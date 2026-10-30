@@ -89,6 +89,17 @@ def test_an_allowlisted_fake_is_skipped(tree, capsys):
     assert rc == 0 and "1 allowlisted" in out
 
 
+def test_a_local_allow_file_is_read_beside_the_tracked_one(tree, capsys, tmp_path):
+    """`.citation-allow.local` (untracked, the maintainer's records) adds lines; without it the fake fails."""
+    other = "pkg/other" + ".py:2"                         # split, so this file's own scan does not see it
+    cite = f"see pkg/fake.py:9 and {other}\n"
+    rc, out = tree(cite, capsys, allow="docs/note.md pkg/fake.py:9\n")
+    assert rc == 1 and f"cites {other}" in out                                # negative control
+    (tmp_path / "repo" / ".citation-allow.local").write_text(f"docs/note.md {other}   # a record\n")
+    rc, out = tree(cite, capsys, allow="docs/note.md pkg/fake.py:9\n")
+    assert rc == 0 and "2 allowlisted" in out
+
+
 @pytest.fixture
 def two_siblings(tmp_path: Path):
     """A repo with two siblings, in priority order, that both hold dup.cpp (trex-core: the /var/tmp clone and

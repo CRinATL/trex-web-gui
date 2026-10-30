@@ -38,7 +38,8 @@ Adaptations for this repo
   - `.citation-allow`: one `<citing-relpath> <raw>:<span>` per line (copy it from a failing run), `#`
     comments. Keyed on the (citing file, cited text) pair, not a line number, so a citing line moving does
     not stale it. It is for a known-fake citation (a document quoting a bad citation) or a genuinely
-    historical one.
+    historical one. `.citation-allow.local`, when present, adds lines the same way; it is untracked (the
+    maintainer's private records carry it), so a public line never has to name a private file.
 
 Snippets and living documents (added 2026-10-18, project review I7)
 -------------------------------------------------------------------
@@ -298,10 +299,8 @@ def _citation_allow(repo: Path) -> set[str]:
     """Deliberately-fake citations to skip, keyed on `_allow_key`. Missing
     file means no exceptions yet - same convention as `.citation-siblings`,
     and the same reason: committed, and absence is a fact, not a mistake."""
-    path = repo / ALLOW_FILE
-    if not path.is_file():
-        return set()
-    return {stripped for ln in path.read_text().splitlines()
+    paths = [p for p in (repo / ALLOW_FILE, repo / (ALLOW_FILE + ".local")) if p.is_file()]
+    return {stripped for path in paths for ln in path.read_text().splitlines()
             if (stripped := ln.split("#", 1)[0].strip())}
 
 

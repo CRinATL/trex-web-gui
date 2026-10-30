@@ -21,3 +21,6 @@ frontend/dist/
 /.sdd.conf
 /.privacy-allow
 /.claude/
+/.citation-renames
+/.citation-allow.local
+/docs/releases/v1.0.0-rc*.md
