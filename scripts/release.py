@@ -39,6 +39,9 @@ from dataclasses import dataclass
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
+# Where a published release's files are downloaded from, by anyone: the repo is public, so the host needs no
+# GitHub account and no gh.
+RELEASES = "https://github.com/CRinATL/trex-web-gui/releases/download"
 GUARDED = ("PLAN.md", "DEFERRED.md")
 LEDGER_GLOB = ".superpowers/sdd/*/progress.md"
 SKIPPED_EXIT = 3
@@ -565,9 +568,11 @@ def _publish(target: Target, root: Path, sh: Sh, sleep: Callable[[float], None],
         print(f"publish {target.name}: {target.tag} is a draft. Check it on the Releases page, then run "
               f"`{_publish_make(target)} PUBLISH_DRAFT=1` to publish it.")
         return 0
+    wheel, digest = wheel_name(target.version), json.loads(_read(_passed(root, target)) or "{}").get("sha256")
     print(f"publish {target.name}: {target.tag} is released. On the host:\n"
-          f"gh release download {target.tag} --pattern '{wheel_name(target.version)}'\n"
-          f"uv tool install --python 3.12 ./{wheel_name(target.version)}")
+          f"curl -fLO {RELEASES}/{target.tag}/{wheel}\n"
+          f"echo '{digest}  {wheel}' | sha256sum -c -\n"
+          f"uv tool install --python 3.12 ./{wheel}")
     return 0
 
 

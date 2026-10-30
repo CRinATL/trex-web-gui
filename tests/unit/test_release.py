@@ -676,6 +676,15 @@ def test_publish_draft_publishes_it_and_checks_the_wheel_again(tmp_path: Path,
     assert gh.release is not None and gh.release["draft"] is False
     assert len([c for c in gh.calls if c[:3] == ["gh", "release", "edit"]]) == 1
     assert "verify: the released wheel's sha256" in out and "v1.0.0 is released" in out
+    # the host needs no GitHub account or gh: a plain download from the public release, checked, installed
+    digest = json.loads((repo / "dist" / "release-final-passed.json").read_text())["sha256"]
+    host = out.split("On the host:\n", 1)[1].splitlines()
+    assert host == [
+        f"curl -fLO https://github.com/CRinATL/trex-web-gui/releases/download/v1.0.0/{FINAL_WHEEL}",
+        f"echo '{digest}  {FINAL_WHEEL}' | sha256sum -c -",
+        f"uv tool install --python 3.12 ./{FINAL_WHEEL}",
+    ]
+    assert "gh release download" not in out
 
 
 def test_a_tag_whose_signature_does_not_verify_is_not_pushed(tmp_path: Path,
