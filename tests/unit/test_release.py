@@ -154,9 +154,8 @@ NOTES = "\n".join(["# notes", "## What is in", "## Install", "## Supported", "##
 
 
 def git(repo: Path, *args: str) -> None:
-    """Runs git in repo with a fixed identity."""
-    who = ["-c", "user.name=t", "-c", "user.email=t@example.com"]
-    subprocess.run(["git", *who, *args], cwd=repo, check=True, capture_output=True)
+    """Runs git in repo."""
+    subprocess.run(["git", *args], cwd=repo, check=True, capture_output=True)
 
 
 def make_repo(tmp_path: Path, branch: str = "main") -> Path:
@@ -172,6 +171,9 @@ def make_repo(tmp_path: Path, branch: str = "main") -> Path:
     (repo / ".superpowers" / "sdd" / "a" / "progress.md").write_text("ledger\n")
     (repo / ".gitignore").write_text("/dist/\n")
     git(repo, "init", "-q", "-b", branch)
+    # repo-local, so the script's own `git tag` has an identity too: a CI runner has no global one
+    git(repo, "config", "user.name", "t")
+    git(repo, "config", "user.email", "t@example.com")
     git(repo, "add", "-A")
     git(repo, "commit", "-qm", "init")
     return repo
