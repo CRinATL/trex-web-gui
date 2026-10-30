@@ -1,0 +1,29 @@
+Port.set_attr read kwargs named link_status, led_status and flow_ctrl_mode, while every caller passes
+link_up, led_on and flow_ctrl, so those three attributes were silently dropped. The bug was introduced
+upstream by trex-core 39a62671c (2018-05-24, v2.42) and is unfixed upstream as of the v3.08 pin. It also
+breaks STLClient.reset(restart=True) and the console portattr command.
+
+diff -ruN a/trex/common/trex_port.py b/trex/common/trex_port.py
+--- a/trex/common/trex_port.py	2026-10-16 14:26:43.390821916 -0400
++++ b/trex/common/trex_port.py	2026-10-16 14:26:43.393320506 -0400
+@@ -497,14 +497,14 @@
+         if kwargs.get('multicast') is not None:
+             json_attr['multicast'] = {'enabled': kwargs['multicast']}
+ 
+-        if kwargs.get('link_status') is not None:
+-            json_attr['link_status'] = {'up': kwargs['link_status']}
++        if kwargs.get('link_up') is not None:
++            json_attr['link_status'] = {'up': kwargs['link_up']}
+ 
+-        if kwargs.get('led_status') is not None:
+-            json_attr['led_status'] = {'on': kwargs['led_status']}
++        if kwargs.get('led_on') is not None:
++            json_attr['led_status'] = {'on': kwargs['led_on']}
+ 
+-        if kwargs.get('flow_ctrl_mode') is not None:
+-            json_attr['flow_ctrl_mode'] = {'mode': kwargs['flow_ctrl_mode']}
++        if kwargs.get('flow_ctrl') is not None:
++            json_attr['flow_ctrl_mode'] = {'mode': kwargs['flow_ctrl']}
+ 
+         if kwargs.get('rx_filter_mode') is not None:
+             json_attr['rx_filter_mode'] = {'mode': kwargs['rx_filter_mode']}

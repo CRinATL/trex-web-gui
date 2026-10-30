@@ -1,0 +1,106 @@
+"""The only importer of the vendored trex client (plan §4)."""
+from .capture import (
+    CaptureRow,
+    CaptureStarted,
+    Fetched,
+    capture_fetch_once,
+    capture_remove,
+    capture_start,
+    capture_status,
+    capture_stop,
+    is_not_found,
+    ports_of,
+)
+from .client import LOSS_EVENTS, ClientEvent, RpcRecord, loss_bound, make_client
+from .decode import Summary
+from .errors import (
+    SUPPORTED_VERSION,
+    CommandRefused,
+    ServerRestarted,
+    ServerUnreachable,
+    TrexApiError,
+    UnsupportedServerVersion,
+    mode_refusal,
+    translate,
+)
+from .loader import load, pin
+from .packet import (
+    PACKET_QUEUE_S,
+    PACKET_START_S,
+    PACKET_TIMEOUT_S,
+    BuildResult,
+    Decompiled,
+    Definitions,
+    DocFromBinary,
+    PacketEngine,
+    PacketError,
+    PcapPage,
+    ReconstructEdit,
+)
+from .port_config import (
+    ArpResult,
+    Neighbour,
+    PingLine,
+    ServiceSaved,
+    XstatsView,
+    conf_ipv6,
+    ping_once,
+    read_xstats,
+    resolve,
+    scan_neighbours,
+    service_on,
+    service_restore,
+    service_state,
+    set_l2,
+    set_l3,
+    set_vlan,
+)
+from .ports import (
+    PortView,
+    check_not_foreign,
+    check_ports,
+    explain_dst_mac,
+    fail_fast,
+    port_views,
+    sync_port,
+    sync_ports,
+)
+from .profiles import (
+    MAX_RESULT_PCAP,
+    PROFILE_SUFFIXES,
+    STUDIO_TIMEOUT_S,
+    WORKER_AS_LIMIT,
+    AddressRange,
+    LoadedProfile,
+    PcapOptions,
+    ProfileError,
+    RoundTrip,
+    StreamSummary,
+    Tunable,
+    check_pcap_options,
+    import_pcap,
+    load_profile,
+    round_trip,
+    streams_from_json,
+    template_stream,
+    to_python,
+)
+from .rawrpc import RawRpc, RawRpcError, port_owners
+from .stats import MAX_PGIDS, PgidView, StatsView, UtilView, read_pgid_stats, read_stats, read_util
+
+__all__ = ["AddressRange", "ArpResult", "BuildResult", "CaptureRow", "CaptureStarted", "ClientEvent",
+           "CommandRefused", "Decompiled", "Definitions", "DocFromBinary", "Fetched", "LOSS_EVENTS",
+           "LoadedProfile", "MAX_PGIDS", "MAX_RESULT_PCAP", "Neighbour", "PACKET_QUEUE_S",
+           "PACKET_START_S", "PACKET_TIMEOUT_S", "PROFILE_SUFFIXES", "PacketEngine", "PacketError",
+           "PcapOptions", "PcapPage", "PgidView", "PingLine", "PortView", "ProfileError", "RawRpc",
+           "RawRpcError", "ReconstructEdit", "RoundTrip", "RpcRecord", "STUDIO_TIMEOUT_S",
+           "SUPPORTED_VERSION", "ServerRestarted", "ServerUnreachable", "ServiceSaved", "StatsView",
+           "StreamSummary", "Summary", "TrexApiError", "Tunable", "UnsupportedServerVersion",
+           "UtilView", "WORKER_AS_LIMIT", "XstatsView", "capture_fetch_once", "capture_remove",
+           "capture_start", "capture_status", "capture_stop", "check_not_foreign", "check_pcap_options",
+           "check_ports", "conf_ipv6", "explain_dst_mac", "fail_fast", "import_pcap", "is_not_found", "load",
+           "load_profile", "loss_bound", "make_client", "mode_refusal", "pin", "ping_once", "port_owners",
+           "port_views", "ports_of", "read_pgid_stats", "read_stats", "read_util", "read_xstats", "resolve",
+           "round_trip", "scan_neighbours", "service_on", "service_restore", "service_state", "set_l2",
+           "set_l3", "set_vlan", "streams_from_json", "sync_port", "sync_ports", "template_stream",
+           "to_python", "translate"]

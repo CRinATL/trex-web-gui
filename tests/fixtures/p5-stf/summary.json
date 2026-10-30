@@ -1,0 +1,424 @@
+{
+ "recorded_utc": "2026-10-24T15:46:14Z",
+ "guest": "jammy",
+ "files_path": "/tmp/trex_files",
+ "listings": {
+  "cap2": {
+   "result": [
+    [],
+    [
+     "jumbo.pcap",
+     "ipv4_load_balance.yaml",
+     "dns_no_delay.yaml",
+     "dns_tw.yaml",
+     "dyn_pyld1.yaml",
+     "rtsp_short3.yaml",
+     "rtp_250k_rtp_only_1.pcap",
+     "rtsp_full2.yaml",
+     "ipv6_load_balance.yaml",
+     "http_short.yaml",
+     "jumbo.yaml",
+     "udp_594B.pcap",
+     "http_very_long.yaml",
+     "dns.yaml",
+     "cur_flow.yaml",
+     "sfr4.yaml",
+     "nat_test.yaml",
+     "sfr2.yaml",
+     "exchange.pcap",
+     "sfr.yaml",
+     "asa_exploit.pcap",
+     "cluster_example.yaml",
+     "sfr_agg_tcp14_udp11_http200msec_new_high_new_nir_profile.yaml",
+     "http_plugin.yaml",
+     "imix_64_fast.yaml",
+     "udp_10_pkts.pcap",
+     "short_tcp.yaml",
+     "wrong_ip.yaml",
+     "Video_Calls.pcap",
+     "imix_9k.yaml",
+     "dns_one_server.yaml",
+     "per_template_gen1.yaml",
+     "delay_10_rtp_250k_short.pcap",
+     "Voice_calls_rtp_only.pcap",
+     "asa_explot1.yaml",
+     "http_get.pcap",
+     "rtsp.yaml",
+     "dns_wlen1.yaml",
+     "dhcp_req_ack_plugin.yaml",
+     "sip_short1.yaml",
+     "tuple_gen.yaml",
+     "wrong_ip.pcap",
+     "rtsp_short1_slow.yaml",
+     "mail_pop.pcap",
+     "dns_wlength.yaml",
+     "http_simple.yaml",
+     "imix_1518.yaml",
+     "per_template_gen2.yaml",
+     "imix_64.yaml",
+     "smtp.pcap",
+     "http.yaml",
+     "cur_flow_single.yaml",
+     "udp_1518B.pcap",
+     "per_template_gen4.yaml",
+     "cur_flow_single_tw_8.yaml",
+     "per_template_gen5.yaml",
+     "lb_ex1.yaml",
+     "ipv6.pcap",
+     "test_pcap_mode2.yaml",
+     "sfr3.yaml",
+     "ipv6.yaml",
+     "rtsp_short1.yaml",
+     "rtp_160k.pcap",
+     "rtsp_short.pcap",
+     "Oracle.pcap",
+     "per_template_gen3.yaml",
+     "limit_single_pkt.yaml",
+     "sip_short2.yaml",
+     "many_client_example.yaml",
+     "citrix.pcap",
+     "dns.pcap",
+     "limit_multi_pkt.yaml",
+     "rtsp_full1.yaml",
+     "sfr_agg_tcp14_udp11_http200msec_new_high_new_nir_profile_ipg_mix.yaml",
+     "imix_9k_burst_10.yaml",
+     "rtp_250k_rtp_only.pcap",
+     "imix_64_100k.yaml",
+     "dns_wlen2.yaml",
+     "190_packet.pcap",
+     "test_pcap_mode1.yaml",
+     "rtsp_short2.yaml",
+     "dns_single_server.yaml",
+     "rtp_250k_rtp_only_2.pcap",
+     "https.pcap",
+     "http_post.pcap",
+     "dns_wlen.yaml",
+     "http_simple_ipv6.yaml",
+     "udp_64B.pcap",
+     "http_browsing.pcap"
+    ]
+   ],
+   "id": 1,
+   "jsonrpc": "2.0"
+  },
+  "avl": {
+   "result": [
+    [],
+    [
+     "delay_10_smtp_0.pcap",
+     "sfr_delay_10.yaml",
+     "delay_10_sip_video_call_full.pcap",
+     "rtp_160_0.pcap",
+     "_tun_mail_pop_0_fixed.pcap",
+     "sfr_delay_10_no_bundeling.yaml",
+     "email_pop4_29.pcap",
+     "delay_sip_0.pcap",
+     "_tun_mail_pop_1_fixed.pcap",
+     "delay_10_rtp_250k_1_0.pcap",
+     "_tun_https_0_fixed.pcap",
+     "delay_10_video_call_rtp_0.pcap",
+     "delay_10_rtp_250k_0_0.pcap",
+     "test_mac.yaml",
+     "delay_dns_0.pcap",
+     "delay_10_smtp_2.pcap",
+     "_tun_rtsp_0_fixed.pcap",
+     "smtp_3.pcap",
+     "exchange.pcap",
+     "sfr_branch_profile_delay_10.yaml",
+     "delay_http_browsing_0.pcap",
+     "rtp_160_1.pcap",
+     "oracle.pcap",
+     "delay_rtp_250k_0_0.pcap",
+     "_tun_oracle_0_fixed.pcap",
+     "_tun_http_browsing_0_fixed.pcap",
+     "mac_uit.yaml",
+     "delay_10_exchange_0.pcap",
+     "sfr_delay_10_1g_no_bundeling.yaml",
+     "delay_http_post_0.pcap",
+     "_tun_smtp_2_fixed.pcap",
+     "smtp_2.pcap",
+     "delay_exchange_0.pcap",
+     "delay_10_mail_pop_2.pcap",
+     "delay_10_sip_video_call_short.pcap",
+     "delay_10_mail_pop_1.pcap",
+     "delay_10_oracle_0.pcap",
+     "avl.csv",
+     "delay_10_mail_pop_0.pcap",
+     "email_pop1.pcap",
+     "http_get.pcap",
+     "delay_10_http_post_0.pcap",
+     "delay_10_smtp_1.pcap",
+     "rtp_250k_1_0.pcap",
+     "delay_smtp_1.pcap",
+     "delay_smtp_2.pcap",
+     "_tun_smtp_1_fixed.pcap",
+     "rtp_250k_2_0.pcap",
+     "_tun_citrix_0_fixed.pcap",
+     "delay_10_http_browsing_0.pcap",
+     "http_manual_01.pcap_c.pcap",
+     "delay_https_0.pcap",
+     "delay_10_http_get_0.pcap",
+     "delay_10_rtp_160k_0.pcap",
+     "delay_10_rtp_160k_full.pcap",
+     "dns_0.pcap",
+     "http_manual_02.pcap_c.pcap",
+     "delay_10_dns_0.pcap",
+     "_tun_mail_pop_2_fixed.pcap",
+     "delay_10_sip_0.pcap",
+     "delay_rtp_160k_1_1_0.pcap",
+     "delay_rtsp_0.pcap",
+     "delay_10_citrix_0.pcap",
+     "delay_smtp_0.pcap",
+     "rtsp_0.pcap",
+     "email_pop2.pcap",
+     "delay_citrix_0.pcap",
+     "delay_video_call_rtp_0.pcap",
+     "delay_email_pop_1.pcap",
+     "_tun_http_get_0_fixed.pcap",
+     "citrix_0.pcap",
+     "delay_10_https_0.pcap",
+     "_tun_http_post_0_fixed.pcap",
+     "video_call_0.pcap",
+     "_tun_exchange_0_fixed.pcap",
+     "sfr_delay_10_1g.yaml",
+     "dhcp_req_ack.pcap",
+     "smtp_1.pcap",
+     "delay_email_pop_0.pcap",
+     "delay_10_video_call_0.pcap",
+     "_tun_smtp_0_fixed.pcap",
+     "delay_oracle_0.pcap",
+     "delay_email_pop_2.pcap",
+     "delay_video_call_0.pcap",
+     "email_pop1_1.pcap",
+     "delay_10_rtsp_0.pcap",
+     "delay_10_rtp_250k_full.pcap",
+     "sfr_delay_10_1g_asa_nat.yaml",
+     "delay_10_rtp_160k_1.pcap",
+     "delay_rtp_160k_1_1_1.pcap",
+     "avl_delay_10.csv",
+     "video_rtp_1588_0.pcap",
+     "delay_http_get_0.pcap",
+     "https.pcap",
+     "http_post.pcap",
+     "delay_rtp_250k_2_0.pcap",
+     "sfr_delay_50_tunnel_no_bundeling.yaml",
+     "sip_0.pcap",
+     "http_browsing.pcap",
+     "email_pop2_2.pcap"
+    ]
+   ],
+   "id": 1,
+   "jsonrpc": "2.0"
+  },
+  "files_path": {
+   "result": [
+    [],
+    []
+   ],
+   "id": 1,
+   "jsonrpc": "2.0"
+  },
+  "etc": {
+   "id": 1,
+   "jsonrpc": "2.0",
+   "error": {
+    "code": -33,
+    "message": "Error processing get_files_list(): Given path should be under current TRex package or /tmp/trex_files"
+   }
+  }
+ },
+ "stf_cmd": [
+  "2475",
+  "./_t-rex-64 --iom 0 --cfg /etc/trex_cfg.yaml -f cap2/sfr2.yaml -d 20 -m 1.0 -l 1000 --rx-check 100 -c 1 --no-key"
+ ],
+ "full_command_stf": "nice -n -19 ./t-rex-64 --iom 0  --cfg /etc/trex_cfg.yaml -f cap2/sfr2.yaml -d 20 -m 1.0 -l 1000 --rx-check 100 -c 1 --no-key",
+ "start_s": 2.51,
+ "run_s": 23.16,
+ "timeline": [
+  {
+   "t": 0.0,
+   "state": 3,
+   "verbose": "TRex is Running"
+  },
+  {
+   "t": 1.11,
+   "state": 3,
+   "verbose": "TRex is Running"
+  },
+  {
+   "t": 2.11,
+   "state": 3,
+   "verbose": "TRex is Running"
+  },
+  {
+   "t": 3.11,
+   "state": 3,
+   "verbose": "TRex is Running"
+  },
+  {
+   "t": 4.11,
+   "state": 3,
+   "verbose": "TRex is Running"
+  },
+  {
+   "t": 5.11,
+   "state": 3,
+   "verbose": "TRex is Running"
+  },
+  {
+   "t": 6.11,
+   "state": 3,
+   "verbose": "TRex is Running"
+  },
+  {
+   "t": 7.12,
+   "state": 3,
+   "verbose": "TRex is Running"
+  },
+  {
+   "t": 8.12,
+   "state": 3,
+   "verbose": "TRex is Running"
+  },
+  {
+   "t": 9.12,
+   "state": 3,
+   "verbose": "TRex is Running"
+  },
+  {
+   "t": 10.12,
+   "state": 3,
+   "verbose": "TRex is Running"
+  },
+  {
+   "t": 11.12,
+   "state": 3,
+   "verbose": "TRex is Running"
+  },
+  {
+   "t": 12.12,
+   "state": 3,
+   "verbose": "TRex is Running"
+  },
+  {
+   "t": 13.13,
+   "state": 3,
+   "verbose": "TRex is Running"
+  },
+  {
+   "t": 14.13,
+   "state": 3,
+   "verbose": "TRex is Running"
+  },
+  {
+   "t": 15.13,
+   "state": 3,
+   "verbose": "TRex is Running"
+  },
+  {
+   "t": 16.13,
+   "state": 3,
+   "verbose": "TRex is Running"
+  },
+  {
+   "t": 17.13,
+   "state": 3,
+   "verbose": "TRex is Running"
+  },
+  {
+   "t": 18.14,
+   "state": 3,
+   "verbose": "TRex is Running"
+  },
+  {
+   "t": 19.14,
+   "state": 3,
+   "verbose": "TRex is Running"
+  },
+  {
+   "t": 20.14,
+   "state": 3,
+   "verbose": "TRex is Running"
+  },
+  {
+   "t": 21.15,
+   "state": 3,
+   "verbose": "TRex is Running"
+  },
+  {
+   "t": 22.15,
+   "state": 3,
+   "verbose": "TRex is Running"
+  },
+  {
+   "t": 23.16,
+   "state": 1,
+   "verbose": "TRex finished."
+  }
+ ],
+ "outcomes": {
+  "finished": "TRex finished.",
+  "stopped": "TRex finished."
+ },
+ "stop_after_end": {
+  "result": false,
+  "id": 1,
+  "jsonrpc": "2.0"
+ },
+ "stop_s": 1.87,
+ "stop_result": {
+  "result": true,
+  "id": 1,
+  "jsonrpc": "2.0"
+ },
+ "start_stf_no_d": {
+  "id": 1,
+  "jsonrpc": "2.0",
+  "error": {
+   "code": -32603,
+   "message": "Server error: File \"/opt/trex/v3.08/automation/trex_control_plane/server/trex_server.py\", line 546, in generate_run_cmd | Exception: Argument -d should be specified in stateful command\n"
+  }
+ },
+ "gate": {
+  "g1_round_trip": true,
+  "g1_detail": {
+   "tg-0dbc43f7b090-Oracle.pcap": {
+    "pushed": true,
+    "sha_ok": true
+   },
+   "tg-08c33344af88-smtp.pcap": {
+    "pushed": true,
+    "sha_ok": true
+   },
+   "tg-3be77ffce931-dns.pcap": {
+    "pushed": true,
+    "sha_ok": true
+   },
+   "tg-f3ac664ffc84-synth4m.pcap": {
+    "pushed": true,
+    "sha_ok": true
+   }
+  },
+  "g2_push_4m_s": 0.07,
+  "g3_listed": true,
+  "g4": {
+   "seq": 44,
+   "templates": [
+    "/tmp/trex_files/tg-0dbc43f7b090-Oracle.pcap",
+    "/tmp/trex_files/tg-08c33344af88-smtp.pcap",
+    "/tmp/trex_files/tg-3be77ffce931-dns.pcap"
+   ],
+   "outcome": "TRex finished.",
+   "run_s": 23.15
+  },
+  "g5_relative": {
+   "id": 1,
+   "jsonrpc": "2.0",
+   "error": {
+    "code": -11,
+    "message": "TRex run failed due to wrong input parameters, or due to readability issues.\n\nTRex command: nice -n -19 ./t-rex-64 --iom 0  --cfg /etc/trex_cfg.yaml -f /tmp/trex_files/tg-ca7be89bda5c-sfr2rel.yaml -d 20 -m 1.0 -l 1000 --rx-check 100 -c 1 --no-key\n\nRun output:\nThe ports are bound/configured.\nStarting  TRex v3.08 please wait  ... \n set driver name net_af_packet \n driver capability  : SLRO \n set dpdk queues mode to ONE_QUE \n Number of ports found: 2\nzmq publisher at: tcp://*:4500\n wait 1 sec .\nport : 0 \n------------\nlink         :  link : Link Up - speed 10000 Mbps - full-duplex\npromiscuous  : 0 \nport : 1 \n------------\nlink         :  link : Link Up - speed 10000 Mbps - full-duplex\npromiscuous  : 0 \n number of ports         : 2 \n max cores for 2 ports   : 1 \n tx queues per port      : 3 \nno client generator pool configured, using default pool\nno server generator pool configured, using default pool\n -------------------------------\nRX core uses TX queue number 65535 on all ports\n core, c-port, c-queue, s-port, s-queue, lat-queue\n ------------------------------------------\n 1        0      0       1       0      0  \n -------------------------------\nno client generator pool configured, using default pool\nno server generator pool configured, using default pool\n -- loading cap file tg-0dbc43f7b090-Oracle.pcap \nCAP file 'tg-0dbc43f7b090-Oracle.pcap' not found\n ERROR file tg-0dbc43f7b090-Oracle.pcap does not exist or not supported \nError processing file: '/tmp/trex_files/tg-ca7be89bda5c-sfr2rel.yaml'. Please correct the errors and try again.\n"
+   }
+  },
+  "errors": []
+ }
+}

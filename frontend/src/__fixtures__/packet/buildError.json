@@ -1,0 +1,8 @@
+{
+  "expression": {
+    "binary": null,
+    "data": [],
+    "error": "ZeroDivisionError: division by zero",
+    "field_engine": null
+  }
+}

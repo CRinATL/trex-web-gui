@@ -1,0 +1,52 @@
+[
+ {
+  "action_count": 0,
+  "core_id": -1,
+  "enabled": true,
+  "flags": 0,
+  "flow_stats": {
+   "enabled": false
+  },
+  "isg": 0.0,
+  "mode": {
+   "rate": {
+    "type": "pps",
+    "value": 1.0
+   },
+   "type": "continuous"
+  },
+  "packet": {
+   "binary": "AAAAAQAAAAAAAgAACABFAABzAAEAAEApOmAQAAABMAAAAWAAAAAANwRAAAAAAAAAAAAAAAAAAAAAAgAAAAAAAAAAAAAAAAAAAAFGAAA3AAEAAEARN7MQAAABMAAAAQEBAQAEAQAMAB+m+GFiY2RlZmdoaWprbG1ub3BxcnN0dXZ3",
+   "meta": ""
+  },
+  "self_start": true,
+  "start_paused": false,
+  "vm": {
+   "instructions": [
+    {
+     "init_value": 268435457,
+     "max_value": 268435466,
+     "min_value": 268435457,
+     "name": "src",
+     "next_var": null,
+     "op": "inc",
+     "size": 4,
+     "split_to_cores": true,
+     "step": 1,
+     "type": "flow_var"
+    },
+    {
+     "add_value": 0,
+     "is_big_endian": true,
+     "name": "src",
+     "pkt_offset": 86,
+     "type": "write_flow_var"
+    },
+    {
+     "pkt_offset": 74,
+     "type": "fix_checksum_ipv4"
+    }
+   ]
+  }
+ }
+]

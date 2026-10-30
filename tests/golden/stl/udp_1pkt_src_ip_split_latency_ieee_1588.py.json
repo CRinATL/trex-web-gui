@@ -1,0 +1,83 @@
+[
+ {
+  "action_count": 0,
+  "core_id": -1,
+  "enabled": true,
+  "flags": 0,
+  "flow_stats": {
+   "enabled": false
+  },
+  "isg": 0.0,
+  "mode": {
+   "rate": {
+    "type": "pps",
+    "value": 1
+   },
+   "type": "continuous"
+  },
+  "packet": {
+   "binary": "AAAAAQAAAAAAAgAACABFAAAuAAEAAEAROr0QAAABMAAAAQQBAAwAGn9veHh4eHh4eHh4eHh4eHh4eHh4",
+   "meta": ""
+  },
+  "self_start": true,
+  "start_paused": false,
+  "vm": {
+   "cache": 255,
+   "instructions": [
+    {
+     "init_value": 167772161,
+     "max_value": 167772415,
+     "min_value": 167772161,
+     "name": "ip_src",
+     "next_var": null,
+     "op": "inc",
+     "size": 4,
+     "split_to_cores": true,
+     "step": 1,
+     "type": "flow_var"
+    },
+    {
+     "add_value": 0,
+     "is_big_endian": true,
+     "name": "ip_src",
+     "pkt_offset": 26,
+     "type": "write_flow_var"
+    },
+    {
+     "pkt_offset": 14,
+     "type": "fix_checksum_ipv4"
+    }
+   ]
+  }
+ },
+ {
+  "action_count": 0,
+  "core_id": -1,
+  "enabled": true,
+  "flags": 0,
+  "flow_stats": {
+   "enabled": true,
+   "ieee_1588": true,
+   "rule_type": "latency",
+   "stream_id": 12,
+   "vxlan": false
+  },
+  "isg": 0.0,
+  "mode": {
+   "rate": {
+    "type": "pps",
+    "value": 1000
+   },
+   "type": "continuous"
+  },
+  "packet": {
+   "binary": "AAAAAQAAAAAAAgAACABFAABYAAEAAEAROpMQAAABMAAAAQQBAT8ARJwGeHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4",
+   "meta": ""
+  },
+  "self_start": true,
+  "start_paused": false,
+  "vm": {
+   "instructions": []
+  }
+ }
+]

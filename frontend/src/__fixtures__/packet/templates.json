@@ -1,0 +1,98 @@
+{
+  "listing": {
+    "dir": "<templates>",
+    "server": [
+      {
+        "buildable": true,
+        "id": "ARP/ARP-REPLY",
+        "name": "ARP-REPLY",
+        "reason": null
+      },
+      {
+        "buildable": true,
+        "id": "ARP/ARP-REQUEST",
+        "name": "ARP-REPLY",
+        "reason": null
+      },
+      {
+        "buildable": true,
+        "id": "DHCP/DHCP-ACK",
+        "name": "DHCP-ACK",
+        "reason": null
+      },
+      {
+        "buildable": true,
+        "id": "DHCP/DHCP-DISCOVER",
+        "name": "DHCP-DISCOVER",
+        "reason": null
+      },
+      {
+        "buildable": true,
+        "id": "DHCP/DHCP-REQUEST",
+        "name": "DHCP-REQUEST",
+        "reason": null
+      },
+      {
+        "buildable": true,
+        "id": "ICMP echo request",
+        "name": "ICMP echo request",
+        "reason": null
+      },
+      {
+        "buildable": false,
+        "id": "IGMP-JOIN",
+        "name": "IGMP-JOIN",
+        "reason": "two Scapy classes are named IGMP, and its fixture carries an IP Router Alert option"
+      },
+      {
+        "buildable": true,
+        "id": "IPv4/ICMP",
+        "name": "ICMP echo request",
+        "reason": null
+      },
+      {
+        "buildable": true,
+        "id": "IPv4/TCP",
+        "name": "ICMP echo request",
+        "reason": null
+      },
+      {
+        "buildable": true,
+        "id": "IPv4/UDP",
+        "name": "ICMP echo request",
+        "reason": null
+      },
+      {
+        "buildable": true,
+        "id": "IPv6/ICMP",
+        "name": "ICMP echo request",
+        "reason": null
+      },
+      {
+        "buildable": true,
+        "id": "IPv6/TCP",
+        "name": "ICMP echo request",
+        "reason": null
+      },
+      {
+        "buildable": true,
+        "id": "IPv6/UDP",
+        "name": "ICMP echo request",
+        "reason": null
+      },
+      {
+        "buildable": true,
+        "id": "TCP-SYN",
+        "name": "TCP-SYN",
+        "reason": null
+      },
+      {
+        "buildable": true,
+        "id": "trex-web-gui/LLDP",
+        "name": "LLDP",
+        "reason": null
+      }
+    ],
+    "user": []
+  }
+}

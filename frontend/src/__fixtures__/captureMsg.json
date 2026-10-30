@@ -1,0 +1,75 @@
+{
+  "idle": {
+    "captures": [],
+    "monitor": null,
+    "ts": 0,
+    "type": "capture",
+    "wireshark": {
+      "error": null,
+      "running": false
+    }
+  },
+  "monitor_and_recorder": {
+    "captures": [
+      {
+        "bpf": "",
+        "bytes": 14880,
+        "count": 120,
+        "endpoint": null,
+        "fetched": 0,
+        "id": 1,
+        "limit": 120,
+        "matched": 1000,
+        "mine": true,
+        "mode": "fixed",
+        "rx": [
+          1
+        ],
+        "service": false,
+        "snaplen": null,
+        "state": "ACTIVE",
+        "tx": []
+      },
+      {
+        "bpf": "",
+        "bytes": 0,
+        "count": 0,
+        "endpoint": null,
+        "fetched": 100,
+        "id": 2,
+        "limit": 100,
+        "matched": 1000,
+        "mine": true,
+        "mode": "cyclic",
+        "rx": [
+          1
+        ],
+        "service": false,
+        "snaplen": null,
+        "state": "ACTIVE",
+        "tx": []
+      }
+    ],
+    "monitor": {
+      "bpf": "",
+      "count": 0,
+      "fetched": 100,
+      "gone": null,
+      "id": 2,
+      "limit": 100,
+      "matched": 1000,
+      "rx": [
+        1
+      ],
+      "start_ts": 0.0,
+      "state": "ACTIVE",
+      "tx": []
+    },
+    "ts": 0,
+    "type": "capture",
+    "wireshark": {
+      "error": null,
+      "running": false
+    }
+  }
+}

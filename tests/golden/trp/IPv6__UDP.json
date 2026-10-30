@@ -1,0 +1,134 @@
+{
+ "binary": "AAAAAQAAAAAAAgAAht1gAAAAAAgRQAAAAAAAAAAAAAAAAAAAAAIAAAAAAAAAAAAAAAAAAAABADUANQAI/3E=",
+ "data": [
+  {
+   "fields": [
+    {
+     "hvalue": "00:00:00:01:00:00",
+     "id": "dst",
+     "length": 6,
+     "offset": 0,
+     "value": "00:00:00:01:00:00"
+    },
+    {
+     "hvalue": "00:00:00:02:00:00",
+     "id": "src",
+     "length": 6,
+     "offset": 6,
+     "value": "00:00:00:02:00:00"
+    },
+    {
+     "hvalue": "IPv6",
+     "id": "type",
+     "length": 2,
+     "offset": 12,
+     "value": 34525
+    }
+   ],
+   "id": "Ether",
+   "offset": 0,
+   "real_id": "Ether",
+   "valid_structure": true
+  },
+  {
+   "fields": [
+    {
+     "hvalue": "6",
+     "id": "version",
+     "length": 0,
+     "offset": 0,
+     "value": 6
+    },
+    {
+     "hvalue": "0",
+     "id": "tc",
+     "length": 0,
+     "offset": 0,
+     "value": 0
+    },
+    {
+     "hvalue": "0",
+     "id": "fl",
+     "length": 0,
+     "offset": 1,
+     "value": 0
+    },
+    {
+     "hvalue": "8",
+     "id": "plen",
+     "length": 2,
+     "offset": 4,
+     "value": 8
+    },
+    {
+     "hvalue": "UDP",
+     "id": "nh",
+     "length": 1,
+     "offset": 6,
+     "value": 17
+    },
+    {
+     "hvalue": "64",
+     "id": "hlim",
+     "length": 1,
+     "offset": 7,
+     "value": 64
+    },
+    {
+     "hvalue": "::2",
+     "id": "src",
+     "length": 16,
+     "offset": 8,
+     "value": "::2"
+    },
+    {
+     "hvalue": "::1",
+     "id": "dst",
+     "length": 16,
+     "offset": 24,
+     "value": "::1"
+    }
+   ],
+   "id": "IPv6",
+   "offset": 14,
+   "real_id": "IPv6",
+   "valid_structure": true
+  },
+  {
+   "fields": [
+    {
+     "hvalue": "53",
+     "id": "sport",
+     "length": 2,
+     "offset": 0,
+     "value": 53
+    },
+    {
+     "hvalue": "53",
+     "id": "dport",
+     "length": 2,
+     "offset": 2,
+     "value": 53
+    },
+    {
+     "hvalue": "8",
+     "id": "len",
+     "length": 2,
+     "offset": 4,
+     "value": 8
+    },
+    {
+     "hvalue": "0xff71",
+     "id": "chksum",
+     "length": 2,
+     "offset": 6,
+     "value": 65393
+    }
+   ],
+   "id": "UDP",
+   "offset": 54,
+   "real_id": "UDP",
+   "valid_structure": true
+  }
+ ]
+}

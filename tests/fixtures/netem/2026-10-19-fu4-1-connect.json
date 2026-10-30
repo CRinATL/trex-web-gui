@@ -1,0 +1,351 @@
+{
+  "recorded_utc": "2026-10-19T07:06:41Z",
+  "delays": [
+    {
+      "delay_ms": 0,
+      "jitter_ms": 0,
+      "qdisc": "qdisc fq_codel 0: root refcnt 2 limit 10240p flows 1024 quantum 1514 target 5ms interval 100ms memory_limit 32Mb ecn drop_batch 64",
+      "p3b": {
+        "composites_secs": {
+          "apply_resolved": 0.163,
+          "apply_unresolved": 3.107,
+          "apply_resolved_again": 0.269
+        },
+        "max_secs_by_call": {
+          "set_port_attr_multicast_true": 0.006,
+          "set_port_attr_multicast_false": 0.006,
+          "apply_2.2.2.2_service_on": 0.002,
+          "apply_2.2.2.2_set_l3": 0.008,
+          "apply_2.2.2.2_resolve": 0.233,
+          "apply_2.2.2.2_service_off": 0.003,
+          "apply_1.1.1.99_service_on": 0.003,
+          "apply_1.1.1.99_set_l3": 0.012,
+          "apply_1.1.1.99_resolve": 3.066,
+          "apply_1.1.1.99_service_off": 0.002,
+          "service_on_0": 0.002,
+          "service_on_1": 0.002,
+          "set_vlan_10": 0.007,
+          "set_vlan_10_20": 0.007,
+          "set_vlan_none": 0.009,
+          "set_l2": 0.009,
+          "set_l3_resolvable": 0.012,
+          "resolve_resolvable": 0.235,
+          "set_l3_nobody": 0.011,
+          "resolve_nobody": 3.024,
+          "set_l3_back": 0.011,
+          "resolve_back": 0.144,
+          "conf_ipv6_auto": 0.006,
+          "conf_ipv6_source": 0.006,
+          "conf_ipv6_off": 0.012,
+          "vlan10_both": 0.023,
+          "vlan10_resolve": 0.238,
+          "vlan10_ping": 0.121,
+          "vlan_clear_both": 0.025,
+          "vlan_clear_resolve": 0.142,
+          "ping_v4_ok": 0.122,
+          "ping_v4_timeout": 3.105,
+          "ipv6_on_for_scan": 0.006,
+          "scan6": 3.125,
+          "ping_v6": 0.125,
+          "ipv6_off_after_scan": 0.007,
+          "service_off_0": 0.002,
+          "service_off_1": 0.002,
+          "service_on_for_raw": 0.002,
+          "raw_set_vlan_three": 0.003,
+          "after_raw_three_tags": 0,
+          "service_off_after_raw": 0.002,
+          "service_on_while_tx": 0.004,
+          "raw_set_l2_while_tx": 0.003,
+          "client_set_l2_while_tx": 0.005,
+          "client_set_l2_while_tx_base_check": 0.002,
+          "stop": 0.108
+        },
+        "slowest_call": {
+          "call": "scan6",
+          "port": 0,
+          "secs": 3.125,
+          "error": null
+        }
+      },
+      "before": {
+        "backend": "/home/user/Projects/trex-gui/backend/trex_gui/__init__.py",
+        "commit": "e7493734c143d85b3e4fb27a1eb5970faec6ff48",
+        "dirty": false,
+        "connect_s": [
+          0.08,
+          0.094,
+          0.073
+        ],
+        "apply_fail": [
+          {
+            "apply_s": 3.174,
+            "max_gap_s": 1.017,
+            "stop_s": 2.171,
+            "apply_done_at_stop": false,
+            "arp_state": "unresolved"
+          },
+          {
+            "apply_s": 3.156,
+            "max_gap_s": 1.017,
+            "stop_s": 2.154,
+            "apply_done_at_stop": false,
+            "arp_state": "unresolved"
+          },
+          {
+            "apply_s": 3.165,
+            "max_gap_s": 1.014,
+            "stop_s": 2.164,
+            "apply_done_at_stop": false,
+            "arp_state": "unresolved"
+          }
+        ],
+        "ping": [
+          {
+            "ping_s": 4.97,
+            "max_gap_s": 1.014,
+            "stop_s": 0.107,
+            "ping_done_at_stop": false
+          },
+          {
+            "ping_s": 4.872,
+            "max_gap_s": 1.013,
+            "stop_s": 0.104,
+            "ping_done_at_stop": false
+          },
+          {
+            "ping_s": 4.971,
+            "max_gap_s": 1.014,
+            "stop_s": 0.107,
+            "ping_done_at_stop": false
+          }
+        ]
+      },
+      "after": {
+        "backend": "/home/user/Projects/trex-gui/backend/trex_gui/__init__.py",
+        "commit": "e7493734c143d85b3e4fb27a1eb5970faec6ff48",
+        "dirty": false,
+        "connect_s": [
+          0.088,
+          0.096,
+          0.063
+        ],
+        "apply_fail": [
+          {
+            "apply_s": 3.166,
+            "max_gap_s": 1.013,
+            "stop_s": 2.165,
+            "apply_done_at_stop": false,
+            "arp_state": "unresolved"
+          },
+          {
+            "apply_s": 3.16,
+            "max_gap_s": 1.015,
+            "stop_s": 2.159,
+            "apply_done_at_stop": false,
+            "arp_state": "unresolved"
+          },
+          {
+            "apply_s": 3.167,
+            "max_gap_s": 1.019,
+            "stop_s": 2.165,
+            "apply_done_at_stop": false,
+            "arp_state": "unresolved"
+          }
+        ],
+        "ping": [
+          {
+            "ping_s": 4.897,
+            "max_gap_s": 1.014,
+            "stop_s": 0.11,
+            "ping_done_at_stop": false
+          },
+          {
+            "ping_s": 4.97,
+            "max_gap_s": 1.012,
+            "stop_s": 0.103,
+            "ping_done_at_stop": false
+          },
+          {
+            "ping_s": 4.803,
+            "max_gap_s": 1.017,
+            "stop_s": 0.105,
+            "ping_done_at_stop": false
+          }
+        ]
+      }
+    },
+    {
+      "delay_ms": 200,
+      "jitter_ms": 40,
+      "qdisc": "qdisc netem 8001: root refcnt 2 limit 1000 delay 200ms  40ms",
+      "p3b": {
+        "composites_secs": {
+          "apply_resolved": 3.908,
+          "apply_unresolved": 10.855,
+          "apply_resolved_again": 4.169
+        },
+        "max_secs_by_call": {
+          "set_port_attr_multicast_true": 0.429,
+          "set_port_attr_multicast_false": 0.638,
+          "apply_2.2.2.2_service_on": 0.239,
+          "apply_2.2.2.2_set_l3": 0.423,
+          "apply_2.2.2.2_resolve": 2.296,
+          "apply_2.2.2.2_service_off": 0.246,
+          "apply_1.1.1.99_service_on": 0.234,
+          "apply_1.1.1.99_set_l3": 0.529,
+          "apply_1.1.1.99_resolve": 8.908,
+          "apply_1.1.1.99_service_off": 0.221,
+          "service_on_0": 0.192,
+          "service_on_1": 0.239,
+          "set_vlan_10": 0.398,
+          "set_vlan_10_20": 0.546,
+          "set_vlan_none": 0.391,
+          "set_l2": 0.447,
+          "set_l3_resolvable": 0.6,
+          "resolve_resolvable": 2.06,
+          "set_l3_nobody": 0.416,
+          "resolve_nobody": 8.708,
+          "set_l3_back": 0.551,
+          "resolve_back": 2.299,
+          "conf_ipv6_auto": 0.201,
+          "conf_ipv6_source": 0.175,
+          "conf_ipv6_off": 0.386,
+          "vlan10_both": 1.098,
+          "vlan10_resolve": 2.062,
+          "vlan10_ping": 1.044,
+          "vlan_clear_both": 0.783,
+          "vlan_clear_resolve": 2.115,
+          "ping_v4_ok": 1.368,
+          "ping_v4_timeout": 8.299,
+          "ipv6_on_for_scan": 0.171,
+          "scan6": 4.762,
+          "ping_v6": 2.142,
+          "ipv6_off_after_scan": 0.433,
+          "service_off_0": 0.374,
+          "service_off_1": 0.183,
+          "service_on_for_raw": 0.166,
+          "raw_set_vlan_three": 0.187,
+          "after_raw_three_tags": 0,
+          "service_off_after_raw": 0.176,
+          "service_on_while_tx": 0.235,
+          "raw_set_l2_while_tx": 0.191,
+          "client_set_l2_while_tx": 0.204,
+          "client_set_l2_while_tx_base_check": 0,
+          "stop": 0.549
+        },
+        "slowest_call": {
+          "call": "apply_1.1.1.99_resolve",
+          "port": 0,
+          "secs": 8.908,
+          "error": "TRexError: Could not resolve following ports: [0]"
+        }
+      },
+      "before": {
+        "backend": "/home/user/Projects/trex-gui/backend/trex_gui/__init__.py",
+        "commit": "e7493734c143d85b3e4fb27a1eb5970faec6ff48",
+        "dirty": false,
+        "connect_s": [
+          4.344,
+          4.411,
+          4.48
+        ],
+        "apply_fail": [
+          {
+            "apply_s": 11.616,
+            "max_gap_s": 2.052,
+            "stop_s": 10.022,
+            "apply_done_at_stop": false,
+            "arp_state": "unresolved"
+          },
+          {
+            "apply_s": 11.756,
+            "max_gap_s": 2.118,
+            "stop_s": 10.086,
+            "apply_done_at_stop": false,
+            "arp_state": "unresolved"
+          },
+          {
+            "apply_s": 12.031,
+            "max_gap_s": 2.022,
+            "stop_s": 10.243,
+            "apply_done_at_stop": false,
+            "arp_state": "unresolved"
+          }
+        ],
+        "ping": [
+          {
+            "ping_s": 11.202,
+            "max_gap_s": 2.105,
+            "stop_s": 2.844,
+            "ping_done_at_stop": false
+          },
+          {
+            "ping_s": 10.574,
+            "max_gap_s": 2.029,
+            "stop_s": 2.564,
+            "ping_done_at_stop": false
+          },
+          {
+            "ping_s": 10.784,
+            "max_gap_s": 2.101,
+            "stop_s": 2.832,
+            "ping_done_at_stop": false
+          }
+        ]
+      },
+      "after": {
+        "backend": "/home/user/Projects/trex-gui/backend/trex_gui/__init__.py",
+        "commit": "e7493734c143d85b3e4fb27a1eb5970faec6ff48",
+        "dirty": false,
+        "connect_s": [
+          4.322,
+          4.208,
+          4.293
+        ],
+        "apply_fail": [
+          {
+            "apply_s": 11.921,
+            "max_gap_s": 2.024,
+            "stop_s": 10.062,
+            "apply_done_at_stop": false,
+            "arp_state": "unresolved"
+          },
+          {
+            "apply_s": 11.692,
+            "max_gap_s": 2.08,
+            "stop_s": 10.691,
+            "apply_done_at_stop": false,
+            "arp_state": "unresolved"
+          },
+          {
+            "apply_s": 11.285,
+            "max_gap_s": 2.037,
+            "stop_s": 9.451,
+            "apply_done_at_stop": false,
+            "arp_state": "unresolved"
+          }
+        ],
+        "ping": [
+          {
+            "ping_s": 10.581,
+            "max_gap_s": 2.121,
+            "stop_s": 1.494,
+            "ping_done_at_stop": false
+          },
+          {
+            "ping_s": 10.982,
+            "max_gap_s": 2.144,
+            "stop_s": 2.924,
+            "ping_done_at_stop": false
+          },
+          {
+            "ping_s": 10.953,
+            "max_gap_s": 2.089,
+            "stop_s": 2.649,
+            "ping_done_at_stop": false
+          }
+        ]
+      }
+    }
+  ]
+}

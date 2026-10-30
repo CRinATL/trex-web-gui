@@ -1,0 +1,38 @@
+{
+  "fileType": "trex-packet-editor",
+  "version": "1.0.0",
+  "metadata": {
+    "caption": "LLDP (Some NICs consume LLDP in firmware: Intel X710/XL710 under i40e is the known case)"
+  },
+  "packet": [
+    {
+      "id": "Ether",
+      "fields": [
+        {
+          "id": "dst",
+          "value": "01:80:c2:00:00:0e"
+        },
+        {
+          "id": "type",
+          "value": 35020
+        }
+      ]
+    },
+    {
+      "id": "Raw",
+      "fields": [
+        {
+          "id": "load",
+          "value": {
+            "vtype": "BYTES",
+            "base64": "AgcEAAAAAAABBAcHdHJleC0wBgIAeAoMdHJleC13ZWItZ3VpAAA="
+          }
+        }
+      ]
+    }
+  ],
+  "fePrarameters": {
+    "cache_size": "1000"
+  },
+  "feInstructions": []
+}

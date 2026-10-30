@@ -1,0 +1,40 @@
+[project]
+name = "trex-web-gui"
+version = "1.0.0"
+description = "One TRex web GUI: Control, Studio, Monitor"
+license = "GPL-2.0-or-later"
+license-files = ["LICENSE", "NOTICE"]
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi>=0.143.3",
+    "uvicorn>=0.54.0",
+    "websockets>=17.2",
+    "pyzmq>=27.2.0",
+    "pyyaml>=6.0.3",
+    "tomli-w>=1.2.0",
+]
+
+[project.scripts]
+trex-web-gui = "trex_web_gui.cli:entry"
+
+[dependency-groups]
+dev = ["pytest", "httpx", "ruff", "mypy", "types-PyYAML", "pytest-timeout", "pytest-xdist"]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["trex_web_gui"]
+
+[tool.hatch.build.targets.wheel.hooks.custom]
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+exclude = ["trex_web_gui/_vendor/"]
+[[tool.mypy.overrides]]
+module = ["trex.*", "zmq.*", "scapy.*"]
+ignore_missing_imports = true
+follow_imports = "skip"

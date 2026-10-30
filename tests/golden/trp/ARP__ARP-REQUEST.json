@@ -1,0 +1,105 @@
+{
+ "binary": "////////ZNS2z6NiCAYAAQgABgQAAWTUts+jYhAAACoAAAAAAAAQAAAB",
+ "data": [
+  {
+   "fields": [
+    {
+     "hvalue": "ff:ff:ff:ff:ff:ff",
+     "id": "dst",
+     "length": 6,
+     "offset": 0,
+     "value": "ff:ff:ff:ff:ff:ff"
+    },
+    {
+     "hvalue": "64:d4:b6:cf:a3:62",
+     "id": "src",
+     "length": 6,
+     "offset": 6,
+     "value": "64:d4:b6:cf:a3:62"
+    },
+    {
+     "hvalue": "ARP",
+     "id": "type",
+     "length": 2,
+     "offset": 12,
+     "value": 2054
+    }
+   ],
+   "id": "Ether",
+   "offset": 0,
+   "real_id": "Ether",
+   "valid_structure": true
+  },
+  {
+   "fields": [
+    {
+     "hvalue": "0x1",
+     "id": "hwtype",
+     "length": 2,
+     "offset": 0,
+     "value": 1
+    },
+    {
+     "hvalue": "IPv4",
+     "id": "ptype",
+     "length": 2,
+     "offset": 2,
+     "value": 2048
+    },
+    {
+     "hvalue": "6",
+     "id": "hwlen",
+     "length": 1,
+     "offset": 4,
+     "value": 6
+    },
+    {
+     "hvalue": "4",
+     "id": "plen",
+     "length": 1,
+     "offset": 5,
+     "value": 4
+    },
+    {
+     "hvalue": "who-has",
+     "id": "op",
+     "length": 2,
+     "offset": 6,
+     "value": 1
+    },
+    {
+     "hvalue": "64:d4:b6:cf:a3:62",
+     "id": "hwsrc",
+     "length": 2,
+     "offset": 8,
+     "value": "64:d4:b6:cf:a3:62"
+    },
+    {
+     "hvalue": "16.0.0.42",
+     "id": "psrc",
+     "length": 2,
+     "offset": 14,
+     "value": "16.0.0.42"
+    },
+    {
+     "hvalue": "00:00:00:00:00:00",
+     "id": "hwdst",
+     "length": 2,
+     "offset": 18,
+     "value": "00:00:00:00:00:00"
+    },
+    {
+     "hvalue": "16.0.0.1",
+     "id": "pdst",
+     "length": 2,
+     "offset": 24,
+     "value": "16.0.0.1"
+    }
+   ],
+   "id": "ARP",
+   "offset": 14,
+   "real_id": "ARP",
+   "valid_structure": true
+  }
+ ]
+}

@@ -1,0 +1,14 @@
+line-length = 110
+target-version = "py312"
+extend-exclude = ["backend/trex_web_gui/_vendor"]
+
+[lint]
+select = ["E", "F", "W", "I", "B", "UP"]
+
+[lint.per-file-ignores]
+# TRex profiles conventionally do `from trex_stl_lib.api import *` (or `trex.stl.api`). The fixtures copy
+# that convention on purpose, because the loader tests load them the way users' profiles are loaded.
+"tests/fixtures/profiles/*.py" = ["F403", "F405"]
+# Each vm script inserts `backend` into sys.path before importing `trex_web_gui`; that is the only way these
+# standalone scripts reach the package.
+"vm/*.py" = ["E402"]

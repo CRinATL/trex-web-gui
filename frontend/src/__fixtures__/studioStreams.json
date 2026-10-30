@@ -1,0 +1,48 @@
+{
+  "udp_for_benchmarks": {
+    "names": [
+      null
+    ],
+    "offset": 0,
+    "rev": "<rev>",
+    "rows": [
+      {
+        "has_editor": false,
+        "index": 0,
+        "length": 124,
+        "stream": {
+          "action_count": 0,
+          "core_id": -1,
+          "enabled": true,
+          "flags": 0,
+          "flow_stats": {
+            "enabled": false
+          },
+          "isg": 0.0,
+          "mode": {
+            "rate": {
+              "type": "pps",
+              "value": 1.0
+            },
+            "type": "continuous"
+          },
+          "packet": {
+            "binary": "AAAAAQAAAAAAAgAACABFAABuAAEAAEAROn0QAAABMAAAAQQBAAwAWm/geHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eA==",
+            "meta": ""
+          },
+          "self_start": true,
+          "start_paused": false,
+          "vm": {
+            "instructions": []
+          }
+        },
+        "summary": {
+          "info": "Ether / IP / UDP 16.0.0.1:1025 > 48.0.0.1:12 / Raw",
+          "proto": "UDP"
+        }
+      }
+    ],
+    "stream_count": 1,
+    "warnings": []
+  }
+}

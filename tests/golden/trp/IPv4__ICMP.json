@@ -1,0 +1,267 @@
+{
+ "binary": "AAAAAQAAAAAAAgAACABFAAAcAAEAAEABOt8QAAABMAAAAQgA9/8AAAAA",
+ "data": [
+  {
+   "fields": [
+    {
+     "hvalue": "00:00:00:01:00:00",
+     "id": "dst",
+     "length": 6,
+     "offset": 0,
+     "value": "00:00:00:01:00:00"
+    },
+    {
+     "hvalue": "00:00:00:02:00:00",
+     "id": "src",
+     "length": 6,
+     "offset": 6,
+     "value": "00:00:00:02:00:00"
+    },
+    {
+     "hvalue": "IPv4",
+     "id": "type",
+     "length": 2,
+     "offset": 12,
+     "value": 2048
+    }
+   ],
+   "id": "Ether",
+   "offset": 0,
+   "real_id": "Ether",
+   "valid_structure": true
+  },
+  {
+   "fields": [
+    {
+     "hvalue": "4",
+     "id": "version",
+     "length": 0,
+     "offset": 0,
+     "value": 4
+    },
+    {
+     "hvalue": "5",
+     "id": "ihl",
+     "length": 0,
+     "offset": 0,
+     "value": 5
+    },
+    {
+     "hvalue": "0x0",
+     "id": "tos",
+     "length": 1,
+     "offset": 1,
+     "value": 0
+    },
+    {
+     "hvalue": "28",
+     "id": "len",
+     "length": 2,
+     "offset": 2,
+     "value": 28
+    },
+    {
+     "hvalue": "1",
+     "id": "id",
+     "length": 2,
+     "offset": 4,
+     "value": 1
+    },
+    {
+     "hvalue": "",
+     "id": "flags",
+     "length": 0,
+     "offset": 6,
+     "value": 0
+    },
+    {
+     "hvalue": "0",
+     "id": "frag",
+     "length": 0,
+     "offset": 6,
+     "value": 0
+    },
+    {
+     "hvalue": "64",
+     "id": "ttl",
+     "length": 1,
+     "offset": 8,
+     "value": 64
+    },
+    {
+     "hvalue": "icmp",
+     "id": "proto",
+     "length": 1,
+     "offset": 9,
+     "value": 1
+    },
+    {
+     "hvalue": "0x3adf",
+     "id": "chksum",
+     "length": 2,
+     "offset": 10,
+     "value": 15071
+    },
+    {
+     "hvalue": "16.0.0.1",
+     "id": "src",
+     "length": 4,
+     "offset": 12,
+     "value": "16.0.0.1"
+    },
+    {
+     "hvalue": "48.0.0.1",
+     "id": "dst",
+     "length": 4,
+     "offset": 16,
+     "value": "48.0.0.1"
+    },
+    {
+     "hvalue": "[]",
+     "id": "options",
+     "length": 2,
+     "offset": 20,
+     "value": {
+      "expr": "[]",
+      "vtype": "EXPRESSION"
+     }
+    }
+   ],
+   "id": "IP",
+   "offset": 14,
+   "real_id": "IP",
+   "valid_structure": true
+  },
+  {
+   "fields": [
+    {
+     "hvalue": "echo-request",
+     "id": "type",
+     "length": 1,
+     "offset": 0,
+     "value": 8
+    },
+    {
+     "hvalue": 0,
+     "id": "code",
+     "length": 1,
+     "offset": 1,
+     "value": 0
+    },
+    {
+     "hvalue": "0xf7ff",
+     "id": "chksum",
+     "length": 2,
+     "offset": 2,
+     "value": 63487
+    },
+    {
+     "hvalue": "0x0",
+     "id": "id",
+     "length": 2,
+     "offset": 4,
+     "value": 0
+    },
+    {
+     "hvalue": "0x0",
+     "id": "seq",
+     "length": 2,
+     "offset": 6,
+     "value": 0
+    },
+    {
+     "hvalue": "<clock>",
+     "id": "ts_ori",
+     "ignored": true,
+     "length": 4,
+     "offset": 8,
+     "value": "<clock>"
+    },
+    {
+     "hvalue": "<clock>",
+     "id": "ts_rx",
+     "ignored": true,
+     "length": 4,
+     "offset": 8,
+     "value": "<clock>"
+    },
+    {
+     "hvalue": "<clock>",
+     "id": "ts_tx",
+     "ignored": true,
+     "length": 4,
+     "offset": 8,
+     "value": "<clock>"
+    },
+    {
+     "hvalue": "0.0.0.0",
+     "id": "gw",
+     "ignored": true,
+     "length": 4,
+     "offset": 8,
+     "value": "0.0.0.0"
+    },
+    {
+     "hvalue": "0",
+     "id": "ptr",
+     "ignored": true,
+     "length": 1,
+     "offset": 8,
+     "value": 0
+    },
+    {
+     "hvalue": "0",
+     "id": "reserved",
+     "ignored": true,
+     "length": 1,
+     "offset": 8,
+     "value": 0
+    },
+    {
+     "hvalue": "0",
+     "id": "length",
+     "ignored": true,
+     "length": 1,
+     "offset": 8,
+     "value": 0
+    },
+    {
+     "hvalue": "0.0.0.0",
+     "id": "addr_mask",
+     "ignored": true,
+     "length": 4,
+     "offset": 8,
+     "value": "0.0.0.0"
+    },
+    {
+     "hvalue": "0",
+     "id": "nexthopmtu",
+     "ignored": true,
+     "length": 2,
+     "offset": 8,
+     "value": 0
+    },
+    {
+     "hvalue": "0",
+     "id": "unused",
+     "ignored": true,
+     "length": 2,
+     "offset": 8,
+     "value": 0
+    },
+    {
+     "hvalue": "0",
+     "id": "unused",
+     "ignored": true,
+     "length": 4,
+     "offset": 8,
+     "value": 0
+    }
+   ],
+   "id": "ICMP",
+   "offset": 34,
+   "real_id": "ICMP",
+   "valid_structure": true
+  }
+ ]
+}

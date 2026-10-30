@@ -1,0 +1,57 @@
+name: Bug report
+description: Something in trex-web-gui does not work as it should.
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        A security problem does not belong here: report it privately, as SECURITY.md says.
+        A problem in TRex itself belongs upstream, in trex-core's issues.
+  - type: input
+    id: version
+    attributes:
+      label: trex-web-gui version
+      description: The first line `trex-web-gui serve` prints, or the wheel's file name.
+      placeholder: trex-web-gui 1.0.0 for ...
+    validations:
+      required: true
+  - type: input
+    id: trex-version
+    attributes:
+      label: TRex version
+      description: The TRex server's version, and the mode it runs in.
+      placeholder: v3.08, stateless
+    validations:
+      required: true
+  - type: input
+    id: browser
+    attributes:
+      label: Browser
+      description: The browser and its version.
+      placeholder: Firefox 140
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: What you did, step by step, using the UI's own labels.
+      placeholder: |
+        1. On the Control page, select Port 0.
+        2. Click Start.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What happened, and what you expected
+    validations:
+      required: true
+  - type: textarea
+    id: console
+    attributes:
+      label: Console or log line
+      description: >-
+        Any error the browser's developer console or the backend's output shows. Remove the login URL and the
+        token from anything you paste.
+      render: text

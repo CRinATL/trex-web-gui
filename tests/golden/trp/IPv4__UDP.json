@@ -1,0 +1,172 @@
+{
+ "binary": "AAAAAQAAAAAAAgAACABFAAAcAAEAAEAROs8QAAABMAAAAQA1ADUACL9y",
+ "data": [
+  {
+   "fields": [
+    {
+     "hvalue": "00:00:00:01:00:00",
+     "id": "dst",
+     "length": 6,
+     "offset": 0,
+     "value": "00:00:00:01:00:00"
+    },
+    {
+     "hvalue": "00:00:00:02:00:00",
+     "id": "src",
+     "length": 6,
+     "offset": 6,
+     "value": "00:00:00:02:00:00"
+    },
+    {
+     "hvalue": "IPv4",
+     "id": "type",
+     "length": 2,
+     "offset": 12,
+     "value": 2048
+    }
+   ],
+   "id": "Ether",
+   "offset": 0,
+   "real_id": "Ether",
+   "valid_structure": true
+  },
+  {
+   "fields": [
+    {
+     "hvalue": "4",
+     "id": "version",
+     "length": 0,
+     "offset": 0,
+     "value": 4
+    },
+    {
+     "hvalue": "5",
+     "id": "ihl",
+     "length": 0,
+     "offset": 0,
+     "value": 5
+    },
+    {
+     "hvalue": "0x0",
+     "id": "tos",
+     "length": 1,
+     "offset": 1,
+     "value": 0
+    },
+    {
+     "hvalue": "28",
+     "id": "len",
+     "length": 2,
+     "offset": 2,
+     "value": 28
+    },
+    {
+     "hvalue": "1",
+     "id": "id",
+     "length": 2,
+     "offset": 4,
+     "value": 1
+    },
+    {
+     "hvalue": "",
+     "id": "flags",
+     "length": 0,
+     "offset": 6,
+     "value": 0
+    },
+    {
+     "hvalue": "0",
+     "id": "frag",
+     "length": 0,
+     "offset": 6,
+     "value": 0
+    },
+    {
+     "hvalue": "64",
+     "id": "ttl",
+     "length": 1,
+     "offset": 8,
+     "value": 64
+    },
+    {
+     "hvalue": "udp",
+     "id": "proto",
+     "length": 1,
+     "offset": 9,
+     "value": 17
+    },
+    {
+     "hvalue": "0x3acf",
+     "id": "chksum",
+     "length": 2,
+     "offset": 10,
+     "value": 15055
+    },
+    {
+     "hvalue": "16.0.0.1",
+     "id": "src",
+     "length": 4,
+     "offset": 12,
+     "value": "16.0.0.1"
+    },
+    {
+     "hvalue": "48.0.0.1",
+     "id": "dst",
+     "length": 4,
+     "offset": 16,
+     "value": "48.0.0.1"
+    },
+    {
+     "hvalue": "[]",
+     "id": "options",
+     "length": 2,
+     "offset": 20,
+     "value": {
+      "expr": "[]",
+      "vtype": "EXPRESSION"
+     }
+    }
+   ],
+   "id": "IP",
+   "offset": 14,
+   "real_id": "IP",
+   "valid_structure": true
+  },
+  {
+   "fields": [
+    {
+     "hvalue": "53",
+     "id": "sport",
+     "length": 2,
+     "offset": 0,
+     "value": 53
+    },
+    {
+     "hvalue": "53",
+     "id": "dport",
+     "length": 2,
+     "offset": 2,
+     "value": 53
+    },
+    {
+     "hvalue": "8",
+     "id": "len",
+     "length": 2,
+     "offset": 4,
+     "value": 8
+    },
+    {
+     "hvalue": "0xbf72",
+     "id": "chksum",
+     "length": 2,
+     "offset": 6,
+     "value": 49010
+    }
+   ],
+   "id": "UDP",
+   "offset": 34,
+   "real_id": "UDP",
+   "valid_structure": true
+  }
+ ]
+}

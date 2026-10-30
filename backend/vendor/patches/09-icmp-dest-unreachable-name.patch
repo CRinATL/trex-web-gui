@@ -1,0 +1,20 @@
+PINGRecord.__init__ assigned self.ICMP_TYPE_DEST_UNREACBLE, a misspelling of the class constant
+ICMP_TYPE_DEST_UNREACHABLE (ICMP type 3), so an ICMP destination-unreachable reply that reaches the filter
+raised AttributeError instead of being recorded as state 3. __str__ and the class body already use the
+correct spelling. The reply reaches the record only when the outer ICMP id is 0, because the vendored
+filter matches on id (the lookup method, services/trex_service_icmp.py:38-54, keys on the reply's IP dst,
+ICMP id, seq and VLANs; Scapy 2.4.3 leaves the id absent for type 3), so the fix affects that rare path
+only. Unfixed upstream as of the v3.08 pin.
+
+diff -ruN a/trex/common/services/trex_service_icmp.py b/trex/common/services/trex_service_icmp.py
+--- a/trex/common/services/trex_service_icmp.py	2026-10-17 23:05:08.826903473 -0400
++++ b/trex/common/services/trex_service_icmp.py	2026-10-17 23:05:08.827046811 -0400
+@@ -160,7 +160,7 @@
+ 
+             if scapy_pkt['ICMP'].type == self.ICMP_TYPE_DEST_UNREACHABLE:
+                 self.responder_ip = scapy_pkt['IP'].src
+-                self.state        = self.ICMP_TYPE_DEST_UNREACBLE
++                self.state        = self.ICMP_TYPE_DEST_UNREACHABLE
+                 return
+ 
+ 

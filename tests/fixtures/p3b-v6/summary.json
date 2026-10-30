@@ -1,0 +1,1571 @@
+{
+ "recorded_utc": "2026-10-18T21:38:56Z",
+ "port_info": {
+  "0": {
+   "hw_mac": "8e:4e:97:11:bf:a8",
+   "stack": "linux_based",
+   "driver": "net_af_packet"
+  },
+  "1": {
+   "hw_mac": "52:52:18:89:91:ea",
+   "stack": "linux_based",
+   "driver": "net_af_packet"
+  }
+ },
+ "hw_mac_port1": "52:52:18:89:91:ea",
+ "timings": [
+  {
+   "call": "service_on_0",
+   "port": 0,
+   "secs": 0.003,
+   "error": null,
+   "rpcs": 1,
+   "try_again": 0,
+   "wip": 0,
+   "async_polls": 0
+  },
+  {
+   "call": "set_vlan_none",
+   "port": 0,
+   "secs": 0.014,
+   "error": null,
+   "rpcs": 2,
+   "try_again": 0,
+   "wip": 0,
+   "async_polls": 0
+  },
+  {
+   "call": "set_l3_resolvable",
+   "port": 0,
+   "secs": 0.013,
+   "error": null,
+   "rpcs": 2,
+   "try_again": 0,
+   "wip": 0,
+   "async_polls": 0
+  },
+  {
+   "call": "resolve_resolvable",
+   "port": 0,
+   "secs": 0.451,
+   "error": null,
+   "rpcs": 11,
+   "try_again": 0,
+   "wip": 1,
+   "async_polls": 1
+  },
+  {
+   "call": "conf_ipv6_auto",
+   "port": 0,
+   "secs": 0.318,
+   "error": null,
+   "rpcs": 3,
+   "try_again": 0,
+   "wip": 1,
+   "async_polls": 1
+  },
+  {
+   "call": "service_off_0",
+   "port": 0,
+   "secs": 0.003,
+   "error": null,
+   "rpcs": 1,
+   "try_again": 0,
+   "wip": 0,
+   "async_polls": 0
+  },
+  {
+   "call": "service_on_both",
+   "port": 0,
+   "secs": 0.003,
+   "error": null,
+   "rpcs": 2,
+   "try_again": 0,
+   "wip": 0,
+   "async_polls": 0
+  },
+  {
+   "call": "conf_ipv6_auto_1",
+   "port": 1,
+   "secs": 0.316,
+   "error": null,
+   "rpcs": 5,
+   "try_again": 0,
+   "wip": 1,
+   "async_polls": 1
+  },
+  {
+   "call": "conf_ipv6_source_0",
+   "port": 0,
+   "secs": 0.317,
+   "error": null,
+   "rpcs": 5,
+   "try_again": 0,
+   "wip": 1,
+   "async_polls": 1
+  },
+  {
+   "call": "conf_ipv6_source_1",
+   "port": 1,
+   "secs": 0.318,
+   "error": null,
+   "rpcs": 3,
+   "try_again": 0,
+   "wip": 1,
+   "async_polls": 1
+  },
+  {
+   "call": "set_l3_nobody",
+   "port": 0,
+   "secs": 0.351,
+   "error": null,
+   "rpcs": 5,
+   "try_again": 0,
+   "wip": 1,
+   "async_polls": 1
+  },
+  {
+   "call": "resolve_nobody",
+   "port": 0,
+   "secs": 3.037,
+   "error": "TRexError: Could not resolve following ports: [0]",
+   "rpcs": 44,
+   "try_again": 0,
+   "wip": 0,
+   "async_polls": 0
+  },
+  {
+   "call": "set_l3_back",
+   "port": 0,
+   "secs": 0.317,
+   "error": null,
+   "rpcs": 5,
+   "try_again": 0,
+   "wip": 1,
+   "async_polls": 1
+  },
+  {
+   "call": "resolve_back",
+   "port": 0,
+   "secs": 0.541,
+   "error": null,
+   "rpcs": 13,
+   "try_again": 0,
+   "wip": 1,
+   "async_polls": 1
+  },
+  {
+   "call": "set_l2",
+   "port": 0,
+   "secs": 0.316,
+   "error": null,
+   "rpcs": 3,
+   "try_again": 0,
+   "wip": 1,
+   "async_polls": 1
+  },
+  {
+   "call": "set_l3_after_l2",
+   "port": 0,
+   "secs": 0.318,
+   "error": null,
+   "rpcs": 5,
+   "try_again": 0,
+   "wip": 1,
+   "async_polls": 1
+  },
+  {
+   "call": "resolve_after_l2",
+   "port": 0,
+   "secs": 0.545,
+   "error": null,
+   "rpcs": 13,
+   "try_again": 0,
+   "wip": 1,
+   "async_polls": 1
+  },
+  {
+   "call": "set_vlan_none_noop",
+   "port": 0,
+   "secs": 0.013,
+   "error": null,
+   "rpcs": 2,
+   "try_again": 0,
+   "wip": 0,
+   "async_polls": 0
+  },
+  {
+   "call": "resolve_1_after_flush",
+   "port": 1,
+   "secs": 0.453,
+   "error": null,
+   "rpcs": 12,
+   "try_again": 0,
+   "wip": 1,
+   "async_polls": 1
+  },
+  {
+   "call": "scan6",
+   "port": 0,
+   "secs": 3.126,
+   "error": null,
+   "rpcs": 64,
+   "try_again": 0,
+   "wip": 0,
+   "async_polls": 0
+  },
+  {
+   "call": "ping_v4",
+   "port": 0,
+   "secs": 0.206,
+   "error": null,
+   "rpcs": 6,
+   "try_again": 0,
+   "wip": 0,
+   "async_polls": 0
+  },
+  {
+   "call": "ping_v4",
+   "port": 0,
+   "secs": 0.205,
+   "error": null,
+   "rpcs": 6,
+   "try_again": 0,
+   "wip": 0,
+   "async_polls": 0
+  },
+  {
+   "call": "ping_v4",
+   "port": 0,
+   "secs": 0.205,
+   "error": null,
+   "rpcs": 6,
+   "try_again": 0,
+   "wip": 0,
+   "async_polls": 0
+  },
+  {
+   "call": "ping_v6_link_local",
+   "port": 0,
+   "secs": 0.115,
+   "error": null,
+   "rpcs": 9,
+   "try_again": 0,
+   "wip": 0,
+   "async_polls": 0
+  },
+  {
+   "call": "ping_v6_link_local",
+   "port": 0,
+   "secs": 0.119,
+   "error": null,
+   "rpcs": 9,
+   "try_again": 0,
+   "wip": 0,
+   "async_polls": 0
+  },
+  {
+   "call": "ping_v6_link_local",
+   "port": 0,
+   "secs": 0.129,
+   "error": null,
+   "rpcs": 11,
+   "try_again": 0,
+   "wip": 0,
+   "async_polls": 0
+  },
+  {
+   "call": "ping_v6_global",
+   "port": 0,
+   "secs": 0.221,
+   "error": null,
+   "rpcs": 10,
+   "try_again": 0,
+   "wip": 0,
+   "async_polls": 0
+  },
+  {
+   "call": "ping_v6_global",
+   "port": 0,
+   "secs": 0.225,
+   "error": null,
+   "rpcs": 12,
+   "try_again": 0,
+   "wip": 0,
+   "async_polls": 0
+  },
+  {
+   "call": "ping_v6_global",
+   "port": 0,
+   "secs": 0.224,
+   "error": null,
+   "rpcs": 10,
+   "try_again": 0,
+   "wip": 0,
+   "async_polls": 0
+  },
+  {
+   "call": "ping_v4_timeout",
+   "port": 0,
+   "secs": 3.111,
+   "error": null,
+   "rpcs": 45,
+   "try_again": 0,
+   "wip": 0,
+   "async_polls": 0
+  },
+  {
+   "call": "ping_v4_timeout",
+   "port": 0,
+   "secs": 3.111,
+   "error": null,
+   "rpcs": 45,
+   "try_again": 0,
+   "wip": 0,
+   "async_polls": 0
+  },
+  {
+   "call": "ping_v4_timeout",
+   "port": 0,
+   "secs": 3.111,
+   "error": null,
+   "rpcs": 45,
+   "try_again": 0,
+   "wip": 0,
+   "async_polls": 0
+  },
+  {
+   "call": "conf_ipv6_off_0",
+   "port": 0,
+   "secs": 0.013,
+   "error": null,
+   "rpcs": 2,
+   "try_again": 0,
+   "wip": 0,
+   "async_polls": 0
+  },
+  {
+   "call": "conf_ipv6_off_1",
+   "port": 1,
+   "secs": 0.317,
+   "error": null,
+   "rpcs": 5,
+   "try_again": 0,
+   "wip": 1,
+   "async_polls": 1
+  },
+  {
+   "call": "set_vlan_10",
+   "port": 0,
+   "secs": 0.319,
+   "error": null,
+   "rpcs": 5,
+   "try_again": 0,
+   "wip": 1,
+   "async_polls": 1
+  },
+  {
+   "call": "set_vlan_10_20",
+   "port": 0,
+   "secs": 0.316,
+   "error": null,
+   "rpcs": 3,
+   "try_again": 0,
+   "wip": 1,
+   "async_polls": 1
+  },
+  {
+   "call": "set_vlan_none",
+   "port": 0,
+   "secs": 0.319,
+   "error": null,
+   "rpcs": 5,
+   "try_again": 0,
+   "wip": 1,
+   "async_polls": 1
+  },
+  {
+   "call": "resolve_1_after_flush",
+   "port": 1,
+   "secs": 3.023,
+   "error": "TRexError: Could not resolve following ports: [1]",
+   "rpcs": 48,
+   "try_again": 0,
+   "wip": 0,
+   "async_polls": 0
+  },
+  {
+   "call": "service_off_both",
+   "port": 0,
+   "secs": 0.007,
+   "error": null,
+   "rpcs": 2,
+   "try_again": 0,
+   "wip": 0,
+   "async_polls": 0
+  }
+ ],
+ "by_call": {
+  "service_on_0": {
+   "n": 1,
+   "max_secs": 0.003,
+   "try_again": 0,
+   "wip": 0,
+   "async_polls": 0
+  },
+  "set_vlan_none": {
+   "n": 2,
+   "max_secs": 0.319,
+   "try_again": 0,
+   "wip": 1,
+   "async_polls": 1
+  },
+  "set_l3_resolvable": {
+   "n": 1,
+   "max_secs": 0.013,
+   "try_again": 0,
+   "wip": 0,
+   "async_polls": 0
+  },
+  "resolve_resolvable": {
+   "n": 1,
+   "max_secs": 0.451,
+   "try_again": 0,
+   "wip": 1,
+   "async_polls": 1
+  },
+  "conf_ipv6_auto": {
+   "n": 1,
+   "max_secs": 0.318,
+   "try_again": 0,
+   "wip": 1,
+   "async_polls": 1
+  },
+  "service_off_0": {
+   "n": 1,
+   "max_secs": 0.003,
+   "try_again": 0,
+   "wip": 0,
+   "async_polls": 0
+  },
+  "service_on_both": {
+   "n": 1,
+   "max_secs": 0.003,
+   "try_again": 0,
+   "wip": 0,
+   "async_polls": 0
+  },
+  "conf_ipv6_auto_1": {
+   "n": 1,
+   "max_secs": 0.316,
+   "try_again": 0,
+   "wip": 1,
+   "async_polls": 1
+  },
+  "conf_ipv6_source_0": {
+   "n": 1,
+   "max_secs": 0.317,
+   "try_again": 0,
+   "wip": 1,
+   "async_polls": 1
+  },
+  "conf_ipv6_source_1": {
+   "n": 1,
+   "max_secs": 0.318,
+   "try_again": 0,
+   "wip": 1,
+   "async_polls": 1
+  },
+  "set_l3_nobody": {
+   "n": 1,
+   "max_secs": 0.351,
+   "try_again": 0,
+   "wip": 1,
+   "async_polls": 1
+  },
+  "resolve_nobody": {
+   "n": 1,
+   "max_secs": 3.037,
+   "try_again": 0,
+   "wip": 0,
+   "async_polls": 0
+  },
+  "set_l3_back": {
+   "n": 1,
+   "max_secs": 0.317,
+   "try_again": 0,
+   "wip": 1,
+   "async_polls": 1
+  },
+  "resolve_back": {
+   "n": 1,
+   "max_secs": 0.541,
+   "try_again": 0,
+   "wip": 1,
+   "async_polls": 1
+  },
+  "set_l2": {
+   "n": 1,
+   "max_secs": 0.316,
+   "try_again": 0,
+   "wip": 1,
+   "async_polls": 1
+  },
+  "set_l3_after_l2": {
+   "n": 1,
+   "max_secs": 0.318,
+   "try_again": 0,
+   "wip": 1,
+   "async_polls": 1
+  },
+  "resolve_after_l2": {
+   "n": 1,
+   "max_secs": 0.545,
+   "try_again": 0,
+   "wip": 1,
+   "async_polls": 1
+  },
+  "set_vlan_none_noop": {
+   "n": 1,
+   "max_secs": 0.013,
+   "try_again": 0,
+   "wip": 0,
+   "async_polls": 0
+  },
+  "resolve_1_after_flush": {
+   "n": 2,
+   "max_secs": 3.023,
+   "try_again": 0,
+   "wip": 1,
+   "async_polls": 1
+  },
+  "scan6": {
+   "n": 1,
+   "max_secs": 3.126,
+   "try_again": 0,
+   "wip": 0,
+   "async_polls": 0
+  },
+  "ping_v4": {
+   "n": 3,
+   "max_secs": 0.206,
+   "try_again": 0,
+   "wip": 0,
+   "async_polls": 0
+  },
+  "ping_v6_link_local": {
+   "n": 3,
+   "max_secs": 0.129,
+   "try_again": 0,
+   "wip": 0,
+   "async_polls": 0
+  },
+  "ping_v6_global": {
+   "n": 3,
+   "max_secs": 0.225,
+   "try_again": 0,
+   "wip": 0,
+   "async_polls": 0
+  },
+  "ping_v4_timeout": {
+   "n": 3,
+   "max_secs": 3.111,
+   "try_again": 0,
+   "wip": 0,
+   "async_polls": 0
+  },
+  "conf_ipv6_off_0": {
+   "n": 1,
+   "max_secs": 0.013,
+   "try_again": 0,
+   "wip": 0,
+   "async_polls": 0
+  },
+  "conf_ipv6_off_1": {
+   "n": 1,
+   "max_secs": 0.317,
+   "try_again": 0,
+   "wip": 1,
+   "async_polls": 1
+  },
+  "set_vlan_10": {
+   "n": 1,
+   "max_secs": 0.319,
+   "try_again": 0,
+   "wip": 1,
+   "async_polls": 1
+  },
+  "set_vlan_10_20": {
+   "n": 1,
+   "max_secs": 0.316,
+   "try_again": 0,
+   "wip": 1,
+   "async_polls": 1
+  },
+  "service_off_both": {
+   "n": 1,
+   "max_secs": 0.007,
+   "try_again": 0,
+   "wip": 0,
+   "async_polls": 0
+  }
+ },
+ "async_by_method": {
+  "set_l3": {
+   "try_again": 0,
+   "wip": 10,
+   "rows": 10
+  },
+  "get_async_results": {
+   "try_again": 0,
+   "wip": 0,
+   "rows": 19
+  },
+  "conf_ipv6": {
+   "try_again": 0,
+   "wip": 5,
+   "rows": 5
+  },
+  "set_l2": {
+   "try_again": 0,
+   "wip": 1,
+   "rows": 1
+  },
+  "set_vlan": {
+   "try_again": 0,
+   "wip": 3,
+   "rows": 3
+  }
+ },
+ "slowest_call": {
+  "call": "scan6",
+  "port": 0,
+  "secs": 3.126,
+  "error": null,
+  "rpcs": 64,
+  "try_again": 0,
+  "wip": 0,
+  "async_polls": 0
+ },
+ "steps": [
+  {
+   "step": "service_on_0",
+   "port": 0,
+   "error": null,
+   "oracle": {
+    "layer_cfg": {
+     "ether": {
+      "dst": "52:52:18:89:91:ea",
+      "src": "8e:4e:97:11:bf:a8",
+      "state": "configured"
+     },
+     "ipv4": {
+      "dst": "2.2.2.2",
+      "src": "1.1.1.1",
+      "state": "resolved"
+     },
+     "ipv6": {
+      "enabled": false
+     }
+    },
+    "vlan": [],
+    "service": true
+   }
+  },
+  {
+   "step": "set_vlan_none",
+   "port": 0,
+   "error": null,
+   "oracle": {
+    "layer_cfg": {
+     "ether": {
+      "dst": "52:52:18:89:91:ea",
+      "src": "8e:4e:97:11:bf:a8",
+      "state": "configured"
+     },
+     "ipv4": {
+      "dst": "2.2.2.2",
+      "src": "1.1.1.1",
+      "state": "resolved"
+     },
+     "ipv6": {
+      "enabled": false
+     }
+    },
+    "vlan": [],
+    "service": true
+   }
+  },
+  {
+   "step": "set_l3_resolvable",
+   "port": 0,
+   "error": null,
+   "oracle": {
+    "layer_cfg": {
+     "ether": {
+      "dst": "52:52:18:89:91:ea",
+      "src": "8e:4e:97:11:bf:a8",
+      "state": "unconfigured"
+     },
+     "ipv4": {
+      "dst": "2.2.2.2",
+      "src": "1.1.1.1",
+      "state": "unresolved"
+     },
+     "ipv6": {
+      "enabled": false
+     }
+    },
+    "vlan": [],
+    "service": true
+   }
+  },
+  {
+   "step": "resolve_resolvable",
+   "port": 0,
+   "error": null,
+   "oracle": {
+    "layer_cfg": {
+     "ether": {
+      "dst": "52:52:18:89:91:ea",
+      "src": "8e:4e:97:11:bf:a8",
+      "state": "configured"
+     },
+     "ipv4": {
+      "dst": "2.2.2.2",
+      "src": "1.1.1.1",
+      "state": "resolved"
+     },
+     "ipv6": {
+      "enabled": false
+     }
+    },
+    "vlan": [],
+    "service": true
+   }
+  },
+  {
+   "step": "conf_ipv6_auto",
+   "port": 0,
+   "error": null,
+   "oracle": {
+    "layer_cfg": {
+     "ether": {
+      "dst": "52:52:18:89:91:ea",
+      "src": "8e:4e:97:11:bf:a8",
+      "state": "configured"
+     },
+     "ipv4": {
+      "dst": "2.2.2.2",
+      "src": "1.1.1.1",
+      "state": "resolved"
+     },
+     "ipv6": {
+      "enabled": true,
+      "src": ""
+     }
+    },
+    "vlan": [],
+    "service": true
+   }
+  },
+  {
+   "step": "service_off_0",
+   "port": 0,
+   "error": null,
+   "oracle": {
+    "layer_cfg": {
+     "ether": {
+      "dst": "52:52:18:89:91:ea",
+      "src": "8e:4e:97:11:bf:a8",
+      "state": "configured"
+     },
+     "ipv4": {
+      "dst": "2.2.2.2",
+      "src": "1.1.1.1",
+      "state": "resolved"
+     },
+     "ipv6": {
+      "enabled": true,
+      "src": ""
+     }
+    },
+    "vlan": [],
+    "service": false
+   }
+  },
+  {
+   "step": "service_on_both",
+   "port": 0,
+   "error": null,
+   "oracle": {
+    "layer_cfg": {
+     "ether": {
+      "dst": "52:52:18:89:91:ea",
+      "src": "8e:4e:97:11:bf:a8",
+      "state": "configured"
+     },
+     "ipv4": {
+      "dst": "2.2.2.2",
+      "src": "1.1.1.1",
+      "state": "resolved"
+     },
+     "ipv6": {
+      "enabled": true,
+      "src": ""
+     }
+    },
+    "vlan": [],
+    "service": true
+   }
+  },
+  {
+   "step": "conf_ipv6_auto_1",
+   "port": 1,
+   "error": null,
+   "oracle": {
+    "layer_cfg": {
+     "ether": {
+      "dst": "8e:4e:97:11:bf:a8",
+      "src": "52:52:18:89:91:ea",
+      "state": "configured"
+     },
+     "ipv4": {
+      "dst": "1.1.1.1",
+      "src": "2.2.2.2",
+      "state": "resolved"
+     },
+     "ipv6": {
+      "enabled": true,
+      "src": ""
+     }
+    },
+    "vlan": [],
+    "service": true
+   }
+  },
+  {
+   "step": "conf_ipv6_source_0",
+   "port": 0,
+   "error": null,
+   "oracle": {
+    "layer_cfg": {
+     "ether": {
+      "dst": "52:52:18:89:91:ea",
+      "src": "8e:4e:97:11:bf:a8",
+      "state": "configured"
+     },
+     "ipv4": {
+      "dst": "2.2.2.2",
+      "src": "1.1.1.1",
+      "state": "resolved"
+     },
+     "ipv6": {
+      "enabled": true,
+      "src": "2001:db8::1"
+     }
+    },
+    "vlan": [],
+    "service": true
+   }
+  },
+  {
+   "step": "conf_ipv6_source_1",
+   "port": 1,
+   "error": null,
+   "oracle": {
+    "layer_cfg": {
+     "ether": {
+      "dst": "8e:4e:97:11:bf:a8",
+      "src": "52:52:18:89:91:ea",
+      "state": "configured"
+     },
+     "ipv4": {
+      "dst": "1.1.1.1",
+      "src": "2.2.2.2",
+      "state": "resolved"
+     },
+     "ipv6": {
+      "enabled": true,
+      "src": "2001:db8::2"
+     }
+    },
+    "vlan": [],
+    "service": true
+   }
+  },
+  {
+   "step": "set_l3_nobody",
+   "port": 0,
+   "error": null,
+   "oracle": {
+    "layer_cfg": {
+     "ether": {
+      "dst": "52:52:18:89:91:ea",
+      "src": "8e:4e:97:11:bf:a8",
+      "state": "unconfigured"
+     },
+     "ipv4": {
+      "dst": "1.1.1.99",
+      "src": "1.1.1.1",
+      "state": "unresolved"
+     },
+     "ipv6": {
+      "enabled": true,
+      "src": "2001:db8::1"
+     }
+    },
+    "vlan": [],
+    "service": true
+   }
+  },
+  {
+   "step": "resolve_nobody",
+   "port": 0,
+   "error": "TRexError: Could not resolve following ports: [0]",
+   "oracle": {
+    "layer_cfg": {
+     "ether": {
+      "dst": "52:52:18:89:91:ea",
+      "src": "8e:4e:97:11:bf:a8",
+      "state": "unconfigured"
+     },
+     "ipv4": {
+      "dst": "1.1.1.99",
+      "src": "1.1.1.1",
+      "state": "unresolved"
+     },
+     "ipv6": {
+      "enabled": true,
+      "src": "2001:db8::1"
+     }
+    },
+    "vlan": [],
+    "service": true
+   }
+  },
+  {
+   "step": "set_l3_back",
+   "port": 0,
+   "error": null,
+   "oracle": {
+    "layer_cfg": {
+     "ether": {
+      "dst": "52:52:18:89:91:ea",
+      "src": "8e:4e:97:11:bf:a8",
+      "state": "unconfigured"
+     },
+     "ipv4": {
+      "dst": "2.2.2.2",
+      "src": "1.1.1.1",
+      "state": "unresolved"
+     },
+     "ipv6": {
+      "enabled": true,
+      "src": "2001:db8::1"
+     }
+    },
+    "vlan": [],
+    "service": true
+   }
+  },
+  {
+   "step": "resolve_back",
+   "port": 0,
+   "error": null,
+   "oracle": {
+    "layer_cfg": {
+     "ether": {
+      "dst": "52:52:18:89:91:ea",
+      "src": "8e:4e:97:11:bf:a8",
+      "state": "configured"
+     },
+     "ipv4": {
+      "dst": "2.2.2.2",
+      "src": "1.1.1.1",
+      "state": "resolved"
+     },
+     "ipv6": {
+      "enabled": true,
+      "src": "2001:db8::1"
+     }
+    },
+    "vlan": [],
+    "service": true
+   }
+  },
+  {
+   "step": "set_l2",
+   "port": 0,
+   "error": null,
+   "oracle": {
+    "layer_cfg": {
+     "ether": {
+      "dst": "52:52:18:89:91:ea",
+      "src": "8e:4e:97:11:bf:a8",
+      "state": "configured"
+     },
+     "ipv4": {
+      "state": "none"
+     },
+     "ipv6": {
+      "enabled": false
+     }
+    },
+    "vlan": [],
+    "service": true
+   }
+  },
+  {
+   "step": "set_l3_after_l2",
+   "port": 0,
+   "error": null,
+   "oracle": {
+    "layer_cfg": {
+     "ether": {
+      "dst": "52:52:18:89:91:ea",
+      "src": "8e:4e:97:11:bf:a8",
+      "state": "unconfigured"
+     },
+     "ipv4": {
+      "dst": "2.2.2.2",
+      "src": "1.1.1.1",
+      "state": "unresolved"
+     },
+     "ipv6": {
+      "enabled": false
+     }
+    },
+    "vlan": [],
+    "service": true
+   }
+  },
+  {
+   "step": "resolve_after_l2",
+   "port": 0,
+   "error": null,
+   "oracle": {
+    "layer_cfg": {
+     "ether": {
+      "dst": "52:52:18:89:91:ea",
+      "src": "8e:4e:97:11:bf:a8",
+      "state": "configured"
+     },
+     "ipv4": {
+      "dst": "2.2.2.2",
+      "src": "1.1.1.1",
+      "state": "resolved"
+     },
+     "ipv6": {
+      "enabled": false
+     }
+    },
+    "vlan": [],
+    "service": true
+   }
+  },
+  {
+   "step": "set_vlan_none_noop",
+   "port": 0,
+   "error": null,
+   "oracle": {
+    "layer_cfg": {
+     "ether": {
+      "dst": "52:52:18:89:91:ea",
+      "src": "8e:4e:97:11:bf:a8",
+      "state": "configured"
+     },
+     "ipv4": {
+      "dst": "2.2.2.2",
+      "src": "1.1.1.1",
+      "state": "resolved"
+     },
+     "ipv6": {
+      "enabled": false
+     }
+    },
+    "vlan": [],
+    "service": true
+   }
+  },
+  {
+   "step": "conf_ipv6_off_0",
+   "port": 0,
+   "error": null,
+   "oracle": {
+    "layer_cfg": {
+     "ether": {
+      "dst": "52:52:18:89:91:ea",
+      "src": "8e:4e:97:11:bf:a8",
+      "state": "configured"
+     },
+     "ipv4": {
+      "dst": "2.2.2.2",
+      "src": "1.1.1.1",
+      "state": "resolved"
+     },
+     "ipv6": {
+      "enabled": false
+     }
+    },
+    "vlan": [],
+    "service": true
+   }
+  },
+  {
+   "step": "conf_ipv6_off_1",
+   "port": 1,
+   "error": null,
+   "oracle": {
+    "layer_cfg": {
+     "ether": {
+      "dst": "8e:4e:97:11:bf:a8",
+      "src": "52:52:18:89:91:ea",
+      "state": "configured"
+     },
+     "ipv4": {
+      "dst": "1.1.1.1",
+      "src": "2.2.2.2",
+      "state": "resolved"
+     },
+     "ipv6": {
+      "enabled": false
+     }
+    },
+    "vlan": [],
+    "service": true
+   }
+  },
+  {
+   "step": "set_vlan_10",
+   "port": 0,
+   "error": null,
+   "oracle": {
+    "layer_cfg": {
+     "ether": {
+      "dst": "52:52:18:89:91:ea",
+      "src": "8e:4e:97:11:bf:a8",
+      "state": "configured"
+     },
+     "ipv4": {
+      "dst": "2.2.2.2",
+      "src": "1.1.1.1",
+      "state": "resolved"
+     },
+     "ipv6": {
+      "enabled": false
+     }
+    },
+    "vlan": [
+     10
+    ],
+    "service": true
+   }
+  },
+  {
+   "step": "set_vlan_10_20",
+   "port": 0,
+   "error": null,
+   "oracle": {
+    "layer_cfg": {
+     "ether": {
+      "dst": "52:52:18:89:91:ea",
+      "src": "8e:4e:97:11:bf:a8",
+      "state": "configured"
+     },
+     "ipv4": {
+      "dst": "2.2.2.2",
+      "src": "1.1.1.1",
+      "state": "resolved"
+     },
+     "ipv6": {
+      "enabled": false
+     }
+    },
+    "vlan": [
+     10,
+     20
+    ],
+    "service": true
+   }
+  },
+  {
+   "step": "set_vlan_none",
+   "port": 0,
+   "error": null,
+   "oracle": {
+    "layer_cfg": {
+     "ether": {
+      "dst": "52:52:18:89:91:ea",
+      "src": "8e:4e:97:11:bf:a8",
+      "state": "configured"
+     },
+     "ipv4": {
+      "dst": "2.2.2.2",
+      "src": "1.1.1.1",
+      "state": "resolved"
+     },
+     "ipv6": {
+      "enabled": false
+     }
+    },
+    "vlan": [],
+    "service": true
+   }
+  },
+  {
+   "step": "service_off_both",
+   "port": 0,
+   "error": null,
+   "oracle": {
+    "layer_cfg": {
+     "ether": {
+      "dst": "52:52:18:89:91:ea",
+      "src": "8e:4e:97:11:bf:a8",
+      "state": "configured"
+     },
+     "ipv4": {
+      "dst": "2.2.2.2",
+      "src": "1.1.1.1",
+      "state": "resolved"
+     },
+     "ipv6": {
+      "enabled": false
+     }
+    },
+    "vlan": [],
+    "service": false
+   }
+  }
+ ],
+ "pings": {
+  "v4": {
+   "dst": "2.2.2.2",
+   "runs": [
+    {
+     "error": null,
+     "records": [
+      {
+       "text": "Reply from 2.2.2.2: bytes=64, time=9.13ms, TTL=64",
+       "status": "success",
+       "rtt": 9.130701762455118
+      }
+     ],
+     "secs": 0.206
+    },
+    {
+     "error": null,
+     "records": [
+      {
+       "text": "Reply from 2.2.2.2: bytes=64, time=2.81ms, TTL=64",
+       "status": "success",
+       "rtt": 2.813313519173022
+      }
+     ],
+     "secs": 0.205
+    },
+    {
+     "error": null,
+     "records": [
+      {
+       "text": "Reply from 2.2.2.2: bytes=64, time=3.98ms, TTL=64",
+       "status": "success",
+       "rtt": 3.9790721238848192
+      }
+     ],
+     "secs": 0.205
+    }
+   ]
+  },
+  "v6_link_local": {
+   "dst": "fe80::5052:18ff:fe89:91ea",
+   "runs": [
+    {
+     "error": null,
+     "records": [
+      {
+       "text": "Reply from fe80::5052:18ff:fe89:91ea: bytes=64, time=1.57ms, hlim=64",
+       "status": "success",
+       "rtt": 1.5667714278340128
+      }
+     ],
+     "secs": 0.115
+    },
+    {
+     "error": null,
+     "records": [
+      {
+       "text": "Reply from fe80::5052:18ff:fe89:91ea: bytes=64, time=2.59ms, hlim=64",
+       "status": "success",
+       "rtt": 2.586274228772112
+      }
+     ],
+     "secs": 0.119
+    },
+    {
+     "error": null,
+     "records": [
+      {
+       "text": "Reply from fe80::5052:18ff:fe89:91ea: bytes=64, time=1.85ms, hlim=64",
+       "status": "success",
+       "rtt": 1.8493166902100455
+      }
+     ],
+     "secs": 0.129
+    }
+   ]
+  },
+  "v6_global": {
+   "dst": "2001:db8::2",
+   "runs": [
+    {
+     "error": null,
+     "records": [
+      {
+       "text": "Reply from 2001:db8::2: bytes=64, time=5.02ms, hlim=64",
+       "status": "success",
+       "rtt": 5.02144712608299
+      }
+     ],
+     "secs": 0.221
+    },
+    {
+     "error": null,
+     "records": [
+      {
+       "text": "Reply from 2001:db8::2: bytes=64, time=4.34ms, hlim=64",
+       "status": "success",
+       "rtt": 4.33900159596412
+      }
+     ],
+     "secs": 0.225
+    },
+    {
+     "error": null,
+     "records": [
+      {
+       "text": "Reply from 2001:db8::2: bytes=64, time=6.08ms, hlim=64",
+       "status": "success",
+       "rtt": 6.075925975819629
+      }
+     ],
+     "secs": 0.224
+    }
+   ]
+  },
+  "v4_timeout": {
+   "dst": "1.1.1.99",
+   "runs": [
+    {
+     "error": null,
+     "records": [
+      {
+       "text": "Request timed out.",
+       "status": "timeout",
+       "rtt": null
+      }
+     ],
+     "secs": 3.111
+    },
+    {
+     "error": null,
+     "records": [
+      {
+       "text": "Request timed out.",
+       "status": "timeout",
+       "rtt": null
+      }
+     ],
+     "secs": 3.111
+    },
+    {
+     "error": null,
+     "records": [
+      {
+       "text": "Request timed out.",
+       "status": "timeout",
+       "rtt": null
+      }
+     ],
+     "secs": 3.111
+    }
+   ]
+  }
+ },
+ "final_state": {
+  "0": {
+   "layer_cfg": {
+    "ether": {
+     "dst": "52:52:18:89:91:ea",
+     "src": "8e:4e:97:11:bf:a8",
+     "state": "configured"
+    },
+    "ipv4": {
+     "dst": "2.2.2.2",
+     "src": "1.1.1.1",
+     "state": "resolved"
+    },
+    "ipv6": {
+     "enabled": false
+    }
+   },
+   "vlan": [],
+   "service": false
+  },
+  "1": {
+   "layer_cfg": {
+    "ether": {
+     "dst": "8e:4e:97:11:bf:a8",
+     "src": "52:52:18:89:91:ea",
+     "state": "unconfigured"
+    },
+    "ipv4": {
+     "dst": "1.1.1.1",
+     "src": "2.2.2.2",
+     "state": "unresolved"
+    },
+    "ipv6": {
+     "enabled": false
+    }
+   },
+   "vlan": [],
+   "service": false
+  }
+ },
+ "start_state": {
+  "0": {
+   "layer_cfg": {
+    "ether": {
+     "dst": "52:52:18:89:91:ea",
+     "src": "8e:4e:97:11:bf:a8",
+     "state": "configured"
+    },
+    "ipv4": {
+     "dst": "2.2.2.2",
+     "src": "1.1.1.1",
+     "state": "resolved"
+    },
+    "ipv6": {
+     "enabled": false
+    }
+   },
+   "vlan": [],
+   "service": false
+  },
+  "1": {
+   "layer_cfg": {
+    "ether": {
+     "dst": "8e:4e:97:11:bf:a8",
+     "src": "52:52:18:89:91:ea",
+     "state": "configured"
+    },
+    "ipv4": {
+     "dst": "1.1.1.1",
+     "src": "2.2.2.2",
+     "state": "resolved"
+    },
+    "ipv6": {
+     "enabled": false
+    }
+   },
+   "vlan": [],
+   "service": false
+  }
+ },
+ "ipv6_auto_layer_cfg": {
+  "ether": {
+   "dst": "52:52:18:89:91:ea",
+   "src": "8e:4e:97:11:bf:a8",
+   "state": "configured"
+  },
+  "ipv4": {
+   "dst": "2.2.2.2",
+   "src": "1.1.1.1",
+   "state": "resolved"
+  },
+  "ipv6": {
+   "enabled": true,
+   "src": ""
+  }
+ },
+ "ipv6_source_layer_cfg": {
+  "0": {
+   "ether": {
+    "dst": "52:52:18:89:91:ea",
+    "src": "8e:4e:97:11:bf:a8",
+    "state": "configured"
+   },
+   "ipv4": {
+    "dst": "2.2.2.2",
+    "src": "1.1.1.1",
+    "state": "resolved"
+   },
+   "ipv6": {
+    "enabled": true,
+    "src": "2001:db8::1"
+   }
+  },
+  "1": {
+   "ether": {
+    "dst": "8e:4e:97:11:bf:a8",
+    "src": "52:52:18:89:91:ea",
+    "state": "configured"
+   },
+   "ipv4": {
+    "dst": "1.1.1.1",
+    "src": "2.2.2.2",
+    "state": "resolved"
+   },
+   "ipv6": {
+    "enabled": true,
+    "src": "2001:db8::2"
+   }
+  }
+ },
+ "port1_resolves_after_noop_vlan": {
+  "flush_rc": 0,
+  "flush_stderr": "",
+  "resolves": true,
+  "error": null
+ },
+ "scan": {
+  "raw": {
+   "0": [
+    {
+     "type": "Host",
+     "mac": "52:52:18:89:91:ea",
+     "ipv6": "fe80::5052:18ff:fe89:91ea"
+    }
+   ]
+  },
+  "error": null,
+  "port1_entries": [
+   {
+    "type": "Host",
+    "mac": "52:52:18:89:91:ea",
+    "ipv6": "fe80::5052:18ff:fe89:91ea"
+   }
+  ]
+ },
+ "ipv6_off_layer_cfg": {
+  "ether": {
+   "dst": "8e:4e:97:11:bf:a8",
+   "src": "52:52:18:89:91:ea",
+   "state": "configured"
+  },
+  "ipv4": {
+   "dst": "1.1.1.1",
+   "src": "2.2.2.2",
+   "state": "resolved"
+  },
+  "ipv6": {
+   "enabled": false
+  }
+ },
+ "port1_resolves_after_vlan_cycle": {
+  "flush_rc": 0,
+  "flush_stderr": "",
+  "resolves": false,
+  "error": "TRexError: Could not resolve following ports: [1]"
+ }
+}

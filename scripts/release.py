@@ -1,0 +1,615 @@
+"""Release gate (P6, D10): `release.py check rc|rc<N>|final [--dry-run]`, `release.py build final`,
+`release.py publish rc|rc<N>|final [--publish-draft]` and `release.py guard`.
+
+`check` checks the preconditions, runs the gate chain (each step logged to
+dist/release-<target>-YYYY-MM-DD-HHMMSSZ.log), records the pass in dist/release-<target>-passed.json and
+PRINTS the push, tag and release commands. It never runs `git push`, `git tag` or `gh` (canon:WRK-3) and
+writes nothing outside dist/.
+
+`publish` is those commands, run only when the person runs it (make release-rc-publish, make release-publish;
+nothing else calls it): for the commit a passing `check` recorded it pushes main if needed, tags, pushes the
+tag, creates the GitHub release and downloads the released wheel to compare its sha256 with the built one.
+Each step reads GitHub's state first and is skipped when already done, a GitHub 5xx or dropped connection is
+retried with backoff, and a failed write is re-read before anything else (GitHub can answer 500 and keep the
+change), so a rerun resumes where a failure stopped. It never replaces a tag or a release that differs; it
+refuses.
+
+v1.0.0 is published from the public clone (F1), which has no records, so gate 2's `check final` cannot run
+there: `build final` (make release-build) runs `make wheel` and `make install-smoke` in that tree and records
+the wheel, and `publish final` refuses any tree holding the records. Its tag is signed (`git tag -s`, checked
+with `git verify-tag` against ~/.config/git/allowed_signers) and its release is made as a draft: publish
+verifies the draft's wheel and stops for the person to look at the draft; `--publish-draft` (make
+release-publish PUBLISH_DRAFT=1) publishes it and verifies the wheel again.
+
+Run it as `uv run --project backend python -I -B scripts/release.py ...` (make release-rc, make release). Exit
+codes: 0 releasable (published, for publish), 1 a precondition or a step failed, 3 the real tier was skipped
+(RELEASE_REAL=skip)."""
+import argparse
+import datetime
+import hashlib
+import json
+import os
+import re
+import subprocess
+import sys
+import time
+import tomllib
+from collections.abc import Callable, Mapping
+from dataclasses import dataclass
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parent.parent
+GUARDED = ("PLAN.md", "DEFERRED.md")
+LEDGER_GLOB = ".superpowers/sdd/*/progress.md"
+SKIPPED_EXIT = 3
+
+
+@dataclass(frozen=True)
+class Target:
+    """One release gate: the version in pyproject, the git tag, the notes file and the release kind."""
+
+    name: str
+    version: str
+    tag: str
+    notes: str
+    prerelease: bool
+
+
+FINAL = Target("final", "1.0.0", "v1.0.0", "docs/releases/v1.0.0.md", False)
+RC_NAME = re.compile(r"rc([1-9]\d*)")
+
+
+def rc_target(n: int) -> Target:
+    """Release candidate n of 1.0.0: version 1.0.0rc<n>, tag v1.0.0-rc<n>, its own notes file."""
+    return Target(f"rc{n}", f"1.0.0rc{n}", f"v1.0.0-rc{n}", f"docs/releases/v1.0.0-rc{n}.md", True)
+
+
+def resolve_target(name: str, pyproject_text: str) -> Target | str:
+    """The Target for `final`, `rc<N>`, or `rc` (the candidate pyproject's version names, so make release-rc
+    needs no edit per candidate); a str says why there is none."""
+    if name == "final":
+        return FINAL
+    if m := RC_NAME.fullmatch(name):
+        return rc_target(int(m.group(1)))
+    if name != "rc":
+        return f"unknown target {name!r}: rc, rc<N> or final"
+    try:
+        version = tomllib.loads(pyproject_text).get("project", {}).get("version")
+    except tomllib.TOMLDecodeError as e:
+        return f"backend/pyproject.toml is not valid TOML: {e}"
+    m = re.fullmatch(r"1\.0\.0rc([1-9]\d*)", version) if isinstance(version, str) else None
+    if m is None:
+        return f"backend/pyproject.toml version is {version!r}, not a 1.0.0 release candidate"
+    return rc_target(int(m.group(1)))
+USE_LOG = "docs/releases/v1.0.0-rc1-use.md"
+DEFERRED = "DEFERRED.md"
+REQUIRED_SECTIONS = ("## What is in", "## Install", "## Supported", "## Known limitations", "## Deviations",
+                     "## Links")
+RC_SECTION = "## What to record during the week"   # every candidate says what its users log
+PLACEHOLDER = "TBD (Task 9)"
+
+VAR_TMP = re.compile(r"/var/tmp(?:/[^\s`'\"()\[\]<>,;|]*)?")
+VM_WORK_DIR = re.compile(r"^/var/tmp/trex-vm(?:-[^/]+)?(?:/|$)")
+COMMITTED = re.compile(r"\(committed: ([^)]+)\)")
+
+
+def wheel_name(version: str) -> str:
+    """The wheel file name hatchling gives a pure-Python build of this version."""
+    return f"trex_web_gui-{version}-py3-none-any.whl"
+
+
+def _exempt(path: str) -> bool:
+    """True for the bare /var/tmp and anything in a VM work directory (D5): configuration, not evidence."""
+    return path == "/var/tmp" or VM_WORK_DIR.match(path) is not None
+
+
+def _committed_ok(path: str, tracked: set[str]) -> bool:
+    """True when path is a tracked file or the prefix of tracked files (a tracked directory)."""
+    path = path.strip().rstrip("/")
+    return path in tracked or any(t.startswith(path + "/") for t in tracked)
+
+
+def guard_problems(texts: dict[str, str], tracked: set[str]) -> list[str]:
+    """One problem per /var/tmp mention that is neither exempt, nor on a line marked `(aged out`, nor on a
+    line naming a tracked `(committed: <path>)`. Texts are keyed by file name; lines count from 1."""
+    problems = []
+    for name, text in texts.items():
+        for n, line in enumerate(text.splitlines(), 1):
+            mentions = [m.rstrip(".:") for m in VAR_TMP.findall(line)]
+            mentions = [m for m in mentions if not _exempt(m)]
+            if not mentions or "(aged out" in line:
+                continue
+            if any(_committed_ok(p, tracked) for p in COMMITTED.findall(line)):
+                continue
+            hint = 'has no committed copy (add "(committed: <path>)" or "(aged out; …)")'
+            problems += [f"{name}:{n}: {m} {hint}" for m in mentions]
+    return problems
+
+
+def version_problems(pyproject_text: str, target: Target) -> list[str]:
+    """The pyproject version must be the target's."""
+    try:
+        version = tomllib.loads(pyproject_text).get("project", {}).get("version")
+    except tomllib.TOMLDecodeError as e:
+        return [f"backend/pyproject.toml is not valid TOML: {e}"]
+    if version != target.version:
+        return [f"backend/pyproject.toml version is {version!r}; {target.name} needs {target.version!r}"]
+    return []
+
+
+def notes_problems(text: str | None, target: Target) -> list[str]:
+    """The notes file must exist, hold every required section, and carry no unfilled placeholder."""
+    if text is None:
+        return [f"{target.notes} is missing"]
+    sections = REQUIRED_SECTIONS + ((RC_SECTION,) if target.prerelease else ())
+    lines = text.splitlines()
+    problems = [f"{target.notes} lacks the section {s!r}" for s in sections
+                if not any(ln.startswith(s) for ln in lines)]
+    if PLACEHOLDER in text:
+        problems.append(f"{target.notes} still holds {PLACEHOLDER!r}")
+    return problems
+
+
+def rc1_open_rows(deferred_text: str) -> list[str]:
+    """`RC1-<n>: <status>` for each register row whose status does not start `fixed` (which covers
+    `fixed earlier`), `recorded` or `wontfix`."""
+    open_rows = []
+    for line in deferred_text.splitlines():
+        cells = [c.strip() for c in re.split(r"(?<!\\)\|", line)]
+        if len(cells) < 4 or not re.fullmatch(r"RC1-\d+", cells[1]):
+            continue
+        status = cells[-2]
+        if not status.startswith(("fixed", "recorded", "wontfix")):
+            open_rows.append(f"{cells[1]}: {status}")
+    return open_rows
+
+
+def use_log_problems(text: str | None) -> list[str]:
+    """The rc1 week's use log must exist and hold at least one line starting with a date."""
+    if text is None:
+        return [f"{USE_LOG} is missing"]
+    if not re.search(r"^\d{4}-\d{2}-\d{2}", text, re.M):
+        return [f"{USE_LOG} has no line starting with a date (YYYY-MM-DD)"]
+    return []
+
+
+def steps(target: Target) -> list[list[str]]:
+    """The gate chain, in order; check-real is last (the longest, and it holds the VM)."""
+    parity = ["make", "parity"] + (["PARITY_GATE=1"] if target.name == "final" else [])
+    return [["make", "check", "VENDOR_TESTS=run"], ["make", "check-py"], ["make", "deferred"], parity,
+            ["make", "wheel"], ["make", "install-smoke"], ["make", "check-real"]]
+
+
+def release_commands(target: Target, sha: str, wheel: Path, sha256: str) -> list[str]:
+    """The commands the person runs after the gate: push main, tag, push the tag, create the release.
+
+    The wheel's digest closes the list as a shell comment, so pasting the whole block runs nothing extra."""
+    gh = f'gh release create {target.tag} dist/{wheel.name} --title "trex-web-gui {target.version}"'
+    gh += f" --notes-file {target.notes}" + (" --prerelease" if target.prerelease else "")
+    return ["git push origin main    # if main is not pushed yet",
+            f'git tag -a {target.tag} -m "trex-web-gui {target.version}" {sha}',
+            f"git push origin {target.tag}",
+            gh,
+            f"# wheel sha256 (a record, not a command; `sha256sum dist/{wheel.name}` reprints it): {sha256}"]
+
+
+def run_logged(argv: list[str], log: Path) -> int:
+    """Runs argv in the repo root, appending its output to log after a `$ argv` line; returns its code."""
+    log.parent.mkdir(parents=True, exist_ok=True)
+    with log.open("a") as f:
+        f.write("$ " + " ".join(argv) + "\n")
+        f.flush()
+        return subprocess.run(argv, cwd=ROOT, stdout=f, stderr=subprocess.STDOUT, check=False).returncode
+
+
+class GitError(RuntimeError):
+    """A git call failed; the gate must refuse, never read the failure as empty output."""
+
+
+def _git(root: Path, *args: str) -> str:
+    """Stdout of `git <args>` in root; raises GitError when git cannot run or exits nonzero."""
+    try:
+        r = subprocess.run(["git", *args], cwd=root, capture_output=True, text=True, check=False)
+    except OSError as e:
+        raise GitError(f"git {' '.join(args)} could not run: {e}") from e
+    if r.returncode != 0:
+        raise GitError(f"git {' '.join(args)} failed (exit {r.returncode}): {r.stderr.strip()}")
+    return r.stdout
+
+
+def _read(path: Path) -> str | None:
+    """The file's text, or None when it does not exist."""
+    return path.read_text() if path.is_file() else None
+
+
+def _guard_inputs(root: Path) -> tuple[dict[str, str], set[str]]:
+    """The guarded texts (PLAN.md, DEFERRED.md, tracked ledgers) and the set of tracked paths."""
+    tracked = {p for p in _git(root, "ls-files").splitlines() if p}
+    names = [n for n in GUARDED if n in tracked]
+    names += sorted(p for p in tracked if re.fullmatch(r"\.superpowers/sdd/[^/]+/progress\.md", p))
+    return {n: (root / n).read_text() for n in names if (root / n).is_file()}, tracked
+
+
+def _check(target: Target, dry_run: bool, run: Callable[[list[str], Path], int], env: Mapping[str, str],
+           root: Path) -> int:
+    """Preconditions, then the chain, then the printed commands."""
+    problems = [f"working tree is not clean: {ln}" for ln in _git(root, "status", "--porcelain").splitlines()]
+    branch = _git(root, "rev-parse", "--abbrev-ref", "HEAD").strip()
+    if branch != "main" and not dry_run:
+        problems.append(f"HEAD is on {branch!r}, not main (--dry-run relaxes this)")
+    problems += version_problems(_read(root / "backend" / "pyproject.toml") or "", target)
+    problems += notes_problems(_read(root / target.notes), target)
+    texts, tracked = _guard_inputs(root)
+    problems += guard_problems(texts, tracked)
+    if target.name == "final":
+        register = _read(root / DEFERRED)
+        if register is None:          # a public clone: without the register, no open row would read as none
+            problems.append(f"{DEFERRED} not found: the final gate runs in the private repo")
+        problems += [f"open rc1 row {r}" for r in rc1_open_rows(register or "")]
+        problems += use_log_problems(_read(root / USE_LOG))
+    if problems:
+        print("\n".join(problems))
+        print(f"release {target.name}: {len(problems)} precondition problem(s); no step was run")
+        return 1
+    stamp = datetime.datetime.now(datetime.UTC).strftime("%Y-%m-%d-%H%M%SZ")
+    log = root / "dist" / f"release-{target.name}-{stamp}.log"
+    skip_real = env.get("RELEASE_REAL") == "skip"
+    chain = steps(target)
+    for i, argv in enumerate(chain, 1):
+        if skip_real and i == len(chain):
+            print(f"NOT RELEASABLE: {' '.join(argv)} was skipped (RELEASE_REAL=skip); log {log}")
+            return SKIPPED_EXIT
+        print(f"step {i}/{len(chain)}: {' '.join(argv)}", flush=True)
+        if run(argv, log) != 0:
+            print(f"FAIL {' '.join(argv)} (log {log})")
+            return 1
+    wheel = root / "dist" / wheel_name(target.version)
+    if not wheel.is_file():
+        print(f"FAIL: dist/{wheel.name} not found after the chain (log {log})")
+        return 1
+    digest = hashlib.sha256(wheel.read_bytes()).hexdigest()
+    print(f"release {target.name}: every step passed (log {log})")
+    sha = _git(root, "rev-parse", "HEAD").strip()
+    if not dry_run:
+        record = {"gate": "check", "sha": sha, "tag": target.tag, "wheel": wheel.name, "sha256": digest}
+        _passed(root, target).write_text(json.dumps(record, indent=1) + "\n")
+    if target.name == "final":     # v1.0.0 is tagged and released from the public clone, not from here
+        print(f"Gate 2 passed at {sha}; nothing is tagged or released from this repo.\n"
+              "v1.0.0 is published by F1 (docs/superpowers/plans/2026-10-26-p12-public-split.md):\n"
+              "export this commit to the public clone, then make release-build and make release-publish\n"
+              "there.")
+        print(release_commands(target, sha, wheel, digest)[-1])
+        return 0
+    print("DRY RUN (tag from main after the merge):" if dry_run else
+          f"Run these yourself, none is run here ({_publish_make(target)} runs them, and resumes after a "
+          "failure):")
+    print("\n".join(release_commands(target, sha, wheel, digest)))
+    return 0
+
+
+def _build(target: Target, run: Callable[[list[str], Path], int], root: Path) -> int:
+    """`build final`: in the public clone, the wheel and the install smoke, then the record publish reads."""
+    if target.name != "final":
+        print(f"release build is for final (v1.0.0's wheel in the public clone); {target.name}'s gate is "
+              "check")
+        return 1
+    problems = [f"working tree is not clean: {ln}" for ln in _git(root, "status", "--porcelain").splitlines()]
+    branch = _git(root, "rev-parse", "--abbrev-ref", "HEAD").strip()
+    if branch != "main":
+        problems.append(f"HEAD is on {branch!r}, not main")
+    problems += version_problems(_read(root / "backend" / "pyproject.toml") or "", target)
+    if problems:
+        print("\n".join(problems))
+        print(f"release build: {len(problems)} precondition problem(s); no step was run")
+        return 1
+    stamp = datetime.datetime.now(datetime.UTC).strftime("%Y-%m-%d-%H%M%SZ")
+    log = root / "dist" / f"release-build-{target.name}-{stamp}.log"
+    for argv in (["make", "wheel"], ["make", "install-smoke"]):
+        print(f"build: {' '.join(argv)}", flush=True)
+        if run(argv, log) != 0:
+            print(f"FAIL {' '.join(argv)} (log {log})")
+            return 1
+    wheel = root / "dist" / wheel_name(target.version)
+    if not wheel.is_file():
+        print(f"FAIL: dist/{wheel.name} not found after make wheel (log {log})")
+        return 1
+    record = {"gate": "build", "sha": _git(root, "rev-parse", "HEAD").strip(), "tag": target.tag,
+              "wheel": wheel.name, "sha256": hashlib.sha256(wheel.read_bytes()).hexdigest()}
+    _passed(root, target).write_text(json.dumps(record, indent=1) + "\n")
+    print(f"release build: {wheel.name} built and smoke-tested (log {log}); next: {_publish_make(target)}")
+    return 0
+
+
+# publish: the person's own command (see the module docstring)
+
+Sh = Callable[[list[str]], tuple[int, str]]
+TRANSIENT = re.compile(r"\b5\d\d\b|Internal Server Error|Bad Gateway|Service Unavailable|"
+                       r"Gateway Time-?out|remote end hung up|Connection reset|Connection refused|timed out|"
+                       r"TLS handshake", re.I)
+BACKOFF = (5, 15, 45)
+ATTEMPTS = len(BACKOFF) + 1
+
+
+class PublishError(RuntimeError):
+    """A publish step cannot go on; the message says why and what is already done stays done."""
+
+
+def _passed(root: Path, target: Target) -> Path:
+    """Where `check` records its pass for `publish`."""
+    return root / "dist" / f"release-{target.name}-passed.json"
+
+
+def _publish_make(target: Target) -> str:
+    """The make target that runs publish for this target."""
+    return "make release-publish" if target.name == "final" else "make release-rc-publish"
+
+
+def run_captured(root: Path) -> Sh:
+    """The real `sh`: runs argv in root and returns (exit code, stdout and stderr together)."""
+    def sh(argv: list[str]) -> tuple[int, str]:
+        """One command; a program that cannot start is exit 127 with the reason, like a shell."""
+        try:
+            r = subprocess.run(argv, cwd=root, capture_output=True, text=True, check=False)
+        except OSError as e:
+            return 127, f"{argv[0]} could not run: {e}"
+        return r.returncode, r.stdout + r.stderr
+    return sh
+
+
+class Publisher:
+    """One publish run: the target, the recorded pass, and the injected command runner and sleep."""
+
+    def __init__(self, target: Target, root: Path, sh: Sh, sleep: Callable[[float], None],
+                 env: Mapping[str, str], publish_draft: bool) -> None:
+        """Nothing runs until run(). publish_draft: publish v1.0.0's reviewed draft (final only)."""
+        self.target, self.root, self.sh, self.sleep = target, root, sh, sleep
+        self.env, self.publish_draft = env, publish_draft
+        self.final = target.name == "final"
+
+    def backoff(self, what: str, i: int, rc: int, out: str) -> None:
+        """After failure i (0-based) of what: wait before the next try, or PublishError when the error is
+        not a transient GitHub or network one, or the tries are used up."""
+        if not TRANSIENT.search(out) or i == ATTEMPTS - 1:
+            raise PublishError(f"{what} failed (exit {rc}): {out.strip()}")
+        first = next((ln for ln in out.splitlines() if TRANSIENT.search(ln)), out.strip())
+        print(f"{what}: GitHub error, retrying in {BACKOFF[i]} s ({i + 2}/{ATTEMPTS}): {first.strip()}")
+        self.sleep(BACKOFF[i])
+
+    def call(self, what: str, argv: list[str]) -> tuple[int, str]:
+        """A read: argv, retried with backoff while it fails with a transient error; the last result."""
+        for i in range(ATTEMPTS):
+            rc, out = self.sh(argv)
+            if rc == 0 or not TRANSIENT.search(out) or i == ATTEMPTS - 1:
+                return rc, out
+            self.backoff(what, i, rc, out)
+        raise AssertionError("unreachable")
+
+    def must(self, what: str, argv: list[str]) -> str:
+        """call(), and its output; PublishError when it still fails."""
+        rc, out = self.call(what, argv)
+        if rc != 0:
+            raise PublishError(f"{what} failed (exit {rc}): {out.strip()}")
+        return out
+
+    def write(self, what: str, argv: list[str], done: Callable[[], bool]) -> None:
+        """A change on GitHub. After a failure done() is asked before anything else, since a request GitHub
+        answered with an error may still have been carried out; only then is a transient error retried."""
+        for i in range(ATTEMPTS):
+            rc, out = self.sh(argv)
+            if rc == 0:
+                if not done():
+                    raise PublishError(f"{what} reported success, but GitHub does not show it")
+                return
+            if done():
+                print(f"{what}: GitHub reported an error, but it is done")
+                return
+            self.backoff(what, i, rc, out)
+
+    def remote(self, ref: str) -> str | None:
+        """The object name GitHub has for ref, or None."""
+        out = self.must(f"reading {ref} on GitHub", ["git", "ls-remote", "origin", ref])
+        names = [ln.split("\t")[0] for ln in out.splitlines() if ln.endswith("\t" + ref)]
+        return names[0] if names else None
+
+    def view(self) -> dict | None:
+        """The GitHub release of the tag (isDraft, isPrerelease, assets), or None when there is none."""
+        rc, out = self.call("reading the release", ["gh", "release", "view", self.target.tag, "--json",
+                                                   "isDraft,isPrerelease,assets"])
+        if rc != 0 and "release not found" in out:
+            return None
+        if rc != 0:
+            raise PublishError(f"reading the release failed (exit {rc}): {out.strip()}")
+        return json.loads(out)
+
+    def record(self) -> dict:
+        """The pass `check` recorded, after checking it matches HEAD, a clean main and the wheel on disk."""
+        t, root = self.target, self.root
+        if self.final and ((root / "PLAN.md").is_file() or (root / DEFERRED).is_file()):
+            raise PublishError("publish final runs in the public clone (F1); this tree holds the private "
+                               "records")
+        text = _read(_passed(root, t))
+        if text is None:
+            raise PublishError(f"no passing `{'build' if self.final else 'check'} {t.name}` recorded "
+                               f"({_passed(root, t).relative_to(root)}); run "
+                               f"make {'release-build' if self.final else 'release-rc'} first")
+        rec = json.loads(text)
+        want = "build" if self.final else "check"
+        if rec.get("gate") != want:
+            raise PublishError(f"the pass was recorded by {rec.get('gate')}, not by {want}; run "
+                               f"make {'release-build' if self.final else 'release-rc'}")
+        dirty = _git(root, "status", "--porcelain").splitlines()
+        problems = [f"working tree is not clean: {ln}" for ln in dirty]
+        branch = _git(root, "rev-parse", "--abbrev-ref", "HEAD").strip()
+        if branch != "main":
+            problems.append(f"HEAD is on {branch!r}, not main")
+        head = _git(root, "rev-parse", "HEAD").strip()
+        if rec.get("sha") != head or rec.get("tag") != t.tag:
+            problems.append(f"the passing check was for {rec.get('tag')} at {rec.get('sha')}, not {t.tag} at "
+                            f"HEAD {head}; run the check again")
+        wheel = root / "dist" / rec.get("wheel", "")
+        if not wheel.is_file() or hashlib.sha256(wheel.read_bytes()).hexdigest() != rec.get("sha256"):
+            problems.append(f"dist/{rec.get('wheel')} is missing or not the wheel the check built; run the "
+                            "check again")
+        if problems:
+            raise PublishError("\n".join(problems))
+        return rec
+
+    def run(self) -> str:
+        """Every step in order, each skipped when GitHub already has it; "draft" when v1.0.0's release waits
+        for the person's review, else "released"."""
+        t, rec = self.target, self.record()
+        sha, wheel = rec["sha"], f"dist/{rec['wheel']}"
+        main_ref = "refs/heads/main"
+        if self.remote(main_ref) == sha:
+            print(f"main: GitHub has {sha[:12]}")
+        else:
+            self.write("pushing main", ["git", "push", "origin", f"{sha}:{main_ref}"],
+                       lambda: self.remote(main_ref) == sha)
+            print(f"main: pushed {sha[:12]}")
+        ref = f"refs/tags/{t.tag}"
+        rc, _ = self.sh(["git", "rev-parse", "-q", "--verify", ref])
+        if rc == 0:
+            on = _git(self.root, "rev-parse", f"{ref}^{{commit}}").strip()
+            if on != sha:
+                raise PublishError(f"tag {t.tag} points at {on}, not {sha}; it is never moved here")
+            print(f"tag: {t.tag} exists on {sha[:12]}")
+        else:
+            argv = ["git", "tag", "-s" if self.final else "-a", t.tag, "-m", f"trex-web-gui {t.version}", sha]
+            rc, out = self.sh(argv)
+            if rc != 0:
+                raise PublishError(f"making tag {t.tag} failed (exit {rc}): {out.strip()}")
+            print(f"tag: made {t.tag} on {sha[:12]}{', signed' if self.final else ''}")
+        if self.final:
+            signers = f"{self.env.get('HOME', '~')}/.config/git/allowed_signers"
+            rc, out = self.sh(["git", "-c", f"gpg.ssh.allowedSignersFile={signers}", "verify-tag", t.tag])
+            if rc != 0:
+                raise PublishError(f"the signature of tag {t.tag} does not verify: {out.strip()}")
+            print(f"tag: {t.tag}'s signature verifies")
+        tag_obj = _git(self.root, "rev-parse", ref).strip()
+        there = self.remote(ref)
+        if there is not None and there != tag_obj:
+            raise PublishError(f"GitHub's tag {t.tag} is {there}, not this tag ({tag_obj}); it is never "
+                               "replaced")
+        if there is None:
+            self.write("pushing the tag", ["git", "push", "origin", ref], lambda: self.remote(ref) == tag_obj)
+            print(f"tag: pushed {t.tag}")
+        else:
+            print(f"tag: GitHub has {t.tag}")
+        state = self.release(rec, wheel)
+        self.verify(rec)
+        return state
+
+    def release(self, rec: dict, wheel: str) -> str:
+        """Create the release, or finish one a failure left as a draft or without the wheel: each round reads
+        the release and takes the one step it lacks, so a failed step is never repeated blindly."""
+        t, fails = self.target, 0
+        for _ in range(3 * ATTEMPTS):
+            rel = self.view()
+            if rel is not None and rel["isPrerelease"] != t.prerelease:
+                kind = "a pre-release" if rel["isPrerelease"] else "not a pre-release"
+                raise PublishError(f"the release {t.tag} is {kind}; fix it on GitHub, it is never changed "
+                                   "here")
+            has = rel is not None and any(a["name"] == rec["wheel"] for a in rel["assets"])
+            if rel is None:
+                argv = ["gh", "release", "create", t.tag, wheel, "--title", f"trex-web-gui {t.version}",
+                        "--notes-file", t.notes]
+                argv += (["--prerelease"] if t.prerelease else []) + ["--verify-tag"]
+                argv += ["--draft"] if self.final else []
+                what = "creating the release"
+            elif not has:
+                argv, what = ["gh", "release", "upload", t.tag, wheel, "--clobber"], "uploading the wheel"
+            elif rel["isDraft"] and self.final and not self.publish_draft:
+                print(f"release: {t.tag} is a draft with {rec['wheel']}")
+                return "draft"
+            elif rel["isDraft"]:
+                argv, what = ["gh", "release", "edit", t.tag, "--draft=false"], "publishing the draft release"
+            else:
+                print(f"release: {t.tag} is published with {rec['wheel']}")
+                return "released"
+            print(f"release: {what}")
+            rc, out = self.sh(argv)
+            if rc != 0:
+                self.backoff(what, fails, rc, out)
+                fails += 1
+        raise PublishError(f"the release {t.tag} is still not complete after {3 * ATTEMPTS} rounds")
+
+    def verify(self, rec: dict) -> None:
+        """Download the released wheel and compare its sha256 with the one the check built."""
+        stamp = datetime.datetime.now(datetime.UTC).strftime("%Y-%m-%d-%H%M%SZ")
+        where = self.root / "dist" / f"publish-check-{stamp}"
+        try:
+            self.must("downloading the released wheel", ["gh", "release", "download", self.target.tag,
+                                                         "--pattern", rec["wheel"], "--dir", str(where),
+                                                         "--clobber"])
+            got = hashlib.sha256((where / rec["wheel"]).read_bytes()).hexdigest()
+        finally:
+            for f in where.glob("*"):
+                f.unlink()
+            if where.is_dir():
+                where.rmdir()
+        if got != rec["sha256"]:
+            raise PublishError(f"the released wheel's sha256 is {got}, not the built {rec['sha256']}")
+        print(f"verify: the released wheel's sha256 is {got}, as built")
+
+
+def _publish(target: Target, root: Path, sh: Sh, sleep: Callable[[float], None], env: Mapping[str, str],
+             publish_draft: bool) -> int:
+    """Run publish and say how it ended; what is done stays done, so a rerun resumes."""
+    try:
+        state = Publisher(target, root, sh, sleep, env, publish_draft).run()
+    except PublishError as e:
+        print(f"{e}\npublish {target.name}: stopped; what is done stays done, rerun "
+              f"`{_publish_make(target)}` after fixing the cause")
+        return 1
+    if state == "draft":
+        print(f"publish {target.name}: {target.tag} is a draft. Check it on the Releases page, then run "
+              f"`{_publish_make(target)} PUBLISH_DRAFT=1` to publish it.")
+        return 0
+    print(f"publish {target.name}: {target.tag} is released. On the host:\n"
+          f"gh release download {target.tag} --pattern '{wheel_name(target.version)}'\n"
+          f"uv tool install --python 3.12 ./{wheel_name(target.version)}")
+    return 0
+
+
+def main(argv: list[str] | None = None, run: Callable[[list[str], Path], int] = run_logged,
+         env: Mapping[str, str] = os.environ, root: Path = ROOT, sh: Sh | None = None,
+         sleep: Callable[[float], None] = time.sleep) -> int:
+    """Entry point: `guard`, `check <rc|rc<N>|final> [--dry-run]` or `publish <rc|rc<N>|final>`."""
+    ap = argparse.ArgumentParser(prog="release.py")
+    sub = ap.add_subparsers(dest="cmd", required=True)
+    sub.add_parser("guard", help="refuse /var/tmp citations without a committed copy")
+    chk = sub.add_parser("check", help="preconditions, the gate chain, then the printed commands")
+    chk.add_argument("target", help="rc (the candidate pyproject names), rc<N> or final")
+    chk.add_argument("--dry-run", action="store_true", help="allow a branch other than main")
+    pub = sub.add_parser("publish", help="tag, push, release and verify what a passing check recorded")
+    pub.add_argument("target", help="rc (the candidate pyproject names), rc<N> or final")
+    pub.add_argument("--publish-draft", action="store_true", help="final: publish the reviewed draft release")
+    bld = sub.add_parser("build", help="final, in the public clone: make wheel and install-smoke, then the "
+                         "record")
+    bld.add_argument("target", help="final")
+    args = ap.parse_args(argv)
+    try:
+        if args.cmd == "guard":
+            if not (root / "PLAN.md").is_file():   # a public clone: with no records, nothing would be scanned
+                print("PLAN.md not found: the guard scans the records, which are in the private repo")
+                return 1
+            texts, tracked = _guard_inputs(root)
+            found = guard_problems(texts, tracked)
+            print("\n".join(found) if found else "guard: ok")
+            return 1 if found else 0
+        target = resolve_target(args.target, _read(root / "backend" / "pyproject.toml") or "")
+        if isinstance(target, str):
+            print(f"{target}\nrelease: no target; no step was run")
+            return 1
+        if args.cmd == "publish":
+            return _publish(target, root, sh or run_captured(root), sleep, env, args.publish_draft)
+        if args.cmd == "build":
+            return _build(target, run, root)
+        return _check(target, args.dry_run, run, env, root)
+    except GitError as e:
+        print(f"{e}\nrelease {getattr(args, 'target', 'guard')}: git failed; refusing (no step was run)")
+        return 1
+
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv[1:]))

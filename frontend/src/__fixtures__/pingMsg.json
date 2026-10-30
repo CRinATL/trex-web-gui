@@ -1,0 +1,35 @@
+{
+  "reply": {
+    "count": 1,
+    "port": 0,
+    "rtt_ms": 4.970682742793997,
+    "run": 1,
+    "seq": 1,
+    "status": "reply",
+    "text": "Reply from 2.2.2.2: bytes=64, time=4.97ms, TTL=128",
+    "ts": 0,
+    "type": "ping"
+  },
+  "reply_v6": {
+    "count": 1,
+    "port": 0,
+    "rtt_ms": 2.885181463227582,
+    "run": 3,
+    "seq": 1,
+    "status": "reply",
+    "text": "Reply from fe80::5052:18ff:fe89:91ea: bytes=64, time=2.89ms, hlim=64",
+    "ts": 0,
+    "type": "ping"
+  },
+  "timeout": {
+    "count": 1,
+    "port": 0,
+    "rtt_ms": null,
+    "run": 2,
+    "seq": 1,
+    "status": "timeout",
+    "text": "Request timed out.",
+    "ts": 0,
+    "type": "ping"
+  }
+}

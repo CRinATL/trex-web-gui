@@ -1,0 +1,28 @@
+[
+  {
+    "enabled": true,
+    "self_start": true,
+    "start_paused": false,
+    "isg": 0.0,
+    "action_count": 0,
+    "core_id": -1,
+    "flags": 0,
+    "mode": {
+      "type": "continuous",
+      "rate": {
+        "type": "pps",
+        "value": 0.03333333333333333
+      }
+    },
+    "packet": {
+      "binary": "AYDCAAAOAAAAAgAAiMwCBwQAAAAAAAEEBwd0cmV4LTAGAgB4Cgx0cmV4LXdlYi1ndWkAAA==",
+      "meta": ""
+    },
+    "vm": {
+      "instructions": []
+    },
+    "flow_stats": {
+      "enabled": false
+    }
+  }
+]

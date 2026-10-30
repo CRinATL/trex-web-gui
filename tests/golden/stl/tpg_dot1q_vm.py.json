@@ -1,0 +1,54 @@
+[
+ {
+  "action_count": 0,
+  "core_id": -1,
+  "enabled": true,
+  "flags": 0,
+  "flow_stats": {
+   "enabled": true,
+   "ieee_1588": false,
+   "rule_type": "tpg",
+   "stream_id": 0,
+   "vxlan": false
+  },
+  "isg": 0.0,
+  "mode": {
+   "rate": {
+    "type": "pps",
+    "value": 40
+   },
+   "total_pkts": 200,
+   "type": "single_burst"
+  },
+  "name": "dot1q_tpg",
+  "packet": {
+   "binary": "AAAAAQAAAAAAAgAAgQAAAQgARQAAOAABAABAETqzEAAAATAAAAEEAQAMACRCEmF0X2xlYXN0XzE2X2J5dGVzX2FyZV9uZWVkZWQ=",
+   "meta": ""
+  },
+  "self_start": true,
+  "start_paused": false,
+  "vm": {
+   "instructions": [
+    {
+     "init_value": 1,
+     "max_value": 50,
+     "min_value": 1,
+     "name": "dot1q_tag",
+     "next_var": null,
+     "op": "inc",
+     "size": 2,
+     "split_to_cores": true,
+     "step": 1,
+     "type": "flow_var"
+    },
+    {
+     "add_value": 0,
+     "is_big_endian": true,
+     "name": "dot1q_tag",
+     "pkt_offset": 14,
+     "type": "write_flow_var"
+    }
+   ]
+  }
+ }
+]

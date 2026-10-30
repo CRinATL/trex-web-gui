@@ -1,0 +1,84 @@
+diff -ruN a/trex/common/trex_subscriber.py b/trex/common/trex_subscriber.py
+--- a/trex/common/trex_subscriber.py	2026-10-16 09:32:50.632001359 -0400
++++ b/trex/common/trex_subscriber.py	2026-10-16 11:15:40.450208947 -0400
+@@ -110,7 +110,7 @@
+         for key, value in snapshot.items():
+             
+             # match a pattern of ports
+-            m = re.search('(.*)\-([0-8])', key)
++            m = re.search(r'(.*)\-([0-8])', key)
+             if m:
+ 
+                 port_id = m.group(2)
+diff -ruN a/trex/scapy_server/scapy_service.py b/trex/scapy_server/scapy_service.py
+--- a/trex/scapy_server/scapy_service.py	2026-10-16 09:32:50.644001202 -0400
++++ b/trex/scapy_server/scapy_service.py	2026-10-16 11:15:40.450526842 -0400
+@@ -400,7 +400,7 @@
+ 
+ def parse_template_code(template_code):
+     template_code = re.sub("0[xX]", '', template_code) # remove 0x
+-    template_code = re.sub("[\s]", '', template_code) # remove spaces
++    template_code = re.sub(r"[\s]", '', template_code) # remove spaces
+     return bytearray.fromhex(template_code)
+ 
+ def verify_payload_size(size):
+@@ -459,7 +459,7 @@
+         self.network_protocols = {'IP':self.transport_protocols ,'ARP':''}
+         self.low_level_protocols = { 'Ether': self.network_protocols }
+         self.regexDB= {'MACField' : self.ScapyFieldDesc('MACField','^([0-9a-fA-F][0-9a-fA-F]:){5}([0-9a-fA-F][0-9a-fA-F])$'),
+-              'IPField' : self.ScapyFieldDesc('IPField','^(25[0-5]|2[0-4][0-9]|[0-1]{1}[0-9]{2}|[1-9]{1}[0-9]{1}|[1-9])\.(25[0-5]|2[0-4][0-9]|[0-1]{1}[0-9]{2}|[1-9]{1}[0-9]{1}|[1-9]|0)\.(25[0-5]|2[0-4][0-9]|[0-1]{1}[0-9]{2}|[1-9]{1}[0-9]{1}|[1-9]|0)\.(25[0-5]|2[0-4][0-9]|[0-1]{1}[0-9]{2}|[1-9]{1}[0-9]{1}|[0-9])$')}
++              'IPField' : self.ScapyFieldDesc('IPField',r'^(25[0-5]|2[0-4][0-9]|[0-1]{1}[0-9]{2}|[1-9]{1}[0-9]{1}|[1-9])\.(25[0-5]|2[0-4][0-9]|[0-1]{1}[0-9]{2}|[1-9]{1}[0-9]{1}|[1-9]|0)\.(25[0-5]|2[0-4][0-9]|[0-1]{1}[0-9]{2}|[1-9]{1}[0-9]{1}|[1-9]|0)\.(25[0-5]|2[0-4][0-9]|[0-1]{1}[0-9]{2}|[1-9]{1}[0-9]{1}|[0-9])$')}
+         self.all_protocols = self._build_lib()
+         self.protocol_tree = {'ALL':{'Ether':{'ARP':{},'IP':{'TCP':{'RAW':'payload'},'UDP':{'RAW':'payload'}}}}}
+         self.version_major = '1'
+diff -ruN a/trex/utils/common.py b/trex/utils/common.py
+--- a/trex/utils/common.py	2026-10-16 09:32:50.647001163 -0400
++++ b/trex/utils/common.py	2026-10-16 11:15:40.449350719 -0400
+@@ -349,7 +349,7 @@
+ # a2 before a10 in sorting
+ # https://blog.codinghorror.com/sorting-for-humans-natural-sort-order/
+ def natural_sorted_key(val):
+-    return [int(c) if c.isdigit() else c for c in re.split('(\d+)', val)]
++    return [int(c) if c.isdigit() else c for c in re.split(r'(\d+)', val)]
+ 
+ def filter_none(seq):
+     return filter(lambda x: x is not None, seq)
+diff -ruN a/trex/utils/parsing_opts.py b/trex/utils/parsing_opts.py
+--- a/trex/utils/parsing_opts.py	2026-10-16 09:32:50.647001163 -0400
++++ b/trex/utils/parsing_opts.py	2026-10-16 11:15:40.450107577 -0400
+@@ -32,7 +32,7 @@
+ 
+ def match_time_unit(val):
+     '''match some val against time shortcut inputs '''
+-    match = re.match("^(\d+(\.\d+)?)([m|h]?)$", val)
++    match = re.match(r"^(\d+(\.\d+)?)([m|h]?)$", val)
+     if match:
+         digit = float(match.group(1))
+         unit = match.group(3)
+@@ -85,7 +85,7 @@
+ def decode_multiplier(val, allow_update = False, divide_count = 1):
+ 
+     factor_table = {None: 1, 'k': 1e3, 'm': 1e6, 'g': 1e9}
+-    pattern = "^(\d+(\.\d+)?)(((k|m|g)?(bpsl1|pps|bps))|%)?"
++    pattern = r"^(\d+(\.\d+)?)(((k|m|g)?(bpsl1|pps|bps))|%)?"
+ 
+     # do we allow updates ?  +/-
+     if not allow_update:
+@@ -93,7 +93,7 @@
+         match = re.match(pattern, val)
+         op = None
+     else:
+-        pattern += "([\+\-])?$"
++        pattern += r"([\+\-])?$"
+         match = re.match(pattern, val)
+         if match:
+             op  = match.group(7)
+@@ -380,7 +380,7 @@
+ 
+     # each token is of form X=Y
+     for token in tokens:
+-        m = re.search('(\S+)=(.+)', token)
++        m = re.search(r'(\S+)=(.+)', token)
+         if not m:
+             raise argparse.ArgumentTypeError("bad syntax for tunables: {0}".format(token))
+         val = m.group(2)           # string

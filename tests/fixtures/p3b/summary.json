@@ -1,0 +1,3026 @@
+{
+ "recorded_utc": "2026-10-18T02:02:18Z",
+ "profile": "flow_latency.py",
+ "marks": [
+  {
+   "t": 0.159,
+   "call": "restore"
+  },
+  {
+   "t": 1.381,
+   "call": "set_port_attr_multicast_true"
+  },
+  {
+   "t": 1.39,
+   "call": "set_port_attr_multicast_false"
+  },
+  {
+   "t": 1.398,
+   "call": "apply_2.2.2.2_service_on"
+  },
+  {
+   "t": 1.404,
+   "call": "apply_2.2.2.2_set_l3"
+  },
+  {
+   "t": 1.416,
+   "call": "apply_2.2.2.2_resolve"
+  },
+  {
+   "t": 1.64,
+   "call": "apply_2.2.2.2_service_off"
+  },
+  {
+   "t": 1.646,
+   "call": "apply_1.1.1.99_service_on"
+  },
+  {
+   "t": 1.651,
+   "call": "apply_1.1.1.99_set_l3"
+  },
+  {
+   "t": 1.662,
+   "call": "apply_1.1.1.99_resolve"
+  },
+  {
+   "t": 4.726,
+   "call": "apply_1.1.1.99_service_off"
+  },
+  {
+   "t": 4.733,
+   "call": "apply_2.2.2.2_service_on"
+  },
+  {
+   "t": 4.74,
+   "call": "apply_2.2.2.2_set_l3"
+  },
+  {
+   "t": 4.756,
+   "call": "apply_2.2.2.2_resolve"
+  },
+  {
+   "t": 4.998,
+   "call": "apply_2.2.2.2_service_off"
+  },
+  {
+   "t": 5.008,
+   "call": "service_on_0"
+  },
+  {
+   "t": 5.019,
+   "call": "service_on_1"
+  },
+  {
+   "t": 5.03,
+   "call": "set_vlan_10"
+  },
+  {
+   "t": 5.049,
+   "call": "set_vlan_10_20"
+  },
+  {
+   "t": 5.067,
+   "call": "set_vlan_none"
+  },
+  {
+   "t": 5.086,
+   "call": "set_l2"
+  },
+  {
+   "t": 5.104,
+   "call": "set_l3_resolvable"
+  },
+  {
+   "t": 5.124,
+   "call": "resolve_resolvable"
+  },
+  {
+   "t": 5.265,
+   "call": "set_l3_nobody"
+  },
+  {
+   "t": 5.276,
+   "call": "resolve_nobody"
+  },
+  {
+   "t": 8.303,
+   "call": "set_l3_back"
+  },
+  {
+   "t": 8.322,
+   "call": "resolve_back"
+  },
+  {
+   "t": 8.471,
+   "call": "conf_ipv6_auto"
+  },
+  {
+   "t": 8.485,
+   "call": "conf_ipv6_source"
+  },
+  {
+   "t": 8.498,
+   "call": "conf_ipv6_off"
+  },
+  {
+   "t": 8.512,
+   "call": "vlan10_both"
+  },
+  {
+   "t": 8.536,
+   "call": "vlan10_resolve"
+  },
+  {
+   "t": 8.801,
+   "call": "vlan_clear_both"
+  },
+  {
+   "t": 8.83,
+   "call": "vlan_clear_resolve"
+  },
+  {
+   "t": 8.979,
+   "call": "ping_0"
+  },
+  {
+   "t": 9.255,
+   "call": "ping_1"
+  },
+  {
+   "t": 9.375,
+   "call": "ping_2"
+  },
+  {
+   "t": 9.588,
+   "call": "ping_3"
+  },
+  {
+   "t": 9.708,
+   "call": "ping_4"
+  },
+  {
+   "t": 9.83,
+   "call": "ping_timeout"
+  },
+  {
+   "t": 13.19,
+   "call": "ipv6_on_for_scan"
+  },
+  {
+   "t": 13.203,
+   "call": "scan6"
+  },
+  {
+   "t": 16.56,
+   "call": "ping_v6"
+  },
+  {
+   "t": 16.834,
+   "call": "ipv6_off_after_scan"
+  },
+  {
+   "t": 16.855,
+   "call": "service_off_0"
+  },
+  {
+   "t": 16.867,
+   "call": "service_off_1"
+  },
+  {
+   "t": 16.878,
+   "call": "service_on_for_raw"
+  },
+  {
+   "t": 16.889,
+   "call": "raw_three_tags"
+  },
+  {
+   "t": 16.893,
+   "call": "after_raw_three_tags"
+  },
+  {
+   "t": 16.9,
+   "call": "service_off_after_raw"
+  },
+  {
+   "t": 17.926,
+   "call": "xstats_idle"
+  },
+  {
+   "t": 18.955,
+   "call": "start_traffic"
+  },
+  {
+   "t": 24.003,
+   "call": "refusal_set_l2_raw"
+  },
+  {
+   "t": 24.004,
+   "call": "refusal_set_l2_client"
+  },
+  {
+   "t": 24.006,
+   "call": "refusal_set_l2_client_static"
+  },
+  {
+   "t": 24.011,
+   "call": "stop_traffic"
+  },
+  {
+   "t": 26.145,
+   "call": "restore"
+  }
+ ],
+ "port_info": {
+  "0": {
+   "hw_mac": "8e:4e:97:11:bf:a8",
+   "stack": "legacy",
+   "driver": "net_af_packet",
+   "description": "Unknown"
+  },
+  "1": {
+   "hw_mac": "52:52:18:89:91:ea",
+   "stack": "legacy",
+   "driver": "net_af_packet",
+   "description": "Unknown"
+  }
+ },
+ "hw_mac_port1": "52:52:18:89:91:ea",
+ "info_stack": "legacy",
+ "sysctl_disable_ipv6": {
+  "veth0": "0",
+  "veth1": "0"
+ },
+ "timings": [
+  {
+   "call": "set_port_attr_multicast_true",
+   "port": 0,
+   "secs": 0.005,
+   "error": null
+  },
+  {
+   "call": "set_port_attr_multicast_false",
+   "port": 0,
+   "secs": 0.005,
+   "error": null
+  },
+  {
+   "call": "apply_2.2.2.2_service_on",
+   "port": 0,
+   "secs": 0.002,
+   "error": null
+  },
+  {
+   "call": "apply_2.2.2.2_set_l3",
+   "port": 0,
+   "secs": 0.007,
+   "error": null
+  },
+  {
+   "call": "apply_2.2.2.2_resolve",
+   "port": 0,
+   "secs": 0.22,
+   "error": null
+  },
+  {
+   "call": "apply_2.2.2.2_service_off",
+   "port": 0,
+   "secs": 0.002,
+   "error": null
+  },
+  {
+   "call": "apply_1.1.1.99_service_on",
+   "port": 0,
+   "secs": 0.002,
+   "error": null
+  },
+  {
+   "call": "apply_1.1.1.99_set_l3",
+   "port": 0,
+   "secs": 0.007,
+   "error": null
+  },
+  {
+   "call": "apply_1.1.1.99_resolve",
+   "port": 0,
+   "secs": 3.058,
+   "error": "TRexError: Could not resolve following ports: [0]"
+  },
+  {
+   "call": "apply_1.1.1.99_service_off",
+   "port": 0,
+   "secs": 0.002,
+   "error": null
+  },
+  {
+   "call": "apply_2.2.2.2_service_on",
+   "port": 0,
+   "secs": 0.002,
+   "error": null
+  },
+  {
+   "call": "apply_2.2.2.2_set_l3",
+   "port": 0,
+   "secs": 0.012,
+   "error": null
+  },
+  {
+   "call": "apply_2.2.2.2_resolve",
+   "port": 0,
+   "secs": 0.235,
+   "error": null
+  },
+  {
+   "call": "apply_2.2.2.2_service_off",
+   "port": 0,
+   "secs": 0.003,
+   "error": null
+  },
+  {
+   "call": "service_on_0",
+   "port": 0,
+   "secs": 0.003,
+   "error": null
+  },
+  {
+   "call": "service_on_1",
+   "port": 1,
+   "secs": 0.003,
+   "error": null
+  },
+  {
+   "call": "set_vlan_10",
+   "port": 0,
+   "secs": 0.011,
+   "error": null
+  },
+  {
+   "call": "set_vlan_10_20",
+   "port": 0,
+   "secs": 0.011,
+   "error": null
+  },
+  {
+   "call": "set_vlan_none",
+   "port": 0,
+   "secs": 0.011,
+   "error": null
+  },
+  {
+   "call": "set_l2",
+   "port": 0,
+   "secs": 0.012,
+   "error": null
+  },
+  {
+   "call": "set_l3_resolvable",
+   "port": 0,
+   "secs": 0.012,
+   "error": null
+  },
+  {
+   "call": "resolve_resolvable",
+   "port": 0,
+   "secs": 0.137,
+   "error": null
+  },
+  {
+   "call": "set_l3_nobody",
+   "port": 0,
+   "secs": 0.007,
+   "error": null
+  },
+  {
+   "call": "resolve_nobody",
+   "port": 0,
+   "secs": 3.021,
+   "error": "TRexError: Could not resolve following ports: [0]"
+  },
+  {
+   "call": "set_l3_back",
+   "port": 0,
+   "secs": 0.012,
+   "error": null
+  },
+  {
+   "call": "resolve_back",
+   "port": 0,
+   "secs": 0.143,
+   "error": null
+  },
+  {
+   "call": "conf_ipv6_auto",
+   "port": 0,
+   "secs": 0.007,
+   "error": "TRexError: Port 0 : *** Could not configure IPv6: IPv6 is not supported with current stack"
+  },
+  {
+   "call": "conf_ipv6_source",
+   "port": 0,
+   "secs": 0.006,
+   "error": "TRexError: Port 0 : *** Could not configure IPv6: IPv6 is not supported with current stack"
+  },
+  {
+   "call": "conf_ipv6_off",
+   "port": 0,
+   "secs": 0.009,
+   "error": null
+  },
+  {
+   "call": "vlan10_both",
+   "port": 0,
+   "secs": 0.017,
+   "error": null
+  },
+  {
+   "call": "vlan10_resolve",
+   "port": 0,
+   "secs": 0.138,
+   "error": null
+  },
+  {
+   "call": "vlan10_ping",
+   "port": 0,
+   "secs": 0.121,
+   "error": null
+  },
+  {
+   "call": "vlan_clear_both",
+   "port": 0,
+   "secs": 0.021,
+   "error": null
+  },
+  {
+   "call": "vlan_clear_resolve",
+   "port": 0,
+   "secs": 0.14,
+   "error": null
+  },
+  {
+   "call": "ping_v4_ok",
+   "port": 0,
+   "secs": 0.122,
+   "error": null
+  },
+  {
+   "call": "ping_v4_ok",
+   "port": 0,
+   "secs": 0.12,
+   "error": null
+  },
+  {
+   "call": "ping_v4_ok",
+   "port": 0,
+   "secs": 0.213,
+   "error": null
+  },
+  {
+   "call": "ping_v4_ok",
+   "port": 0,
+   "secs": 0.12,
+   "error": null
+  },
+  {
+   "call": "ping_v4_ok",
+   "port": 0,
+   "secs": 0.122,
+   "error": null
+  },
+  {
+   "call": "ping_v4_timeout",
+   "port": 0,
+   "secs": 3.111,
+   "error": null
+  },
+  {
+   "call": "ipv6_on_for_scan",
+   "port": 0,
+   "secs": 0.006,
+   "error": "TRexError: Port 0 : *** Could not configure IPv6: IPv6 is not supported with current stack"
+  },
+  {
+   "call": "scan6",
+   "port": 0,
+   "secs": 3.13,
+   "error": null
+  },
+  {
+   "call": "ping_v6",
+   "port": 0,
+   "secs": 0.127,
+   "error": null
+  },
+  {
+   "call": "ipv6_off_after_scan",
+   "port": 0,
+   "secs": 0.014,
+   "error": null
+  },
+  {
+   "call": "service_off_0",
+   "port": 0,
+   "secs": 0.004,
+   "error": null
+  },
+  {
+   "call": "service_off_1",
+   "port": 1,
+   "secs": 0.003,
+   "error": null
+  },
+  {
+   "call": "service_on_for_raw",
+   "port": 0,
+   "secs": 0.004,
+   "error": null
+  },
+  {
+   "call": "raw_set_vlan_three",
+   "port": 0,
+   "secs": 0.003,
+   "error": null
+  },
+  {
+   "call": "after_raw_three_tags",
+   "port": 0,
+   "secs": 0.0,
+   "error": null
+  },
+  {
+   "call": "service_off_after_raw",
+   "port": 0,
+   "secs": 0.003,
+   "error": null
+  },
+  {
+   "call": "service_on_while_tx",
+   "port": 0,
+   "secs": 0.002,
+   "error": null
+  },
+  {
+   "call": "raw_set_l2_while_tx",
+   "port": 0,
+   "secs": 0.001,
+   "error": null
+  },
+  {
+   "call": "client_set_l2_while_tx",
+   "port": 0,
+   "secs": 0.002,
+   "error": "TRexError: Port 0 : *** command 'set_l2_mode' cannot be executed on current state: 'TX'"
+  },
+  {
+   "call": "client_set_l2_while_tx_base_check",
+   "port": 0,
+   "secs": 0.0,
+   "error": "TRexError: Port 0 : *** set_l2_mode - port is active, please stop the port before executing command"
+  },
+  {
+   "call": "stop",
+   "port": 0,
+   "secs": 0.104,
+   "error": null
+  }
+ ],
+ "max_secs_by_call": {
+  "set_port_attr_multicast_true": 0.005,
+  "set_port_attr_multicast_false": 0.005,
+  "apply_2.2.2.2_service_on": 0.002,
+  "apply_2.2.2.2_set_l3": 0.012,
+  "apply_2.2.2.2_resolve": 0.235,
+  "apply_2.2.2.2_service_off": 0.003,
+  "apply_1.1.1.99_service_on": 0.002,
+  "apply_1.1.1.99_set_l3": 0.007,
+  "apply_1.1.1.99_resolve": 3.058,
+  "apply_1.1.1.99_service_off": 0.002,
+  "service_on_0": 0.003,
+  "service_on_1": 0.003,
+  "set_vlan_10": 0.011,
+  "set_vlan_10_20": 0.011,
+  "set_vlan_none": 0.011,
+  "set_l2": 0.012,
+  "set_l3_resolvable": 0.012,
+  "resolve_resolvable": 0.137,
+  "set_l3_nobody": 0.007,
+  "resolve_nobody": 3.021,
+  "set_l3_back": 0.012,
+  "resolve_back": 0.143,
+  "conf_ipv6_auto": 0.007,
+  "conf_ipv6_source": 0.006,
+  "conf_ipv6_off": 0.009,
+  "vlan10_both": 0.017,
+  "vlan10_resolve": 0.138,
+  "vlan10_ping": 0.121,
+  "vlan_clear_both": 0.021,
+  "vlan_clear_resolve": 0.14,
+  "ping_v4_ok": 0.213,
+  "ping_v4_timeout": 3.111,
+  "ipv6_on_for_scan": 0.006,
+  "scan6": 3.13,
+  "ping_v6": 0.127,
+  "ipv6_off_after_scan": 0.014,
+  "service_off_0": 0.004,
+  "service_off_1": 0.003,
+  "service_on_for_raw": 0.004,
+  "raw_set_vlan_three": 0.003,
+  "after_raw_three_tags": 0,
+  "service_off_after_raw": 0.003,
+  "service_on_while_tx": 0.002,
+  "raw_set_l2_while_tx": 0.001,
+  "client_set_l2_while_tx": 0.002,
+  "client_set_l2_while_tx_base_check": 0,
+  "stop": 0.104
+ },
+ "composites_secs": {
+  "apply_resolved": 0.248,
+  "apply_unresolved": 3.087,
+  "apply_resolved_again": 0.275
+ },
+ "slowest_call": {
+  "call": "scan6",
+  "port": 0,
+  "secs": 3.13,
+  "error": null
+ },
+ "steps": [
+  {
+   "step": "set_port_attr_multicast_true",
+   "port": 0,
+   "error": null,
+   "oracle": {
+    "layer_cfg": {
+     "ether": {
+      "dst": "52:52:18:89:91:ea",
+      "src": "8e:4e:97:11:bf:a8",
+      "state": "configured"
+     },
+     "ipv4": {
+      "dst": "2.2.2.2",
+      "src": "1.1.1.1",
+      "state": "resolved"
+     },
+     "ipv6": {
+      "enabled": false
+     }
+    },
+    "vlan": [],
+    "rx_filter_mode": "hw",
+    "multicast": false,
+    "service": false,
+    "service_filtered": false,
+    "state": 0
+   },
+   "changed": {}
+  },
+  {
+   "step": "set_port_attr_multicast_false",
+   "port": 0,
+   "error": null,
+   "oracle": {
+    "layer_cfg": {
+     "ether": {
+      "dst": "52:52:18:89:91:ea",
+      "src": "8e:4e:97:11:bf:a8",
+      "state": "configured"
+     },
+     "ipv4": {
+      "dst": "2.2.2.2",
+      "src": "1.1.1.1",
+      "state": "resolved"
+     },
+     "ipv6": {
+      "enabled": false
+     }
+    },
+    "vlan": [],
+    "rx_filter_mode": "hw",
+    "multicast": false,
+    "service": false,
+    "service_filtered": false,
+    "state": 0
+   },
+   "changed": {}
+  },
+  {
+   "step": "apply_2.2.2.2_service_on",
+   "port": 0,
+   "error": null,
+   "oracle": {
+    "layer_cfg": {
+     "ether": {
+      "dst": "52:52:18:89:91:ea",
+      "src": "8e:4e:97:11:bf:a8",
+      "state": "configured"
+     },
+     "ipv4": {
+      "dst": "2.2.2.2",
+      "src": "1.1.1.1",
+      "state": "resolved"
+     },
+     "ipv6": {
+      "enabled": false
+     }
+    },
+    "vlan": [],
+    "rx_filter_mode": "all",
+    "multicast": false,
+    "service": true,
+    "service_filtered": false,
+    "state": 0
+   },
+   "changed": {
+    "rx_filter_mode": {
+     "from": "hw",
+     "to": "all"
+    },
+    "service": {
+     "from": false,
+     "to": true
+    }
+   }
+  },
+  {
+   "step": "apply_2.2.2.2_set_l3",
+   "port": 0,
+   "error": null,
+   "oracle": {
+    "layer_cfg": {
+     "ether": {
+      "dst": "52:52:18:89:91:ea",
+      "src": "8e:4e:97:11:bf:a8",
+      "state": "unconfigured"
+     },
+     "ipv4": {
+      "dst": "2.2.2.2",
+      "src": "1.1.1.1",
+      "state": "unresolved"
+     },
+     "ipv6": {
+      "enabled": false
+     }
+    },
+    "vlan": [],
+    "rx_filter_mode": "all",
+    "multicast": false,
+    "service": true,
+    "service_filtered": false,
+    "state": 0
+   },
+   "changed": {
+    "layer_cfg.ether.state": {
+     "from": "configured",
+     "to": "unconfigured"
+    },
+    "layer_cfg.ipv4.state": {
+     "from": "resolved",
+     "to": "unresolved"
+    }
+   }
+  },
+  {
+   "step": "apply_2.2.2.2_resolve",
+   "port": 0,
+   "error": null,
+   "oracle": {
+    "layer_cfg": {
+     "ether": {
+      "dst": "52:52:18:89:91:ea",
+      "src": "8e:4e:97:11:bf:a8",
+      "state": "configured"
+     },
+     "ipv4": {
+      "dst": "2.2.2.2",
+      "src": "1.1.1.1",
+      "state": "resolved"
+     },
+     "ipv6": {
+      "enabled": false
+     }
+    },
+    "vlan": [],
+    "rx_filter_mode": "all",
+    "multicast": false,
+    "service": true,
+    "service_filtered": false,
+    "state": 0
+   },
+   "changed": {
+    "layer_cfg.ether.state": {
+     "from": "unconfigured",
+     "to": "configured"
+    },
+    "layer_cfg.ipv4.state": {
+     "from": "unresolved",
+     "to": "resolved"
+    }
+   }
+  },
+  {
+   "step": "apply_2.2.2.2_service_off",
+   "port": 0,
+   "error": null,
+   "oracle": {
+    "layer_cfg": {
+     "ether": {
+      "dst": "52:52:18:89:91:ea",
+      "src": "8e:4e:97:11:bf:a8",
+      "state": "configured"
+     },
+     "ipv4": {
+      "dst": "2.2.2.2",
+      "src": "1.1.1.1",
+      "state": "resolved"
+     },
+     "ipv6": {
+      "enabled": false
+     }
+    },
+    "vlan": [],
+    "rx_filter_mode": "hw",
+    "multicast": false,
+    "service": false,
+    "service_filtered": false,
+    "state": 0
+   },
+   "changed": {
+    "rx_filter_mode": {
+     "from": "all",
+     "to": "hw"
+    },
+    "service": {
+     "from": true,
+     "to": false
+    }
+   }
+  },
+  {
+   "step": "apply_1.1.1.99_service_on",
+   "port": 0,
+   "error": null,
+   "oracle": {
+    "layer_cfg": {
+     "ether": {
+      "dst": "52:52:18:89:91:ea",
+      "src": "8e:4e:97:11:bf:a8",
+      "state": "configured"
+     },
+     "ipv4": {
+      "dst": "2.2.2.2",
+      "src": "1.1.1.1",
+      "state": "resolved"
+     },
+     "ipv6": {
+      "enabled": false
+     }
+    },
+    "vlan": [],
+    "rx_filter_mode": "all",
+    "multicast": false,
+    "service": true,
+    "service_filtered": false,
+    "state": 0
+   },
+   "changed": {
+    "rx_filter_mode": {
+     "from": "hw",
+     "to": "all"
+    },
+    "service": {
+     "from": false,
+     "to": true
+    }
+   }
+  },
+  {
+   "step": "apply_1.1.1.99_set_l3",
+   "port": 0,
+   "error": null,
+   "oracle": {
+    "layer_cfg": {
+     "ether": {
+      "dst": "52:52:18:89:91:ea",
+      "src": "8e:4e:97:11:bf:a8",
+      "state": "unconfigured"
+     },
+     "ipv4": {
+      "dst": "1.1.1.99",
+      "src": "1.1.1.1",
+      "state": "unresolved"
+     },
+     "ipv6": {
+      "enabled": false
+     }
+    },
+    "vlan": [],
+    "rx_filter_mode": "all",
+    "multicast": false,
+    "service": true,
+    "service_filtered": false,
+    "state": 0
+   },
+   "changed": {
+    "layer_cfg.ether.state": {
+     "from": "configured",
+     "to": "unconfigured"
+    },
+    "layer_cfg.ipv4.dst": {
+     "from": "2.2.2.2",
+     "to": "1.1.1.99"
+    },
+    "layer_cfg.ipv4.state": {
+     "from": "resolved",
+     "to": "unresolved"
+    }
+   }
+  },
+  {
+   "step": "apply_1.1.1.99_resolve",
+   "port": 0,
+   "error": "TRexError: Could not resolve following ports: [0]",
+   "oracle": {
+    "layer_cfg": {
+     "ether": {
+      "dst": "52:52:18:89:91:ea",
+      "src": "8e:4e:97:11:bf:a8",
+      "state": "unconfigured"
+     },
+     "ipv4": {
+      "dst": "1.1.1.99",
+      "src": "1.1.1.1",
+      "state": "unresolved"
+     },
+     "ipv6": {
+      "enabled": false
+     }
+    },
+    "vlan": [],
+    "rx_filter_mode": "all",
+    "multicast": false,
+    "service": true,
+    "service_filtered": false,
+    "state": 0
+   },
+   "changed": {}
+  },
+  {
+   "step": "apply_1.1.1.99_service_off",
+   "port": 0,
+   "error": null,
+   "oracle": {
+    "layer_cfg": {
+     "ether": {
+      "dst": "52:52:18:89:91:ea",
+      "src": "8e:4e:97:11:bf:a8",
+      "state": "unconfigured"
+     },
+     "ipv4": {
+      "dst": "1.1.1.99",
+      "src": "1.1.1.1",
+      "state": "unresolved"
+     },
+     "ipv6": {
+      "enabled": false
+     }
+    },
+    "vlan": [],
+    "rx_filter_mode": "hw",
+    "multicast": false,
+    "service": false,
+    "service_filtered": false,
+    "state": 0
+   },
+   "changed": {
+    "rx_filter_mode": {
+     "from": "all",
+     "to": "hw"
+    },
+    "service": {
+     "from": true,
+     "to": false
+    }
+   }
+  },
+  {
+   "step": "apply_2.2.2.2_service_on",
+   "port": 0,
+   "error": null,
+   "oracle": {
+    "layer_cfg": {
+     "ether": {
+      "dst": "52:52:18:89:91:ea",
+      "src": "8e:4e:97:11:bf:a8",
+      "state": "unconfigured"
+     },
+     "ipv4": {
+      "dst": "1.1.1.99",
+      "src": "1.1.1.1",
+      "state": "unresolved"
+     },
+     "ipv6": {
+      "enabled": false
+     }
+    },
+    "vlan": [],
+    "rx_filter_mode": "all",
+    "multicast": false,
+    "service": true,
+    "service_filtered": false,
+    "state": 0
+   },
+   "changed": {
+    "rx_filter_mode": {
+     "from": "hw",
+     "to": "all"
+    },
+    "service": {
+     "from": false,
+     "to": true
+    }
+   }
+  },
+  {
+   "step": "apply_2.2.2.2_set_l3",
+   "port": 0,
+   "error": null,
+   "oracle": {
+    "layer_cfg": {
+     "ether": {
+      "dst": "52:52:18:89:91:ea",
+      "src": "8e:4e:97:11:bf:a8",
+      "state": "unconfigured"
+     },
+     "ipv4": {
+      "dst": "2.2.2.2",
+      "src": "1.1.1.1",
+      "state": "unresolved"
+     },
+     "ipv6": {
+      "enabled": false
+     }
+    },
+    "vlan": [],
+    "rx_filter_mode": "all",
+    "multicast": false,
+    "service": true,
+    "service_filtered": false,
+    "state": 0
+   },
+   "changed": {
+    "layer_cfg.ipv4.dst": {
+     "from": "1.1.1.99",
+     "to": "2.2.2.2"
+    }
+   }
+  },
+  {
+   "step": "apply_2.2.2.2_resolve",
+   "port": 0,
+   "error": null,
+   "oracle": {
+    "layer_cfg": {
+     "ether": {
+      "dst": "52:52:18:89:91:ea",
+      "src": "8e:4e:97:11:bf:a8",
+      "state": "configured"
+     },
+     "ipv4": {
+      "dst": "2.2.2.2",
+      "src": "1.1.1.1",
+      "state": "resolved"
+     },
+     "ipv6": {
+      "enabled": false
+     }
+    },
+    "vlan": [],
+    "rx_filter_mode": "all",
+    "multicast": false,
+    "service": true,
+    "service_filtered": false,
+    "state": 0
+   },
+   "changed": {
+    "layer_cfg.ether.state": {
+     "from": "unconfigured",
+     "to": "configured"
+    },
+    "layer_cfg.ipv4.state": {
+     "from": "unresolved",
+     "to": "resolved"
+    }
+   }
+  },
+  {
+   "step": "apply_2.2.2.2_service_off",
+   "port": 0,
+   "error": null,
+   "oracle": {
+    "layer_cfg": {
+     "ether": {
+      "dst": "52:52:18:89:91:ea",
+      "src": "8e:4e:97:11:bf:a8",
+      "state": "configured"
+     },
+     "ipv4": {
+      "dst": "2.2.2.2",
+      "src": "1.1.1.1",
+      "state": "resolved"
+     },
+     "ipv6": {
+      "enabled": false
+     }
+    },
+    "vlan": [],
+    "rx_filter_mode": "hw",
+    "multicast": false,
+    "service": false,
+    "service_filtered": false,
+    "state": 0
+   },
+   "changed": {
+    "rx_filter_mode": {
+     "from": "all",
+     "to": "hw"
+    },
+    "service": {
+     "from": true,
+     "to": false
+    }
+   }
+  },
+  {
+   "step": "service_on_0",
+   "port": 0,
+   "error": null,
+   "oracle": {
+    "layer_cfg": {
+     "ether": {
+      "dst": "52:52:18:89:91:ea",
+      "src": "8e:4e:97:11:bf:a8",
+      "state": "configured"
+     },
+     "ipv4": {
+      "dst": "2.2.2.2",
+      "src": "1.1.1.1",
+      "state": "resolved"
+     },
+     "ipv6": {
+      "enabled": false
+     }
+    },
+    "vlan": [],
+    "rx_filter_mode": "all",
+    "multicast": false,
+    "service": true,
+    "service_filtered": false,
+    "state": 0
+   },
+   "changed": {
+    "rx_filter_mode": {
+     "from": "hw",
+     "to": "all"
+    },
+    "service": {
+     "from": false,
+     "to": true
+    }
+   }
+  },
+  {
+   "step": "service_on_1",
+   "port": 1,
+   "error": null,
+   "oracle": {
+    "layer_cfg": {
+     "ether": {
+      "dst": "8e:4e:97:11:bf:a8",
+      "src": "52:52:18:89:91:ea",
+      "state": "configured"
+     },
+     "ipv4": {
+      "dst": "1.1.1.1",
+      "src": "2.2.2.2",
+      "state": "resolved"
+     },
+     "ipv6": {
+      "enabled": false
+     }
+    },
+    "vlan": [],
+    "rx_filter_mode": "all",
+    "multicast": false,
+    "service": true,
+    "service_filtered": false,
+    "state": 0
+   },
+   "changed": {
+    "rx_filter_mode": {
+     "from": "hw",
+     "to": "all"
+    },
+    "service": {
+     "from": false,
+     "to": true
+    }
+   }
+  },
+  {
+   "step": "set_vlan_10",
+   "port": 0,
+   "error": null,
+   "oracle": {
+    "layer_cfg": {
+     "ether": {
+      "dst": "52:52:18:89:91:ea",
+      "src": "8e:4e:97:11:bf:a8",
+      "state": "configured"
+     },
+     "ipv4": {
+      "dst": "2.2.2.2",
+      "src": "1.1.1.1",
+      "state": "resolved"
+     },
+     "ipv6": {
+      "enabled": false
+     }
+    },
+    "vlan": [
+     10
+    ],
+    "rx_filter_mode": "all",
+    "multicast": false,
+    "service": true,
+    "service_filtered": false,
+    "state": 0
+   },
+   "changed": {
+    "vlan": {
+     "from": [],
+     "to": [
+      10
+     ]
+    }
+   }
+  },
+  {
+   "step": "set_vlan_10_20",
+   "port": 0,
+   "error": null,
+   "oracle": {
+    "layer_cfg": {
+     "ether": {
+      "dst": "52:52:18:89:91:ea",
+      "src": "8e:4e:97:11:bf:a8",
+      "state": "configured"
+     },
+     "ipv4": {
+      "dst": "2.2.2.2",
+      "src": "1.1.1.1",
+      "state": "resolved"
+     },
+     "ipv6": {
+      "enabled": false
+     }
+    },
+    "vlan": [
+     10,
+     20
+    ],
+    "rx_filter_mode": "all",
+    "multicast": false,
+    "service": true,
+    "service_filtered": false,
+    "state": 0
+   },
+   "changed": {
+    "vlan": {
+     "from": [
+      10
+     ],
+     "to": [
+      10,
+      20
+     ]
+    }
+   }
+  },
+  {
+   "step": "set_vlan_none",
+   "port": 0,
+   "error": null,
+   "oracle": {
+    "layer_cfg": {
+     "ether": {
+      "dst": "52:52:18:89:91:ea",
+      "src": "8e:4e:97:11:bf:a8",
+      "state": "configured"
+     },
+     "ipv4": {
+      "dst": "2.2.2.2",
+      "src": "1.1.1.1",
+      "state": "resolved"
+     },
+     "ipv6": {
+      "enabled": false
+     }
+    },
+    "vlan": [],
+    "rx_filter_mode": "all",
+    "multicast": false,
+    "service": true,
+    "service_filtered": false,
+    "state": 0
+   },
+   "changed": {
+    "vlan": {
+     "from": [
+      10,
+      20
+     ],
+     "to": []
+    }
+   }
+  },
+  {
+   "step": "set_l2",
+   "port": 0,
+   "error": null,
+   "oracle": {
+    "layer_cfg": {
+     "ether": {
+      "dst": "52:52:18:89:91:ea",
+      "src": "8e:4e:97:11:bf:a8",
+      "state": "configured"
+     },
+     "ipv4": {
+      "state": "none"
+     },
+     "ipv6": {
+      "enabled": false
+     }
+    },
+    "vlan": [],
+    "rx_filter_mode": "all",
+    "multicast": false,
+    "service": true,
+    "service_filtered": false,
+    "state": 0
+   },
+   "changed": {
+    "layer_cfg.ipv4.state": {
+     "from": "resolved",
+     "to": "none"
+    }
+   }
+  },
+  {
+   "step": "set_l3_resolvable",
+   "port": 0,
+   "error": null,
+   "oracle": {
+    "layer_cfg": {
+     "ether": {
+      "dst": "52:52:18:89:91:ea",
+      "src": "8e:4e:97:11:bf:a8",
+      "state": "unconfigured"
+     },
+     "ipv4": {
+      "dst": "2.2.2.2",
+      "src": "1.1.1.1",
+      "state": "unresolved"
+     },
+     "ipv6": {
+      "enabled": false
+     }
+    },
+    "vlan": [],
+    "rx_filter_mode": "all",
+    "multicast": false,
+    "service": true,
+    "service_filtered": false,
+    "state": 0
+   },
+   "changed": {
+    "layer_cfg.ether.state": {
+     "from": "configured",
+     "to": "unconfigured"
+    },
+    "layer_cfg.ipv4.dst": {
+     "from": null,
+     "to": "2.2.2.2"
+    },
+    "layer_cfg.ipv4.src": {
+     "from": null,
+     "to": "1.1.1.1"
+    },
+    "layer_cfg.ipv4.state": {
+     "from": "none",
+     "to": "unresolved"
+    }
+   }
+  },
+  {
+   "step": "resolve_resolvable",
+   "port": 0,
+   "error": null,
+   "oracle": {
+    "layer_cfg": {
+     "ether": {
+      "dst": "52:52:18:89:91:ea",
+      "src": "8e:4e:97:11:bf:a8",
+      "state": "configured"
+     },
+     "ipv4": {
+      "dst": "2.2.2.2",
+      "src": "1.1.1.1",
+      "state": "resolved"
+     },
+     "ipv6": {
+      "enabled": false
+     }
+    },
+    "vlan": [],
+    "rx_filter_mode": "all",
+    "multicast": false,
+    "service": true,
+    "service_filtered": false,
+    "state": 0
+   },
+   "changed": {
+    "layer_cfg.ether.state": {
+     "from": "unconfigured",
+     "to": "configured"
+    },
+    "layer_cfg.ipv4.state": {
+     "from": "unresolved",
+     "to": "resolved"
+    }
+   }
+  },
+  {
+   "step": "set_l3_nobody",
+   "port": 0,
+   "error": null,
+   "oracle": {
+    "layer_cfg": {
+     "ether": {
+      "dst": "52:52:18:89:91:ea",
+      "src": "8e:4e:97:11:bf:a8",
+      "state": "unconfigured"
+     },
+     "ipv4": {
+      "dst": "1.1.1.99",
+      "src": "1.1.1.1",
+      "state": "unresolved"
+     },
+     "ipv6": {
+      "enabled": false
+     }
+    },
+    "vlan": [],
+    "rx_filter_mode": "all",
+    "multicast": false,
+    "service": true,
+    "service_filtered": false,
+    "state": 0
+   },
+   "changed": {
+    "layer_cfg.ether.state": {
+     "from": "configured",
+     "to": "unconfigured"
+    },
+    "layer_cfg.ipv4.dst": {
+     "from": "2.2.2.2",
+     "to": "1.1.1.99"
+    },
+    "layer_cfg.ipv4.state": {
+     "from": "resolved",
+     "to": "unresolved"
+    }
+   }
+  },
+  {
+   "step": "resolve_nobody",
+   "port": 0,
+   "error": "TRexError: Could not resolve following ports: [0]",
+   "oracle": {
+    "layer_cfg": {
+     "ether": {
+      "dst": "52:52:18:89:91:ea",
+      "src": "8e:4e:97:11:bf:a8",
+      "state": "unconfigured"
+     },
+     "ipv4": {
+      "dst": "1.1.1.99",
+      "src": "1.1.1.1",
+      "state": "unresolved"
+     },
+     "ipv6": {
+      "enabled": false
+     }
+    },
+    "vlan": [],
+    "rx_filter_mode": "all",
+    "multicast": false,
+    "service": true,
+    "service_filtered": false,
+    "state": 0
+   },
+   "changed": {}
+  },
+  {
+   "step": "set_l3_back",
+   "port": 0,
+   "error": null,
+   "oracle": {
+    "layer_cfg": {
+     "ether": {
+      "dst": "52:52:18:89:91:ea",
+      "src": "8e:4e:97:11:bf:a8",
+      "state": "unconfigured"
+     },
+     "ipv4": {
+      "dst": "2.2.2.2",
+      "src": "1.1.1.1",
+      "state": "unresolved"
+     },
+     "ipv6": {
+      "enabled": false
+     }
+    },
+    "vlan": [],
+    "rx_filter_mode": "all",
+    "multicast": false,
+    "service": true,
+    "service_filtered": false,
+    "state": 0
+   },
+   "changed": {
+    "layer_cfg.ipv4.dst": {
+     "from": "1.1.1.99",
+     "to": "2.2.2.2"
+    }
+   }
+  },
+  {
+   "step": "resolve_back",
+   "port": 0,
+   "error": null,
+   "oracle": {
+    "layer_cfg": {
+     "ether": {
+      "dst": "52:52:18:89:91:ea",
+      "src": "8e:4e:97:11:bf:a8",
+      "state": "configured"
+     },
+     "ipv4": {
+      "dst": "2.2.2.2",
+      "src": "1.1.1.1",
+      "state": "resolved"
+     },
+     "ipv6": {
+      "enabled": false
+     }
+    },
+    "vlan": [],
+    "rx_filter_mode": "all",
+    "multicast": false,
+    "service": true,
+    "service_filtered": false,
+    "state": 0
+   },
+   "changed": {
+    "layer_cfg.ether.state": {
+     "from": "unconfigured",
+     "to": "configured"
+    },
+    "layer_cfg.ipv4.state": {
+     "from": "unresolved",
+     "to": "resolved"
+    }
+   }
+  },
+  {
+   "step": "conf_ipv6_auto",
+   "port": 0,
+   "error": "TRexError: Port 0 : *** Could not configure IPv6: IPv6 is not supported with current stack",
+   "oracle": {
+    "layer_cfg": {
+     "ether": {
+      "dst": "52:52:18:89:91:ea",
+      "src": "8e:4e:97:11:bf:a8",
+      "state": "configured"
+     },
+     "ipv4": {
+      "dst": "2.2.2.2",
+      "src": "1.1.1.1",
+      "state": "resolved"
+     },
+     "ipv6": {
+      "enabled": false
+     }
+    },
+    "vlan": [],
+    "rx_filter_mode": "all",
+    "multicast": false,
+    "service": true,
+    "service_filtered": false,
+    "state": 0
+   },
+   "changed": {}
+  },
+  {
+   "step": "conf_ipv6_source",
+   "port": 0,
+   "error": "TRexError: Port 0 : *** Could not configure IPv6: IPv6 is not supported with current stack",
+   "oracle": {
+    "layer_cfg": {
+     "ether": {
+      "dst": "52:52:18:89:91:ea",
+      "src": "8e:4e:97:11:bf:a8",
+      "state": "configured"
+     },
+     "ipv4": {
+      "dst": "2.2.2.2",
+      "src": "1.1.1.1",
+      "state": "resolved"
+     },
+     "ipv6": {
+      "enabled": false
+     }
+    },
+    "vlan": [],
+    "rx_filter_mode": "all",
+    "multicast": false,
+    "service": true,
+    "service_filtered": false,
+    "state": 0
+   },
+   "changed": {}
+  },
+  {
+   "step": "conf_ipv6_off",
+   "port": 0,
+   "error": null,
+   "oracle": {
+    "layer_cfg": {
+     "ether": {
+      "dst": "52:52:18:89:91:ea",
+      "src": "8e:4e:97:11:bf:a8",
+      "state": "configured"
+     },
+     "ipv4": {
+      "dst": "2.2.2.2",
+      "src": "1.1.1.1",
+      "state": "resolved"
+     },
+     "ipv6": {
+      "enabled": false
+     }
+    },
+    "vlan": [],
+    "rx_filter_mode": "all",
+    "multicast": false,
+    "service": true,
+    "service_filtered": false,
+    "state": 0
+   },
+   "changed": {}
+  },
+  {
+   "step": "vlan10_both",
+   "port": 0,
+   "error": null,
+   "oracle": {
+    "layer_cfg": {
+     "ether": {
+      "dst": "52:52:18:89:91:ea",
+      "src": "8e:4e:97:11:bf:a8",
+      "state": "configured"
+     },
+     "ipv4": {
+      "dst": "2.2.2.2",
+      "src": "1.1.1.1",
+      "state": "resolved"
+     },
+     "ipv6": {
+      "enabled": false
+     }
+    },
+    "vlan": [
+     10
+    ],
+    "rx_filter_mode": "all",
+    "multicast": false,
+    "service": true,
+    "service_filtered": false,
+    "state": 0
+   },
+   "changed": {
+    "vlan": {
+     "from": [],
+     "to": [
+      10
+     ]
+    }
+   }
+  },
+  {
+   "step": "vlan10_resolve",
+   "port": 0,
+   "error": null,
+   "oracle": {
+    "layer_cfg": {
+     "ether": {
+      "dst": "52:52:18:89:91:ea",
+      "src": "8e:4e:97:11:bf:a8",
+      "state": "configured"
+     },
+     "ipv4": {
+      "dst": "2.2.2.2",
+      "src": "1.1.1.1",
+      "state": "resolved"
+     },
+     "ipv6": {
+      "enabled": false
+     }
+    },
+    "vlan": [
+     10
+    ],
+    "rx_filter_mode": "all",
+    "multicast": false,
+    "service": true,
+    "service_filtered": false,
+    "state": 0
+   },
+   "changed": {}
+  },
+  {
+   "step": "vlan_clear_both",
+   "port": 0,
+   "error": null,
+   "oracle": {
+    "layer_cfg": {
+     "ether": {
+      "dst": "52:52:18:89:91:ea",
+      "src": "8e:4e:97:11:bf:a8",
+      "state": "configured"
+     },
+     "ipv4": {
+      "dst": "2.2.2.2",
+      "src": "1.1.1.1",
+      "state": "resolved"
+     },
+     "ipv6": {
+      "enabled": false
+     }
+    },
+    "vlan": [],
+    "rx_filter_mode": "all",
+    "multicast": false,
+    "service": true,
+    "service_filtered": false,
+    "state": 0
+   },
+   "changed": {
+    "vlan": {
+     "from": [
+      10
+     ],
+     "to": []
+    }
+   }
+  },
+  {
+   "step": "vlan_clear_resolve",
+   "port": 0,
+   "error": null,
+   "oracle": {
+    "layer_cfg": {
+     "ether": {
+      "dst": "52:52:18:89:91:ea",
+      "src": "8e:4e:97:11:bf:a8",
+      "state": "configured"
+     },
+     "ipv4": {
+      "dst": "2.2.2.2",
+      "src": "1.1.1.1",
+      "state": "resolved"
+     },
+     "ipv6": {
+      "enabled": false
+     }
+    },
+    "vlan": [],
+    "rx_filter_mode": "all",
+    "multicast": false,
+    "service": true,
+    "service_filtered": false,
+    "state": 0
+   },
+   "changed": {}
+  },
+  {
+   "step": "ipv6_on_for_scan",
+   "port": 0,
+   "error": "TRexError: Port 0 : *** Could not configure IPv6: IPv6 is not supported with current stack",
+   "oracle": {
+    "layer_cfg": {
+     "ether": {
+      "dst": "52:52:18:89:91:ea",
+      "src": "8e:4e:97:11:bf:a8",
+      "state": "configured"
+     },
+     "ipv4": {
+      "dst": "2.2.2.2",
+      "src": "1.1.1.1",
+      "state": "resolved"
+     },
+     "ipv6": {
+      "enabled": false
+     }
+    },
+    "vlan": [],
+    "rx_filter_mode": "all",
+    "multicast": false,
+    "service": true,
+    "service_filtered": false,
+    "state": 0
+   },
+   "changed": {}
+  },
+  {
+   "step": "ipv6_off_after_scan",
+   "port": 0,
+   "error": null,
+   "oracle": {
+    "layer_cfg": {
+     "ether": {
+      "dst": "52:52:18:89:91:ea",
+      "src": "8e:4e:97:11:bf:a8",
+      "state": "configured"
+     },
+     "ipv4": {
+      "dst": "2.2.2.2",
+      "src": "1.1.1.1",
+      "state": "resolved"
+     },
+     "ipv6": {
+      "enabled": false
+     }
+    },
+    "vlan": [],
+    "rx_filter_mode": "all",
+    "multicast": false,
+    "service": true,
+    "service_filtered": false,
+    "state": 0
+   },
+   "changed": {}
+  },
+  {
+   "step": "service_off_0",
+   "port": 0,
+   "error": null,
+   "oracle": {
+    "layer_cfg": {
+     "ether": {
+      "dst": "52:52:18:89:91:ea",
+      "src": "8e:4e:97:11:bf:a8",
+      "state": "configured"
+     },
+     "ipv4": {
+      "dst": "2.2.2.2",
+      "src": "1.1.1.1",
+      "state": "resolved"
+     },
+     "ipv6": {
+      "enabled": false
+     }
+    },
+    "vlan": [],
+    "rx_filter_mode": "hw",
+    "multicast": false,
+    "service": false,
+    "service_filtered": false,
+    "state": 0
+   },
+   "changed": {
+    "rx_filter_mode": {
+     "from": "all",
+     "to": "hw"
+    },
+    "service": {
+     "from": true,
+     "to": false
+    }
+   }
+  },
+  {
+   "step": "service_off_1",
+   "port": 1,
+   "error": null,
+   "oracle": {
+    "layer_cfg": {
+     "ether": {
+      "dst": "8e:4e:97:11:bf:a8",
+      "src": "52:52:18:89:91:ea",
+      "state": "configured"
+     },
+     "ipv4": {
+      "dst": "1.1.1.1",
+      "src": "2.2.2.2",
+      "state": "resolved"
+     },
+     "ipv6": {
+      "enabled": false
+     }
+    },
+    "vlan": [],
+    "rx_filter_mode": "hw",
+    "multicast": false,
+    "service": false,
+    "service_filtered": false,
+    "state": 0
+   },
+   "changed": {
+    "rx_filter_mode": {
+     "from": "all",
+     "to": "hw"
+    },
+    "service": {
+     "from": true,
+     "to": false
+    }
+   }
+  },
+  {
+   "step": "service_on_for_raw",
+   "port": 0,
+   "error": null,
+   "oracle": {
+    "layer_cfg": {
+     "ether": {
+      "dst": "52:52:18:89:91:ea",
+      "src": "8e:4e:97:11:bf:a8",
+      "state": "configured"
+     },
+     "ipv4": {
+      "dst": "2.2.2.2",
+      "src": "1.1.1.1",
+      "state": "resolved"
+     },
+     "ipv6": {
+      "enabled": false
+     }
+    },
+    "vlan": [],
+    "rx_filter_mode": "all",
+    "multicast": false,
+    "service": true,
+    "service_filtered": false,
+    "state": 0
+   },
+   "changed": {
+    "rx_filter_mode": {
+     "from": "hw",
+     "to": "all"
+    },
+    "service": {
+     "from": false,
+     "to": true
+    }
+   }
+  },
+  {
+   "step": "after_raw_three_tags",
+   "port": 0,
+   "error": null,
+   "oracle": {
+    "layer_cfg": {
+     "ether": {
+      "dst": "52:52:18:89:91:ea",
+      "src": "8e:4e:97:11:bf:a8",
+      "state": "configured"
+     },
+     "ipv4": {
+      "dst": "2.2.2.2",
+      "src": "1.1.1.1",
+      "state": "resolved"
+     },
+     "ipv6": {
+      "enabled": false
+     }
+    },
+    "vlan": [],
+    "rx_filter_mode": "all",
+    "multicast": false,
+    "service": true,
+    "service_filtered": false,
+    "state": 0
+   },
+   "changed": {}
+  },
+  {
+   "step": "service_off_after_raw",
+   "port": 0,
+   "error": null,
+   "oracle": {
+    "layer_cfg": {
+     "ether": {
+      "dst": "52:52:18:89:91:ea",
+      "src": "8e:4e:97:11:bf:a8",
+      "state": "configured"
+     },
+     "ipv4": {
+      "dst": "2.2.2.2",
+      "src": "1.1.1.1",
+      "state": "resolved"
+     },
+     "ipv6": {
+      "enabled": false
+     }
+    },
+    "vlan": [],
+    "rx_filter_mode": "hw",
+    "multicast": false,
+    "service": false,
+    "service_filtered": false,
+    "state": 0
+   },
+   "changed": {
+    "rx_filter_mode": {
+     "from": "all",
+     "to": "hw"
+    },
+    "service": {
+     "from": true,
+     "to": false
+    }
+   }
+  }
+ ],
+ "watches": {
+  "ping_v4": {
+   "before": {
+    "rx_filter_mode": "all",
+    "multicast": false,
+    "service": true
+   },
+   "during": [
+    {
+     "dt": 0.01,
+     "rx_filter_mode": "all",
+     "multicast": false,
+     "service": true
+    }
+   ],
+   "after": {
+    "rx_filter_mode": "all",
+    "multicast": false,
+    "service": true
+   }
+  },
+  "ping_v4_timeout": {
+   "before": {
+    "rx_filter_mode": "all",
+    "multicast": false,
+    "service": true
+   },
+   "during": [
+    {
+     "dt": 0.01,
+     "rx_filter_mode": "all",
+     "multicast": false,
+     "service": true
+    },
+    {
+     "dt": 0.27,
+     "rx_filter_mode": "all",
+     "multicast": false,
+     "service": true
+    },
+    {
+     "dt": 0.52,
+     "rx_filter_mode": "all",
+     "multicast": false,
+     "service": true
+    },
+    {
+     "dt": 0.78,
+     "rx_filter_mode": "all",
+     "multicast": false,
+     "service": true
+    },
+    {
+     "dt": 1.04,
+     "rx_filter_mode": "all",
+     "multicast": false,
+     "service": true
+    },
+    {
+     "dt": 1.3,
+     "rx_filter_mode": "all",
+     "multicast": false,
+     "service": true
+    },
+    {
+     "dt": 1.55,
+     "rx_filter_mode": "all",
+     "multicast": false,
+     "service": true
+    },
+    {
+     "dt": 1.81,
+     "rx_filter_mode": "all",
+     "multicast": false,
+     "service": true
+    },
+    {
+     "dt": 2.07,
+     "rx_filter_mode": "all",
+     "multicast": false,
+     "service": true
+    },
+    {
+     "dt": 2.32,
+     "rx_filter_mode": "all",
+     "multicast": false,
+     "service": true
+    },
+    {
+     "dt": 2.58,
+     "rx_filter_mode": "all",
+     "multicast": false,
+     "service": true
+    },
+    {
+     "dt": 2.84,
+     "rx_filter_mode": "all",
+     "multicast": false,
+     "service": true
+    },
+    {
+     "dt": 3.1,
+     "rx_filter_mode": "all",
+     "multicast": false,
+     "service": true
+    }
+   ],
+   "after": {
+    "rx_filter_mode": "all",
+    "multicast": false,
+    "service": true
+   }
+  },
+  "scan6": {
+   "before": {
+    "rx_filter_mode": "all",
+    "multicast": false,
+    "service": true
+   },
+   "during": [
+    {
+     "dt": 0.01,
+     "rx_filter_mode": "all",
+     "multicast": false,
+     "service": true
+    },
+    {
+     "dt": 0.27,
+     "rx_filter_mode": "all",
+     "multicast": false,
+     "service": true
+    },
+    {
+     "dt": 0.52,
+     "rx_filter_mode": "all",
+     "multicast": false,
+     "service": true
+    },
+    {
+     "dt": 0.78,
+     "rx_filter_mode": "all",
+     "multicast": false,
+     "service": true
+    },
+    {
+     "dt": 1.04,
+     "rx_filter_mode": "all",
+     "multicast": false,
+     "service": true
+    },
+    {
+     "dt": 1.3,
+     "rx_filter_mode": "all",
+     "multicast": false,
+     "service": true
+    },
+    {
+     "dt": 1.55,
+     "rx_filter_mode": "all",
+     "multicast": false,
+     "service": true
+    },
+    {
+     "dt": 1.81,
+     "rx_filter_mode": "all",
+     "multicast": false,
+     "service": true
+    },
+    {
+     "dt": 2.06,
+     "rx_filter_mode": "all",
+     "multicast": false,
+     "service": true
+    },
+    {
+     "dt": 2.32,
+     "rx_filter_mode": "all",
+     "multicast": false,
+     "service": true
+    },
+    {
+     "dt": 2.58,
+     "rx_filter_mode": "all",
+     "multicast": false,
+     "service": true
+    },
+    {
+     "dt": 2.83,
+     "rx_filter_mode": "all",
+     "multicast": false,
+     "service": true
+    },
+    {
+     "dt": 3.09,
+     "rx_filter_mode": "all",
+     "multicast": false,
+     "service": true
+    }
+   ],
+   "after": {
+    "rx_filter_mode": "all",
+    "multicast": false,
+    "service": true
+   }
+  },
+  "ping_v6": {
+   "before": {
+    "rx_filter_mode": "all",
+    "multicast": false,
+    "service": true
+   },
+   "during": [
+    {
+     "dt": 0.01,
+     "rx_filter_mode": "all",
+     "multicast": false,
+     "service": true
+    }
+   ],
+   "after": {
+    "rx_filter_mode": "all",
+    "multicast": false,
+    "service": true
+   }
+  }
+ },
+ "pings": {
+  "ok": [
+   {
+    "records": [
+     {
+      "text": "Reply from 2.2.2.2: bytes=64, time=4.97ms, TTL=128",
+      "status": "success",
+      "rtt": 4.970682742793997,
+      "src_ip": "2.2.2.2",
+      "ttl": 128
+     }
+    ],
+    "secs": 0.122
+   },
+   {
+    "records": [
+     {
+      "text": "Reply from 2.2.2.2: bytes=64, time=3.97ms, TTL=128",
+      "status": "success",
+      "rtt": 3.969051049978134,
+      "src_ip": "2.2.2.2",
+      "ttl": 128
+     }
+    ],
+    "secs": 0.12
+   },
+   {
+    "records": [
+     {
+      "text": "Reply from 2.2.2.2: bytes=64, time=5.40ms, TTL=128",
+      "status": "success",
+      "rtt": 5.398711535917755,
+      "src_ip": "2.2.2.2",
+      "ttl": 128
+     }
+    ],
+    "secs": 0.213
+   },
+   {
+    "records": [
+     {
+      "text": "Reply from 2.2.2.2: bytes=64, time=4.15ms, TTL=128",
+      "status": "success",
+      "rtt": 4.152341266774329,
+      "src_ip": "2.2.2.2",
+      "ttl": 128
+     }
+    ],
+    "secs": 0.12
+   },
+   {
+    "records": [
+     {
+      "text": "Reply from 2.2.2.2: bytes=64, time=4.47ms, TTL=128",
+      "status": "success",
+      "rtt": 4.470223918303873,
+      "src_ip": "2.2.2.2",
+      "ttl": 128
+     }
+    ],
+    "secs": 0.122
+   }
+  ],
+  "timeout": {
+   "records": [
+    {
+     "text": "Request timed out.",
+     "status": "timeout",
+     "rtt": null,
+     "src_ip": "N/A",
+     "ttl": "N/A"
+    }
+   ],
+   "secs": 3.111
+  },
+  "v6": {
+   "dst": "fe80::5052:18ff:fe89:91ea",
+   "dst_from_scan": true,
+   "error": null,
+   "records": [
+    {
+     "text": "Reply from fe80::5052:18ff:fe89:91ea: bytes=64, time=2.89ms, hlim=64",
+     "status": "success",
+     "rtt": 2.885181463227582,
+     "src_ip": "fe80::5052:18ff:fe89:91ea",
+     "ttl": 64
+    }
+   ],
+   "secs": 0.127
+  }
+ },
+ "refusals": {
+  "raw_set_vlan_three_tags": {
+   "ok": false,
+   "error": "Maximal number of stacked VLANs is 2, got: 3",
+   "data": null
+  },
+  "service_on_while_tx": {
+   "error": null
+  },
+  "raw_set_l2_while_tx": {
+   "ok": false,
+   "error": "command 'set_l2_mode' cannot be executed on current state: 'TX'"
+  },
+  "client_set_l2_while_tx": {
+   "error": "TRexError: Port 0 : *** command 'set_l2_mode' cannot be executed on current state: 'TX'"
+  },
+  "client_set_l2_while_tx_base_check": {
+   "error": "TRexError: Port 0 : *** set_l2_mode - port is active, please stop the port before executing command"
+  }
+ },
+ "xstats_names": {
+  "0": [
+   "rx_good_packets",
+   "tx_good_packets",
+   "rx_good_bytes",
+   "tx_good_bytes",
+   "rx_missed_errors",
+   "rx_errors",
+   "tx_errors",
+   "rx_mbuf_allocation_errors",
+   "rx_q0_packets",
+   "rx_q0_bytes",
+   "rx_q0_errors",
+   "tx_q0_packets",
+   "tx_q0_bytes"
+  ],
+  "1": [
+   "rx_good_packets",
+   "tx_good_packets",
+   "rx_good_bytes",
+   "tx_good_bytes",
+   "rx_missed_errors",
+   "rx_errors",
+   "tx_errors",
+   "rx_mbuf_allocation_errors",
+   "rx_q0_packets",
+   "rx_q0_bytes",
+   "rx_q0_errors",
+   "tx_q0_packets",
+   "tx_q0_bytes"
+  ]
+ },
+ "xstats_names_that_move_under_load": {
+  "0": [
+   "tx_good_bytes",
+   "tx_good_packets",
+   "tx_q0_bytes",
+   "tx_q0_packets"
+  ],
+  "1": [
+   "rx_good_bytes",
+   "rx_good_packets",
+   "rx_q0_bytes",
+   "rx_q0_packets"
+  ]
+ },
+ "xstats_samples": [
+  {
+   "condition": "idle",
+   "t_before": 17.926,
+   "t_after": 17.941,
+   "xstats": {
+    "0": {
+     "rx_good_packets": 34,
+     "tx_good_packets": 120712260,
+     "rx_good_bytes": 2138,
+     "tx_good_bytes": 7242735652,
+     "rx_missed_errors": 0,
+     "rx_errors": 0,
+     "tx_errors": 0,
+     "rx_mbuf_allocation_errors": 0,
+     "rx_q0_packets": 34,
+     "rx_q0_bytes": 2138,
+     "rx_q0_errors": 0,
+     "tx_q0_packets": 120712260,
+     "tx_q0_bytes": 7242735652
+    },
+    "1": {
+     "rx_good_packets": 120510070,
+     "tx_good_packets": 16,
+     "rx_good_bytes": 7230604466,
+     "tx_good_bytes": 844,
+     "rx_missed_errors": 202208,
+     "rx_errors": 0,
+     "tx_errors": 0,
+     "rx_mbuf_allocation_errors": 0,
+     "rx_q0_packets": 120510070,
+     "rx_q0_bytes": 7230604466,
+     "rx_q0_errors": 0,
+     "tx_q0_packets": 16,
+     "tx_q0_bytes": 844
+    }
+   },
+   "oracle": {
+    "0": {
+     "opackets": 28,
+     "ipackets": 23
+    },
+    "1": {
+     "opackets": 14,
+     "ipackets": 37
+    }
+   }
+  },
+  {
+   "condition": "idle",
+   "t_before": 18.941,
+   "t_after": 18.955,
+   "xstats": {
+    "0": {
+     "rx_good_packets": 34,
+     "tx_good_packets": 120712260,
+     "rx_good_bytes": 2138,
+     "tx_good_bytes": 7242735652,
+     "rx_missed_errors": 0,
+     "rx_errors": 0,
+     "tx_errors": 0,
+     "rx_mbuf_allocation_errors": 0,
+     "rx_q0_packets": 34,
+     "rx_q0_bytes": 2138,
+     "rx_q0_errors": 0,
+     "tx_q0_packets": 120712260,
+     "tx_q0_bytes": 7242735652
+    },
+    "1": {
+     "rx_good_packets": 120510070,
+     "tx_good_packets": 16,
+     "rx_good_bytes": 7230604466,
+     "tx_good_bytes": 844,
+     "rx_missed_errors": 202208,
+     "rx_errors": 0,
+     "tx_errors": 0,
+     "rx_mbuf_allocation_errors": 0,
+     "rx_q0_packets": 120510070,
+     "rx_q0_bytes": 7230604466,
+     "rx_q0_errors": 0,
+     "tx_q0_packets": 16,
+     "tx_q0_bytes": 844
+    }
+   },
+   "oracle": {
+    "0": {
+     "opackets": 28,
+     "ipackets": 23
+    },
+    "1": {
+     "opackets": 14,
+     "ipackets": 37
+    }
+   }
+  },
+  {
+   "condition": "load",
+   "t_before": 20.969,
+   "t_after": 20.983,
+   "xstats": {
+    "0": {
+     "rx_good_packets": 34,
+     "tx_good_packets": 120714467,
+     "rx_good_bytes": 2138,
+     "tx_good_bytes": 7242916626,
+     "rx_missed_errors": 0,
+     "rx_errors": 0,
+     "tx_errors": 0,
+     "rx_mbuf_allocation_errors": 0,
+     "rx_q0_packets": 34,
+     "rx_q0_bytes": 2138,
+     "rx_q0_errors": 0,
+     "tx_q0_packets": 120714467,
+     "tx_q0_bytes": 7242916626
+    },
+    "1": {
+     "rx_good_packets": 120512279,
+     "tx_good_packets": 16,
+     "rx_good_bytes": 7230785604,
+     "tx_good_bytes": 844,
+     "rx_missed_errors": 202208,
+     "rx_errors": 0,
+     "tx_errors": 0,
+     "rx_mbuf_allocation_errors": 0,
+     "rx_q0_packets": 120512279,
+     "rx_q0_bytes": 7230785604,
+     "rx_q0_errors": 0,
+     "tx_q0_packets": 16,
+     "tx_q0_bytes": 844
+    }
+   },
+   "oracle": {
+    "0": {
+     "opackets": 2241,
+     "ipackets": 23
+    },
+    "1": {
+     "opackets": 14,
+     "ipackets": 2249
+    }
+   }
+  },
+  {
+   "condition": "load",
+   "t_before": 21.984,
+   "t_after": 21.998,
+   "xstats": {
+    "0": {
+     "rx_good_packets": 34,
+     "tx_good_packets": 120715584,
+     "rx_good_bytes": 2138,
+     "tx_good_bytes": 7243008220,
+     "rx_missed_errors": 0,
+     "rx_errors": 0,
+     "tx_errors": 0,
+     "rx_mbuf_allocation_errors": 0,
+     "rx_q0_packets": 34,
+     "rx_q0_bytes": 2138,
+     "rx_q0_errors": 0,
+     "tx_q0_packets": 120715584,
+     "tx_q0_bytes": 7243008220
+    },
+    "1": {
+     "rx_good_packets": 120513396,
+     "tx_good_packets": 16,
+     "rx_good_bytes": 7230877198,
+     "tx_good_bytes": 844,
+     "rx_missed_errors": 202208,
+     "rx_errors": 0,
+     "tx_errors": 0,
+     "rx_mbuf_allocation_errors": 0,
+     "rx_q0_packets": 120513396,
+     "rx_q0_bytes": 7230877198,
+     "rx_q0_errors": 0,
+     "tx_q0_packets": 16,
+     "tx_q0_bytes": 844
+    }
+   },
+   "oracle": {
+    "0": {
+     "opackets": 3356,
+     "ipackets": 23
+    },
+    "1": {
+     "opackets": 14,
+     "ipackets": 3365
+    }
+   }
+  },
+  {
+   "condition": "load",
+   "t_before": 22.998,
+   "t_after": 23.001,
+   "xstats": {
+    "0": {
+     "rx_good_packets": 34,
+     "tx_good_packets": 120716699,
+     "rx_good_bytes": 2138,
+     "tx_good_bytes": 7243099650,
+     "rx_missed_errors": 0,
+     "rx_errors": 0,
+     "tx_errors": 0,
+     "rx_mbuf_allocation_errors": 0,
+     "rx_q0_packets": 34,
+     "rx_q0_bytes": 2138,
+     "rx_q0_errors": 0,
+     "tx_q0_packets": 120716699,
+     "tx_q0_bytes": 7243099650
+    },
+    "1": {
+     "rx_good_packets": 120514508,
+     "tx_good_packets": 16,
+     "rx_good_bytes": 7230968382,
+     "tx_good_bytes": 844,
+     "rx_missed_errors": 202208,
+     "rx_errors": 0,
+     "tx_errors": 0,
+     "rx_mbuf_allocation_errors": 0,
+     "rx_q0_packets": 120514508,
+     "rx_q0_bytes": 7230968382,
+     "rx_q0_errors": 0,
+     "tx_q0_packets": 16,
+     "tx_q0_bytes": 844
+    }
+   },
+   "oracle": {
+    "0": {
+     "opackets": 4468,
+     "ipackets": 23
+    },
+    "1": {
+     "opackets": 14,
+     "ipackets": 4476
+    }
+   }
+  },
+  {
+   "condition": "after_stop",
+   "t_before": 25.115,
+   "t_after": 25.129,
+   "xstats": {
+    "0": {
+     "rx_good_packets": 34,
+     "tx_good_packets": 120717813,
+     "rx_good_bytes": 2138,
+     "tx_good_bytes": 7243190998,
+     "rx_missed_errors": 0,
+     "rx_errors": 0,
+     "tx_errors": 0,
+     "rx_mbuf_allocation_errors": 0,
+     "rx_q0_packets": 34,
+     "rx_q0_bytes": 2138,
+     "rx_q0_errors": 0,
+     "tx_q0_packets": 120717813,
+     "tx_q0_bytes": 7243190998
+    },
+    "1": {
+     "rx_good_packets": 120515623,
+     "tx_good_packets": 16,
+     "rx_good_bytes": 7231059812,
+     "tx_good_bytes": 844,
+     "rx_missed_errors": 202208,
+     "rx_errors": 0,
+     "tx_errors": 0,
+     "rx_mbuf_allocation_errors": 0,
+     "rx_q0_packets": 120515623,
+     "rx_q0_bytes": 7231059812,
+     "rx_q0_errors": 0,
+     "tx_q0_packets": 16,
+     "tx_q0_bytes": 844
+    }
+   },
+   "oracle": {
+    "0": {
+     "opackets": 5581,
+     "ipackets": 23
+    },
+    "1": {
+     "opackets": 14,
+     "ipackets": 5590
+    }
+   }
+  },
+  {
+   "condition": "after_stop",
+   "t_before": 26.129,
+   "t_after": 26.143,
+   "xstats": {
+    "0": {
+     "rx_good_packets": 34,
+     "tx_good_packets": 120717813,
+     "rx_good_bytes": 2138,
+     "tx_good_bytes": 7243190998,
+     "rx_missed_errors": 0,
+     "rx_errors": 0,
+     "tx_errors": 0,
+     "rx_mbuf_allocation_errors": 0,
+     "rx_q0_packets": 34,
+     "rx_q0_bytes": 2138,
+     "rx_q0_errors": 0,
+     "tx_q0_packets": 120717813,
+     "tx_q0_bytes": 7243190998
+    },
+    "1": {
+     "rx_good_packets": 120515623,
+     "tx_good_packets": 16,
+     "rx_good_bytes": 7231059812,
+     "tx_good_bytes": 844,
+     "rx_missed_errors": 202208,
+     "rx_errors": 0,
+     "tx_errors": 0,
+     "rx_mbuf_allocation_errors": 0,
+     "rx_q0_packets": 120515623,
+     "rx_q0_bytes": 7231059812,
+     "rx_q0_errors": 0,
+     "tx_q0_packets": 16,
+     "tx_q0_bytes": 844
+    }
+   },
+   "oracle": {
+    "0": {
+     "opackets": 5581,
+     "ipackets": 23
+    },
+    "1": {
+     "opackets": 14,
+     "ipackets": 5590
+    }
+   }
+  }
+ ],
+ "final_state": {
+  "0": {
+   "layer_cfg": {
+    "ether": {
+     "dst": "52:52:18:89:91:ea",
+     "src": "8e:4e:97:11:bf:a8",
+     "state": "configured"
+    },
+    "ipv4": {
+     "dst": "2.2.2.2",
+     "src": "1.1.1.1",
+     "state": "resolved"
+    },
+    "ipv6": {
+     "enabled": false
+    }
+   },
+   "vlan": [],
+   "rx_filter_mode": "hw",
+   "multicast": false,
+   "service": false,
+   "service_filtered": false,
+   "state": 0
+  },
+  "1": {
+   "layer_cfg": {
+    "ether": {
+     "dst": "8e:4e:97:11:bf:a8",
+     "src": "52:52:18:89:91:ea",
+     "state": "configured"
+    },
+    "ipv4": {
+     "dst": "1.1.1.1",
+     "src": "2.2.2.2",
+     "state": "resolved"
+    },
+    "ipv6": {
+     "enabled": false
+    }
+   },
+   "vlan": [],
+   "rx_filter_mode": "hw",
+   "multicast": false,
+   "service": false,
+   "service_filtered": false,
+   "state": 0
+  }
+ },
+ "start_state": {
+  "0": {
+   "layer_cfg": {
+    "ether": {
+     "dst": "52:52:18:89:91:ea",
+     "src": "8e:4e:97:11:bf:a8",
+     "state": "configured"
+    },
+    "ipv4": {
+     "dst": "2.2.2.2",
+     "src": "1.1.1.1",
+     "state": "resolved"
+    },
+    "ipv6": {
+     "enabled": false
+    }
+   },
+   "vlan": [],
+   "rx_filter_mode": "hw",
+   "multicast": false,
+   "service": false,
+   "service_filtered": false,
+   "state": 0
+  },
+  "1": {
+   "layer_cfg": {
+    "ether": {
+     "dst": "8e:4e:97:11:bf:a8",
+     "src": "52:52:18:89:91:ea",
+     "state": "configured"
+    },
+    "ipv4": {
+     "dst": "1.1.1.1",
+     "src": "2.2.2.2",
+     "state": "resolved"
+    },
+    "ipv6": {
+     "enabled": false
+    }
+   },
+   "vlan": [],
+   "rx_filter_mode": "hw",
+   "multicast": false,
+   "service": false,
+   "service_filtered": false,
+   "state": 0
+  }
+ },
+ "multicast_true": {
+  "ok": true,
+  "error": null,
+  "oracle_multicast": false
+ },
+ "apply_resolved_parts": {
+  "service_on": {
+   "secs": 0.002,
+   "error": null
+  },
+  "set_l3": {
+   "secs": 0.007,
+   "error": null
+  },
+  "resolve": {
+   "secs": 0.22,
+   "error": null
+  },
+  "service_off": {
+   "secs": 0.002,
+   "error": null
+  }
+ },
+ "resolved_mac": "52:52:18:89:91:ea",
+ "resolved_layer_cfg": {
+  "ether": {
+   "dst": "52:52:18:89:91:ea",
+   "src": "8e:4e:97:11:bf:a8",
+   "state": "configured"
+  },
+  "ipv4": {
+   "dst": "2.2.2.2",
+   "src": "1.1.1.1",
+   "state": "resolved"
+  },
+  "ipv6": {
+   "enabled": false
+  }
+ },
+ "apply_unresolved_parts": {
+  "service_on": {
+   "secs": 0.002,
+   "error": null
+  },
+  "set_l3": {
+   "secs": 0.007,
+   "error": null
+  },
+  "resolve": {
+   "secs": 3.058,
+   "error": "TRexError: Could not resolve following ports: [0]"
+  },
+  "service_off": {
+   "secs": 0.002,
+   "error": null
+  }
+ },
+ "unresolved_layer_cfg": {
+  "ether": {
+   "dst": "52:52:18:89:91:ea",
+   "src": "8e:4e:97:11:bf:a8",
+   "state": "unconfigured"
+  },
+  "ipv4": {
+   "dst": "1.1.1.99",
+   "src": "1.1.1.1",
+   "state": "unresolved"
+  },
+  "ipv6": {
+   "enabled": false
+  }
+ },
+ "resolved_mac_service_on": "52:52:18:89:91:ea",
+ "vlan10": {
+  "resolve_error": null,
+  "resolve_layer_cfg": {
+   "ether": {
+    "dst": "52:52:18:89:91:ea",
+    "src": "8e:4e:97:11:bf:a8",
+    "state": "configured"
+   },
+   "ipv4": {
+    "dst": "2.2.2.2",
+    "src": "1.1.1.1",
+    "state": "resolved"
+   },
+   "ipv6": {
+    "enabled": false
+   }
+  },
+  "ping_error": null,
+  "ping": [
+   {
+    "text": "Reply from 2.2.2.2: bytes=64, time=2.97ms, TTL=128",
+    "status": "success",
+    "rtt": 2.9688488691590464,
+    "src_ip": "2.2.2.2",
+    "ttl": 128
+   }
+  ]
+ },
+ "scan": {
+  "raw": {
+   "0": [
+    {
+     "type": "Host",
+     "mac": "52:52:18:89:91:ea",
+     "ipv6": "fe80::5052:18ff:fe89:91ea"
+    }
+   ]
+  },
+  "error": null,
+  "port1_entries": [
+   {
+    "type": "Host",
+    "mac": "52:52:18:89:91:ea",
+    "ipv6": "fe80::5052:18ff:fe89:91ea"
+   }
+  ]
+ },
+ "client_view_during_tx": {
+  "state": 2,
+  "is_writeable": true,
+  "is_dynamic": true,
+  "is_active": true,
+  "is_transmitting": true,
+  "service_mode": true
+ },
+ "during_tx_snapshot": {
+  "layer_cfg": {
+   "ether": {
+    "dst": "52:52:18:89:91:ea",
+    "src": "8e:4e:97:11:bf:a8",
+    "state": "configured"
+   },
+   "ipv4": {
+    "dst": "2.2.2.2",
+    "src": "1.1.1.1",
+    "state": "resolved"
+   },
+   "ipv6": {
+    "enabled": false
+   }
+  },
+  "vlan": [],
+  "rx_filter_mode": "all",
+  "multicast": false,
+  "service": true,
+  "service_filtered": false,
+  "state": 2
+ }
+}

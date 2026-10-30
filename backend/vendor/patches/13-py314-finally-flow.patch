@@ -1,0 +1,98 @@
+diff -ruN a/trex/common/services/trex_service_ap.py b/trex/common/services/trex_service_ap.py
+--- a/trex/common/services/trex_service_ap.py	2026-10-28 22:14:42.051828882 -0400
++++ b/trex/common/services/trex_service_ap.py	2026-10-28 22:14:53.512304372 -0400
+@@ -227,19 +227,18 @@
+                     traceback.print_exc()
+                 err_msg = ' (Exception: %s)' % e
+         finally:
+-            if not self.capture_id:
+-                return
+-            try:
+-                self.bg_client.stop_capture(self.capture_id)
+-            except:
+-                pass
+-            if self.port_id in self.ap_mngr.service_ctx:
+-                if self.ap_per_ip:
+-                    self.err('Background thread on port %s died%s. Disconnecting APs.' % (self.port_id, err_msg))
+-                else:
+-                    self.err('Background thread on port %s died%s.' % (self.port_id, err_msg))
+-                for ap in self.ap_per_ip.values():
+-                    self.shutdown_ap(ap)
++            if self.capture_id:
++                try:
++                    self.bg_client.stop_capture(self.capture_id)
++                except:
++                    pass
++                if self.port_id in self.ap_mngr.service_ctx:
++                    if self.ap_per_ip:
++                        self.err('Background thread on port %s died%s. Disconnecting APs.' % (self.port_id, err_msg))
++                    else:
++                        self.err('Background thread on port %s died%s.' % (self.port_id, err_msg))
++                    for ap in self.ap_per_ip.values():
++                        self.shutdown_ap(ap)
+ 
+ 
+     def handle_ap_arp(self, rx_bytes):
+diff -ruN a/trex/scapy_server/scapy_zmq_server.py b/trex/scapy_server/scapy_zmq_server.py
+--- a/trex/scapy_server/scapy_zmq_server.py	2026-10-28 22:14:42.047752256 -0400
++++ b/trex/scapy_server/scapy_zmq_server.py	2026-10-28 22:14:53.512150942 -0400
+@@ -76,26 +76,28 @@
+     def error_handler(self,e,req_id):
+         response = []
+         try:
+-            raise e
+-        except ParseException as e:
+-            response = self.create_error_response(-32700,'Parse error ',req_id)
+-        except InvalidRequest as e:
+-            response = self.create_error_response(-32600,'Invalid Request',req_id)
+-        except MethodNotFound as e:
+-            response = self.create_error_response(-32601,'Method not found',req_id)
+-        except InvalidParams as e:
+-            response = self.create_error_response(-32603,'Invalid params',req_id)
+-        except SyntaxError as e:
+-            response = self.create_error_response(-32097,'SyntaxError',req_id)
+-        except Exception as e:
+-            if hasattr(e,'message'):
+-                response = self.create_error_response(-32098,'Scapy Server: '+str(e.message),req_id)
+-            elif (is_python(3)):
+-                response = self.create_error_response(-32096,'Scapy Server: '+str(e),req_id)
+-            else:
+-                response = self.create_error_response(-32096,'Scapy Server: Unknown Error',req_id)
+-        finally:
+-            return response
++            try:
++                raise e
++            except ParseException as e:
++                response = self.create_error_response(-32700,'Parse error ',req_id)
++            except InvalidRequest as e:
++                response = self.create_error_response(-32600,'Invalid Request',req_id)
++            except MethodNotFound as e:
++                response = self.create_error_response(-32601,'Method not found',req_id)
++            except InvalidParams as e:
++                response = self.create_error_response(-32603,'Invalid params',req_id)
++            except SyntaxError as e:
++                response = self.create_error_response(-32097,'SyntaxError',req_id)
++            except Exception as e:
++                if hasattr(e,'message'):
++                    response = self.create_error_response(-32098,'Scapy Server: '+str(e.message),req_id)
++                elif (is_python(3)):
++                    response = self.create_error_response(-32096,'Scapy Server: '+str(e),req_id)
++                else:
++                    response = self.create_error_response(-32096,'Scapy Server: Unknown Error',req_id)
++        except Exception:
++            pass
++        return response
+ 
+ class Scapy_server():
+     def __init__(self, args,port=4507):
+@@ -168,8 +170,8 @@
+ 
+                 #  Send reply back to client
+                     self.socket.send(json_response.encode('utf-8'))
+-                    if (method == 'shut_down'):
+-                        break
++                if (method == 'shut_down'):
++                    break
+ 
+         except KeyboardInterrupt:
+                 self.logger.info(b'Terminated By local user')

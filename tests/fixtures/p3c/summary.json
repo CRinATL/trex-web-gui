@@ -1,0 +1,1375 @@
+{
+ "monitor": {
+  "start": {
+   "id": 4,
+   "ts": 261.57552601644386
+  },
+  "status_samples": [
+   {
+    "bytes": 6000,
+    "count": 100,
+    "fetched": 0,
+    "filter": {
+     "bpf": "udp",
+     "rx": 2,
+     "tx": 0
+    },
+    "id": 4,
+    "limit": 100,
+    "matched": 100,
+    "mode": "cyclic",
+    "state": "ACTIVE"
+   },
+   {
+    "bytes": 6000,
+    "count": 100,
+    "fetched": 0,
+    "filter": {
+     "bpf": "udp",
+     "rx": 2,
+     "tx": 0
+    },
+    "id": 4,
+    "limit": 100,
+    "matched": 200,
+    "mode": "cyclic",
+    "state": "ACTIVE"
+   },
+   {
+    "bytes": 6000,
+    "count": 100,
+    "fetched": 0,
+    "filter": {
+     "bpf": "udp",
+     "rx": 2,
+     "tx": 0
+    },
+    "id": 4,
+    "limit": 100,
+    "matched": 301,
+    "mode": "cyclic",
+    "state": "ACTIVE"
+   }
+  ],
+  "final": {
+   "bytes": 6000,
+   "count": 100,
+   "fetched": 0,
+   "filter": {
+    "bpf": "udp",
+    "rx": 2,
+    "tx": 0
+   },
+   "id": 4,
+   "limit": 100,
+   "matched": 301,
+   "mode": "cyclic",
+   "state": "ACTIVE"
+  },
+  "fetch_pkt_counts": [
+   50,
+   50,
+   5
+  ],
+  "fetch_pending": [
+   50,
+   1,
+   0
+  ],
+  "fetch_reply_keys": [
+   "pending",
+   "pkts",
+   "start_ts"
+  ],
+  "stop": {
+   "ok": true,
+   "data": {
+    "endpoint": "",
+    "pkt_count": 0
+   },
+   "error": null
+  },
+  "drain_pkts": 0,
+  "drain_pending": 0,
+  "remove": {
+   "ok": true,
+   "data": {},
+   "error": null
+  },
+  "first_packet": {
+   "index": 202,
+   "origin": "RX",
+   "port": 1,
+   "ts": 263.59113922534056,
+   "wirelen": 60
+  },
+  "start_ts": 261.57552601644386
+ },
+ "fixed_recorder": {
+  "start": {
+   "capture_id": 7,
+   "start_ts": 267.6903846828346
+  },
+  "polls": 6,
+  "final": {
+   "bytes": 3000,
+   "count": 50,
+   "fetched": 0,
+   "filter": {
+    "bpf": "",
+    "rx": 0,
+    "tx": 1
+   },
+   "id": 7,
+   "limit": 50,
+   "matched": 51,
+   "mode": "fixed",
+   "state": "ACTIVE"
+  },
+  "stop": {
+   "endpoint": "",
+   "pkt_count": 50
+  },
+  "fetched": 50,
+  "status_after_fetch": {
+   "bytes": 0,
+   "count": 0,
+   "fetched": 50,
+   "filter": {
+    "bpf": "",
+    "rx": 0,
+    "tx": 1
+   },
+   "id": 7,
+   "limit": 50,
+   "matched": 51,
+   "mode": "fixed",
+   "state": "STOPPED"
+  },
+  "remove": {
+   "ok": true,
+   "data": {},
+   "error": null
+  },
+  "first_packet": {
+   "index": 1,
+   "origin": "TX",
+   "port": 0,
+   "ts": 267.69564070849054,
+   "wirelen": 60
+  },
+  "start_ts": 267.6903846828346,
+  "fetch_reply_keys": [
+   "pending",
+   "pkts",
+   "start_ts"
+  ]
+ },
+ "first_packet": {
+  "keys": [
+   "binary",
+   "index",
+   "origin",
+   "port",
+   "ts",
+   "wirelen"
+  ],
+  "index": 1,
+  "origin": "TX",
+  "ts": 267.69564070849054,
+  "start_ts": 267.6903846828346,
+  "port": 0,
+  "wirelen": 60
+ },
+ "five_second_counts": {
+  "a": 501,
+  "b": 500,
+  "a_row": {
+   "bytes": 30060,
+   "count": 501,
+   "fetched": 0,
+   "filter": {
+    "bpf": "",
+    "rx": 2,
+    "tx": 0
+   },
+   "id": 8,
+   "limit": 1000,
+   "matched": 501,
+   "mode": "cyclic",
+   "state": "ACTIVE"
+  },
+  "b_row": {
+   "bytes": 30000,
+   "count": 500,
+   "fetched": 0,
+   "filter": {
+    "bpf": "",
+    "rx": 2,
+    "tx": 0
+   },
+   "id": 9,
+   "limit": 1000,
+   "matched": 500,
+   "mode": "cyclic",
+   "state": "ACTIVE"
+  }
+ },
+ "errors": {
+  "bad_bpf": "BPF filter: 'not a filter((' is not a valid pattern",
+  "limit": "capture limit has reached",
+  "limit_ok_flag": false,
+  "fetch_9999": "capture ID not found",
+  "stop_9999": "capture ID not found",
+  "remove_9999": "capture ID not found"
+ },
+ "capture_ids_at_limit": [
+  10,
+  11,
+  12,
+  13,
+  14,
+  15,
+  16,
+  17,
+  18,
+  19
+ ],
+ "remove_active_allowed": true,
+ "remove_active_reply": {
+  "ok": true,
+  "data": {},
+  "error": null
+ },
+ "reset": {
+  "before_ids": [
+   21,
+   22
+  ],
+  "before_states": {
+   "21": "ACTIVE",
+   "22": "STOPPED"
+  },
+  "after": {}
+ },
+ "reset_removes_captures": true,
+ "service_capture": {
+  "row": {
+   "bytes": 0,
+   "count": 0,
+   "fetched": 0,
+   "filter": {
+    "bpf": "icmp or (vlan and icmp) or (vlan and icmp)",
+    "rx": 1,
+    "tx": 0
+   },
+   "id": 23,
+   "limit": 10000,
+   "matched": 0,
+   "mode": "fixed",
+   "state": "ACTIVE"
+  },
+  "all_rows": [
+   {
+    "bytes": 0,
+    "count": 0,
+    "fetched": 0,
+    "filter": {
+     "bpf": "icmp or (vlan and icmp) or (vlan and icmp)",
+     "rx": 1,
+     "tx": 0
+    },
+    "id": 23,
+    "limit": 10000,
+    "matched": 0,
+    "mode": "fixed",
+    "state": "ACTIVE"
+   }
+  ],
+  "ping_error": null,
+  "ping_status": [
+   2
+  ]
+ },
+ "capture_survives_disconnect": true,
+ "after_reconnect_status": {
+  "24": {
+   "bytes": 0,
+   "count": 0,
+   "fetched": 0,
+   "filter": {
+    "bpf": "",
+    "rx": 2,
+    "tx": 0
+   },
+   "id": 24,
+   "limit": 100,
+   "matched": 0,
+   "mode": "cyclic",
+   "state": "ACTIVE"
+  }
+ },
+ "conf_ipv6_error": "TRexError: Port 0 : *** Could not configure IPv6: IPv6 is not supported with current stack",
+ "fetch_sizes": {
+  "100pps": {
+   "fetches": [
+    {
+     "secs": 0.006,
+     "pkts": 50,
+     "pending": 200,
+     "wirelen": 1496,
+     "json_bytes": 104205,
+     "wire_bytes": 1201
+    },
+    {
+     "secs": 0.006,
+     "pkts": 50,
+     "pending": 151,
+     "wirelen": 1496,
+     "json_bytes": 104216,
+     "wire_bytes": 1212
+    },
+    {
+     "secs": 0.006,
+     "pkts": 50,
+     "pending": 102,
+     "wirelen": 1496,
+     "json_bytes": 104258,
+     "wire_bytes": 1192
+    }
+   ],
+   "status": {
+    "bytes": 152592,
+    "count": 102,
+    "fetched": 150,
+    "filter": {
+     "bpf": "udp",
+     "rx": 2,
+     "tx": 0
+    },
+    "id": 32,
+    "limit": 1000,
+    "matched": 252,
+    "mode": "cyclic",
+    "state": "ACTIVE"
+   }
+  },
+  "1000pps": {
+   "fetches": [
+    {
+     "secs": 0.006,
+     "pkts": 50,
+     "pending": 950,
+     "wirelen": 1496,
+     "json_bytes": 104319,
+     "wire_bytes": 1179
+    },
+    {
+     "secs": 0.006,
+     "pkts": 50,
+     "pending": 906,
+     "wirelen": 1496,
+     "json_bytes": 104324,
+     "wire_bytes": 1183
+    },
+    {
+     "secs": 0.006,
+     "pkts": 50,
+     "pending": 862,
+     "wirelen": 1496,
+     "json_bytes": 104318,
+     "wire_bytes": 1185
+    }
+   ],
+   "status": {
+    "bytes": 1298528,
+    "count": 868,
+    "fetched": 150,
+    "filter": {
+     "bpf": "udp",
+     "rx": 2,
+     "tx": 0
+    },
+    "id": 33,
+    "limit": 1000,
+    "matched": 2520,
+    "mode": "cyclic",
+    "state": "ACTIVE"
+   }
+  }
+ },
+ "scapy": {
+  "construct_secs": 0.003,
+  "reconstruct_secs": {
+   "udp": 0.0014,
+   "arp": 0.0005,
+   "vlan": 0.0012,
+   "ipv6_nd": 0.0008,
+   "truncated": 0.0002
+  },
+  "reconstruct_max_secs": 0.0014
+ },
+ "recorded_utc": "2026-10-19T20:53:08Z",
+ "marks": [
+  {
+   "t": 0.125,
+   "call": "restore"
+  },
+  {
+   "t": 0.626,
+   "call": "probe_traffic"
+  },
+  {
+   "t": 2.149,
+   "call": "monitor"
+  },
+  {
+   "t": 5.23,
+   "call": "fixed_recorder"
+  },
+  {
+   "t": 8.809,
+   "call": "oracle_counts"
+  },
+  {
+   "t": 13.828,
+   "call": "errors"
+  },
+  {
+   "t": 13.878,
+   "call": "reset"
+  },
+  {
+   "t": 14.922,
+   "call": "service_capture"
+  },
+  {
+   "t": 15.13,
+   "call": "persistence"
+  },
+  {
+   "t": 15.213,
+   "call": "frames_arp"
+  },
+  {
+   "t": 15.955,
+   "call": "frames_vlan"
+  },
+  {
+   "t": 17.02,
+   "call": "frames_ipv6_nd"
+  },
+  {
+   "t": 20.766,
+   "call": "rates"
+  },
+  {
+   "t": 25.858,
+   "call": "scapy"
+  },
+  {
+   "t": 25.865,
+   "call": "restore"
+  }
+ ],
+ "status_row": {
+  "bytes": 6000,
+  "count": 100,
+  "fetched": 0,
+  "filter": {
+   "bpf": "udp",
+   "rx": 2,
+   "tx": 0
+  },
+  "id": 4,
+  "limit": 100,
+  "matched": 100,
+  "mode": "cyclic",
+  "state": "ACTIVE"
+ },
+ "status_row_keys": [
+  "bytes",
+  "count",
+  "fetched",
+  "filter",
+  "id",
+  "limit",
+  "matched",
+  "mode",
+  "state"
+ ],
+ "filter_keys": [
+  "bpf",
+  "rx",
+  "tx"
+ ],
+ "fetch_packet_keys": [
+  "binary",
+  "index",
+  "origin",
+  "port",
+  "ts",
+  "wirelen"
+ ],
+ "frames": {
+  "udp": "UlIYiZHqjk6XEb+oCABFAAAmAAEAAEAROsUQAAABMAAAAQQBAAwAEmFheHh4eHh4eHh4eAAAAAAAAAAA",
+  "arp": "////////jk6XEb+oCAYAAQgABgQAAY5OlxG/qAEBAQEAAAAAAAACAgIC",
+  "vlan": "UlIYiZHqjk6XEb+ogQAACggARQAALgABAABAAXTJAQEBAQICAgIIAGE8WocAAHh4eHh4eHh4eHh4eHh4eHh4eA==",
+  "ipv6_nd": "MzP/Eb+oUlIYiZHqht1gAAAAACA6//6AAAAAAAAAUFIY//6Jker/AgAAAAAAAAAAAAH/Eb+ohwDkTgAAAAD+gAAAAAAAAIxOl//+Eb+oAQFSUhiJkeo=",
+  "truncated": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+ },
+ "frame_meta": {
+  "arp": {
+   "index": 1,
+   "origin": "RX",
+   "port": 1,
+   "ts": 274.7510167603385,
+   "wirelen": 42
+  },
+  "vlan": {
+   "index": 1,
+   "origin": "RX",
+   "port": 1,
+   "ts": 275.49120554223174,
+   "wirelen": 64
+  },
+  "ipv6_nd": {
+   "index": 1,
+   "origin": "RX",
+   "port": 1,
+   "ts": 276.5594352568836,
+   "wirelen": 86
+  },
+  "truncated": {
+   "built_by_hand": true,
+   "len": 30
+  }
+ },
+ "timings": [
+  {
+   "call": "start_traffic",
+   "port": 0,
+   "secs": 0.005,
+   "error": null
+  },
+  {
+   "call": "probe_start",
+   "port": null,
+   "secs": 0.002,
+   "error": null
+  },
+  {
+   "call": "get_capture_status",
+   "port": null,
+   "secs": 0.002,
+   "error": null
+  },
+  {
+   "call": "stop_traffic",
+   "port": 0,
+   "secs": 0.002,
+   "error": null
+  },
+  {
+   "call": "probe_remove",
+   "port": null,
+   "secs": 0.002,
+   "error": null
+  },
+  {
+   "call": "start_traffic",
+   "port": 0,
+   "secs": 0.004,
+   "error": null
+  },
+  {
+   "call": "start_capture",
+   "port": 1,
+   "secs": 0.004,
+   "error": null
+  },
+  {
+   "call": "get_capture_status",
+   "port": null,
+   "secs": 0.002,
+   "error": null
+  },
+  {
+   "call": "get_capture_status",
+   "port": null,
+   "secs": 0.002,
+   "error": null
+  },
+  {
+   "call": "get_capture_status",
+   "port": null,
+   "secs": 0.004,
+   "error": null
+  },
+  {
+   "call": "capture_fetch",
+   "port": null,
+   "secs": 0.008,
+   "error": null
+  },
+  {
+   "call": "capture_fetch",
+   "port": null,
+   "secs": 0.011,
+   "error": null
+  },
+  {
+   "call": "capture_fetch",
+   "port": null,
+   "secs": 0.032,
+   "error": null
+  },
+  {
+   "call": "capture_stop",
+   "port": null,
+   "secs": 0.002,
+   "error": null
+  },
+  {
+   "call": "capture_fetch_drain",
+   "port": null,
+   "secs": 0.002,
+   "error": null
+  },
+  {
+   "call": "capture_remove",
+   "port": null,
+   "secs": 0.002,
+   "error": null
+  },
+  {
+   "call": "stop_traffic",
+   "port": 0,
+   "secs": 0.002,
+   "error": null
+  },
+  {
+   "call": "tx_probe_service_off_start",
+   "port": null,
+   "secs": 0.002,
+   "error": null
+  },
+  {
+   "call": "get_capture_status",
+   "port": null,
+   "secs": 0.002,
+   "error": null
+  },
+  {
+   "call": "stop_traffic",
+   "port": 0,
+   "secs": 0.002,
+   "error": null
+  },
+  {
+   "call": "tx_probe_service_off_remove",
+   "port": null,
+   "secs": 0.002,
+   "error": null
+  },
+  {
+   "call": "tx_probe_service_on_start",
+   "port": null,
+   "secs": 0.002,
+   "error": null
+  },
+  {
+   "call": "get_capture_status",
+   "port": null,
+   "secs": 0.002,
+   "error": null
+  },
+  {
+   "call": "stop_traffic",
+   "port": 0,
+   "secs": 0.002,
+   "error": null
+  },
+  {
+   "call": "tx_probe_service_on_remove",
+   "port": null,
+   "secs": 0.002,
+   "error": null
+  },
+  {
+   "call": "start_traffic",
+   "port": 0,
+   "secs": 0.003,
+   "error": null
+  },
+  {
+   "call": "capture_start_fixed",
+   "port": null,
+   "secs": 0.002,
+   "error": null
+  },
+  {
+   "call": "get_capture_status",
+   "port": null,
+   "secs": 0.002,
+   "error": null
+  },
+  {
+   "call": "get_capture_status",
+   "port": null,
+   "secs": 0.002,
+   "error": null
+  },
+  {
+   "call": "get_capture_status",
+   "port": null,
+   "secs": 0.002,
+   "error": null
+  },
+  {
+   "call": "get_capture_status",
+   "port": null,
+   "secs": 0.002,
+   "error": null
+  },
+  {
+   "call": "get_capture_status",
+   "port": null,
+   "secs": 0.002,
+   "error": null
+  },
+  {
+   "call": "get_capture_status",
+   "port": null,
+   "secs": 0.002,
+   "error": null
+  },
+  {
+   "call": "capture_stop",
+   "port": null,
+   "secs": 0.002,
+   "error": null
+  },
+  {
+   "call": "get_capture_status",
+   "port": null,
+   "secs": 0.002,
+   "error": null
+  },
+  {
+   "call": "capture_fetch_peek",
+   "port": null,
+   "secs": 0.002,
+   "error": null
+  },
+  {
+   "call": "get_capture_status",
+   "port": null,
+   "secs": 0.002,
+   "error": null
+  },
+  {
+   "call": "capture_fetch_recorder",
+   "port": null,
+   "secs": 0.003,
+   "error": null
+  },
+  {
+   "call": "get_capture_status",
+   "port": null,
+   "secs": 0.002,
+   "error": null
+  },
+  {
+   "call": "capture_remove",
+   "port": null,
+   "secs": 0.002,
+   "error": null
+  },
+  {
+   "call": "stop_traffic",
+   "port": 0,
+   "secs": 0.002,
+   "error": null
+  },
+  {
+   "call": "start_traffic",
+   "port": 0,
+   "secs": 0.004,
+   "error": null
+  },
+  {
+   "call": "capture_start_oracle_a",
+   "port": null,
+   "secs": 0.002,
+   "error": null
+  },
+  {
+   "call": "capture_start_oracle_b",
+   "port": null,
+   "secs": 0.002,
+   "error": null
+  },
+  {
+   "call": "get_capture_status_oracle",
+   "port": null,
+   "secs": 0.002,
+   "error": null
+  },
+  {
+   "call": "capture_stop_oracle",
+   "port": null,
+   "secs": 0.002,
+   "error": null
+  },
+  {
+   "call": "capture_remove_oracle",
+   "port": null,
+   "secs": 0.002,
+   "error": null
+  },
+  {
+   "call": "capture_stop_oracle",
+   "port": null,
+   "secs": 0.002,
+   "error": null
+  },
+  {
+   "call": "capture_remove_oracle",
+   "port": null,
+   "secs": 0.002,
+   "error": null
+  },
+  {
+   "call": "stop_traffic",
+   "port": 0,
+   "secs": 0.002,
+   "error": null
+  },
+  {
+   "call": "capture_start_bad_bpf",
+   "port": null,
+   "secs": 0.001,
+   "error": null
+  },
+  {
+   "call": "capture_start_limit_fill",
+   "port": null,
+   "secs": 0.002,
+   "error": null
+  },
+  {
+   "call": "capture_start_limit_fill",
+   "port": null,
+   "secs": 0.002,
+   "error": null
+  },
+  {
+   "call": "capture_start_limit_fill",
+   "port": null,
+   "secs": 0.002,
+   "error": null
+  },
+  {
+   "call": "capture_start_limit_fill",
+   "port": null,
+   "secs": 0.002,
+   "error": null
+  },
+  {
+   "call": "capture_start_limit_fill",
+   "port": null,
+   "secs": 0.002,
+   "error": null
+  },
+  {
+   "call": "capture_start_limit_fill",
+   "port": null,
+   "secs": 0.002,
+   "error": null
+  },
+  {
+   "call": "capture_start_limit_fill",
+   "port": null,
+   "secs": 0.002,
+   "error": null
+  },
+  {
+   "call": "capture_start_limit_fill",
+   "port": null,
+   "secs": 0.002,
+   "error": null
+  },
+  {
+   "call": "capture_start_limit_fill",
+   "port": null,
+   "secs": 0.002,
+   "error": null
+  },
+  {
+   "call": "capture_start_limit_fill",
+   "port": null,
+   "secs": 0.002,
+   "error": null
+  },
+  {
+   "call": "capture_start_eleventh",
+   "port": null,
+   "secs": 0.002,
+   "error": null
+  },
+  {
+   "call": "capture_fetch_9999",
+   "port": null,
+   "secs": 0.002,
+   "error": null
+  },
+  {
+   "call": "capture_stop_9999",
+   "port": null,
+   "secs": 0.002,
+   "error": null
+  },
+  {
+   "call": "capture_remove_9999",
+   "port": null,
+   "secs": 0.002,
+   "error": null
+  },
+  {
+   "call": "capture_start_active",
+   "port": null,
+   "secs": 0.002,
+   "error": null
+  },
+  {
+   "call": "capture_remove_active",
+   "port": null,
+   "secs": 0.002,
+   "error": null
+  },
+  {
+   "call": "get_capture_status",
+   "port": null,
+   "secs": 0.002,
+   "error": null
+  },
+  {
+   "call": "start_traffic",
+   "port": 0,
+   "secs": 0.005,
+   "error": null
+  },
+  {
+   "call": "capture_start_reset_monitor",
+   "port": null,
+   "secs": 0.002,
+   "error": null
+  },
+  {
+   "call": "capture_start_reset_recorder",
+   "port": null,
+   "secs": 0.002,
+   "error": null
+  },
+  {
+   "call": "capture_stop_reset_recorder",
+   "port": null,
+   "secs": 0.002,
+   "error": null
+  },
+  {
+   "call": "get_capture_status",
+   "port": null,
+   "secs": 0.002,
+   "error": null
+  },
+  {
+   "call": "reset",
+   "port": 0,
+   "secs": 0.02,
+   "error": null
+  },
+  {
+   "call": "get_capture_status",
+   "port": null,
+   "secs": 0.002,
+   "error": null
+  },
+  {
+   "call": "service_ping",
+   "port": 0,
+   "secs": 0.206,
+   "error": null
+  },
+  {
+   "call": "capture_start_persist",
+   "port": null,
+   "secs": 0.002,
+   "error": null
+  },
+  {
+   "call": "disconnect",
+   "port": null,
+   "secs": 0.013,
+   "error": null
+  },
+  {
+   "call": "reconnect",
+   "port": null,
+   "secs": 0.059,
+   "error": null
+  },
+  {
+   "call": "get_capture_status",
+   "port": null,
+   "secs": 0.002,
+   "error": null
+  },
+  {
+   "call": "arp_start",
+   "port": null,
+   "secs": 0.002,
+   "error": null
+  },
+  {
+   "call": "arp_fetch",
+   "port": null,
+   "secs": 0.002,
+   "error": null
+  },
+  {
+   "call": "arp_stop",
+   "port": null,
+   "secs": 0.003,
+   "error": null
+  },
+  {
+   "call": "arp_remove",
+   "port": null,
+   "secs": 0.002,
+   "error": null
+  },
+  {
+   "call": "vlan_start",
+   "port": null,
+   "secs": 0.002,
+   "error": null
+  },
+  {
+   "call": "vlan_fetch",
+   "port": null,
+   "secs": 0.002,
+   "error": null
+  },
+  {
+   "call": "vlan_stop",
+   "port": null,
+   "secs": 0.002,
+   "error": null
+  },
+  {
+   "call": "vlan_remove",
+   "port": null,
+   "secs": 0.002,
+   "error": null
+  },
+  {
+   "call": "ipv6_nd_start",
+   "port": null,
+   "secs": 0.002,
+   "error": null
+  },
+  {
+   "call": "scan6",
+   "port": 0,
+   "secs": 3.12,
+   "error": null
+  },
+  {
+   "call": "ipv6_nd_fetch",
+   "port": null,
+   "secs": 0.004,
+   "error": null
+  },
+  {
+   "call": "ipv6_nd_stop",
+   "port": null,
+   "secs": 0.003,
+   "error": null
+  },
+  {
+   "call": "ipv6_nd_remove",
+   "port": null,
+   "secs": 0.003,
+   "error": null
+  },
+  {
+   "call": "start_traffic",
+   "port": 0,
+   "secs": 0.009,
+   "error": null
+  },
+  {
+   "call": "capture_start_100pps",
+   "port": null,
+   "secs": 0.005,
+   "error": null
+  },
+  {
+   "call": "capture_fetch_1500B_100pps",
+   "port": null,
+   "secs": 0.006,
+   "error": null
+  },
+  {
+   "call": "capture_fetch_1500B_100pps",
+   "port": null,
+   "secs": 0.006,
+   "error": null
+  },
+  {
+   "call": "capture_fetch_1500B_100pps",
+   "port": null,
+   "secs": 0.006,
+   "error": null
+  },
+  {
+   "call": "get_capture_status",
+   "port": null,
+   "secs": 0.002,
+   "error": null
+  },
+  {
+   "call": "capture_stop_100pps",
+   "port": null,
+   "secs": 0.002,
+   "error": null
+  },
+  {
+   "call": "capture_remove_100pps",
+   "port": null,
+   "secs": 0.002,
+   "error": null
+  },
+  {
+   "call": "stop_traffic",
+   "port": 0,
+   "secs": 0.002,
+   "error": null
+  },
+  {
+   "call": "start_traffic",
+   "port": 0,
+   "secs": 0.005,
+   "error": null
+  },
+  {
+   "call": "capture_start_1000pps",
+   "port": null,
+   "secs": 0.002,
+   "error": null
+  },
+  {
+   "call": "capture_fetch_1500B_1000pps",
+   "port": null,
+   "secs": 0.006,
+   "error": null
+  },
+  {
+   "call": "capture_fetch_1500B_1000pps",
+   "port": null,
+   "secs": 0.006,
+   "error": null
+  },
+  {
+   "call": "capture_fetch_1500B_1000pps",
+   "port": null,
+   "secs": 0.006,
+   "error": null
+  },
+  {
+   "call": "get_capture_status",
+   "port": null,
+   "secs": 0.002,
+   "error": null
+  },
+  {
+   "call": "capture_stop_1000pps",
+   "port": null,
+   "secs": 0.002,
+   "error": null
+  },
+  {
+   "call": "capture_remove_1000pps",
+   "port": null,
+   "secs": 0.002,
+   "error": null
+  },
+  {
+   "call": "stop_traffic",
+   "port": 0,
+   "secs": 0.002,
+   "error": null
+  }
+ ],
+ "max_secs_by_call": {
+  "start_traffic": 0.009,
+  "probe_start": 0.002,
+  "get_capture_status": 0.004,
+  "stop_traffic": 0.002,
+  "probe_remove": 0.002,
+  "start_capture": 0.004,
+  "capture_fetch": 0.032,
+  "capture_stop": 0.002,
+  "capture_fetch_drain": 0.002,
+  "capture_remove": 0.002,
+  "tx_probe_service_off_start": 0.002,
+  "tx_probe_service_off_remove": 0.002,
+  "tx_probe_service_on_start": 0.002,
+  "tx_probe_service_on_remove": 0.002,
+  "capture_start_fixed": 0.002,
+  "capture_fetch_peek": 0.002,
+  "capture_fetch_recorder": 0.003,
+  "capture_start_oracle_a": 0.002,
+  "capture_start_oracle_b": 0.002,
+  "get_capture_status_oracle": 0.002,
+  "capture_stop_oracle": 0.002,
+  "capture_remove_oracle": 0.002,
+  "capture_start_bad_bpf": 0.001,
+  "capture_start_limit_fill": 0.002,
+  "capture_start_eleventh": 0.002,
+  "capture_fetch_9999": 0.002,
+  "capture_stop_9999": 0.002,
+  "capture_remove_9999": 0.002,
+  "capture_start_active": 0.002,
+  "capture_remove_active": 0.002,
+  "capture_start_reset_monitor": 0.002,
+  "capture_start_reset_recorder": 0.002,
+  "capture_stop_reset_recorder": 0.002,
+  "reset": 0.02,
+  "service_ping": 0.206,
+  "capture_start_persist": 0.002,
+  "disconnect": 0.013,
+  "reconnect": 0.059,
+  "arp_start": 0.002,
+  "arp_fetch": 0.002,
+  "arp_stop": 0.003,
+  "arp_remove": 0.002,
+  "vlan_start": 0.002,
+  "vlan_fetch": 0.002,
+  "vlan_stop": 0.002,
+  "vlan_remove": 0.002,
+  "ipv6_nd_start": 0.002,
+  "scan6": 3.12,
+  "ipv6_nd_fetch": 0.004,
+  "ipv6_nd_stop": 0.003,
+  "ipv6_nd_remove": 0.003,
+  "capture_start_100pps": 0.005,
+  "capture_fetch_1500B_100pps": 0.006,
+  "capture_stop_100pps": 0.002,
+  "capture_remove_100pps": 0.002,
+  "capture_start_1000pps": 0.002,
+  "capture_fetch_1500B_1000pps": 0.006,
+  "capture_stop_1000pps": 0.002,
+  "capture_remove_1000pps": 0.002
+ },
+ "slowest_call": {
+  "call": "scan6",
+  "port": 0,
+  "secs": 3.12,
+  "error": null
+ },
+ "traffic_mode": {
+  "service_on": false,
+  "force": false,
+  "tried": [
+   {
+    "service": false,
+    "count": 20
+   }
+  ]
+ },
+ "tx_capture_probe": [
+  {
+   "service": false,
+   "force": true,
+   "mode": "fixed",
+   "limit": 50,
+   "count": 0,
+   "matched": 0,
+   "opackets_delta": 151,
+   "row": {
+    "bytes": 0,
+    "count": 0,
+    "fetched": 0,
+    "filter": {
+     "bpf": "",
+     "rx": 0,
+     "tx": 1
+    },
+    "id": 5,
+    "limit": 50,
+    "matched": 0,
+    "mode": "fixed",
+    "state": "ACTIVE"
+   }
+  },
+  {
+   "service": true,
+   "force": true,
+   "mode": "fixed",
+   "limit": 50,
+   "count": 50,
+   "matched": 150,
+   "opackets_delta": 151,
+   "row": {
+    "bytes": 3000,
+    "count": 50,
+    "fetched": 0,
+    "filter": {
+     "bpf": "",
+     "rx": 0,
+     "tx": 1
+    },
+    "id": 6,
+    "limit": 50,
+    "matched": 150,
+    "mode": "fixed",
+    "state": "ACTIVE"
+   }
+  }
+ ],
+ "tx_capture_service_off": {
+  "bytes": 0,
+  "count": 0,
+  "fetched": 0,
+  "filter": {
+   "bpf": "",
+   "rx": 0,
+   "tx": 1
+  },
+  "id": 5,
+  "limit": 50,
+  "matched": 0,
+  "mode": "fixed",
+  "state": "ACTIVE"
+ },
+ "fetch_peek": {
+  "ok": true,
+  "pkts": 0,
+  "pending": 50,
+  "reply_keys": [
+   "pending",
+   "pkts",
+   "start_ts"
+  ],
+  "start_ts": 267.6903846828346,
+  "status_count_before": 50,
+  "status_count_after": 50,
+  "fetched_before": 0,
+  "fetched_after": 0,
+  "next_fetch_start_ts": 267.6903846828346,
+  "error": null
+ }
+}

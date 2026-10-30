@@ -1,0 +1,85 @@
+{
+ "recorded_utc": "2026-10-24T15:03:57Z",
+ "guest": "jammy",
+ "stateful": true,
+ "stateful_error": null,
+ "stateful_source": "recording",
+ "template_names": [
+  "cap2/Oracle.pcap",
+  "cap2/smtp.pcap",
+  "cap2/dns.pcap"
+ ],
+ "files_path": "/tmp/trex_files",
+ "started_version": "v3.08",
+ "stop_s": 0.01,
+ "seq": 68,
+ "faults": {
+  "get_file": {
+   "id": 1,
+   "jsonrpc": "2.0",
+   "error": {
+    "code": -33,
+    "message": "Can't get requested file /etc/shadow: Given path should be under current TRex package or /tmp/trex_files"
+   }
+  },
+  "stop_wrong_seq_idle": {
+   "result": false,
+   "id": 1,
+   "jsonrpc": "2.0"
+  },
+  "stop_wrong_seq_running": {
+   "id": 1,
+   "jsonrpc": "2.0",
+   "error": {
+    "code": -33,
+    "message": "Abort request is only allowed to process initiated the run. Request denied."
+   }
+  },
+  "start_twice": {
+   "id": 1,
+   "jsonrpc": "2.0",
+   "error": {
+    "code": -13,
+    "message": "TRex is already taken, cannot create another run until done."
+   }
+  },
+  "start_bad_cfg": {
+   "id": 1,
+   "jsonrpc": "2.0",
+   "error": {
+    "code": -11,
+    "message": "TRex run failed due to wrong input parameters, or due to readability issues.\n\nTRex command: nice -n -19 ./t-rex-64 --iom 0  --cfg /tmp/trex_files/trex-gui-bad.yaml -i --no-scapy-server --no-key\n\nRun output:\nERROR: Could not find Linux interface nope0.\nERROR encountered while configuring TRex system\n"
+   }
+  },
+  "unknown_method": {
+   "id": 1,
+   "jsonrpc": "2.0",
+   "error": {
+    "code": -32601,
+    "message": "Method no_such_method not supported."
+   }
+  },
+  "foreign_start": {
+   "result": 92,
+   "id": 1,
+   "jsonrpc": "2.0"
+  }
+ },
+ "names": {
+  "stl": {
+   "trex-global": 43
+  },
+  "stateful": {
+   "trex-global": 59,
+   "tx-gen": 59,
+   "template_info": 59,
+   "rx-check": 59,
+   "trex-latecny": 59,
+   "trex-latecny-v2": 59
+  }
+ },
+ "triggers": {
+  "stl": 9,
+  "stateful": 0
+ }
+}

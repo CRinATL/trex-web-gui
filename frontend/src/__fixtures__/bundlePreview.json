@@ -1,0 +1,78 @@
+{
+  "preview": {
+    "ignored": [],
+    "path_changes": [
+      {
+        "from": "/old/other.py",
+        "port": 0,
+        "slug": "lab-a",
+        "to": "/p/udp.py"
+      }
+    ],
+    "profile_paths": [
+      "/p/udp.py"
+    ],
+    "sections": {
+      "connections": {
+        "adds": [],
+        "changes": [
+          "lab"
+        ],
+        "errors": [],
+        "flags": [],
+        "present": true,
+        "removes": [],
+        "valid": true
+      },
+      "port_labels": {
+        "adds": [],
+        "changes": [],
+        "errors": [],
+        "flags": [],
+        "present": true,
+        "removes": [],
+        "valid": true
+      },
+      "preferences": {
+        "adds": [],
+        "changes": [],
+        "errors": [],
+        "flags": [
+          "`wireshark_path` changes from `wireshark` to `/opt/ws`"
+        ],
+        "present": true,
+        "removes": [],
+        "valid": true
+      },
+      "test_setups": {
+        "adds": [
+          "lab-b"
+        ],
+        "changes": [
+          "lab-a"
+        ],
+        "errors": [],
+        "flags": [
+          "lab-a: port 0 force-acquires on Run",
+          "lab-a: port 0 stops a transmitting port before assigning",
+          "lab-a: port 0 applies a port configuration"
+        ],
+        "present": true,
+        "removes": [
+          "old"
+        ],
+        "valid": true
+      },
+      "theme": {
+        "adds": [],
+        "changes": [],
+        "errors": [],
+        "flags": [],
+        "present": false,
+        "removes": [],
+        "valid": true
+      }
+    },
+    "version": 1
+  }
+}

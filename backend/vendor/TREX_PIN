@@ -1,0 +1,20 @@
+{
+ "upstream_sha": "27e0153b5",
+ "source_tree_sha256": "35527d8b8753deb566a5c6dbe12e9568043472bcd7cc73b2f4ec4b0ddc609b9d",
+ "patches": [
+  "01-load-system-libs.patch",
+  "02-yaml-safe-load.patch",
+  "03-scapy-themes-html-escape.patch",
+  "04-raw-string-regexes.patch",
+  "05-never-signal-host-process.patch",
+  "06-latency-stats-handler-name.patch",
+  "07-scapy-service-assert-message.patch",
+  "08-set-attr-kwarg-names.patch",
+  "09-icmp-dest-unreachable-name.patch",
+  "10-drop-trex-openssl.patch",
+  "11-enum-values-dict-paren.patch",
+  "12-flow-var-init-value.patch",
+  "13-py314-finally-flow.patch"
+ ],
+ "skipped": []
+}

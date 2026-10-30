@@ -1,0 +1,880 @@
+{
+ "udp": {
+  "data": [
+   {
+    "id": "Ether",
+    "offset": 0,
+    "fields": [
+     {
+      "id": "dst",
+      "value": "52:52:18:89:91:ea",
+      "hvalue": "52:52:18:89:91:ea",
+      "offset": 0,
+      "length": 6
+     },
+     {
+      "id": "src",
+      "value": "8e:4e:97:11:bf:a8",
+      "hvalue": "8e:4e:97:11:bf:a8",
+      "offset": 6,
+      "length": 6
+     },
+     {
+      "id": "type",
+      "value": 2048,
+      "hvalue": "IPv4",
+      "offset": 12,
+      "length": 2
+     }
+    ],
+    "real_id": "Ether",
+    "valid_structure": true
+   },
+   {
+    "id": "IP",
+    "offset": 14,
+    "fields": [
+     {
+      "id": "version",
+      "value": 4,
+      "hvalue": "4",
+      "offset": 0,
+      "length": 0
+     },
+     {
+      "id": "ihl",
+      "value": 5,
+      "hvalue": "5",
+      "offset": 0,
+      "length": 0
+     },
+     {
+      "id": "tos",
+      "value": 0,
+      "hvalue": "0x0",
+      "offset": 1,
+      "length": 1
+     },
+     {
+      "id": "len",
+      "value": 38,
+      "hvalue": "38",
+      "offset": 2,
+      "length": 2
+     },
+     {
+      "id": "id",
+      "value": 1,
+      "hvalue": "1",
+      "offset": 4,
+      "length": 2
+     },
+     {
+      "id": "flags",
+      "value": 0,
+      "hvalue": "",
+      "offset": 6,
+      "length": 0
+     },
+     {
+      "id": "frag",
+      "value": 0,
+      "hvalue": "0",
+      "offset": 6,
+      "length": 0
+     },
+     {
+      "id": "ttl",
+      "value": 64,
+      "hvalue": "64",
+      "offset": 8,
+      "length": 1
+     },
+     {
+      "id": "proto",
+      "value": 17,
+      "hvalue": "udp",
+      "offset": 9,
+      "length": 1
+     },
+     {
+      "id": "chksum",
+      "value": 15045,
+      "hvalue": "0x3ac5",
+      "offset": 10,
+      "length": 2
+     },
+     {
+      "id": "src",
+      "value": "16.0.0.1",
+      "hvalue": "16.0.0.1",
+      "offset": 12,
+      "length": 4
+     },
+     {
+      "id": "dst",
+      "value": "48.0.0.1",
+      "hvalue": "48.0.0.1",
+      "offset": 16,
+      "length": 4
+     },
+     {
+      "id": "options",
+      "value": {
+       "vtype": "EXPRESSION",
+       "expr": "[]"
+      },
+      "hvalue": "[]",
+      "offset": 20,
+      "length": 2
+     }
+    ],
+    "real_id": "IP",
+    "valid_structure": true
+   },
+   {
+    "id": "UDP",
+    "offset": 34,
+    "fields": [
+     {
+      "id": "sport",
+      "value": 1025,
+      "hvalue": "1025",
+      "offset": 0,
+      "length": 2
+     },
+     {
+      "id": "dport",
+      "value": 12,
+      "hvalue": "12",
+      "offset": 2,
+      "length": 2
+     },
+     {
+      "id": "len",
+      "value": 18,
+      "hvalue": "18",
+      "offset": 4,
+      "length": 2
+     },
+     {
+      "id": "chksum",
+      "value": 24929,
+      "hvalue": "0x6161",
+      "offset": 6,
+      "length": 2
+     }
+    ],
+    "real_id": "UDP",
+    "valid_structure": true
+   },
+   {
+    "id": "Raw",
+    "offset": 42,
+    "fields": [
+     {
+      "id": "load",
+      "value": {
+       "vtype": "BYTES",
+       "base64": "eHh4eHh4eHh4eA=="
+      },
+      "hvalue": "xxxxxxxxxx",
+      "offset": 0,
+      "length": 18
+     }
+    ],
+    "real_id": "Raw",
+    "valid_structure": true
+   },
+   {
+    "id": "Raw",
+    "offset": 52,
+    "fields": [
+     {
+      "id": "load",
+      "value": {
+       "vtype": "BYTES",
+       "base64": "AAAAAAAAAAA="
+      },
+      "hvalue": "\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000",
+      "offset": 0,
+      "length": 8
+     }
+    ],
+    "real_id": "Padding",
+    "valid_structure": true
+   }
+  ],
+  "binary": "UlIYiZHqjk6XEb+oCABFAAAmAAEAAEAROsUQAAABMAAAAQQBAAwAEmFheHh4eHh4eHh4eAAAAAAAAAAA"
+ },
+ "arp": {
+  "data": [
+   {
+    "id": "Ether",
+    "offset": 0,
+    "fields": [
+     {
+      "id": "dst",
+      "value": "ff:ff:ff:ff:ff:ff",
+      "hvalue": "ff:ff:ff:ff:ff:ff",
+      "offset": 0,
+      "length": 6
+     },
+     {
+      "id": "src",
+      "value": "8e:4e:97:11:bf:a8",
+      "hvalue": "8e:4e:97:11:bf:a8",
+      "offset": 6,
+      "length": 6
+     },
+     {
+      "id": "type",
+      "value": 2054,
+      "hvalue": "ARP",
+      "offset": 12,
+      "length": 2
+     }
+    ],
+    "real_id": "Ether",
+    "valid_structure": true
+   },
+   {
+    "id": "ARP",
+    "offset": 14,
+    "fields": [
+     {
+      "id": "hwtype",
+      "value": 1,
+      "hvalue": "0x1",
+      "offset": 0,
+      "length": 2
+     },
+     {
+      "id": "ptype",
+      "value": 2048,
+      "hvalue": "IPv4",
+      "offset": 2,
+      "length": 2
+     },
+     {
+      "id": "hwlen",
+      "value": 6,
+      "hvalue": "6",
+      "offset": 4,
+      "length": 1
+     },
+     {
+      "id": "plen",
+      "value": 4,
+      "hvalue": "4",
+      "offset": 5,
+      "length": 1
+     },
+     {
+      "id": "op",
+      "value": 1,
+      "hvalue": "who-has",
+      "offset": 6,
+      "length": 2
+     },
+     {
+      "id": "hwsrc",
+      "value": "8e:4e:97:11:bf:a8",
+      "hvalue": "8e:4e:97:11:bf:a8",
+      "offset": 8,
+      "length": 2
+     },
+     {
+      "id": "psrc",
+      "value": "1.1.1.1",
+      "hvalue": "1.1.1.1",
+      "offset": 14,
+      "length": 2
+     },
+     {
+      "id": "hwdst",
+      "value": "00:00:00:00:00:00",
+      "hvalue": "00:00:00:00:00:00",
+      "offset": 18,
+      "length": 2
+     },
+     {
+      "id": "pdst",
+      "value": "2.2.2.2",
+      "hvalue": "2.2.2.2",
+      "offset": 24,
+      "length": 2
+     }
+    ],
+    "real_id": "ARP",
+    "valid_structure": true
+   }
+  ],
+  "binary": "////////jk6XEb+oCAYAAQgABgQAAY5OlxG/qAEBAQEAAAAAAAACAgIC"
+ },
+ "vlan": {
+  "data": [
+   {
+    "id": "Ether",
+    "offset": 0,
+    "fields": [
+     {
+      "id": "dst",
+      "value": "52:52:18:89:91:ea",
+      "hvalue": "52:52:18:89:91:ea",
+      "offset": 0,
+      "length": 6
+     },
+     {
+      "id": "src",
+      "value": "8e:4e:97:11:bf:a8",
+      "hvalue": "8e:4e:97:11:bf:a8",
+      "offset": 6,
+      "length": 6
+     },
+     {
+      "id": "type",
+      "value": 33024,
+      "hvalue": "n_802_1Q",
+      "offset": 12,
+      "length": 2
+     }
+    ],
+    "real_id": "Ether",
+    "valid_structure": true
+   },
+   {
+    "id": "Dot1Q",
+    "offset": 14,
+    "fields": [
+     {
+      "id": "prio",
+      "value": 0,
+      "hvalue": "0",
+      "offset": 0,
+      "length": 0
+     },
+     {
+      "id": "id",
+      "value": 0,
+      "hvalue": "0",
+      "offset": 0,
+      "length": 0
+     },
+     {
+      "id": "vlan",
+      "value": 10,
+      "hvalue": "10",
+      "offset": 0,
+      "length": 0
+     },
+     {
+      "id": "type",
+      "value": 2048,
+      "hvalue": "IPv4",
+      "offset": 2,
+      "length": 2
+     }
+    ],
+    "real_id": "Dot1Q",
+    "valid_structure": true
+   },
+   {
+    "id": "IP",
+    "offset": 18,
+    "fields": [
+     {
+      "id": "version",
+      "value": 4,
+      "hvalue": "4",
+      "offset": 0,
+      "length": 0
+     },
+     {
+      "id": "ihl",
+      "value": 5,
+      "hvalue": "5",
+      "offset": 0,
+      "length": 0
+     },
+     {
+      "id": "tos",
+      "value": 0,
+      "hvalue": "0x0",
+      "offset": 1,
+      "length": 1
+     },
+     {
+      "id": "len",
+      "value": 46,
+      "hvalue": "46",
+      "offset": 2,
+      "length": 2
+     },
+     {
+      "id": "id",
+      "value": 1,
+      "hvalue": "1",
+      "offset": 4,
+      "length": 2
+     },
+     {
+      "id": "flags",
+      "value": 0,
+      "hvalue": "",
+      "offset": 6,
+      "length": 0
+     },
+     {
+      "id": "frag",
+      "value": 0,
+      "hvalue": "0",
+      "offset": 6,
+      "length": 0
+     },
+     {
+      "id": "ttl",
+      "value": 64,
+      "hvalue": "64",
+      "offset": 8,
+      "length": 1
+     },
+     {
+      "id": "proto",
+      "value": 1,
+      "hvalue": "icmp",
+      "offset": 9,
+      "length": 1
+     },
+     {
+      "id": "chksum",
+      "value": 29897,
+      "hvalue": "0x74c9",
+      "offset": 10,
+      "length": 2
+     },
+     {
+      "id": "src",
+      "value": "1.1.1.1",
+      "hvalue": "1.1.1.1",
+      "offset": 12,
+      "length": 4
+     },
+     {
+      "id": "dst",
+      "value": "2.2.2.2",
+      "hvalue": "2.2.2.2",
+      "offset": 16,
+      "length": 4
+     },
+     {
+      "id": "options",
+      "value": {
+       "vtype": "EXPRESSION",
+       "expr": "[]"
+      },
+      "hvalue": "[]",
+      "offset": 20,
+      "length": 2
+     }
+    ],
+    "real_id": "IP",
+    "valid_structure": true
+   },
+   {
+    "id": "ICMP",
+    "offset": 38,
+    "fields": [
+     {
+      "id": "type",
+      "value": 8,
+      "hvalue": "echo-request",
+      "offset": 0,
+      "length": 1
+     },
+     {
+      "id": "code",
+      "value": 0,
+      "hvalue": 0,
+      "offset": 1,
+      "length": 1
+     },
+     {
+      "id": "chksum",
+      "value": 24892,
+      "hvalue": "0x613c",
+      "offset": 2,
+      "length": 2
+     },
+     {
+      "id": "id",
+      "value": 23175,
+      "hvalue": "0x5a87",
+      "offset": 4,
+      "length": 2
+     },
+     {
+      "id": "seq",
+      "value": 0,
+      "hvalue": "0x0",
+      "offset": 6,
+      "length": 2
+     },
+     {
+      "id": "ts_ori",
+      "value": {
+       "vtype": "EXPRESSION",
+       "expr": "--"
+      },
+      "hvalue": "--",
+      "offset": 8,
+      "length": 4
+     },
+     {
+      "id": "ts_rx",
+      "value": {
+       "vtype": "EXPRESSION",
+       "expr": "--"
+      },
+      "hvalue": "--",
+      "offset": 8,
+      "length": 4
+     },
+     {
+      "id": "ts_tx",
+      "value": {
+       "vtype": "EXPRESSION",
+       "expr": "--"
+      },
+      "hvalue": "--",
+      "offset": 8,
+      "length": 4
+     },
+     {
+      "id": "gw",
+      "value": {
+       "vtype": "EXPRESSION",
+       "expr": "None"
+      },
+      "hvalue": "None",
+      "offset": 8,
+      "length": 4
+     },
+     {
+      "id": "ptr",
+      "value": {
+       "vtype": "EXPRESSION",
+       "expr": "None"
+      },
+      "hvalue": "None",
+      "offset": 8,
+      "length": 1
+     },
+     {
+      "id": "reserved",
+      "value": {
+       "vtype": "EXPRESSION",
+       "expr": "None"
+      },
+      "hvalue": "None",
+      "offset": 8,
+      "length": 1
+     },
+     {
+      "id": "length",
+      "value": {
+       "vtype": "EXPRESSION",
+       "expr": "None"
+      },
+      "hvalue": "None",
+      "offset": 8,
+      "length": 1
+     },
+     {
+      "id": "addr_mask",
+      "value": {
+       "vtype": "EXPRESSION",
+       "expr": "None"
+      },
+      "hvalue": "None",
+      "offset": 8,
+      "length": 4
+     },
+     {
+      "id": "nexthopmtu",
+      "value": {
+       "vtype": "EXPRESSION",
+       "expr": "None"
+      },
+      "hvalue": "None",
+      "offset": 8,
+      "length": 2
+     },
+     {
+      "id": "unused",
+      "value": {
+       "vtype": "EXPRESSION",
+       "expr": "None"
+      },
+      "hvalue": "None",
+      "offset": 8,
+      "length": 2
+     },
+     {
+      "id": "unused",
+      "value": {
+       "vtype": "EXPRESSION",
+       "expr": "None"
+      },
+      "hvalue": "None",
+      "offset": 8,
+      "length": 4
+     }
+    ],
+    "real_id": "ICMP",
+    "valid_structure": true
+   },
+   {
+    "id": "Raw",
+    "offset": 46,
+    "fields": [
+     {
+      "id": "load",
+      "value": {
+       "vtype": "BYTES",
+       "base64": "eHh4eHh4eHh4eHh4eHh4eHh4"
+      },
+      "hvalue": "xxxxxxxxxxxxxxxxxx",
+      "offset": 0,
+      "length": 18
+     }
+    ],
+    "real_id": "Raw",
+    "valid_structure": true
+   }
+  ],
+  "binary": "UlIYiZHqjk6XEb+ogQAACggARQAALgABAABAAXTJAQEBAQICAgIIAGE8WocAAHh4eHh4eHh4eHh4eHh4eHh4eA=="
+ },
+ "ipv6_nd": {
+  "data": [
+   {
+    "id": "Ether",
+    "offset": 0,
+    "fields": [
+     {
+      "id": "dst",
+      "value": "33:33:ff:11:bf:a8",
+      "hvalue": "33:33:ff:11:bf:a8",
+      "offset": 0,
+      "length": 6
+     },
+     {
+      "id": "src",
+      "value": "52:52:18:89:91:ea",
+      "hvalue": "52:52:18:89:91:ea",
+      "offset": 6,
+      "length": 6
+     },
+     {
+      "id": "type",
+      "value": 34525,
+      "hvalue": "IPv6",
+      "offset": 12,
+      "length": 2
+     }
+    ],
+    "real_id": "Ether",
+    "valid_structure": true
+   },
+   {
+    "id": "IPv6",
+    "offset": 14,
+    "fields": [
+     {
+      "id": "version",
+      "value": 6,
+      "hvalue": "6",
+      "offset": 0,
+      "length": 0
+     },
+     {
+      "id": "tc",
+      "value": 0,
+      "hvalue": "0",
+      "offset": 0,
+      "length": 0
+     },
+     {
+      "id": "fl",
+      "value": 0,
+      "hvalue": "0",
+      "offset": 1,
+      "length": 0
+     },
+     {
+      "id": "plen",
+      "value": 32,
+      "hvalue": "32",
+      "offset": 4,
+      "length": 2
+     },
+     {
+      "id": "nh",
+      "value": 58,
+      "hvalue": "ICMPv6",
+      "offset": 6,
+      "length": 1
+     },
+     {
+      "id": "hlim",
+      "value": 255,
+      "hvalue": "255",
+      "offset": 7,
+      "length": 1
+     },
+     {
+      "id": "src",
+      "value": "fe80::5052:18ff:fe89:91ea",
+      "hvalue": "fe80::5052:18ff:fe89:91ea",
+      "offset": 8,
+      "length": 16
+     },
+     {
+      "id": "dst",
+      "value": "ff02::1:ff11:bfa8",
+      "hvalue": "ff02::1:ff11:bfa8",
+      "offset": 24,
+      "length": 16
+     }
+    ],
+    "real_id": "IPv6",
+    "valid_structure": true
+   },
+   {
+    "id": "ICMPv6ND_NS",
+    "offset": 54,
+    "fields": [
+     {
+      "id": "type",
+      "value": 135,
+      "hvalue": "Neighbor Solicitation",
+      "offset": 0,
+      "length": 1
+     },
+     {
+      "id": "code",
+      "value": 0,
+      "hvalue": "0",
+      "offset": 1,
+      "length": 1
+     },
+     {
+      "id": "cksum",
+      "value": 58446,
+      "hvalue": "0xe44e",
+      "offset": 2,
+      "length": 2
+     },
+     {
+      "id": "res",
+      "value": 0,
+      "hvalue": "0",
+      "offset": 4,
+      "length": 4
+     },
+     {
+      "id": "tgt",
+      "value": "fe80::8c4e:97ff:fe11:bfa8",
+      "hvalue": "fe80::8c4e:97ff:fe11:bfa8",
+      "offset": 8,
+      "length": 16
+     }
+    ],
+    "real_id": "ICMPv6ND_NS",
+    "valid_structure": true
+   },
+   {
+    "id": "ICMPv6NDOptSrcLLAddr",
+    "offset": 78,
+    "fields": [
+     {
+      "id": "type",
+      "value": 1,
+      "hvalue": "1",
+      "offset": 0,
+      "length": 1
+     },
+     {
+      "id": "len",
+      "value": 1,
+      "hvalue": "1",
+      "offset": 1,
+      "length": 1
+     },
+     {
+      "id": "lladdr",
+      "value": "52:52:18:89:91:ea",
+      "hvalue": "52:52:18:89:91:ea",
+      "offset": 2,
+      "length": 6
+     }
+    ],
+    "real_id": "ICMPv6NDOptSrcLLAddr",
+    "valid_structure": true
+   }
+  ],
+  "binary": "MzP/Eb+oUlIYiZHqht1gAAAAACA6//6AAAAAAAAAUFIY//6Jker/AgAAAAAAAAAAAAH/Eb+ohwDkTgAAAAD+gAAAAAAAAIxOl//+Eb+oAQFSUhiJkeo="
+ },
+ "truncated": {
+  "data": [
+   {
+    "id": "Dot3",
+    "offset": 0,
+    "fields": [
+     {
+      "id": "dst",
+      "value": "00:00:00:00:00:00",
+      "hvalue": "00:00:00:00:00:00",
+      "offset": 0,
+      "length": 6
+     },
+     {
+      "id": "src",
+      "value": "00:00:00:00:00:00",
+      "hvalue": "00:00:00:00:00:00",
+      "offset": 6,
+      "length": 6
+     },
+     {
+      "id": "len",
+      "value": 0,
+      "hvalue": "0",
+      "offset": 12,
+      "length": 2
+     }
+    ],
+    "real_id": "Dot3",
+    "valid_structure": true
+   },
+   {
+    "id": "Raw",
+    "offset": 14,
+    "fields": [
+     {
+      "id": "load",
+      "value": {
+       "vtype": "BYTES",
+       "base64": "AAAAAAAAAAAAAAAAAAAAAA=="
+      },
+      "hvalue": "\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000",
+      "offset": 0,
+      "length": 16
+     }
+    ],
+    "real_id": "Padding",
+    "valid_structure": true
+   }
+  ],
+  "binary": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+ }
+}

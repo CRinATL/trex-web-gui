@@ -1,0 +1,34 @@
+{
+  "udp_for_benchmarks": {
+    "dir": "<library>",
+    "load_errors": [],
+    "profiles": [
+      {
+        "created": "2026-01-01T00:00:00.000Z",
+        "load_error": null,
+        "name": "udp_for_benchmarks",
+        "path": "<library>/udp-for-benchmarks.json",
+        "slug": "udp-for-benchmarks",
+        "source": {
+          "args": [
+            "--packet_len",
+            "128"
+          ],
+          "imported": "2026-01-01T00:00:00.000Z",
+          "kind": "py",
+          "path": "<fixtures>/profiles/udp_for_benchmarks.py",
+          "ports_differ": false,
+          "tunables": {
+            "extra": "",
+            "values": {
+              "packet_len": 128
+            }
+          }
+        },
+        "source_missing": false,
+        "stream_count": 1,
+        "updated": "2026-01-01T00:00:00.000Z"
+      }
+    ]
+  }
+}

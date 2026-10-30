@@ -1,0 +1,46 @@
+{
+  "udp_for_benchmarks": {
+    "chains": [
+      {
+        "action_count": 0,
+        "end": "stop",
+        "loop_to": null,
+        "pkts": null,
+        "start": "#0",
+        "steps": [
+          "#0"
+        ]
+      }
+    ],
+    "notes": [],
+    "round_trip": {
+      "differences": [],
+      "equal": true
+    },
+    "streams": [
+      {
+        "bps_l1": 1184.0,
+        "bps_l2": 1024.0,
+        "burst_s": null,
+        "enabled": true,
+        "index": 0,
+        "length": 128,
+        "mode": "continuous",
+        "name": null,
+        "percent": null,
+        "pkts": null,
+        "pps": 1.0,
+        "rate_type": "pps",
+        "rate_value": 1.0
+      }
+    ],
+    "totals": {
+      "bps_l1": 1184.0,
+      "bps_l2": 1024.0,
+      "burst_pkts": 0,
+      "percent": 0.0,
+      "pps": 1.0
+    },
+    "unreachable": []
+  }
+}

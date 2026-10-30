@@ -1,0 +1,14 @@
+--- a/trex/__init__.py
++++ b/trex/__init__.py
+@@ -38,6 +38,11 @@
+                  {'name': 'repoze',       'dir': 'repoze'},
+                ]
+ 
++    # trex-web-gui vendor patch: let the environment supply these instead of external_libs
++    system_libs = set(filter(None, os.getenv('TREX_SYSTEM_LIBS', '').split(',')))
++    if system_libs:
++        ext_libs = [m for m in ext_libs if m['name'] not in system_libs]
++
+     __import_ext_libs(ext_libs, ext_libs_path)
+ 
+ 

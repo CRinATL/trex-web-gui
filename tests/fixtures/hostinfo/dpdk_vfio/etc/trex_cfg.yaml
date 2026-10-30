@@ -1,0 +1,3 @@
+- version: 2
+  port_limit: 2
+  interfaces: ['03:00.0', '03:00.1']

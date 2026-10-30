@@ -1,0 +1,485 @@
+{
+  "ipv6_address": {
+    "fc_mode": -1,
+    "id": 0,
+    "info": {
+      "cores": [
+        0
+      ],
+      "description": "Unknown",
+      "driver": "net_af_packet",
+      "hw_mac": "8e:4e:97:11:bf:a8",
+      "index": 0,
+      "is_fc_supported": false,
+      "is_ieee1588_supported": false,
+      "is_led_supported": false,
+      "is_link_supported": false,
+      "is_prom_supported": true,
+      "is_virtual": true,
+      "is_vxlan_supported": false,
+      "numa": -1,
+      "pci_addr": "N/A",
+      "rx": {
+        "caps": [
+          "flow_stats",
+          "latency",
+          "rx_bytes",
+          "tpg"
+        ],
+        "counters": 1023
+      },
+      "stack": "linux_based",
+      "supp_speeds": []
+    },
+    "layer_cfg": {
+      "ether": {
+        "dst": "52:52:18:89:91:ea",
+        "src": "8e:4e:97:11:bf:a8",
+        "state": "configured"
+      },
+      "ipv4": {
+        "state": "none"
+      },
+      "ipv6": {
+        "enabled": true,
+        "src": "fe80::5052:18ff:fe89:91ea"
+      }
+    },
+    "link_up": true,
+    "mine_elsewhere": false,
+    "multicast": false,
+    "owned": true,
+    "owner": "<local-user>",
+    "profiles": {},
+    "promiscuous": false,
+    "rx_filter_mode": "hw",
+    "rx_info": {
+      "capture_port": {
+        "is_active": false
+      },
+      "capwap_proxy": {
+        "is_active": false
+      },
+      "grat_arp": {
+        "is_active": false
+      },
+      "latency": {
+        "is_active": false
+      },
+      "queue": {
+        "is_active": false
+      },
+      "stack": {
+        "is_active": true
+      }
+    },
+    "service": false,
+    "service_filtered": false,
+    "speed_gbps": 10.0,
+    "state": "IDLE",
+    "vlan": []
+  },
+  "ipv6_auto": {
+    "fc_mode": -1,
+    "id": 0,
+    "info": {
+      "cores": [
+        0
+      ],
+      "description": "Unknown",
+      "driver": "net_af_packet",
+      "hw_mac": "8e:4e:97:11:bf:a8",
+      "index": 0,
+      "is_fc_supported": false,
+      "is_ieee1588_supported": false,
+      "is_led_supported": false,
+      "is_link_supported": false,
+      "is_prom_supported": true,
+      "is_virtual": true,
+      "is_vxlan_supported": false,
+      "numa": -1,
+      "pci_addr": "N/A",
+      "rx": {
+        "caps": [
+          "flow_stats",
+          "latency",
+          "rx_bytes",
+          "tpg"
+        ],
+        "counters": 1023
+      },
+      "stack": "linux_based",
+      "supp_speeds": []
+    },
+    "layer_cfg": {
+      "ether": {
+        "dst": "52:52:18:89:91:ea",
+        "src": "8e:4e:97:11:bf:a8",
+        "state": "configured"
+      },
+      "ipv4": {
+        "state": "none"
+      },
+      "ipv6": {
+        "enabled": true,
+        "src": ""
+      }
+    },
+    "link_up": true,
+    "mine_elsewhere": false,
+    "multicast": false,
+    "owned": true,
+    "owner": "<local-user>",
+    "profiles": {},
+    "promiscuous": false,
+    "rx_filter_mode": "hw",
+    "rx_info": {
+      "capture_port": {
+        "is_active": false
+      },
+      "capwap_proxy": {
+        "is_active": false
+      },
+      "grat_arp": {
+        "is_active": false
+      },
+      "latency": {
+        "is_active": false
+      },
+      "queue": {
+        "is_active": false
+      },
+      "stack": {
+        "is_active": true
+      }
+    },
+    "service": false,
+    "service_filtered": false,
+    "speed_gbps": 10.0,
+    "state": "IDLE",
+    "vlan": []
+  },
+  "l2": {
+    "fc_mode": -1,
+    "id": 0,
+    "info": {
+      "cores": [
+        0
+      ],
+      "description": "Unknown",
+      "driver": "net_af_packet",
+      "hw_mac": "8e:4e:97:11:bf:a8",
+      "index": 0,
+      "is_fc_supported": false,
+      "is_ieee1588_supported": false,
+      "is_led_supported": false,
+      "is_link_supported": false,
+      "is_prom_supported": true,
+      "is_virtual": true,
+      "is_vxlan_supported": false,
+      "numa": -1,
+      "pci_addr": "N/A",
+      "rx": {
+        "caps": [
+          "flow_stats",
+          "latency",
+          "rx_bytes",
+          "tpg"
+        ],
+        "counters": 1023
+      },
+      "stack": "legacy",
+      "supp_speeds": []
+    },
+    "layer_cfg": {
+      "ether": {
+        "dst": "52:52:18:89:91:ea",
+        "src": "8e:4e:97:11:bf:a8",
+        "state": "configured"
+      },
+      "ipv4": {
+        "state": "none"
+      },
+      "ipv6": {
+        "enabled": false
+      }
+    },
+    "link_up": true,
+    "mine_elsewhere": false,
+    "multicast": false,
+    "owned": true,
+    "owner": "<local-user>",
+    "profiles": {},
+    "promiscuous": false,
+    "rx_filter_mode": "hw",
+    "rx_info": {
+      "capture_port": {
+        "is_active": false
+      },
+      "capwap_proxy": {
+        "is_active": false
+      },
+      "grat_arp": {
+        "is_active": false
+      },
+      "latency": {
+        "is_active": false
+      },
+      "queue": {
+        "is_active": false
+      },
+      "stack": {
+        "is_active": true
+      }
+    },
+    "service": false,
+    "service_filtered": false,
+    "speed_gbps": 10.0,
+    "state": "IDLE",
+    "vlan": []
+  },
+  "l3_resolved": {
+    "fc_mode": -1,
+    "id": 0,
+    "info": {
+      "cores": [
+        0
+      ],
+      "description": "Unknown",
+      "driver": "net_af_packet",
+      "hw_mac": "8e:4e:97:11:bf:a8",
+      "index": 0,
+      "is_fc_supported": false,
+      "is_ieee1588_supported": false,
+      "is_led_supported": false,
+      "is_link_supported": false,
+      "is_prom_supported": true,
+      "is_virtual": true,
+      "is_vxlan_supported": false,
+      "numa": -1,
+      "pci_addr": "N/A",
+      "rx": {
+        "caps": [
+          "flow_stats",
+          "latency",
+          "rx_bytes",
+          "tpg"
+        ],
+        "counters": 1023
+      },
+      "stack": "legacy",
+      "supp_speeds": []
+    },
+    "layer_cfg": {
+      "ether": {
+        "dst": "52:52:18:89:91:ea",
+        "src": "8e:4e:97:11:bf:a8",
+        "state": "configured"
+      },
+      "ipv4": {
+        "dst": "2.2.2.2",
+        "src": "1.1.1.1",
+        "state": "resolved"
+      },
+      "ipv6": {
+        "enabled": false
+      }
+    },
+    "link_up": true,
+    "mine_elsewhere": false,
+    "multicast": false,
+    "owned": false,
+    "owner": "console-b",
+    "profiles": {},
+    "promiscuous": false,
+    "rx_filter_mode": "hw",
+    "rx_info": {
+      "capture_port": {
+        "is_active": false
+      },
+      "capwap_proxy": {
+        "is_active": false
+      },
+      "grat_arp": {
+        "is_active": false
+      },
+      "latency": {
+        "is_active": false
+      },
+      "queue": {
+        "is_active": false
+      },
+      "stack": {
+        "is_active": true
+      }
+    },
+    "service": false,
+    "service_filtered": false,
+    "speed_gbps": 10.0,
+    "state": "IDLE",
+    "vlan": []
+  },
+  "l3_unresolved": {
+    "fc_mode": -1,
+    "id": 0,
+    "info": {
+      "cores": [
+        0
+      ],
+      "description": "Unknown",
+      "driver": "net_af_packet",
+      "hw_mac": "8e:4e:97:11:bf:a8",
+      "index": 0,
+      "is_fc_supported": false,
+      "is_ieee1588_supported": false,
+      "is_led_supported": false,
+      "is_link_supported": false,
+      "is_prom_supported": true,
+      "is_virtual": true,
+      "is_vxlan_supported": false,
+      "numa": -1,
+      "pci_addr": "N/A",
+      "rx": {
+        "caps": [
+          "flow_stats",
+          "latency",
+          "rx_bytes",
+          "tpg"
+        ],
+        "counters": 1023
+      },
+      "stack": "legacy",
+      "supp_speeds": []
+    },
+    "layer_cfg": {
+      "ether": {
+        "dst": "52:52:18:89:91:ea",
+        "src": "8e:4e:97:11:bf:a8",
+        "state": "unconfigured"
+      },
+      "ipv4": {
+        "dst": "1.1.1.99",
+        "src": "1.1.1.1",
+        "state": "unresolved"
+      },
+      "ipv6": {
+        "enabled": false
+      }
+    },
+    "link_up": true,
+    "mine_elsewhere": false,
+    "multicast": false,
+    "owned": false,
+    "owner": "console-b",
+    "profiles": {},
+    "promiscuous": false,
+    "rx_filter_mode": "hw",
+    "rx_info": {
+      "capture_port": {
+        "is_active": false
+      },
+      "capwap_proxy": {
+        "is_active": false
+      },
+      "grat_arp": {
+        "is_active": false
+      },
+      "latency": {
+        "is_active": false
+      },
+      "queue": {
+        "is_active": false
+      },
+      "stack": {
+        "is_active": true
+      }
+    },
+    "service": false,
+    "service_filtered": false,
+    "speed_gbps": 10.0,
+    "state": "IDLE",
+    "vlan": []
+  },
+  "vlan_two_tags": {
+    "fc_mode": -1,
+    "id": 0,
+    "info": {
+      "cores": [
+        0
+      ],
+      "description": "Unknown",
+      "driver": "net_af_packet",
+      "hw_mac": "8e:4e:97:11:bf:a8",
+      "index": 0,
+      "is_fc_supported": false,
+      "is_ieee1588_supported": false,
+      "is_led_supported": false,
+      "is_link_supported": false,
+      "is_prom_supported": true,
+      "is_virtual": true,
+      "is_vxlan_supported": false,
+      "numa": -1,
+      "pci_addr": "N/A",
+      "rx": {
+        "caps": [
+          "flow_stats",
+          "latency",
+          "rx_bytes",
+          "tpg"
+        ],
+        "counters": 1023
+      },
+      "stack": "legacy",
+      "supp_speeds": []
+    },
+    "layer_cfg": {
+      "ether": {
+        "dst": "52:52:18:89:91:ea",
+        "src": "8e:4e:97:11:bf:a8",
+        "state": "configured"
+      },
+      "ipv4": {
+        "state": "none"
+      },
+      "ipv6": {
+        "enabled": false
+      }
+    },
+    "link_up": true,
+    "mine_elsewhere": false,
+    "multicast": false,
+    "owned": true,
+    "owner": "<local-user>",
+    "profiles": {},
+    "promiscuous": false,
+    "rx_filter_mode": "hw",
+    "rx_info": {
+      "capture_port": {
+        "is_active": false
+      },
+      "capwap_proxy": {
+        "is_active": false
+      },
+      "grat_arp": {
+        "is_active": false
+      },
+      "latency": {
+        "is_active": false
+      },
+      "queue": {
+        "is_active": false
+      },
+      "stack": {
+        "is_active": true
+      }
+    },
+    "service": false,
+    "service_filtered": false,
+    "speed_gbps": 10.0,
+    "state": "IDLE",
+    "vlan": [
+      10,
+      20
+    ]
+  }
+}

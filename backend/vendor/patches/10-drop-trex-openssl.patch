@@ -1,0 +1,19 @@
+trex-web-gui need, not a bug: trex-web-gui does not ship the bundled external_libs/trex-openssl, because its
+libssl.so.1.1 and libcrypto.so.1.1 are OpenSSL 1.1, whose OpenSSL/SSLeay licence is incompatible with the
+GPLv2 that covers the client (LICENSE_Python_Client) and Scapy 2.4.3. backend/scripts/vendor_trex.py no
+longer copies the directory, but trex/__init__.py:36 still lists trex_openssl in ext_libs, and
+__import_ext_libs raises "Unable to find required external library" for any listed directory that is
+missing. This patch removes that entry. The only vendored users, stl/trex_stl_wlc.py:15 and
+common/services/trex_service_ap.py:10 (WLC/AP emulation, unused by trex-web-gui), now fail at import with
+"No module named 'trex_openssl'". Not for upstream: upstream ships the library.
+
+--- a/trex/__init__.py
++++ b/trex/__init__.py
+@@ -33,7 +33,6 @@
+                  {'name': 'scapy',        'dir': 'scapy-2.4.3'},
+                  {'name': 'zmq',          'dir': 'pyzmq-ctypes'},
+                  {'name': 'simpy',        'dir': 'simpy-3.0.10'},
+-                 {'name': 'trex_openssl', 'dir': 'trex-openssl'},
+                  {'name': 'dpkt',         'dir': 'dpkt-1.9.1'},
+                  {'name': 'repoze',       'dir': 'repoze'},
+                ]

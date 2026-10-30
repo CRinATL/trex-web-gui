@@ -1,0 +1,53 @@
+{
+ "phases": [
+  {
+   "t": 0.0,
+   "phase": "connect"
+  },
+  {
+   "t": 0.064,
+   "phase": "info"
+  },
+  {
+   "t": 0.064,
+   "phase": "acquire_reset"
+  },
+  {
+   "t": 0.095,
+   "phase": "add_streams"
+  },
+  {
+   "t": 0.098,
+   "phase": "start"
+  },
+  {
+   "t": 3.151,
+   "phase": "pause"
+  },
+  {
+   "t": 4.155,
+   "phase": "resume"
+  },
+  {
+   "t": 5.159,
+   "phase": "update"
+  },
+  {
+   "t": 6.163,
+   "phase": "stop"
+  },
+  {
+   "t": 6.276,
+   "phase": "idle_events"
+  },
+  {
+   "t": 18.276,
+   "phase": "release"
+  },
+  {
+   "t": 18.28,
+   "phase": "disconnect"
+  }
+ ],
+ "duration_s": 18.81
+}

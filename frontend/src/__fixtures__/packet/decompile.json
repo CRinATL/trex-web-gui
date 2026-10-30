@@ -1,0 +1,33 @@
+{
+  "flow_var": {
+    "global_parameters": {
+      "cache_size": "10"
+    },
+    "instructions": [
+      {
+        "id": "STLVmFlowVar",
+        "parameters": {
+          "init_value": "268435457",
+          "max_value": "268435466",
+          "min_value": "268435457",
+          "name": "ip_src",
+          "op": "inc",
+          "size": "4",
+          "step": "1",
+          "value_list": "None"
+        }
+      },
+      {
+        "id": "STLVmWrFlowVar",
+        "parameters": {
+          "add_val": "0",
+          "fv_name": "ip_src",
+          "is_big": "true",
+          "offset_fixup": "0",
+          "pkt_offset": "26"
+        }
+      }
+    ],
+    "warnings": []
+  }
+}

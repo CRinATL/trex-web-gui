@@ -1,0 +1,316 @@
+{
+ "binary": "MPdyQMLN6JT2cY58CABFAAJAHuQAAEAR2BDAqAABwKgAZwBDAEQCLAUnAgEGAJIOgm8AAAAAAAAAAMCoAGcAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABjglNj",
+ "data": [
+  {
+   "fields": [
+    {
+     "hvalue": "30:f7:72:40:c2:cd",
+     "id": "dst",
+     "length": 6,
+     "offset": 0,
+     "value": "30:f7:72:40:c2:cd"
+    },
+    {
+     "hvalue": "e8:94:f6:71:8e:7c",
+     "id": "src",
+     "length": 6,
+     "offset": 6,
+     "value": "e8:94:f6:71:8e:7c"
+    },
+    {
+     "hvalue": "IPv4",
+     "id": "type",
+     "length": 2,
+     "offset": 12,
+     "value": 2048
+    }
+   ],
+   "id": "Ether",
+   "offset": 0,
+   "real_id": "Ether",
+   "valid_structure": true
+  },
+  {
+   "fields": [
+    {
+     "hvalue": "4",
+     "id": "version",
+     "length": 0,
+     "offset": 0,
+     "value": 4
+    },
+    {
+     "hvalue": "5",
+     "id": "ihl",
+     "length": 0,
+     "offset": 0,
+     "value": 5
+    },
+    {
+     "hvalue": "0x0",
+     "id": "tos",
+     "length": 1,
+     "offset": 1,
+     "value": 0
+    },
+    {
+     "hvalue": "576",
+     "id": "len",
+     "length": 2,
+     "offset": 2,
+     "value": 576
+    },
+    {
+     "hvalue": "7908",
+     "id": "id",
+     "length": 2,
+     "offset": 4,
+     "value": 7908
+    },
+    {
+     "hvalue": "",
+     "id": "flags",
+     "length": 0,
+     "offset": 6,
+     "value": 0
+    },
+    {
+     "hvalue": "0",
+     "id": "frag",
+     "length": 0,
+     "offset": 6,
+     "value": 0
+    },
+    {
+     "hvalue": "64",
+     "id": "ttl",
+     "length": 1,
+     "offset": 8,
+     "value": 64
+    },
+    {
+     "hvalue": "udp",
+     "id": "proto",
+     "length": 1,
+     "offset": 9,
+     "value": 17
+    },
+    {
+     "hvalue": "0xd810",
+     "id": "chksum",
+     "length": 2,
+     "offset": 10,
+     "value": 55312
+    },
+    {
+     "hvalue": "192.168.0.1",
+     "id": "src",
+     "length": 4,
+     "offset": 12,
+     "value": "192.168.0.1"
+    },
+    {
+     "hvalue": "192.168.0.103",
+     "id": "dst",
+     "length": 4,
+     "offset": 16,
+     "value": "192.168.0.103"
+    },
+    {
+     "hvalue": "[]",
+     "id": "options",
+     "length": 2,
+     "offset": 20,
+     "value": {
+      "expr": "[]",
+      "vtype": "EXPRESSION"
+     }
+    }
+   ],
+   "id": "IP",
+   "offset": 14,
+   "real_id": "IP",
+   "valid_structure": true
+  },
+  {
+   "fields": [
+    {
+     "hvalue": "67",
+     "id": "sport",
+     "length": 2,
+     "offset": 0,
+     "value": 67
+    },
+    {
+     "hvalue": "68",
+     "id": "dport",
+     "length": 2,
+     "offset": 2,
+     "value": 68
+    },
+    {
+     "hvalue": "556",
+     "id": "len",
+     "length": 2,
+     "offset": 4,
+     "value": 556
+    },
+    {
+     "hvalue": "0x527",
+     "id": "chksum",
+     "length": 2,
+     "offset": 6,
+     "value": 1319
+    }
+   ],
+   "id": "UDP",
+   "offset": 34,
+   "real_id": "UDP",
+   "valid_structure": true
+  },
+  {
+   "fields": [
+    {
+     "hvalue": "BOOTREPLY",
+     "id": "op",
+     "length": 1,
+     "offset": 0,
+     "value": 2
+    },
+    {
+     "hvalue": "1",
+     "id": "htype",
+     "length": 1,
+     "offset": 1,
+     "value": 1
+    },
+    {
+     "hvalue": "6",
+     "id": "hlen",
+     "length": 1,
+     "offset": 2,
+     "value": 6
+    },
+    {
+     "hvalue": "0",
+     "id": "hops",
+     "length": 1,
+     "offset": 3,
+     "value": 0
+    },
+    {
+     "hvalue": "2450424431",
+     "id": "xid",
+     "length": 4,
+     "offset": 4,
+     "value": 2450424431
+    },
+    {
+     "hvalue": "0",
+     "id": "secs",
+     "length": 2,
+     "offset": 8,
+     "value": 0
+    },
+    {
+     "hvalue": "",
+     "id": "flags",
+     "length": 0,
+     "offset": 10,
+     "value": 0
+    },
+    {
+     "hvalue": "0.0.0.0",
+     "id": "ciaddr",
+     "length": 4,
+     "offset": 12,
+     "value": "0.0.0.0"
+    },
+    {
+     "hvalue": "192.168.0.103",
+     "id": "yiaddr",
+     "length": 4,
+     "offset": 16,
+     "value": "192.168.0.103"
+    },
+    {
+     "hvalue": "0.0.0.0",
+     "id": "siaddr",
+     "length": 4,
+     "offset": 20,
+     "value": "0.0.0.0"
+    },
+    {
+     "hvalue": "0.0.0.0",
+     "id": "giaddr",
+     "length": 4,
+     "offset": 24,
+     "value": "0.0.0.0"
+    },
+    {
+     "hvalue": "<binary>",
+     "id": "chaddr",
+     "length": 16,
+     "offset": 28,
+     "value": {
+      "base64": "",
+      "vtype": "BYTES"
+     }
+    },
+    {
+     "hvalue": "<binary>",
+     "id": "sname",
+     "length": 64,
+     "offset": 44,
+     "value": {
+      "base64": "",
+      "vtype": "BYTES"
+     }
+    },
+    {
+     "hvalue": "<binary>",
+     "id": "file",
+     "length": 128,
+     "offset": 108,
+     "value": {
+      "base64": "",
+      "vtype": "BYTES"
+     }
+    },
+    {
+     "hvalue": "<binary>",
+     "id": "options",
+     "length": 2,
+     "offset": 236,
+     "value": {
+      "base64": "Y4JTYw==",
+      "vtype": "BYTES"
+     }
+    }
+   ],
+   "id": "BOOTP",
+   "offset": 42,
+   "real_id": "BOOTP",
+   "valid_structure": true
+  },
+  {
+   "fields": [
+    {
+     "hvalue": "<binary>",
+     "id": "options",
+     "ignored": true,
+     "length": 2,
+     "offset": 0,
+     "value": {
+      "base64": "",
+      "vtype": "BYTES"
+     }
+    }
+   ],
+   "id": "DHCP",
+   "offset": 282,
+   "real_id": null,
+   "valid_structure": false
+  }
+ ]
+}

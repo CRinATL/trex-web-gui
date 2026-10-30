@@ -1,0 +1,12 @@
+diff -ruN a/trex/scapy_server/scapy_service.py b/trex/scapy_server/scapy_service.py
+--- a/trex/scapy_server/scapy_service.py	2026-10-16 11:15:40.469053783 -0400
++++ b/trex/scapy_server/scapy_service.py	2026-10-16 11:15:40.609638180 -0400
+@@ -890,7 +890,7 @@
+         try:
+             field_engine['instructions'] = self._generate_vm_instructions(pkt, extra_options['field_engine'])
+         except AssertionError as e:
+-            field_engine['error'] = e.message
++            field_engine['error'] = str(e)
+         except CTRexPacketBuildException as e:
+             field_engine['error'] = e.message
+ 

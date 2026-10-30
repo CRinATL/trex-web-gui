@@ -1,0 +1,595 @@
+{
+  "alive": true,
+  "bytes": 3827,
+  "dropped": {
+    "long_name": 0,
+    "other_names": 0,
+    "oversize": 0,
+    "undecodable": 0
+  },
+  "dropped_triggers": 0,
+  "frames": 12,
+  "global": {
+    "ibytes-0": 161364,
+    "ibytes-1": 249244,
+    "ierrors-0": 0,
+    "ierrors-1": 0,
+    "ipackets-0": 1842,
+    "ipackets-1": 1885,
+    "m_active_flows": 1.0,
+    "m_active_sockets": 4,
+    "m_bw_per_core": 0.0,
+    "m_cpu_util": 0.0,
+    "m_cpu_util-0": 0.0,
+    "m_cpu_util-1": 0.0,
+    "m_cpu_util_raw": 0.0,
+    "m_open_flows": 4.0,
+    "m_platform_factor": 1.0,
+    "m_rx_bps": 1145247.9,
+    "m_rx_core_pps": -1.0,
+    "m_rx_cpu_util": 0.0,
+    "m_rx_drop_bps": 0.0,
+    "m_rx_pps": 1206.0,
+    "m_socket_util": 2.491e-05,
+    "m_total_alloc_error": 0,
+    "m_total_clients": 255,
+    "m_total_nat_active": 0,
+    "m_total_nat_learn_error": 0,
+    "m_total_nat_no_fid": 0,
+    "m_total_nat_open": 0,
+    "m_total_nat_syn_wait": 0,
+    "m_total_nat_time_out": 0,
+    "m_total_nat_time_out_wait_ack": 0,
+    "m_total_queue_drop": 0,
+    "m_total_queue_full": 0,
+    "m_total_rx_bps-0": 393256.0,
+    "m_total_rx_bps-1": 751992.0,
+    "m_total_rx_bytes": 410608,
+    "m_total_rx_pkts": 3727,
+    "m_total_rx_pps-0": 594.0,
+    "m_total_rx_pps-1": 612.0,
+    "m_total_servers": 255,
+    "m_total_tx_bps-0": 752256.0,
+    "m_total_tx_bps-1": 393520.0,
+    "m_total_tx_bytes": 410740,
+    "m_total_tx_pkts": 3729,
+    "m_total_tx_pps-0": 612.5,
+    "m_total_tx_pps-1": 594.5,
+    "m_tx_bps": 1145776.0,
+    "m_tx_cps": 1.0,
+    "m_tx_expected_bps": 1391118.4,
+    "m_tx_expected_cps": 3.2,
+    "m_tx_expected_pps": 436.0,
+    "m_tx_pps": 1207.0,
+    "obytes-0": 249310,
+    "obytes-1": 161430,
+    "oerrors-0": 0,
+    "oerrors-1": 0,
+    "opackets-0": 1886,
+    "opackets-1": 1843,
+    "template": [
+      0,
+      0,
+      2,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+    ],
+    "ts": {
+      "freq": 2807958037,
+      "value": 1408105489407
+    },
+    "unknown": 0
+  },
+  "known_ts": {
+    "rx-check": 1700000000.0,
+    "template_info": 1700000000.0,
+    "trex-global": 1700000000.0,
+    "trex-latecny": 1700000000.0,
+    "trex-latecny-v2": 1700000000.0
+  },
+  "latency": {
+    "avg-0": 552.0,
+    "avg-1": 559.0,
+    "c-max-0": 1047.6,
+    "c-max-1": 1051.8,
+    "error-0": 0.0,
+    "error-1": 0.0,
+    "jitter-0": 250.0,
+    "jitter-1": 250.0,
+    "max-0": 1049.0,
+    "max-1": 1052.0,
+    "unknown": 0
+  },
+  "latency_v2": {
+    "cpu_util": 0.0,
+    "port-0": {
+      "hist": {
+        "cnt": 1506,
+        "high_cnt": 1506,
+        "histogram": [
+          {
+            "key": 20,
+            "val": 1
+          },
+          {
+            "key": 40,
+            "val": 1
+          },
+          {
+            "key": 50,
+            "val": 67
+          },
+          {
+            "key": 60,
+            "val": 2
+          },
+          {
+            "key": 70,
+            "val": 13
+          },
+          {
+            "key": 90,
+            "val": 1
+          },
+          {
+            "key": 100,
+            "val": 174
+          },
+          {
+            "key": 200,
+            "val": 140
+          },
+          {
+            "key": 300,
+            "val": 116
+          },
+          {
+            "key": 400,
+            "val": 144
+          },
+          {
+            "key": 500,
+            "val": 138
+          },
+          {
+            "key": 600,
+            "val": 142
+          },
+          {
+            "key": 700,
+            "val": 186
+          },
+          {
+            "key": 800,
+            "val": 150
+          },
+          {
+            "key": 900,
+            "val": 156
+          },
+          {
+            "key": 1000,
+            "val": 75
+          }
+        ],
+        "max_usec": 1049,
+        "min_usec": 10,
+        "s_avg": 552.0,
+        "s_max": 1047.644217
+      },
+      "stats": {
+        "ignore_bytes": 0,
+        "ipv6_n_solic": 0,
+        "m_jitter": 250,
+        "m_l3_cs_err": 0,
+        "m_l4_cs_err": 0,
+        "m_length_error": 0,
+        "m_no_id": 0,
+        "m_no_ipv4_option": 0,
+        "m_no_magic": 0,
+        "m_pkt_ok": 1506,
+        "m_rx_check": 1,
+        "m_seq_error": 0,
+        "m_tx_pkt_err": 0,
+        "m_tx_pkt_ok": 1507,
+        "m_unsup_prot": 0,
+        "tx_arp": 0
+      }
+    },
+    "port-1": {
+      "hist": {
+        "cnt": 1506,
+        "high_cnt": 1506,
+        "histogram": [
+          {
+            "key": 30,
+            "val": 1
+          },
+          {
+            "key": 50,
+            "val": 1
+          },
+          {
+            "key": 60,
+            "val": 68
+          },
+          {
+            "key": 70,
+            "val": 2
+          },
+          {
+            "key": 80,
+            "val": 11
+          },
+          {
+            "key": 90,
+            "val": 1
+          },
+          {
+            "key": 100,
+            "val": 143
+          },
+          {
+            "key": 200,
+            "val": 138
+          },
+          {
+            "key": 300,
+            "val": 149
+          },
+          {
+            "key": 400,
+            "val": 121
+          },
+          {
+            "key": 500,
+            "val": 133
+          },
+          {
+            "key": 600,
+            "val": 154
+          },
+          {
+            "key": 700,
+            "val": 157
+          },
+          {
+            "key": 800,
+            "val": 165
+          },
+          {
+            "key": 900,
+            "val": 177
+          },
+          {
+            "key": 1000,
+            "val": 85
+          }
+        ],
+        "max_usec": 1052,
+        "min_usec": 10,
+        "s_avg": 559.0,
+        "s_max": 1051.824835
+      },
+      "stats": {
+        "ignore_bytes": 0,
+        "ipv6_n_solic": 0,
+        "m_jitter": 250,
+        "m_l3_cs_err": 0,
+        "m_l4_cs_err": 0,
+        "m_length_error": 0,
+        "m_no_id": 0,
+        "m_no_ipv4_option": 0,
+        "m_no_magic": 0,
+        "m_pkt_ok": 1506,
+        "m_rx_check": 1,
+        "m_seq_error": 0,
+        "m_tx_pkt_err": 0,
+        "m_tx_pkt_ok": 1507,
+        "m_unsup_prot": 0,
+        "tx_arp": 0
+      }
+    },
+    "unknown": 0
+  },
+  "other": {
+    "tx-gen": {
+      "data": {
+        "realtime-hist": {
+          "cnt": 0,
+          "high_cnt": 0,
+          "histogram": [],
+          "max_usec": 0,
+          "min_usec": 10,
+          "s_avg": 0.0,
+          "s_max": 0.0
+        },
+        "unknown": 0
+      },
+      "ts": 1700000000.0
+    }
+  },
+  "rx_check": {
+    "latency_hist": {
+      "cnt": 2,
+      "high_cnt": 2,
+      "histogram": [
+        {
+          "key": 200,
+          "val": 1
+        },
+        {
+          "key": 1000,
+          "val": 1
+        }
+      ],
+      "max_usec": 0,
+      "min_usec": 10,
+      "s_avg": 1073.0,
+      "s_max": 0.0
+    },
+    "stats": {
+      "m_active": 0,
+      "m_add": 1,
+      "m_err_aged": 0,
+      "m_err_drop": 0,
+      "m_err_fif_seen_twice": 0,
+      "m_err_flow_length_changed": 0,
+      "m_err_no_magic": 0,
+      "m_err_oo_dup": 0,
+      "m_err_oo_early": 0,
+      "m_err_oo_late": 0,
+      "m_err_open_with_no_fif_pkt": 0,
+      "m_err_wrong_pkt_id": 0,
+      "m_fif": 1,
+      "m_found": 1,
+      "m_lookup": 2,
+      "m_remove": 1,
+      "m_total_rx": 2,
+      "m_total_rx_bytes": 0
+    },
+    "template": [
+      {
+        "id": 0,
+        "jitter": 0,
+        "rx_pkts": 0,
+        "val": 0
+      },
+      {
+        "id": 1,
+        "jitter": 0,
+        "rx_pkts": 0,
+        "val": 0
+      },
+      {
+        "id": 2,
+        "jitter": 212,
+        "rx_pkts": 2,
+        "val": 0
+      },
+      {
+        "id": 3,
+        "jitter": 0,
+        "rx_pkts": 0,
+        "val": 0
+      },
+      {
+        "id": 4,
+        "jitter": 0,
+        "rx_pkts": 0,
+        "val": 0
+      },
+      {
+        "id": 5,
+        "jitter": 0,
+        "rx_pkts": 0,
+        "val": 0
+      },
+      {
+        "id": 6,
+        "jitter": 0,
+        "rx_pkts": 0,
+        "val": 0
+      },
+      {
+        "id": 7,
+        "jitter": 0,
+        "rx_pkts": 0,
+        "val": 0
+      },
+      {
+        "id": 8,
+        "jitter": 0,
+        "rx_pkts": 0,
+        "val": 0
+      },
+      {
+        "id": 9,
+        "jitter": 0,
+        "rx_pkts": 0,
+        "val": 0
+      },
+      {
+        "id": 10,
+        "jitter": 0,
+        "rx_pkts": 0,
+        "val": 0
+      },
+      {
+        "id": 11,
+        "jitter": 0,
+        "rx_pkts": 0,
+        "val": 0
+      },
+      {
+        "id": 12,
+        "jitter": 0,
+        "rx_pkts": 0,
+        "val": 0
+      },
+      {
+        "id": 13,
+        "jitter": 0,
+        "rx_pkts": 0,
+        "val": 0
+      },
+      {
+        "id": 14,
+        "jitter": 0,
+        "rx_pkts": 0,
+        "val": 0
+      },
+      {
+        "id": 15,
+        "jitter": 0,
+        "rx_pkts": 0,
+        "val": 0
+      },
+      {
+        "id": 16,
+        "jitter": 0,
+        "rx_pkts": 0,
+        "val": 0
+      },
+      {
+        "id": 17,
+        "jitter": 0,
+        "rx_pkts": 0,
+        "val": 0
+      },
+      {
+        "id": 18,
+        "jitter": 0,
+        "rx_pkts": 0,
+        "val": 0
+      },
+      {
+        "id": 19,
+        "jitter": 0,
+        "rx_pkts": 0,
+        "val": 0
+      },
+      {
+        "id": 20,
+        "jitter": 0,
+        "rx_pkts": 0,
+        "val": 0
+      },
+      {
+        "id": 21,
+        "jitter": 0,
+        "rx_pkts": 0,
+        "val": 0
+      },
+      {
+        "id": 22,
+        "jitter": 0,
+        "rx_pkts": 0,
+        "val": 0
+      },
+      {
+        "id": 23,
+        "jitter": 0,
+        "rx_pkts": 0,
+        "val": 0
+      },
+      {
+        "id": 24,
+        "jitter": 0,
+        "rx_pkts": 0,
+        "val": 0
+      },
+      {
+        "id": 25,
+        "jitter": 0,
+        "rx_pkts": 0,
+        "val": 0
+      },
+      {
+        "id": 26,
+        "jitter": 0,
+        "rx_pkts": 0,
+        "val": 0
+      },
+      {
+        "id": 27,
+        "jitter": 0,
+        "rx_pkts": 0,
+        "val": 0
+      },
+      {
+        "id": 28,
+        "jitter": 0,
+        "rx_pkts": 0,
+        "val": 0
+      },
+      {
+        "id": 29,
+        "jitter": 0,
+        "rx_pkts": 0,
+        "val": 0
+      },
+      {
+        "id": 30,
+        "jitter": 0,
+        "rx_pkts": 0,
+        "val": 0
+      },
+      {
+        "id": 31,
+        "jitter": 0,
+        "rx_pkts": 0,
+        "val": 0
+      }
+    ],
+    "timer_w": {
+      "m_active": 1,
+      "m_st_alloc": 1,
+      "m_st_free": 0,
+      "m_st_handle": 0,
+      "m_st_start": 2,
+      "m_st_stop": 1
+    },
+    "unknown": 0
+  },
+  "stale_since": null,
+  "state": "connected",
+  "target": {
+    "host": "127.0.0.1",
+    "port": 4500
+  },
+  "templates": [
+    "cap2/Oracle.pcap",
+    "cap2/smtp.pcap",
+    "cap2/dns.pcap"
+  ],
+  "ts": 1700000000.0,
+  "type": "monitor"
+}

@@ -1,0 +1,12 @@
+#cloud-config
+hostname: trex-vm
+users:
+  - name: trex
+    sudo: ALL=(ALL) NOPASSWD:ALL
+    shell: /bin/bash
+    lock_passwd: true
+    ssh_authorized_keys:
+      - <contents of /var/tmp/trex-vm/id_ed25519.pub>
+ssh_pwauth: false
+package_update: false
+package_upgrade: false

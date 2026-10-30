@@ -1,0 +1,57 @@
+[
+ {
+  "action_count": 0,
+  "core_id": -1,
+  "enabled": true,
+  "flags": 0,
+  "flow_stats": {
+   "enabled": false
+  },
+  "isg": 0.0,
+  "mode": {
+   "rate": {
+    "type": "pps",
+    "value": 1.0
+   },
+   "type": "continuous"
+  },
+  "packet": {
+   "binary": "AAAAAQAAAAAAAgAACABFAAAuAAEAAEAROr0QAAABMAAAAQQBAAwAGn9veHh4eHh4eHh4eHh4eHh4eHh4",
+   "meta": ""
+  },
+  "self_start": true,
+  "start_paused": false,
+  "vm": {
+   "instructions": [
+    {
+     "flags": 0,
+     "ip_max": 268435458,
+     "ip_min": 268435457,
+     "limit_flows": 10000,
+     "name": "tuple",
+     "port_max": 2048,
+     "port_min": 1025,
+     "type": "tuple_flow_var"
+    },
+    {
+     "add_value": 0,
+     "is_big_endian": true,
+     "name": "tuple.ip",
+     "pkt_offset": 26,
+     "type": "write_flow_var"
+    },
+    {
+     "pkt_offset": 14,
+     "type": "fix_checksum_ipv4"
+    },
+    {
+     "add_value": 0,
+     "is_big_endian": true,
+     "name": "tuple.port",
+     "pkt_offset": 34,
+     "type": "write_flow_var"
+    }
+   ]
+  }
+ }
+]

@@ -1,0 +1,187 @@
+{
+ "binary": "AAAAAQAAAAAAAgAAht1gAAAAABQGQAAAAAAAAAAAAAAAAAAAAAIAAAAAAAAAAAAAAAAAAAABABQAUAAAAAAAAAAAUAIgAI98AAA=",
+ "data": [
+  {
+   "fields": [
+    {
+     "hvalue": "00:00:00:01:00:00",
+     "id": "dst",
+     "length": 6,
+     "offset": 0,
+     "value": "00:00:00:01:00:00"
+    },
+    {
+     "hvalue": "00:00:00:02:00:00",
+     "id": "src",
+     "length": 6,
+     "offset": 6,
+     "value": "00:00:00:02:00:00"
+    },
+    {
+     "hvalue": "IPv6",
+     "id": "type",
+     "length": 2,
+     "offset": 12,
+     "value": 34525
+    }
+   ],
+   "id": "Ether",
+   "offset": 0,
+   "real_id": "Ether",
+   "valid_structure": true
+  },
+  {
+   "fields": [
+    {
+     "hvalue": "6",
+     "id": "version",
+     "length": 0,
+     "offset": 0,
+     "value": 6
+    },
+    {
+     "hvalue": "0",
+     "id": "tc",
+     "length": 0,
+     "offset": 0,
+     "value": 0
+    },
+    {
+     "hvalue": "0",
+     "id": "fl",
+     "length": 0,
+     "offset": 1,
+     "value": 0
+    },
+    {
+     "hvalue": "20",
+     "id": "plen",
+     "length": 2,
+     "offset": 4,
+     "value": 20
+    },
+    {
+     "hvalue": "TCP",
+     "id": "nh",
+     "length": 1,
+     "offset": 6,
+     "value": 6
+    },
+    {
+     "hvalue": "64",
+     "id": "hlim",
+     "length": 1,
+     "offset": 7,
+     "value": 64
+    },
+    {
+     "hvalue": "::2",
+     "id": "src",
+     "length": 16,
+     "offset": 8,
+     "value": "::2"
+    },
+    {
+     "hvalue": "::1",
+     "id": "dst",
+     "length": 16,
+     "offset": 24,
+     "value": "::1"
+    }
+   ],
+   "id": "IPv6",
+   "offset": 14,
+   "real_id": "IPv6",
+   "valid_structure": true
+  },
+  {
+   "fields": [
+    {
+     "hvalue": "20",
+     "id": "sport",
+     "length": 2,
+     "offset": 0,
+     "value": 20
+    },
+    {
+     "hvalue": "80",
+     "id": "dport",
+     "length": 2,
+     "offset": 2,
+     "value": 80
+    },
+    {
+     "hvalue": "0",
+     "id": "seq",
+     "length": 4,
+     "offset": 4,
+     "value": 0
+    },
+    {
+     "hvalue": "0",
+     "id": "ack",
+     "length": 4,
+     "offset": 8,
+     "value": 0
+    },
+    {
+     "hvalue": "5",
+     "id": "dataofs",
+     "length": 0,
+     "offset": 12,
+     "value": 5
+    },
+    {
+     "hvalue": "0",
+     "id": "reserved",
+     "length": 0,
+     "offset": 12,
+     "value": 0
+    },
+    {
+     "hvalue": "S",
+     "id": "flags",
+     "length": 0,
+     "offset": 12,
+     "value": 2
+    },
+    {
+     "hvalue": "8192",
+     "id": "window",
+     "length": 2,
+     "offset": 14,
+     "value": 8192
+    },
+    {
+     "hvalue": "0x8f7c",
+     "id": "chksum",
+     "length": 2,
+     "offset": 16,
+     "value": 36732
+    },
+    {
+     "hvalue": "0",
+     "id": "urgptr",
+     "length": 2,
+     "offset": 18,
+     "value": 0
+    },
+    {
+     "hvalue": "<binary>",
+     "id": "options",
+     "ignored": true,
+     "length": 2,
+     "offset": 20,
+     "value": {
+      "base64": "",
+      "vtype": "BYTES"
+     }
+    }
+   ],
+   "id": "TCP",
+   "offset": 54,
+   "real_id": "TCP",
+   "valid_structure": true
+  }
+ ]
+}

@@ -1,0 +1,105 @@
+{
+ "binary": "ZNS2z6NiyWbVmgBxCAYAAQgABgQAAslm1ZoAcRAAAA9k1LbPo2IQAAAq",
+ "data": [
+  {
+   "fields": [
+    {
+     "hvalue": "64:d4:b6:cf:a3:62",
+     "id": "dst",
+     "length": 6,
+     "offset": 0,
+     "value": "64:d4:b6:cf:a3:62"
+    },
+    {
+     "hvalue": "c9:66:d5:9a:00:71",
+     "id": "src",
+     "length": 6,
+     "offset": 6,
+     "value": "c9:66:d5:9a:00:71"
+    },
+    {
+     "hvalue": "ARP",
+     "id": "type",
+     "length": 2,
+     "offset": 12,
+     "value": 2054
+    }
+   ],
+   "id": "Ether",
+   "offset": 0,
+   "real_id": "Ether",
+   "valid_structure": true
+  },
+  {
+   "fields": [
+    {
+     "hvalue": "0x1",
+     "id": "hwtype",
+     "length": 2,
+     "offset": 0,
+     "value": 1
+    },
+    {
+     "hvalue": "IPv4",
+     "id": "ptype",
+     "length": 2,
+     "offset": 2,
+     "value": 2048
+    },
+    {
+     "hvalue": "6",
+     "id": "hwlen",
+     "length": 1,
+     "offset": 4,
+     "value": 6
+    },
+    {
+     "hvalue": "4",
+     "id": "plen",
+     "length": 1,
+     "offset": 5,
+     "value": 4
+    },
+    {
+     "hvalue": "is-at",
+     "id": "op",
+     "length": 2,
+     "offset": 6,
+     "value": 2
+    },
+    {
+     "hvalue": "c9:66:d5:9a:00:71",
+     "id": "hwsrc",
+     "length": 2,
+     "offset": 8,
+     "value": "c9:66:d5:9a:00:71"
+    },
+    {
+     "hvalue": "16.0.0.15",
+     "id": "psrc",
+     "length": 2,
+     "offset": 14,
+     "value": "16.0.0.15"
+    },
+    {
+     "hvalue": "64:d4:b6:cf:a3:62",
+     "id": "hwdst",
+     "length": 2,
+     "offset": 18,
+     "value": "64:d4:b6:cf:a3:62"
+    },
+    {
+     "hvalue": "16.0.0.42",
+     "id": "pdst",
+     "length": 2,
+     "offset": 24,
+     "value": "16.0.0.42"
+    }
+   ],
+   "id": "ARP",
+   "offset": 14,
+   "real_id": "ARP",
+   "valid_structure": true
+  }
+ ]
+}

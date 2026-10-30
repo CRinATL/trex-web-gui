@@ -1,0 +1,20 @@
+{
+  "port0": {
+    "port": 0,
+    "values": {
+      "rx_errors": 0,
+      "rx_good_bytes": 0,
+      "rx_good_packets": 0,
+      "rx_mbuf_allocation_errors": 0,
+      "rx_missed_errors": 0,
+      "rx_q0_bytes": 0,
+      "rx_q0_errors": 0,
+      "rx_q0_packets": 0,
+      "tx_errors": 0,
+      "tx_good_bytes": 0,
+      "tx_good_packets": 0,
+      "tx_q0_bytes": 0,
+      "tx_q0_packets": 0
+    }
+  }
+}

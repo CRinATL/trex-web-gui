@@ -1,0 +1,19 @@
+# Citations scripts/check_citations.py should skip: known-fake ones (a document quoting a bad citation) and
+# genuinely historical ones. Reviewed exceptions, not something to widen casually. Format, per line:
+#   <citing-relpath> <raw>:<span>      # why
+# an exact copy of the text a failing run prints (the "here" minus ":<line-number>", then the cited text).
+
+# --- tests/unit/test_check_citations.py: citations in its own assertions are the test's temp-tree fixtures ---
+tests/unit/test_check_citations.py pkg/real.py:2-3   # fake on purpose: temp-tree fixture text
+tests/unit/test_check_citations.py pkg/real.py:4     # fake on purpose: temp-tree fixture text
+tests/unit/test_check_citations.py docs/note.md:1    # fake on purpose: the checker's own output quoted in an assertion
+tests/unit/test_check_citations.py pkg/nope.py:1     # fake on purpose: temp-tree fixture text
+tests/unit/test_check_citations.py pkg/fake.py:9     # fake on purpose: temp-tree fixture text
+tests/unit/test_check_citations.py deep/p.cpp:2      # fake on purpose: temp-tree fixture text
+tests/unit/test_check_citations.py deep/p.cpp:8      # fake on purpose: temp-tree fixture text
+tests/unit/test_check_citations.py pkg/real.py:2      # fake on purpose: temp-tree fixture text (snippet test)
+tests/unit/test_check_citations.py pkg/real.py:1      # fake on purpose: temp-tree fixture text (missing-sibling test)
+tests/unit/test_check_citations.py pkg/guide.md:2    # fake on purpose: temp-tree fixture text (living-document test)
+tests/unit/test_check_citations.py src/x.cpp:1      # fake on purpose: temp-tree fixture text (missing-sibling tests)
+
+# --- historical plan steps: they quote a line as it stood when the plan was written ---

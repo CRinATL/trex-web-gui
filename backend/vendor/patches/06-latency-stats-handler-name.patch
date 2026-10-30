@@ -1,0 +1,12 @@
+diff -ruN a/trex/common/trex_subscriber.py b/trex/common/trex_subscriber.py
+--- a/trex/common/trex_subscriber.py	2026-10-16 11:15:40.468948049 -0400
++++ b/trex/common/trex_subscriber.py	2026-10-16 11:15:40.556952964 -0400
+@@ -402,7 +402,7 @@
+         self.ctx.event_handler.on_event("flow stats update", data, baseline)
+ 
+ 
+-    def handle_flow_stats_update (self, data, baseline):
++    def handle_latency_stats_update (self, data, baseline):
+         self.ctx.event_handler.on_event("latency stats update", data, baseline)
+ 
+ 

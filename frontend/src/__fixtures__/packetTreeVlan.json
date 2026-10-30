@@ -1,0 +1,345 @@
+{
+  "vlan": {
+    "binary": "UlIYiZHqjk6XEb+ogQAACggARQAALgABAABAAXTJAQEBAQICAgIIAGE8WocAAHh4eHh4eHh4eHh4eHh4eHh4eA==",
+    "data": [
+      {
+        "fields": [
+          {
+            "hvalue": "52:52:18:89:91:ea",
+            "id": "dst",
+            "length": 6,
+            "offset": 0,
+            "value": "52:52:18:89:91:ea"
+          },
+          {
+            "hvalue": "8e:4e:97:11:bf:a8",
+            "id": "src",
+            "length": 6,
+            "offset": 6,
+            "value": "8e:4e:97:11:bf:a8"
+          },
+          {
+            "hvalue": "n_802_1Q",
+            "id": "type",
+            "length": 2,
+            "offset": 12,
+            "value": 33024
+          }
+        ],
+        "id": "Ether",
+        "offset": 0,
+        "real_id": "Ether",
+        "valid_structure": true
+      },
+      {
+        "fields": [
+          {
+            "hvalue": "0",
+            "id": "prio",
+            "length": 0,
+            "offset": 0,
+            "value": 0
+          },
+          {
+            "hvalue": "0",
+            "id": "id",
+            "length": 0,
+            "offset": 0,
+            "value": 0
+          },
+          {
+            "hvalue": "10",
+            "id": "vlan",
+            "length": 0,
+            "offset": 0,
+            "value": 10
+          },
+          {
+            "hvalue": "IPv4",
+            "id": "type",
+            "length": 2,
+            "offset": 2,
+            "value": 2048
+          }
+        ],
+        "id": "Dot1Q",
+        "offset": 14,
+        "real_id": "Dot1Q",
+        "valid_structure": true
+      },
+      {
+        "fields": [
+          {
+            "hvalue": "4",
+            "id": "version",
+            "length": 0,
+            "offset": 0,
+            "value": 4
+          },
+          {
+            "hvalue": "5",
+            "id": "ihl",
+            "length": 0,
+            "offset": 0,
+            "value": 5
+          },
+          {
+            "hvalue": "0x0",
+            "id": "tos",
+            "length": 1,
+            "offset": 1,
+            "value": 0
+          },
+          {
+            "hvalue": "46",
+            "id": "len",
+            "length": 2,
+            "offset": 2,
+            "value": 46
+          },
+          {
+            "hvalue": "1",
+            "id": "id",
+            "length": 2,
+            "offset": 4,
+            "value": 1
+          },
+          {
+            "hvalue": "",
+            "id": "flags",
+            "length": 0,
+            "offset": 6,
+            "value": 0
+          },
+          {
+            "hvalue": "0",
+            "id": "frag",
+            "length": 0,
+            "offset": 6,
+            "value": 0
+          },
+          {
+            "hvalue": "64",
+            "id": "ttl",
+            "length": 1,
+            "offset": 8,
+            "value": 64
+          },
+          {
+            "hvalue": "icmp",
+            "id": "proto",
+            "length": 1,
+            "offset": 9,
+            "value": 1
+          },
+          {
+            "hvalue": "0x74c9",
+            "id": "chksum",
+            "length": 2,
+            "offset": 10,
+            "value": 29897
+          },
+          {
+            "hvalue": "1.1.1.1",
+            "id": "src",
+            "length": 4,
+            "offset": 12,
+            "value": "1.1.1.1"
+          },
+          {
+            "hvalue": "2.2.2.2",
+            "id": "dst",
+            "length": 4,
+            "offset": 16,
+            "value": "2.2.2.2"
+          },
+          {
+            "hvalue": "[]",
+            "id": "options",
+            "length": 2,
+            "offset": 20,
+            "value": {
+              "expr": "[]",
+              "vtype": "EXPRESSION"
+            }
+          }
+        ],
+        "id": "IP",
+        "offset": 18,
+        "real_id": "IP",
+        "valid_structure": true
+      },
+      {
+        "fields": [
+          {
+            "hvalue": "echo-request",
+            "id": "type",
+            "length": 1,
+            "offset": 0,
+            "value": 8
+          },
+          {
+            "hvalue": 0,
+            "id": "code",
+            "length": 1,
+            "offset": 1,
+            "value": 0
+          },
+          {
+            "hvalue": "0x613c",
+            "id": "chksum",
+            "length": 2,
+            "offset": 2,
+            "value": 24892
+          },
+          {
+            "hvalue": "0x5a87",
+            "id": "id",
+            "length": 2,
+            "offset": 4,
+            "value": 23175
+          },
+          {
+            "hvalue": "0x0",
+            "id": "seq",
+            "length": 2,
+            "offset": 6,
+            "value": 0
+          },
+          {
+            "hvalue": "--",
+            "id": "ts_ori",
+            "length": 4,
+            "offset": 8,
+            "value": {
+              "expr": "--",
+              "vtype": "EXPRESSION"
+            }
+          },
+          {
+            "hvalue": "--",
+            "id": "ts_rx",
+            "length": 4,
+            "offset": 8,
+            "value": {
+              "expr": "--",
+              "vtype": "EXPRESSION"
+            }
+          },
+          {
+            "hvalue": "--",
+            "id": "ts_tx",
+            "length": 4,
+            "offset": 8,
+            "value": {
+              "expr": "--",
+              "vtype": "EXPRESSION"
+            }
+          },
+          {
+            "hvalue": "None",
+            "id": "gw",
+            "length": 4,
+            "offset": 8,
+            "value": {
+              "expr": "None",
+              "vtype": "EXPRESSION"
+            }
+          },
+          {
+            "hvalue": "None",
+            "id": "ptr",
+            "length": 1,
+            "offset": 8,
+            "value": {
+              "expr": "None",
+              "vtype": "EXPRESSION"
+            }
+          },
+          {
+            "hvalue": "None",
+            "id": "reserved",
+            "length": 1,
+            "offset": 8,
+            "value": {
+              "expr": "None",
+              "vtype": "EXPRESSION"
+            }
+          },
+          {
+            "hvalue": "None",
+            "id": "length",
+            "length": 1,
+            "offset": 8,
+            "value": {
+              "expr": "None",
+              "vtype": "EXPRESSION"
+            }
+          },
+          {
+            "hvalue": "None",
+            "id": "addr_mask",
+            "length": 4,
+            "offset": 8,
+            "value": {
+              "expr": "None",
+              "vtype": "EXPRESSION"
+            }
+          },
+          {
+            "hvalue": "None",
+            "id": "nexthopmtu",
+            "length": 2,
+            "offset": 8,
+            "value": {
+              "expr": "None",
+              "vtype": "EXPRESSION"
+            }
+          },
+          {
+            "hvalue": "None",
+            "id": "unused",
+            "length": 2,
+            "offset": 8,
+            "value": {
+              "expr": "None",
+              "vtype": "EXPRESSION"
+            }
+          },
+          {
+            "hvalue": "None",
+            "id": "unused",
+            "length": 4,
+            "offset": 8,
+            "value": {
+              "expr": "None",
+              "vtype": "EXPRESSION"
+            }
+          }
+        ],
+        "id": "ICMP",
+        "offset": 38,
+        "real_id": "ICMP",
+        "valid_structure": true
+      },
+      {
+        "fields": [
+          {
+            "hvalue": "xxxxxxxxxxxxxxxxxx",
+            "id": "load",
+            "length": 18,
+            "offset": 0,
+            "value": {
+              "base64": "eHh4eHh4eHh4eHh4eHh4eHh4",
+              "vtype": "BYTES"
+            }
+          }
+        ],
+        "id": "Raw",
+        "offset": 46,
+        "real_id": "Raw",
+        "valid_structure": true
+      }
+    ]
+  }
+}

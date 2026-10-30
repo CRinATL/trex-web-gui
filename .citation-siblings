@@ -1,0 +1,5 @@
+# Trees this repo cites by path. A missing path is skipped, and named in the checker's summary.
+# Words after a path restrict which subdirectories are indexed for bare-basename lookup.
+# trex-core at the commit backend/vendor/TREX_PIN names (upstream_sha), the source of the vendored client
+~/Projects/trex-core-history src scripts
+~/Projects/trex-rework

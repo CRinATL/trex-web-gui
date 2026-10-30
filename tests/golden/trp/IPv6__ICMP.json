@@ -1,0 +1,148 @@
+{
+ "binary": "AAAAAQAAAAAAAgAAht1gAAAAACg6/wAAAAAAAAAAAAAAAAAAAAL/AgAAAAAAAAAAAAAAAAABiQB3lwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
+ "data": [
+  {
+   "fields": [
+    {
+     "hvalue": "00:00:00:01:00:00",
+     "id": "dst",
+     "length": 6,
+     "offset": 0,
+     "value": "00:00:00:01:00:00"
+    },
+    {
+     "hvalue": "00:00:00:02:00:00",
+     "id": "src",
+     "length": 6,
+     "offset": 6,
+     "value": "00:00:00:02:00:00"
+    },
+    {
+     "hvalue": "IPv6",
+     "id": "type",
+     "length": 2,
+     "offset": 12,
+     "value": 34525
+    }
+   ],
+   "id": "Ether",
+   "offset": 0,
+   "real_id": "Ether",
+   "valid_structure": true
+  },
+  {
+   "fields": [
+    {
+     "hvalue": "6",
+     "id": "version",
+     "length": 0,
+     "offset": 0,
+     "value": 6
+    },
+    {
+     "hvalue": "0",
+     "id": "tc",
+     "length": 0,
+     "offset": 0,
+     "value": 0
+    },
+    {
+     "hvalue": "0",
+     "id": "fl",
+     "length": 0,
+     "offset": 1,
+     "value": 0
+    },
+    {
+     "hvalue": "40",
+     "id": "plen",
+     "length": 2,
+     "offset": 4,
+     "value": 40
+    },
+    {
+     "hvalue": "ICMPv6",
+     "id": "nh",
+     "length": 1,
+     "offset": 6,
+     "value": 58
+    },
+    {
+     "hvalue": "255",
+     "id": "hlim",
+     "length": 1,
+     "offset": 7,
+     "value": 255
+    },
+    {
+     "hvalue": "::2",
+     "id": "src",
+     "length": 16,
+     "offset": 8,
+     "value": "::2"
+    },
+    {
+     "hvalue": "ff02::1",
+     "id": "dst",
+     "length": 16,
+     "offset": 24,
+     "value": "ff02::1"
+    }
+   ],
+   "id": "IPv6",
+   "offset": 14,
+   "real_id": "IPv6",
+   "valid_structure": true
+  },
+  {
+   "fields": [
+    {
+     "hvalue": "Redirect Message",
+     "id": "type",
+     "length": 1,
+     "offset": 0,
+     "value": 137
+    },
+    {
+     "hvalue": "0",
+     "id": "code",
+     "length": 1,
+     "offset": 1,
+     "value": 0
+    },
+    {
+     "hvalue": "0x7797",
+     "id": "cksum",
+     "length": 2,
+     "offset": 2,
+     "value": 30615
+    },
+    {
+     "hvalue": "0x0",
+     "id": "res",
+     "length": 4,
+     "offset": 4,
+     "value": 0
+    },
+    {
+     "hvalue": "::",
+     "id": "tgt",
+     "length": 16,
+     "offset": 8,
+     "value": "::"
+    },
+    {
+     "hvalue": "::",
+     "id": "dst",
+     "length": 16,
+     "offset": 24,
+     "value": "::"
+    }
+   ],
+   "id": "ICMPv6ND_Redirect",
+   "offset": 54,
+   "real_id": "ICMPv6ND_Redirect",
+   "valid_structure": true
+  }
+ ]
+}

@@ -1,0 +1,167 @@
+{
+ "acquire_owned_no_force": {
+  "t": 2.252,
+  "client": "gui-a",
+  "thread": "MainThread",
+  "req": {
+   "jsonrpc": "2.0",
+   "id": 12781866,
+   "method": "acquire",
+   "params": {
+    "port_id": 0,
+    "user": "gui-a",
+    "session_id": 1901128027,
+    "force": false,
+    "api_h": "z2O5WUnP"
+   }
+  },
+  "resp": {
+   "error": {
+    "code": -32000,
+    "message": "Failed To Execute Method",
+    "specific_err": "port is already taken by 'console-b'"
+   },
+   "id": 12781866,
+   "jsonrpc": "2.0"
+  }
+ },
+ "release_wrong_handler": {
+  "t": 4.328,
+  "client": "gui-a",
+  "thread": "MainThread",
+  "req": {
+   "jsonrpc": "2.0",
+   "id": 13552397,
+   "method": "release",
+   "params": {
+    "port_id": 0,
+    "handler": "bogus000",
+    "api_h": "z2O5WUnP"
+   }
+  },
+  "resp": {
+   "error": {
+    "code": -32000,
+    "message": "Failed To Execute Method",
+    "specific_err": "port is not owned by you or your current executing session"
+   },
+   "id": 13552397,
+   "jsonrpc": "2.0"
+  }
+ },
+ "start_no_streams": {
+  "t": 4.329,
+  "client": "gui-a",
+  "thread": "MainThread",
+  "req": {
+   "jsonrpc": "2.0",
+   "id": 10288692,
+   "method": "start_traffic",
+   "params": {
+    "handler": "0MereuYK",
+    "port_id": 0,
+    "profile_id": "_",
+    "mul": {
+     "type": "raw",
+     "value": 1.0,
+     "op": "abs"
+    },
+    "duration": -1,
+    "force": false,
+    "core_mask": 1,
+    "api_h": "z2O5WUnP"
+   }
+  },
+  "resp": {
+   "error": {
+    "code": -32000,
+    "message": "Failed To Execute Method",
+    "specific_err": "command 'start' cannot be executed on current state: 'IDLE on profile_id(_)."
+   },
+   "id": 10288692,
+   "jsonrpc": "2.0"
+  }
+ },
+ "command_wrong_handler": {
+  "t": 4.33,
+  "client": "gui-a",
+  "thread": "MainThread",
+  "req": {
+   "jsonrpc": "2.0",
+   "id": 1020249,
+   "method": "start_traffic",
+   "params": {
+    "handler": "bogus000",
+    "port_id": 0,
+    "profile_id": "_",
+    "mul": {
+     "type": "raw",
+     "value": 1.0,
+     "op": "abs"
+    },
+    "duration": -1,
+    "force": false,
+    "core_mask": 1,
+    "api_h": "z2O5WUnP"
+   }
+  },
+  "resp": {
+   "error": {
+    "code": -32000,
+    "message": "Failed To Execute Method",
+    "specific_err": "port is not owned by you or your current executing session"
+   },
+   "id": 1020249,
+   "jsonrpc": "2.0"
+  }
+ },
+ "remove_streams_while_tx": {
+  "t": 6.338,
+  "client": "gui-a",
+  "thread": "MainThread",
+  "req": {
+   "jsonrpc": "2.0",
+   "id": 8325575,
+   "method": "remove_all_streams",
+   "params": {
+    "handler": "0MereuYK",
+    "port_id": 0,
+    "profile_id": "_",
+    "api_h": "z2O5WUnP"
+   }
+  },
+  "resp": {
+   "error": {
+    "code": -32000,
+    "message": "Failed To Execute Method",
+    "specific_err": "command 'remove_and_delete_all_streams' cannot be executed on current state: 'TX on profile_id(_)."
+   },
+   "id": 8325575,
+   "jsonrpc": "2.0"
+  }
+ },
+ "api_h_mismatch": {
+  "t": 13.381,
+  "client": "gui-a",
+  "thread": "MainThread",
+  "req": {
+   "jsonrpc": "2.0",
+   "id": 10326637,
+   "method": "get_port_status",
+   "params": {
+    "port_id": 0,
+    "block": false,
+    "api_h": "zzzzzzzz"
+   }
+  },
+  "resp": {
+   "error": {
+    "code": -32000,
+    "message": "Failed To Execute Method",
+    "specific_err": "API verification failed - API handler provided mismatch for class: 'common'"
+   },
+   "id": 10326637,
+   "jsonrpc": "2.0"
+  }
+ }
+}

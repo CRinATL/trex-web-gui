@@ -1,0 +1,20 @@
+trex-web-gui: one TRex web GUI (Control, Studio, Monitor)
+Copyright (C) 2026 Charles Menser
+
+This program is free software; you can redistribute it and/or modify it under the terms of the GNU
+General Public License as published by the Free Software Foundation; either version 2 of the License, or
+(at your option) any later version. SPDX-License-Identifier: GPL-2.0-or-later
+
+This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the
+implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public
+License, in the file LICENSE, for more details.
+
+The licence covers the whole repository, backend and frontend. Third-party code keeps its own terms:
+
+- backend/trex_web_gui/_vendor/ is a patched copy of the TRex Python client (cisco-system-traffic-generator/
+  trex-core at the commit in backend/vendor/TREX_PIN). Upstream's LICENSE_Python_Client licenses the client
+  under GPLv2 "or (at your option) any later version", because it uses Scapy. The patches are described in
+  backend/vendor/patches.md.
+- Its bundled libraries are under backend/trex_web_gui/_vendor/external_libs/; Scapy 2.4.3 is GPLv2 (its LICENSE
+  file there). The bundled trex-openssl (OpenSSL 1.1 shared objects) is deliberately not shipped: vendor
+  patch 10.

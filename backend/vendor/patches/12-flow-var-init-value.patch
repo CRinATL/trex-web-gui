@@ -1,0 +1,18 @@
+Fixes STLPktBuilder.from_json (stl/trex_stl_packet_builder_scapy.py:1827-1835 at the pin), which rebuilds each
+flow_var without its `init_value`. STLStream.from_json calls it, so every JSON profile path (STLProfile.load_json,
+STLProfile.from_json, the packet editor's vm-python) loses a Field Engine init_value that differs from the default
+(min_value, or max_value for "dec"): to_json() writes it, from_json() drops it, and TRex starts counting from the
+default. The patch passes `init_value = instr.get('init_value')`; an absent key still means the default. Found by
+trex-web-gui P4b final gate review. Upstream: not reported. Not touched by any other patch.
+
+diff -ruN a/trex/stl/trex_stl_packet_builder_scapy.py b/trex/stl/trex_stl_packet_builder_scapy.py
+--- a/trex/stl/trex_stl_packet_builder_scapy.py
++++ b/trex/stl/trex_stl_packet_builder_scapy.py
+@@ -1828,6 +1828,7 @@
+                                op               = instr['op'],
+                                min_value        = instr.get('min_value',0),
+                                max_value        = instr.get('max_value',0),
++                               init_value       = instr.get('init_value'),
+                                value_list       = instr.get('value_list',None),
+                                size             = instr['size'],
+                                step             = instr['step'],

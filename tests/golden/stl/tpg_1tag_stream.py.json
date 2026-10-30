@@ -1,0 +1,322 @@
+[
+ {
+  "action_count": 0,
+  "core_id": -1,
+  "enabled": true,
+  "flags": 0,
+  "flow_stats": {
+   "enabled": true,
+   "ieee_1588": false,
+   "rule_type": "tpg",
+   "stream_id": 0,
+   "vxlan": false
+  },
+  "isg": 0.0,
+  "mode": {
+   "rate": {
+    "type": "pps",
+    "value": 1
+   },
+   "total_pkts": 5,
+   "type": "single_burst"
+  },
+  "name": "vlan_1",
+  "packet": {
+   "binary": "AAAAAQAAAAAAAgAAgQAAAQgARQAAOAABAABAETqzEAAAATAAAAEEAQAMACRCEmF0X2xlYXN0XzE2X2J5dGVzX2FyZV9uZWVkZWQ=",
+   "meta": ""
+  },
+  "self_start": true,
+  "start_paused": false,
+  "vm": {
+   "instructions": []
+  }
+ },
+ {
+  "action_count": 0,
+  "core_id": -1,
+  "enabled": true,
+  "flags": 0,
+  "flow_stats": {
+   "enabled": true,
+   "ieee_1588": false,
+   "rule_type": "tpg",
+   "stream_id": 1,
+   "vxlan": false
+  },
+  "isg": 0.0,
+  "mode": {
+   "rate": {
+    "type": "pps",
+    "value": 1
+   },
+   "total_pkts": 5,
+   "type": "single_burst"
+  },
+  "name": "vlan_2",
+  "packet": {
+   "binary": "AAAAAQAAAAAAAgAAgQAAAggARQAAOAABAABAETqzEAAAATAAAAEEAQAMACRCEmF0X2xlYXN0XzE2X2J5dGVzX2FyZV9uZWVkZWQ=",
+   "meta": ""
+  },
+  "self_start": true,
+  "start_paused": false,
+  "vm": {
+   "instructions": []
+  }
+ },
+ {
+  "action_count": 0,
+  "core_id": -1,
+  "enabled": true,
+  "flags": 0,
+  "flow_stats": {
+   "enabled": true,
+   "ieee_1588": false,
+   "rule_type": "tpg",
+   "stream_id": 2,
+   "vxlan": false
+  },
+  "isg": 0.0,
+  "mode": {
+   "rate": {
+    "type": "pps",
+    "value": 1
+   },
+   "total_pkts": 5,
+   "type": "single_burst"
+  },
+  "name": "vlan_3",
+  "packet": {
+   "binary": "AAAAAQAAAAAAAgAAgQAAAwgARQAAOAABAABAETqzEAAAATAAAAEEAQAMACRCEmF0X2xlYXN0XzE2X2J5dGVzX2FyZV9uZWVkZWQ=",
+   "meta": ""
+  },
+  "self_start": true,
+  "start_paused": false,
+  "vm": {
+   "instructions": []
+  }
+ },
+ {
+  "action_count": 0,
+  "core_id": -1,
+  "enabled": true,
+  "flags": 0,
+  "flow_stats": {
+   "enabled": true,
+   "ieee_1588": false,
+   "rule_type": "tpg",
+   "stream_id": 3,
+   "vxlan": false
+  },
+  "isg": 0.0,
+  "mode": {
+   "rate": {
+    "type": "pps",
+    "value": 1
+   },
+   "total_pkts": 5,
+   "type": "single_burst"
+  },
+  "name": "vlan_4",
+  "packet": {
+   "binary": "AAAAAQAAAAAAAgAAgQAABAgARQAAOAABAABAETqzEAAAATAAAAEEAQAMACRCEmF0X2xlYXN0XzE2X2J5dGVzX2FyZV9uZWVkZWQ=",
+   "meta": ""
+  },
+  "self_start": true,
+  "start_paused": false,
+  "vm": {
+   "instructions": []
+  }
+ },
+ {
+  "action_count": 0,
+  "core_id": -1,
+  "enabled": true,
+  "flags": 0,
+  "flow_stats": {
+   "enabled": true,
+   "ieee_1588": false,
+   "rule_type": "tpg",
+   "stream_id": 4,
+   "vxlan": false
+  },
+  "isg": 0.0,
+  "mode": {
+   "rate": {
+    "type": "pps",
+    "value": 1
+   },
+   "total_pkts": 5,
+   "type": "single_burst"
+  },
+  "name": "vlan_5",
+  "packet": {
+   "binary": "AAAAAQAAAAAAAgAAgQAABQgARQAAOAABAABAETqzEAAAATAAAAEEAQAMACRCEmF0X2xlYXN0XzE2X2J5dGVzX2FyZV9uZWVkZWQ=",
+   "meta": ""
+  },
+  "self_start": true,
+  "start_paused": false,
+  "vm": {
+   "instructions": []
+  }
+ },
+ {
+  "action_count": 0,
+  "core_id": -1,
+  "enabled": true,
+  "flags": 0,
+  "flow_stats": {
+   "enabled": true,
+   "ieee_1588": false,
+   "rule_type": "tpg",
+   "stream_id": 5,
+   "vxlan": false
+  },
+  "isg": 0.0,
+  "mode": {
+   "rate": {
+    "type": "pps",
+    "value": 1
+   },
+   "total_pkts": 5,
+   "type": "single_burst"
+  },
+  "name": "vlan_6",
+  "packet": {
+   "binary": "AAAAAQAAAAAAAgAAgQAABggARQAAOAABAABAETqzEAAAATAAAAEEAQAMACRCEmF0X2xlYXN0XzE2X2J5dGVzX2FyZV9uZWVkZWQ=",
+   "meta": ""
+  },
+  "self_start": true,
+  "start_paused": false,
+  "vm": {
+   "instructions": []
+  }
+ },
+ {
+  "action_count": 0,
+  "core_id": -1,
+  "enabled": true,
+  "flags": 0,
+  "flow_stats": {
+   "enabled": true,
+   "ieee_1588": false,
+   "rule_type": "tpg",
+   "stream_id": 6,
+   "vxlan": false
+  },
+  "isg": 0.0,
+  "mode": {
+   "rate": {
+    "type": "pps",
+    "value": 1
+   },
+   "total_pkts": 5,
+   "type": "single_burst"
+  },
+  "name": "vlan_7",
+  "packet": {
+   "binary": "AAAAAQAAAAAAAgAAgQAABwgARQAAOAABAABAETqzEAAAATAAAAEEAQAMACRCEmF0X2xlYXN0XzE2X2J5dGVzX2FyZV9uZWVkZWQ=",
+   "meta": ""
+  },
+  "self_start": true,
+  "start_paused": false,
+  "vm": {
+   "instructions": []
+  }
+ },
+ {
+  "action_count": 0,
+  "core_id": -1,
+  "enabled": true,
+  "flags": 0,
+  "flow_stats": {
+   "enabled": true,
+   "ieee_1588": false,
+   "rule_type": "tpg",
+   "stream_id": 7,
+   "vxlan": false
+  },
+  "isg": 0.0,
+  "mode": {
+   "rate": {
+    "type": "pps",
+    "value": 1
+   },
+   "total_pkts": 5,
+   "type": "single_burst"
+  },
+  "name": "vlan_8",
+  "packet": {
+   "binary": "AAAAAQAAAAAAAgAAgQAACAgARQAAOAABAABAETqzEAAAATAAAAEEAQAMACRCEmF0X2xlYXN0XzE2X2J5dGVzX2FyZV9uZWVkZWQ=",
+   "meta": ""
+  },
+  "self_start": true,
+  "start_paused": false,
+  "vm": {
+   "instructions": []
+  }
+ },
+ {
+  "action_count": 0,
+  "core_id": -1,
+  "enabled": true,
+  "flags": 0,
+  "flow_stats": {
+   "enabled": true,
+   "ieee_1588": false,
+   "rule_type": "tpg",
+   "stream_id": 8,
+   "vxlan": false
+  },
+  "isg": 0.0,
+  "mode": {
+   "rate": {
+    "type": "pps",
+    "value": 1
+   },
+   "total_pkts": 5,
+   "type": "single_burst"
+  },
+  "name": "vlan_9",
+  "packet": {
+   "binary": "AAAAAQAAAAAAAgAAgQAACQgARQAAOAABAABAETqzEAAAATAAAAEEAQAMACRCEmF0X2xlYXN0XzE2X2J5dGVzX2FyZV9uZWVkZWQ=",
+   "meta": ""
+  },
+  "self_start": true,
+  "start_paused": false,
+  "vm": {
+   "instructions": []
+  }
+ },
+ {
+  "action_count": 0,
+  "core_id": -1,
+  "enabled": true,
+  "flags": 0,
+  "flow_stats": {
+   "enabled": true,
+   "ieee_1588": false,
+   "rule_type": "tpg",
+   "stream_id": 9,
+   "vxlan": false
+  },
+  "isg": 0.0,
+  "mode": {
+   "rate": {
+    "type": "pps",
+    "value": 1
+   },
+   "total_pkts": 5,
+   "type": "single_burst"
+  },
+  "name": "vlan_10",
+  "packet": {
+   "binary": "AAAAAQAAAAAAAgAAgQAACggARQAAOAABAABAETqzEAAAATAAAAEEAQAMACRCEmF0X2xlYXN0XzE2X2J5dGVzX2FyZV9uZWVkZWQ=",
+   "meta": ""
+  },
+  "self_start": true,
+  "start_paused": false,
+  "vm": {
+   "instructions": []
+  }
+ }
+]

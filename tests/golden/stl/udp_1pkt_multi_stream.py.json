@@ -1,0 +1,32 @@
+[
+ {
+  "action_count": 0,
+  "core_id": -1,
+  "enabled": true,
+  "flags": 0,
+  "flow_stats": {
+   "enabled": true,
+   "ieee_1588": false,
+   "rule_type": "stats",
+   "stream_id": 12,
+   "vxlan": false
+  },
+  "isg": 0.0,
+  "mode": {
+   "rate": {
+    "type": "pps",
+    "value": 1
+   },
+   "type": "continuous"
+  },
+  "packet": {
+   "binary": "AAAAAQAAAAAAAgAACABFAAAuAAEAAEAROr0QAAABMAAAAQQBAAwAGn9veHh4eHh4eHh4eHh4eHh4eHh4",
+   "meta": ""
+  },
+  "self_start": true,
+  "start_paused": false,
+  "vm": {
+   "instructions": []
+  }
+ }
+]

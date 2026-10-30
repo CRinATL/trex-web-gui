@@ -1,0 +1,12 @@
+{
+  "scan": {
+    "neighbours": [
+      {
+        "ipv6": "fe80::5052:18ff:fe89:91ea",
+        "mac": "52:52:18:89:91:ea",
+        "type": "Host"
+      }
+    ],
+    "service_restore_error": null
+  }
+}

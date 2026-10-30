@@ -1,0 +1,128 @@
+{
+ "api_sync_v2_major4": {
+  "req": {
+   "jsonrpc": "2.0",
+   "id": 1,
+   "method": "api_sync_v2",
+   "params": {
+    "name": "STL",
+    "major": 4,
+    "minor": 0
+   }
+  },
+  "resp": {
+   "error": {
+    "code": -32000,
+    "message": "Failed To Execute Method",
+    "specific_err": "RPC version mismatch: a newer client version is required\n(API type 'STL':  - server: '5.1', client: '4.0')"
+   },
+   "id": 1,
+   "jsonrpc": "2.0"
+  }
+ },
+ "api_sync_v2_minor2_too_new": {
+  "req": {
+   "jsonrpc": "2.0",
+   "id": 2,
+   "method": "api_sync_v2",
+   "params": {
+    "name": "STL",
+    "major": 5,
+    "minor": 2
+   }
+  },
+  "resp": {
+   "error": {
+    "code": -32000,
+    "message": "Failed To Execute Method",
+    "specific_err": "Version mismatch: your client version is too new to be supported by the server\n(API type 'STL':  - server: '5.1', client: '5.2')"
+   },
+   "id": 2,
+   "jsonrpc": "2.0"
+  }
+ },
+ "api_sync_v2_ok": {
+  "req": {
+   "jsonrpc": "2.0",
+   "id": 3,
+   "method": "api_sync_v2",
+   "params": {
+    "name": "STL",
+    "major": 5,
+    "minor": 1
+   }
+  },
+  "resp": {
+   "id": 3,
+   "jsonrpc": "2.0",
+   "result": {
+    "api_h": "z2O5WUnP"
+   }
+  }
+ },
+ "start_traffic_without_handler": {
+  "req": {
+   "jsonrpc": "2.0",
+   "id": 4,
+   "method": "start_traffic",
+   "params": {
+    "api_h": "z2O5WUnP",
+    "port_id": 0,
+    "profile_id": "_",
+    "mul": {
+     "type": "raw",
+     "op": "abs",
+     "value": 1.0
+    },
+    "duration": -1,
+    "force": false,
+    "core_mask": 0,
+    "start_at_ts": 0
+   }
+  },
+  "resp": {
+   "error": {
+    "code": -32602,
+    "message": "Bad parameters for method",
+    "specific_err": "field 'handler' value is null"
+   },
+   "id": 4,
+   "jsonrpc": "2.0"
+  }
+ },
+ "unknown_method": {
+  "req": {
+   "jsonrpc": "2.0",
+   "id": 5,
+   "method": "no_such_method",
+   "params": {
+    "api_h": "z2O5WUnP"
+   }
+  },
+  "resp": {
+   "error": {
+    "code": -32601,
+    "message": "Method no_such_method not registered"
+   },
+   "id": 5,
+   "jsonrpc": "2.0"
+  }
+ },
+ "get_version_without_api_h": {
+  "req": {
+   "jsonrpc": "2.0",
+   "id": 6,
+   "method": "get_system_info",
+   "params": {}
+  },
+  "resp": {
+   "error": {
+    "code": -32602,
+    "message": "Bad parameters for method",
+    "specific_err": "field 'api_h' value is null"
+   },
+   "id": 6,
+   "jsonrpc": "2.0"
+  }
+ }
+}

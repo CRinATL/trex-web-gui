@@ -1,0 +1,73 @@
+{
+  "two_setups": {
+    "load_errors": [],
+    "setups": [
+      {
+        "created": "2026-01-01T00:00:00Z",
+        "dashboard": null,
+        "name": "Lab A",
+        "ports": [
+          {
+            "acquire_force": true,
+            "duration": -1.0,
+            "force": false,
+            "key": "#0",
+            "layer": {
+              "dst_ipv4": null,
+              "dst_mac": "aa:bb:cc:dd:ee:ff",
+              "ipv6": null,
+              "mode": "L2",
+              "src_ipv4": null,
+              "vlan": [
+                100
+              ]
+            },
+            "mult": "10kpps",
+            "port": 0,
+            "profile": {
+              "kind": "py",
+              "path": "/p/udp.py"
+            },
+            "stop_first": true,
+            "tunables": {
+              "extra": "",
+              "values": {}
+            }
+          }
+        ],
+        "server": "h:4501",
+        "slug": "lab-a",
+        "updated": "2026-01-01T00:00:00Z"
+      },
+      {
+        "created": "2026-01-01T00:00:00Z",
+        "dashboard": null,
+        "name": "Lab B",
+        "ports": [
+          {
+            "acquire_force": false,
+            "duration": -1.0,
+            "force": false,
+            "key": "#0",
+            "layer": null,
+            "mult": "10kpps",
+            "port": 0,
+            "profile": {
+              "kind": "py",
+              "path": "/p/udp.py"
+            },
+            "stop_first": false,
+            "tunables": {
+              "extra": "",
+              "values": {}
+            }
+          }
+        ],
+        "server": "h:4501",
+        "slug": "lab-b",
+        "updated": "2026-01-01T00:00:00Z"
+      }
+    ],
+    "type": "test_setups"
+  }
+}

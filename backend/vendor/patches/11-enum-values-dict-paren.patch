@@ -1,0 +1,19 @@
+Fixes a misplaced parenthesis in Scapy_service._get_fields_definition (scapy_server/scapy_service.py:1119 at the
+pin): `len(field_data["values_dict"] > 0)` compares a dict with 0, which raises TypeError on Python 3, and the
+bare `except:` around it swallows the error. Every EnumField (Dot1Q.type, ARP.op, ...) therefore reports no
+`type` in get_definitions, so the packet editor cannot tell it is an enumeration. The patch moves the
+parenthesis: `len(field_data["values_dict"]) > 0`. Found by trex-web-gui P4b (the packet editor). Upstream: not
+reported; open PR #1220 touches a different bug in the same file. Not touched by any other patch.
+
+diff -ruN a/trex/scapy_server/scapy_service.py b/trex/scapy_server/scapy_service.py
+--- a/trex/scapy_server/scapy_service.py
++++ b/trex/scapy_server/scapy_service.py
+@@ -1116,7 +1116,7 @@
+                 try:
+                     field_data["values_dict"] = field_desc.s2i
+                     if field_data.get("type") == None:
+-                        if len(field_data["values_dict"] > 0):
++                        if len(field_data["values_dict"]) > 0:
+                             field_data["type"] = "ENUM"
+                         elif fieldId == 'load':
+                             field_data["type"] = "BYTES"

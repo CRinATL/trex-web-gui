@@ -1,0 +1,29 @@
+diff -ruN a/trex/common/trex_client.py b/trex/common/trex_client.py
+--- a/trex/common/trex_client.py	2026-10-16 09:32:50.631001372 -0400
++++ b/trex/common/trex_client.py	2026-10-16 11:15:40.502608878 -0400
+@@ -233,9 +233,7 @@
+         ev = Event('local', 'warning', msg)
+         self.ctx.logger.critical(ev)
+ 
+-        # kill the process
+-        self.ctx.logger.critical('Terminating due to subscriber crash')
+-        os.kill(os.getpid(), signal.SIGTERM)
++        # trex-web-gui vendor patch 05: never signal the host process; the caller decides (plan §4.1 Threads)
+ 
+         return ev
+    
+diff -ruN a/trex/common/trex_conn.py b/trex/common/trex_conn.py
+--- a/trex/common/trex_conn.py	2026-10-16 09:32:50.631001372 -0400
++++ b/trex/common/trex_conn.py	2026-10-16 11:15:40.502690401 -0400
+@@ -113,10 +113,7 @@
+         # change state
+         self.state = (self.MARK_FOR_DISCONNECT, cause)
+ 
+-        # if the flag is on, a SIGINT will be sent to the main thread
+-        # causing the ZMQ RPC to stop what it's doing and report an error
+-        if self.sigint_on_conn_lost:
+-            os.kill(os.getpid(), signal.SIGINT)
++        # trex-web-gui vendor patch 05: never signal the host process; the caller decides (plan §4.1 Threads)
+          
+             
+     def sigint_on_conn_lost_enable (self):

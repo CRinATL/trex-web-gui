@@ -1,0 +1,77 @@
+[
+ {
+  "action_count": 0,
+  "core_id": -1,
+  "enabled": true,
+  "flags": 3,
+  "flow_stats": {
+   "enabled": false
+  },
+  "isg": 0.0,
+  "mode": {
+   "rate": {
+    "type": "pps",
+    "value": 10
+   },
+   "total_pkts": 3000,
+   "type": "single_burst"
+  },
+  "packet": {
+   "binary": "////////AADd3QABCAYAAQgABgQAAQAA3d0AATc3AQEAAN3dAAE3NwEB",
+   "meta": ""
+  },
+  "self_start": true,
+  "start_paused": false,
+  "vm": {
+   "instructions": [
+    {
+     "init_value": 1,
+     "max_value": 3000,
+     "min_value": 1,
+     "name": "mac_src",
+     "next_var": null,
+     "op": "inc",
+     "size": 2,
+     "split_to_cores": true,
+     "step": 1,
+     "type": "flow_var"
+    },
+    {
+     "add_value": 0,
+     "is_big_endian": true,
+     "name": "mac_src",
+     "pkt_offset": 10,
+     "type": "write_flow_var"
+    },
+    {
+     "add_value": 0,
+     "is_big_endian": true,
+     "name": "mac_src",
+     "pkt_offset": 30,
+     "type": "write_flow_var"
+    },
+    {
+     "add_value": 0,
+     "is_big_endian": true,
+     "name": "mac_src",
+     "pkt_offset": 26,
+     "type": "write_flow_var"
+    },
+    {
+     "add_value": 0,
+     "is_big_endian": true,
+     "name": "mac_src",
+     "pkt_offset": 40,
+     "type": "write_flow_var"
+    },
+    {
+     "add_value": 0,
+     "is_big_endian": true,
+     "name": "mac_src",
+     "pkt_offset": 36,
+     "type": "write_flow_var"
+    }
+   ]
+  }
+ }
+]

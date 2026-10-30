@@ -1,0 +1,16 @@
+# A sample systemd user unit for `trex-web-gui serve` (documentation, not installed by anything).
+# Copy it to ~/.config/systemd/user/trex-web-gui.service, then:
+#   systemctl --user daemon-reload && systemctl --user enable --now trex-web-gui
+# The login URL is printed to the journal: journalctl --user -u trex-web-gui
+[Unit]
+Description=trex-web-gui
+
+[Service]
+ExecStart=%h/.local/bin/trex-web-gui serve
+Restart=on-failure
+# A user unit has no display, and Wireshark needs one: set it here
+# Environment=DISPLAY=:0
+# or run `systemctl --user import-environment DISPLAY WAYLAND_DISPLAY` once per session.
+
+[Install]
+WantedBy=default.target

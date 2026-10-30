@@ -1,0 +1,54 @@
+[
+ {
+  "flags": 0,
+  "action_count": 0,
+  "enabled": true,
+  "self_start": true,
+  "start_paused": false,
+  "isg": 0.0,
+  "core_id": -1,
+  "mode": {
+   "rate": {
+    "type": "pps",
+    "value": 1.0
+   },
+   "type": "continuous"
+  },
+  "packet": {
+   "binary": "AAAAAQAAAAAAAgAACABFAAAuAAEAAEAROr0QAAABMAAAAQQBAAwAGn9veHh4eHh4eHh4eHh4eHh4eHh4",
+   "meta": ""
+  },
+  "vm": {
+   "instructions": []
+  },
+  "flow_stats": {
+   "enabled": false
+  }
+ },
+ {
+  "flags": 0,
+  "action_count": 0,
+  "enabled": true,
+  "self_start": true,
+  "start_paused": false,
+  "isg": 0.0,
+  "core_id": -1,
+  "mode": {
+   "rate": {
+    "type": "pps",
+    "value": 1.0
+   },
+   "type": "continuous"
+  },
+  "packet": {
+   "binary": "AAAAAQAAAAAAAgAACABFAAAuAAEAAEAROr0QAAABMAAAAQQBAAwAGn9veHh4eHh4eHh4eHh4eHh4eHh4",
+   "meta": ""
+  },
+  "vm": {
+   "instructions": []
+  },
+  "flow_stats": {
+   "enabled": false
+  }
+ }
+]

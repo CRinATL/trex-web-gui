@@ -1,0 +1,177 @@
+{
+ "recorded_utc": "2026-10-16T18:35:29Z",
+ "marks": [
+  {
+   "t": 1.241,
+   "call": "acquire"
+  },
+  {
+   "t": 2.253,
+   "call": "acquire_force"
+  },
+  {
+   "t": 3.266,
+   "call": "late_connect"
+  },
+  {
+   "t": 4.331,
+   "call": "add_stream"
+  },
+  {
+   "t": 5.333,
+   "call": "start_traffic"
+  },
+  {
+   "t": 6.338,
+   "call": "update_traffic"
+  },
+  {
+   "t": 7.339,
+   "call": "pause_traffic"
+  },
+  {
+   "t": 8.341,
+   "call": "resume_traffic"
+  },
+  {
+   "t": 9.346,
+   "call": "stop_traffic"
+  },
+  {
+   "t": 10.348,
+   "call": "set_port_attr"
+  },
+  {
+   "t": 11.37,
+   "call": "service"
+  },
+  {
+   "t": 12.377,
+   "call": "remove_all_streams"
+  },
+  {
+   "t": 13.382,
+   "call": "release"
+  }
+ ],
+ "seq_by_reader": {
+  "console-b": [
+   0,
+   1,
+   2,
+   3,
+   4,
+   5,
+   6,
+   7,
+   8,
+   9,
+   10,
+   11,
+   12,
+   13,
+   14,
+   15,
+   16
+  ],
+  "gui-a": [
+   0,
+   1,
+   2,
+   3,
+   4,
+   5,
+   6,
+   7,
+   8,
+   9,
+   10,
+   11,
+   12,
+   13,
+   14,
+   15,
+   16
+  ],
+  "late-c": [
+   0,
+   1,
+   2,
+   3,
+   4,
+   5,
+   6,
+   7,
+   8,
+   9
+  ]
+ },
+ "first_seq": {
+  "console-b": 0,
+  "gui-a": 0,
+  "late-c": 0
+ },
+ "per_session_seq": true,
+ "validate_result": {
+  "graph": {
+   "events": [
+    {
+     "diff_bps_l1": 1216.0,
+     "diff_bps_l2": 1056.0,
+     "diff_pps": 1.0,
+     "stream_id": 1,
+     "time_usec": 0.0
+    }
+   ],
+   "events_count": 1,
+   "expected_duration": -1
+  },
+  "rate": {
+   "max_bps_l1": 1216.0,
+   "max_bps_l2": 1056.0,
+   "max_line_util": 1.2161216e-05,
+   "max_pps": 1.0,
+   "min_bps_l1": 0.0,
+   "min_bps_l2": 0.0,
+   "min_line_util": 0.0,
+   "min_pps": 0.0
+  }
+ },
+ "get_all_streams_example": {
+  "id": "ju53uow3",
+  "jsonrpc": "2.0",
+  "result": {
+   "profiles": {
+    "_": {
+     "1": {
+      "action_count": 0,
+      "core_id": -1,
+      "enabled": true,
+      "flags": 0,
+      "flow_stats": {
+       "enabled": false
+      },
+      "isg": 0.0,
+      "mode": {
+       "rate": {
+        "type": "pps",
+        "value": 1.0
+       },
+       "type": "continuous"
+      },
+      "next_stream_id": -1,
+      "packet": {
+       "binary": "AAAAAQAAAAAAAgAACABFAAByAAEAAEAROnkQAAABMAAAAQQBAAwAXn7neHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHg=",
+       "meta": ""
+      },
+      "self_start": true,
+      "start_paused": false,
+      "vm": {
+       "instructions": []
+      }
+     }
+    }
+   }
+  }
+ }
+}

@@ -1,0 +1,18 @@
+{
+  "listing": {
+    "dir": "<spool>",
+    "files": [
+      {
+        "capture_id": 1,
+        "mtime": 0,
+        "name": "rec-1-<stamp>.pcap",
+        "partial": false,
+        "pkt_count": 120,
+        "server": "<server>",
+        "size": 16824,
+        "start_ts": 0.0
+      }
+    ],
+    "total": 1
+  }
+}

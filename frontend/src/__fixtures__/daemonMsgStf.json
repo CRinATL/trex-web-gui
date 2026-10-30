@@ -1,0 +1,34 @@
+{
+ "type": "daemon",
+ "state": "connected",
+ "target": {
+  "host": "127.0.0.1",
+  "port": 8090
+ },
+ "version": "Version : v3.08   \n DPDK version : DPDK 25.07.0   \n User    : hhaim   \n Date    : Nov  5 2025 , 16:04:20",
+ "status": {
+  "state": "Running",
+  "verbose": "TRex is Running"
+ },
+ "running_seq": 44,
+ "files_path": "/tmp/trex_files",
+ "last_error": null,
+ "trex_cmds": [
+  {
+   "pid": 2475,
+   "cmd": "./_t-rex-64 --iom 0 --cfg /etc/trex_cfg.yaml -f cap2/sfr2.yaml -d 20 -m 1.0 -l 1000 --rx-check 100 -c 1 --no-key"
+  }
+ ],
+ "reserved": false,
+ "pushed": [],
+ "busy": false,
+ "run": {
+  "mode": "stf",
+  "seq": 44,
+  "profile": "cap2/sfr2.yaml",
+  "duration_s": 20,
+  "started_at": 1700000000.0,
+  "state": "running",
+  "outcome": null
+ }
+}

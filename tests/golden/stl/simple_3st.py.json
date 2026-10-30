@@ -1,0 +1,80 @@
+[
+ {
+  "action_count": 0,
+  "core_id": -1,
+  "enabled": true,
+  "flags": 0,
+  "flow_stats": {
+   "enabled": false
+  },
+  "isg": 1.0,
+  "mode": {
+   "rate": {
+    "type": "pps",
+    "value": 10
+   },
+   "type": "continuous"
+  },
+  "packet": {
+   "binary": "AAAAAQAAAAAAAgAACABFAAAuAAEAAEAROr0QAAABMAAAAQQBAAwAGn9veHh4eHh4eHh4eHh4eHh4eHh4",
+   "meta": ""
+  },
+  "self_start": true,
+  "start_paused": false,
+  "vm": {
+   "instructions": []
+  }
+ },
+ {
+  "action_count": 0,
+  "core_id": -1,
+  "enabled": true,
+  "flags": 0,
+  "flow_stats": {
+   "enabled": false
+  },
+  "isg": 2.0,
+  "mode": {
+   "rate": {
+    "type": "pps",
+    "value": 20
+   },
+   "type": "continuous"
+  },
+  "packet": {
+   "binary": "AAAAAQAAAAAAAgAACABFAAAuAAEAAEAROrwQAAACMAAAAQQBAAwAGn9ueHh4eHh4eHh4eHh4eHh4eHh4",
+   "meta": ""
+  },
+  "self_start": true,
+  "start_paused": false,
+  "vm": {
+   "instructions": []
+  }
+ },
+ {
+  "action_count": 0,
+  "core_id": -1,
+  "enabled": true,
+  "flags": 0,
+  "flow_stats": {
+   "enabled": false
+  },
+  "isg": 3.0,
+  "mode": {
+   "rate": {
+    "type": "pps",
+    "value": 30
+   },
+   "type": "continuous"
+  },
+  "packet": {
+   "binary": "AAAAAQAAAAAAAgAACABFAAAuAAEAAEAROrsQAAADMAAAAQQBAAwAGn9teHh4eHh4eHh4eHh4eHh4eHh4",
+   "meta": ""
+  },
+  "self_start": true,
+  "start_paused": false,
+  "vm": {
+   "instructions": []
+  }
+ }
+]

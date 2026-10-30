@@ -1,0 +1,43 @@
+{
+  "neighbours": [
+    {
+      "port": 0,
+      "vlan": 10,
+      "src": "00:11:22:33:44:55",
+      "chassis_id": "00:11:22:33:44:55",
+      "chassis_id_subtype": "MAC address",
+      "port_id": "Gi1/0/2",
+      "port_id_subtype": "interface name",
+      "ttl": 120,
+      "system_name": null,
+      "system_description": null,
+      "port_description": null,
+      "management_addresses": [],
+      "capabilities": [],
+      "last_seen": 1000.0,
+      "expires": 1120.0
+    },
+    {
+      "port": 1,
+      "vlan": null,
+      "src": "00:11:22:33:44:55",
+      "chassis_id": "00:11:22:33:44:55",
+      "chassis_id_subtype": "MAC address",
+      "port_id": "Gi1/0/1",
+      "port_id_subtype": "interface name",
+      "ttl": 120,
+      "system_name": "sw1",
+      "system_description": "Switch OS 1.0",
+      "port_description": "uplink to lab",
+      "management_addresses": [
+        "192.168.0.1"
+      ],
+      "capabilities": [
+        "bridge"
+      ],
+      "last_seen": 1000.0,
+      "expires": 1120.0
+    }
+  ],
+  "note": "Some NICs consume LLDP in firmware (Intel X710/XL710 under i40e is the known case), so a neighbour that sends LLDP may never appear here. Unverified on hardware: the test guest has no LLDP speaker."
+}

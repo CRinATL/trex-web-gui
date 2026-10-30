@@ -1,0 +1,23 @@
+__pycache__/
+*.pyc
+backend/.venv/
+.mypy_cache/
+.ruff_cache/
+frontend/node_modules/
+frontend/dist/
+.idea/
+.superpowers/brainstorm/
+/dist/
+/.agents/
+.superpowers/gate/
+# Development records, kept in the private repo
+/PLAN.md
+/DEFERRED.md
+/.superpowers/
+/docs/superpowers/
+/docs/evidence/
+/docs/handoffs/
+/docs/parity-v1.0.md
+/.sdd.conf
+/.privacy-allow
+/.claude/
