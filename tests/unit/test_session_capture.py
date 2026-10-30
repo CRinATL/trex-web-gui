@@ -1461,7 +1461,9 @@ def test_a_pipe_that_ends_on_its_own_is_published_with_its_error(rig: Rig, tmp_p
         await rig.until(lambda: rig.of("capture")[-1]["wireshark"]["error"] is not None)
         assert rig.of("capture")[-1]["wireshark"] == {"running": False,
                                                       "error": "Wireshark exited before it opened the pipe"}
-        assert "Wireshark: Wireshark exited before it opened the pipe" in rig.logs()
+        # the writer sets the error before the loop runs _wireshark_ended (log, then publish), so another
+        # publish can carry the error first: wait for the log line rather than expect it already there
+        await rig.until(lambda: "Wireshark: Wireshark exited before it opened the pipe" in rig.logs())
         assert s._monitor is not None                      # the monitor keeps running
     rig.run(body)
 
