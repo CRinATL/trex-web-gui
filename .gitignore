@@ -24,3 +24,4 @@ frontend/dist/
 /.citation-renames
 /.citation-allow.local
 /docs/releases/v1.0.0-rc*.md
+/docs/releases/host-use-*.md
