@@ -10,6 +10,7 @@ subscriber thread and are handed to the loop with call_soon_threadsafe."""
 import asyncio
 import contextlib
 import dataclasses
+import json
 import logging
 import socket
 import time
@@ -29,6 +30,7 @@ from .port_config import PortConfigCommands
 
 log = logging.getLogger(__name__)
 _T = TypeVar("_T")
+RPC_BODY_MAX = 64 * 1024               # most characters of a body's JSON text the RPC console publishes
 _PROCESS_START_NS = time.time_ns()     # prefix of connect_seq: a GUI restart never repeats a value
 Publish = Callable[[dict[str, object]], None]
 
@@ -967,7 +969,8 @@ class TrexSession(PortConfigCommands, CaptureCommands):
     def _on_rpc(self, r: trexapi.RpcRecord) -> None:
         """Either client's subscriber or executor thread: a ServerRestarted error in a response goes to
         _note_restart on the loop; with the RPC console on (a polling RPC only when included) the record is
-        published as `rpc`, also through the loop. Writes no session state on this thread."""
+        published as `rpc`, also through the loop; a body whose JSON text passes RPC_BODY_MAX is cut to a
+        string and carries `truncated`, the full length. Writes no session state on this thread."""
         if r.direction == "response":      # every response, polling or not; a stats batch answers with a list
             for el in r.body if isinstance(r.body, list) else [r.body]:
                 if isinstance(el, dict) and el.get("error"):
@@ -982,8 +985,12 @@ class TrexSession(PortConfigCommands, CaptureCommands):
             return                         # plain bool reads from a client thread; benign under the GIL
         loop = self._loop
         if loop is not None and not loop.is_closed():
-            loop.call_soon_threadsafe(self._publish, {"type": "rpc", "direction": r.direction, "body": r.body,
-                                                      "ts": r.ts, "thread": r.thread})
+            msg: dict[str, Any] = {"type": "rpc", "direction": r.direction, "body": r.body,
+                                   "ts": r.ts, "thread": r.thread}
+            text = json.dumps(r.body, default=str)       # paid only while the console is on
+            if len(text) > RPC_BODY_MAX:                 # cut: the text's head, and its full length
+                msg["body"], msg["truncated"] = text[:RPC_BODY_MAX], len(text)
+            loop.call_soon_threadsafe(self._publish, msg)
 
     def _note_restart(self, cause: str) -> None:
         """Loop thread: keep the restart cause, which a later loss event reports instead of its own text."""

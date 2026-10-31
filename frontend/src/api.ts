@@ -35,7 +35,7 @@ export interface PortView {
 }
 export interface PortsMsg { type: 'ports'; ports: PortView[] }
 export interface LogMsg { type: 'log'; level: 'info' | 'warning' | 'error' | 'ping'; message: string; ts: number }
-export interface RpcMsg { type: 'rpc'; direction: 'request' | 'response'; body: unknown; ts: number; thread: string }
+export interface RpcMsg { type: 'rpc'; direction: 'request' | 'response'; body: unknown; truncated?: number; ts: number; thread: string }
 export interface StatsMsg { type: 'stats'; ts: number; stats_epoch?: number; interval_s: number; global: Record<string, number | null>; ports: Record<string, Record<string, number | null>>; total: Record<string, number | null> }
 // Mirrors backend PgidView / UtilView / port_labels (recorded in __fixtures__/pgidMsg.json, utilMsg.json). A per-port map has the port numbers as keys plus "total".
 export type PortMap = Record<string, number | null>

@@ -592,7 +592,8 @@ browser: a reload empties it.
 reloads; `Capture is off.` / `Waiting for RPC traffic…`), **Include polling** (off by default, so stats, port
 status and event polls do not push your own commands out of the 500-entry buffer), **Filter text**, **Copy**;
 one line per message, `→` a request, `←` a response; a body over 8 KB is cut on screen (`Copy copies the full
-body`).
+body`). Bodies over 64 KB are cut by the backend (the line says so); Copy copies what arrived. The buffer
+holds at most about 500 × 64 KB.
 
 ---
 

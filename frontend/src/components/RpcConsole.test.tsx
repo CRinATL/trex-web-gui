@@ -74,4 +74,20 @@ describe('RpcConsole', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Copy' }))
     expect(writeText.mock.calls[0][0]).toContain(big)
   })
+  it('a body the backend cut shows its size and Copy copies what arrived', async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined)
+    vi.stubGlobal('navigator', { ...navigator, clipboard: { writeText } })
+    const note = '… (cut by the backend at 64 KB of 70000 characters)'
+    render(<RpcConsole entries={[{ ...msg('response', 'x'.repeat(10)), truncated: 70000 }]} on />)
+    expect(document.querySelector('pre')!.textContent).toBe(`← xxxxxxxxxx${note}`)
+    await userEvent.click(screen.getByRole('button', { name: 'Copy' }))
+    expect(writeText).toHaveBeenCalledWith(`← xxxxxxxxxx${note}`)
+  })
+  it('a cut body longer than the on-screen limit never claims Copy copies the full body', () => {
+    render(<RpcConsole entries={[{ ...msg('response', 'x'.repeat(9000)), truncated: 70000 }]} on />)
+    const t = document.querySelector('pre')!.textContent!
+    expect(t).not.toContain('Copy copies the full body')
+    expect(t).toContain('… (truncated)')
+    expect(t.endsWith('… (cut by the backend at 64 KB of 70000 characters)')).toBe(true)
+  })
 })
