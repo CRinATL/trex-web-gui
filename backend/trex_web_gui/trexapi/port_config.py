@@ -1,8 +1,8 @@
 """P3b port configuration, service-mode bracket, ping, scan and xstats (plan P3b Task 3).
 
-Each function is ONE client call (or one service run) and runs as one executor job: the session, not this
-module, brackets a command with service_on / service_restore, checks the port is idle and owned, and
-translates what is raised. Executor thread only (see ports.fail_fast)."""
+Each function is ONE client call (or one service run, or one short ARP attempt) and runs as one executor
+job: the session, not this module, brackets a command with service_on / service_restore, checks the port is
+idle and owned, and translates what is raised. Executor thread only (see ports.fail_fast)."""
 import ipaddress
 from typing import Any, Literal, NamedTuple
 
@@ -95,22 +95,61 @@ def set_l3(c: Any, port: int, src: str, dst: str) -> None:
         raise translate(Exception(str(rc.err())))
 
 
-def resolve(c: Any, port: int) -> ArpResult:
-    """Resolve the port's IPv4 destination by ARP (one client call). A failure leaves "unresolved" with the
-    error text only when src and dst are set and the layer state is unresolved; a loss or refusal is raised
-    translated and any other failure re-raised untranslated. Executor thread only."""
+def _unresolved_or_raise(c: Any, port: int, e: Exception) -> ArpResult:
+    """The failure rule of the ARP resolve: a loss or refusal is raised translated; any other failure is
+    "unresolved" with its text when src and dst are set and the layer state is unresolved, else re-raised
+    untranslated (from inside the caller's except block)."""
+    err = translate(e)
+    if isinstance(err, ServerUnreachable | ServerRestarted | CommandRefused):
+        raise err from e      # a loss must reach the session, which marks it; it is not "unresolved"
+    cfg = c.ports[port].get_layer_cfg() or {}
+    v4 = cfg.get("ipv4") or {}
+    if v4.get("src") and v4.get("dst") and v4.get("state") == "unresolved":
+        return ArpResult("unresolved", None, err.message)
+    raise e
+
+
+def arp_attempt(c: Any, port: int, listen_s: float, first: bool) -> ArpResult | None:
+    """One ARP try on the port: the vendor's acquired, service and L3 checks, then a ServiceARP listening
+    listen_s seconds in its own service context, which is torn down when it returns (the vendor's
+    STLClient.resolve, trex_client.py:2281, run in short pieces so other jobs can run between them). On
+    `first` the port's ARP is invalidated. A reply sets the port's L3 mode with the MAC (a bad RC raises
+    TrexApiError) and returns "resolved"; no reply returns None (try again). A failure follows the resolve
+    rule: a loss or refusal is raised translated, any other failure is "unresolved" with its text when src
+    and dst are set and the layer state is unresolved, else re-raised untranslated. Executor thread only."""
+    from trex.common.services.trex_service_arp import ServiceARP
+    from trex.common.trex_psv import PSV_ACQUIRED, PSV_L3, PSV_SERVICE
     try:
-        c.resolve(ports=[port])
+        # the vendor's own check (trex_client.py:2300): a port reset out of L3 between attempts fails here
+        c.psv.validate("arp", [port], (PSV_ACQUIRED, PSV_SERVICE, PSV_L3))
+        p = c.ports[port]
+        if first:
+            p.invalidate_arp()
+        v4 = (p.get_layer_cfg() or {}).get("ipv4") or {}
+        src, dst = v4.get("src"), v4.get("dst")
+        ctx = c.create_service_ctx(port)
+        arp = ServiceARP(ctx, dst_ip=dst, src_ip=src, vlan=p.get_vlan_cfg(), timeout_sec=listen_s)
+        ctx.run(arp)
+        record = arp.get_record()
+        if not record:
+            return None
+        rc = p.set_l3_mode(src, dst, record.dst_mac)
+        if not rc:
+            raise translate(Exception(str(rc.err())))
+        return ArpResult("resolved", record.dst_mac, None)
     except Exception as e:
-        err = translate(e)
-        if isinstance(err, ServerUnreachable | ServerRestarted | CommandRefused):
-            raise err from e      # a loss must reach the session, which marks it; it is not "unresolved"
-        cfg = c.ports[port].get_layer_cfg() or {}
-        v4 = cfg.get("ipv4") or {}
-        if v4.get("src") and v4.get("dst") and v4.get("state") == "unresolved":
-            return ArpResult("unresolved", None, err.message)
-        raise
-    return ArpResult("resolved", ((c.ports[port].get_layer_cfg() or {}).get("ether") or {}).get("dst"), None)
+        return _unresolved_or_raise(c, port, e)
+
+
+def arp_unresolved(c: Any, port: int) -> ArpResult:
+    """The outcome once every attempt got no reply: "unresolved" with the vendor's no-reply text when src and
+    dst are set and the layer state is unresolved, else that text raised as TrexApiError. Executor thread
+    only."""
+    err = translate(Exception(f"Could not resolve following ports: [{port}]"))
+    v4 = (c.ports[port].get_layer_cfg() or {}).get("ipv4") or {}
+    if v4.get("src") and v4.get("dst") and v4.get("state") == "unresolved":
+        return ArpResult("unresolved", None, err.message)
+    raise TrexApiError(err.message)
 
 
 def conf_ipv6(c: Any, port: int, enabled: bool, src: str | None) -> None:

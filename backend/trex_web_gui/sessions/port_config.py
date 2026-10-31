@@ -2,6 +2,7 @@
 neighbour scan and xstats. A mixin, so the session's lock, executor and loss handling stay in one class;
 every command runs its client calls as executor jobs through the session's `_job` / `_run`."""
 import asyncio
+import math
 import time
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
@@ -12,6 +13,10 @@ from trex_web_gui.trexapi import TrexApiError
 from trex_web_gui.trexapi.ports import STATE_NAMES
 
 PING_INTERVAL_S = 1.0                  # between two echoes, spent on the loop, not on the executor
+ARP_ATTEMPT_S = 0.5                    # one ARP try's listen: a job on the control executor
+ARP_BUDGET_S = 3.0                     # the resolve's whole listen, the vendor's one try (ServiceARP)
+ARP_ENDED = "the connection ended; the resolve stopped"
+ARP_ENDED_RESULT = trexapi.ArpResult("unresolved", None, ARP_ENDED)
 CONFIGURABLE = frozenset({"IDLE", "STREAMS", "ASTF_LOADED"})    # server stx/common/trex_port.cpp:378-380 etc.
 LEGACY_IPV6 = "IPv6 configuration needs the linux_based stack; this server runs legacy"
 
@@ -73,6 +78,10 @@ class PortConfigCommands:
         def _mark_lost(self, cause: str) -> None: ...
         # TrexSession's: port_busy when a ping or scan (or, unless held_only, an Apply) holds a port
         def _refuse_busy(self, label: str, ports: list[int], held_only: bool = False) -> None: ...
+        # TrexSession's: one background refresh unless one is pending; loop thread only
+        def _schedule_refresh(self) -> None: ...
+        # TrexSession's: waits for fut however often this task is cancelled, then raises that CancelledError
+        async def _await_done(self, fut: asyncio.Future[Any]) -> Any: ...
         # TrexSession's: claims or frees a port and publishes `busy` on a change
         def _set_busy(self, port: int, kind: str | None) -> None: ...
 
@@ -89,13 +98,15 @@ class PortConfigCommands:
     async def _restore_service(self, c: Any, port: int, label: str,
                                saved: trexapi.ServiceSaved) -> str | None:
         """service_restore as its own job. Skipped when the connection is gone (the server may then keep
-        service mode on). Shielded: a cancelled command still puts the port back."""
+        service mode on). A cancel is held off until the restore job has ended (_await_done), so the command
+        ends after the port is back."""
         if not self._connected_to(c):
             self._log("warning", f"{label}: the connection ended; service mode may still be on "
                                  f"for port {port}")
             return None
         try:
-            err: str | None = await asyncio.shield(self._run(trexapi.service_restore, c, port, saved))
+            err: str | None = await self._await_done(
+                asyncio.ensure_future(self._run(trexapi.service_restore, c, port, saved)))
         except (trexapi.ServerUnreachable, trexapi.ServerRestarted) as e:
             raise self._note_failure(label, e) from e    # a loss during the restore marks the session lost
         if err:
@@ -117,12 +128,12 @@ class PortConfigCommands:
                 return trexapi.service_on(c, port)
             job1 = asyncio.ensure_future(self._job(label, first))
             try:
-                saved = await asyncio.shield(job1)
+                saved = await self._await_done(job1)
             except asyncio.CancelledError:
                 # service_on still completes on the executor: wait for it and put the port back
                 try:
-                    saved = await asyncio.shield(job1)
-                except Exception:
+                    saved = job1.result()
+                except BaseException:
                     pass                                 # job 1 failed: nothing was turned on
                 else:
                     await self._restore_service(c, port, label, saved)
@@ -139,7 +150,11 @@ class PortConfigCommands:
 
     async def apply_layer(self, port: int, req: LayerRequest) -> ApplyResult:
         """Jobs in order: service on, VLAN, L2 or L3, then (L3) the ARP resolve, then IPv6 if given, and the
-        restore. An unresolved ARP is a warning: the L3 configuration stays."""
+        restore. The resolve is ceil(ARP_BUDGET_S / ARP_ATTEMPT_S) short attempts, one job each, so other
+        commands (Stop) run between them; the first reply, or a failure that ends it, is the result, and
+        arp_unresolved is the last job when none replied. If the connection ends between attempts the resolve
+        stops "unresolved" and IPv6 is not attempted. An unresolved ARP is a warning: the L3 configuration
+        stays."""
         c = self.require_control()
         label = f"Apply {req.mode} configuration to port {port}"
 
@@ -151,6 +166,20 @@ class PortConfigCommands:
                 return fn(c, port, *args)
             return job
 
+        # the ARP resolve as short attempts, one job each; an ended connection is the ARP_ENDED_RESULT
+        async def resolve() -> trexapi.ArpResult:
+            attempts = math.ceil(ARP_BUDGET_S / ARP_ATTEMPT_S)
+            for i in range(attempts):
+                if not self._connected_to(c):
+                    return ARP_ENDED_RESULT
+                r = await self._job(label, step(trexapi.arp_attempt, ARP_ATTEMPT_S, i == 0))
+                if r is not None:
+                    return r                      # type: ignore[no-any-return]
+            if not self._connected_to(c):         # lost during the last attempt: no further job
+                return ARP_ENDED_RESULT
+            no_reply: trexapi.ArpResult = await self._job(label, step(trexapi.arp_unresolved))
+            return no_reply
+
         # inside the service bracket: the configuration jobs in order; returns the ARP result (L3 only)
         async def body() -> trexapi.ArpResult | None:
             arp: trexapi.ArpResult | None = None
@@ -159,13 +188,18 @@ class PortConfigCommands:
                 await self._job(label, step(trexapi.set_l2, req.dst_mac or ""))
             else:
                 await self._job(label, step(trexapi.set_l3, req.src_ipv4 or "", req.dst_ipv4 or ""))
-                arp = await self._job(label, step(trexapi.resolve))
+                arp = await resolve()
+                if arp is ARP_ENDED_RESULT:
+                    return arp                    # like ping: nothing more runs on a connection that ended
             if req.ipv6 is not None:
                 await self._job(label, step(trexapi.conf_ipv6, req.ipv6[0], req.ipv6[1]))
             return arp
         try:
             arp, restore_error = await self._bracketed(c, port, label, "apply", body,
                                                        ipv6=bool(req.ipv6 and req.ipv6[0]))
+        except asyncio.CancelledError:
+            self._schedule_refresh()                  # the port state may have changed under the command
+            raise
         except Exception:
             await self._refresh_quietly(c)
             raise
@@ -173,7 +207,8 @@ class PortConfigCommands:
             self._log("warning", f"{label}: L3 set, ARP unresolved: {arp.error}")
         else:
             self._log("info", f"{label}: done")
-        await self._refresh_quietly(c)
+        if self._connected_to(c):                  # a connection that ended is not refreshed, as ping does
+            await self._refresh_quietly(c)
         return ApplyResult(arp, restore_error)
 
     async def ping(self, port: int, dst: str, count: int, pkt_size: int) -> PingResult:
@@ -223,7 +258,11 @@ class PortConfigCommands:
                 self._log("ping", f"Port {port}: {line.text}")
                 if seq < count:
                     await asyncio.sleep(PING_INTERVAL_S)
-        _, restore_error = await self._bracketed(c, port, label, "ping", body)
+        try:
+            _, restore_error = await self._bracketed(c, port, label, "ping", body)
+        except asyncio.CancelledError:
+            self._schedule_refresh()
+            raise
         if outcome["failure"] is not None:
             self._log("warning", f"{label}: failed: {outcome['failure']}")
         elif "ended" not in outcome:
@@ -247,7 +286,11 @@ class PortConfigCommands:
                 return trexapi.scan_neighbours(c, port)
             found: list[trexapi.Neighbour] = await self._job(label, scan_job)
             return found
-        found, restore_error = await self._bracketed(c, port, label, "scan", body)
+        try:
+            found, restore_error = await self._bracketed(c, port, label, "scan", body)
+        except asyncio.CancelledError:
+            self._schedule_refresh()
+            raise
         self._log("info", f"{label}: done, {len(found)} found")
         await self._refresh_quietly(c)
         return ScanResult(found, restore_error)

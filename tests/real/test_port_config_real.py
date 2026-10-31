@@ -197,7 +197,8 @@ def test_session_port_config_matches_the_client_oracle() -> None:
         oracle.disconnect(stop_traffic=False, release_ports=False)
 
 
-# 1.1.1.99 does not exist: the resolve takes about 3.1 s
+# 1.1.1.99 does not exist: the Apply takes about 3.2 s (3.18-3.24 s measured 2026-10-31; the resolve is
+# six 0.5 s attempts)
 UNRESOLVED = LayerRequest("L3", None, "2.2.2.2", "1.1.1.99", [], None)
 MAX_STATS_GAP_S = 2.0
 MAX_STOP_S = 3.2
@@ -205,9 +206,9 @@ MAX_STOP_S = 3.2
 
 @pytest.mark.timeout(180)
 def test_stats_flow_during_a_failing_apply() -> None:
-    """P3b follow-up 3: port 0 transmits while port 1's Apply spends about 3.1 s in a failing resolve on the
-    control client. The reader client keeps `stats` flowing (before, the largest gap was 3.05-3.16 s) and
-    Stop, issued 1.0 s into the Apply, still returns within MAX_STOP_S."""
+    """P3b follow-up 3: port 0 transmits while port 1's Apply, mostly a failing resolve on the control client,
+    takes about 3.2 s (3.18-3.24 s measured 2026-10-31). The reader client keeps `stats` flowing (before, the
+    largest gap was 3.05-3.16 s) and Stop, issued 1.0 s into the Apply, still returns within MAX_STOP_S."""
     trexapi.load()
     from trex.stl.api import STLClient
     oracle = STLClient(username="oracle", server=HOST, sync_port=real_ports()[0],

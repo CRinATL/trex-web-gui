@@ -18,7 +18,7 @@ from concurrent.futures import Future, ThreadPoolExecutor
 from dataclasses import dataclass
 from enum import StrEnum
 from pathlib import Path
-from typing import Any
+from typing import Any, TypeVar
 
 from trex_web_gui import trexapi
 from trex_web_gui.hostinfo import read_cfg, resolve
@@ -28,6 +28,7 @@ from .capture import CaptureCommands
 from .port_config import PortConfigCommands
 
 log = logging.getLogger(__name__)
+_T = TypeVar("_T")
 _PROCESS_START_NS = time.time_ns()     # prefix of connect_seq: a GUI restart never repeats a value
 Publish = Callable[[dict[str, object]], None]
 
@@ -125,11 +126,14 @@ class TrexSession(PortConfigCommands, CaptureCommands):
         session with release=True (its ports are released on the server), forgets the params, ports,
         interfaces and capture state (publishing `capture` when there was any), then goes CONNECTING. A
         connect that fails before CONNECTED goes DISCONNECTED with the error and raises it translated; a
-        cancel releases both clients and goes DISCONNECTED; a loss seen during the connect goes LOST and
-        raises TrexApiError. Otherwise CONNECTED: starts the port poll and stats loops, sets
-        the ports (publishing `ports`), looks up the interfaces off the loop (a failure becomes
-        `ifaces_note`) and publishes `session`; then, only if still CONNECTED, lists the server's captures
-        and starts the capture loop (a failure there is logged, not raised)."""
+        cancel releases both clients and goes DISCONNECTED, and the release waits for the connect jobs however
+        often the caller is cancelled meanwhile, so a cancel can take up to the whole connect (N2); a loss
+        seen during the connect goes LOST and raises TrexApiError. A cancel after CONNECTED (the ports
+        lookup, the interface lookup) is not a connect cancel: it propagates and the session stays CONNECTED
+        with both clients. Otherwise CONNECTED: starts the port poll and stats loops, sets the ports
+        (publishing `ports`), looks up the interfaces off the loop (a failure becomes `ifaces_note`) and
+        publishes `session`; then, only if still CONNECTED, lists the server's captures and starts the
+        capture loop (a failure there is logged, not raised)."""
         if self._closed:
             raise TrexApiError("This session is closed; create a new one.")
         if self._lock.locked() or self._state in (SessionState.CONNECTING, SessionState.CONNECTED):
@@ -169,7 +173,7 @@ class TrexSession(PortConfigCommands, CaptureCommands):
                 if not isinstance(rdr, BaseException):
                     cleanup = self._reader_executor.submit(self._disconnect_blocking, rdr, False)
                     try:
-                        await asyncio.shield(asyncio.wrap_future(cleanup))
+                        await self._await_done(asyncio.wrap_future(cleanup))
                     finally:
                         self._error = err.message
                         self._set(SessionState.DISCONNECTED)
@@ -183,7 +187,7 @@ class TrexSession(PortConfigCommands, CaptureCommands):
                 self._log_connect_failure(p, err)
                 cleanup = self._executor.submit(self._disconnect_blocking, client, True)
                 try:
-                    await asyncio.shield(asyncio.wrap_future(cleanup))
+                    await self._await_done(asyncio.wrap_future(cleanup))
                 finally:                                 # a cancel here must not leave CONNECTING behind
                     self._error = err.message
                     self._set(SessionState.DISCONNECTED)
@@ -255,7 +259,8 @@ class TrexSession(PortConfigCommands, CaptureCommands):
         """End the session for good; a second call returns at once. On the loop thread it sets both clients
         to fail fast, cancels this loop's background tasks, kills every Wireshark the session launched, then
         disconnects (releasing ports when `release_on_exit()` says so) and shuts both executors down off the
-        loop, cancelling their queued jobs."""
+        loop, cancelling their queued jobs; the shutdowns run even when the disconnect raises or is
+        cancelled."""
         if self._closed:
             return
         self._closed = True
@@ -267,9 +272,13 @@ class TrexSession(PortConfigCommands, CaptureCommands):
             if t.get_loop() is loop:
                 t.cancel()
         await self._kill_wireshark()          # first: disconnect may wait out a silent server
-        await self.disconnect(release=self._release_on_exit())
-        await asyncio.to_thread(self._executor.shutdown, wait=True, cancel_futures=True)
-        await asyncio.to_thread(self._reader_executor.shutdown, wait=True, cancel_futures=True)
+        try:
+            await self.disconnect(release=self._release_on_exit())
+        finally:                              # neither a raise nor a cancel may skip a shutdown
+            try:
+                await asyncio.to_thread(self._executor.shutdown, wait=True, cancel_futures=True)
+            finally:
+                await asyncio.to_thread(self._reader_executor.shutdown, wait=True, cancel_futures=True)
 
     # -- ports and commands -------------------------------------------------------------------
     def ports(self) -> list[trexapi.PortView]:
@@ -302,7 +311,7 @@ class TrexSession(PortConfigCommands, CaptureCommands):
         def blocking(c: Any) -> Any:
             if not force:
                 trexapi.check_not_foreign(c, ports)
-            return c.acquire(ports=ports, force=force)
+            return trexapi.acquire_marked(c, ports, force)
         await self._command(label, blocking, ports=ports, need_owned=False)
         self._forget_assigned(ports)                 # what another owner left there is not this session's
 
@@ -322,7 +331,7 @@ class TrexSession(PortConfigCommands, CaptureCommands):
             mine = sorted(pid for pid, p in c.ports.items()
                           if not p.is_acquired() and p.owner == c.ctx.username)
             if mine:
-                c.acquire(ports=mine, force=True)
+                trexapi.acquire_marked(c, mine, True)
             return mine
         result: list[int] = await self._command("Re-acquire my ports", blocking)
         return result
@@ -505,28 +514,34 @@ class TrexSession(PortConfigCommands, CaptureCommands):
         await self._command(label, blocking, ports=ports, guard=True)
 
     async def update(self, ports: list[int], mult: str) -> None:
-        """Change the rate of `ports` to `mult` through _command; refused unless owned, or (from the client's
-        cache) unless profile "_" transmits on each."""
-        # control executor: the profile "_" check, then the update RPC
+        """Change the rate of `ports` to `mult` through _command; refused unless owned, or unless profile "_"
+        transmits on each (the ports are synced first, so the check sees the server's state)."""
+        # control executor: sync the ports, the profile "_" check, then the update RPC
         def blocking(c: Any) -> None:
+            for p in ports:
+                trexapi.sync_port(c, p)
             self._require_profile_state(c, ports, {c.ports[p].STATE_TX for p in ports}, "not transmitting")
             c.update(ports=ports, mult=mult)
         await self._command(f"Update port(s) {ports} to {mult}", blocking, ports=ports)
 
     async def pause(self, ports: list[int]) -> None:
-        """Pause `ports` through _command; refused unless owned, or (from the client's cache) unless profile
-        "_" transmits on each."""
-        # control executor: the profile "_" check, then the pause RPC
+        """Pause `ports` through _command; refused unless owned, or unless profile "_" transmits on each (the
+        ports are synced first, so the check sees the server's state)."""
+        # control executor: sync the ports, the profile "_" check, then the pause RPC
         def blocking(c: Any) -> None:
+            for p in ports:
+                trexapi.sync_port(c, p)
             self._require_profile_state(c, ports, {c.ports[p].STATE_TX for p in ports}, "not transmitting")
             c.pause(ports=ports)
         await self._command(f"Pause port(s) {ports}", blocking, ports=ports)
 
     async def resume(self, ports: list[int]) -> None:
-        """Resume `ports` through _command; refused unless owned, or (from the client's cache) unless profile
-        "_" is paused on each."""
-        # control executor: the profile "_" check, then the resume RPC
+        """Resume `ports` through _command; refused unless owned, or unless profile "_" is paused on each (the
+        ports are synced first, so the check sees the server's state)."""
+        # control executor: sync the ports, the profile "_" check, then the resume RPC
         def blocking(c: Any) -> None:
+            for p in ports:
+                trexapi.sync_port(c, p)
             self._require_profile_state(c, ports, {c.ports[p].STATE_PAUSE for p in ports}, "not paused")
             c.resume(ports=ports)
         await self._command(f"Resume port(s) {ports}", blocking, ports=ports)
@@ -596,7 +611,12 @@ class TrexSession(PortConfigCommands, CaptureCommands):
         def blocking(c: Any) -> None:
             nonlocal entered
             entered = True
-            c.reset(ports=ports)
+            trexapi.mark_pending(c, ports)       # c.reset force-acquires first; its own event takes the mark
+            try:
+                c.reset(ports=ports)
+            except BaseException:
+                trexapi.unmark_pending(c, ports)
+                raise
 
         # reader executor: clears the reader's port counters, then bumps the epoch even when the clear raised
         def reader_job(rd: Any) -> None:
@@ -970,6 +990,25 @@ class TrexSession(PortConfigCommands, CaptureCommands):
         self._restart_cause = cause
 
     # -- helpers --------------------------------------------------------------------------------
+    async def _await_done(self, fut: asyncio.Future[_T]) -> _T:
+        """Wait for `fut` to finish however often this task is cancelled (each wait is shielded), then
+        re-raise the CancelledError if one arrived, else return its result (its exception propagates). Never
+        returns normally after a cancel. Holds off a cancel for as long as `fut` runs, which is bounded by the
+        job itself."""
+        cancelled = False
+        while not fut.done():
+            try:
+                await asyncio.shield(fut)
+            except asyncio.CancelledError:
+                cancelled = True
+            except Exception:
+                pass                                     # fut failed; reported below unless a cancel came
+        if cancelled:
+            if fut.done() and not fut.cancelled():
+                fut.exception()                          # retrieved: no "never retrieved" noise
+            raise asyncio.CancelledError
+        return fut.result()
+
     async def _abandon_connect(self, job: Future[tuple[Any, ServerInfo]],
                                result: asyncio.Future[tuple[Any, ServerInfo]],
                                rjob: Future[Any] | None = None,
@@ -982,7 +1021,7 @@ class TrexSession(PortConfigCommands, CaptureCommands):
             if rjob is not None and rresult is not None:
                 rresult.add_done_callback(lambda f: f.cancelled() or f.exception())
                 rcleanup = self._reader_executor.submit(self._release_reader_result, rjob)
-                await asyncio.shield(asyncio.wrap_future(rcleanup))
+                await self._await_done(asyncio.wrap_future(rcleanup))
         finally:
             await self._release_control_result(job)
 
@@ -992,7 +1031,7 @@ class TrexSession(PortConfigCommands, CaptureCommands):
         `session`)."""
         cleanup = self._executor.submit(self._release_result, job)
         try:
-            await asyncio.shield(asyncio.wrap_future(cleanup))
+            await self._await_done(asyncio.wrap_future(cleanup))
         finally:
             self._info, self._error = None, "Connect cancelled."
             self._set(SessionState.DISCONNECTED)
@@ -1012,10 +1051,12 @@ class TrexSession(PortConfigCommands, CaptureCommands):
         r, self._reader = self._reader, None
         try:
             if c is not None:
-                await self._run(self._disconnect_blocking, c, release)
+                await self._await_done(asyncio.wrap_future(
+                    self._executor.submit(self._disconnect_blocking, c, release)))
         finally:
             if r is not None:
-                await self._run_reader(self._disconnect_blocking, r, False)
+                await self._await_done(asyncio.wrap_future(
+                    self._reader_executor.submit(self._disconnect_blocking, r, False)))
 
     def _set(self, st: SessionState) -> None:
         """Set the state; any state but CONNECTED cancels the port poll, stats and capture loops. Publishes

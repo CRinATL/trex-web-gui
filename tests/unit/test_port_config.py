@@ -1,7 +1,7 @@
-"""trexapi.port_config: service bracket, set_*, resolve, ping, scan and xstats (P3b Task 3). The service,
-set_* and xstats functions run against the fake (the vendored client is the oracle); ping, scan and resolve
-cannot (the fake answers `capture` and `push_pkts` as unknown methods), so they run against stubs of the
-client's service-level calls shaped by the records in tests/fixtures/p3b/summary.json."""
+"""trexapi.port_config: service bracket, set_*, the ARP resolve, ping, scan and xstats (P3b Task 3). The
+service, set_* and xstats functions run against the fake (the vendored client is the oracle); ping, scan and
+the ARP resolve cannot (the fake answers `capture` and `push_pkts` as unknown methods), so they run against
+stubs of the client's service-level calls shaped by the records in tests/fixtures/p3b/summary.json."""
 import json
 import time
 from types import SimpleNamespace as NS
@@ -112,84 +112,209 @@ def test_conf_ipv6_is_the_thin_wrapper(client) -> None:
         port_config.conf_ipv6(client, 0, True, None)        # and refuses the enable, recorded text
 
 
-# ---- resolve, against a stub
+# ---- the ARP resolve (arp_attempt, arp_unresolved), against a stub
+
+class _RC:
+    def __init__(self, err: str | None = None) -> None:
+        """A client RC: truthy when `err` is None, else falsy with that text."""
+        self.text = err
+
+    def __bool__(self) -> bool:
+        """True unless an error text was given."""
+        return self.text is None
+
+    def err(self) -> str | None:
+        """The error text."""
+        return self.text
+
+
+class _Ctx:
+    def __init__(self, client: "_Resolver") -> None:
+        """A service context of `client`."""
+        self.client = client
+
+    def get_src_mac(self) -> str:
+        """The port's MAC (ServiceARP reads it when no src_mac is given)."""
+        return "00:00:00:00:00:01"
+
+    def run(self, arp: Any) -> None:
+        """Records the service, then raises the client's run exception, or sets the service's record to a
+        reply (an object with dst_mac) or leaves it None."""
+        self.client.arps.append(arp)
+        if self.client.run_exc:
+            raise self.client.run_exc
+        arp.record = NS(dst_mac=PEER_MAC) if self.client.reply else None
+
 
 class _Ports:
-    def __init__(self, v4: dict[str, Any], ether: dict[str, Any] | None = None) -> None:
-        """Holds the ipv4 layer config and the ether one (unconfigured when None)."""
-        self.v4, self.ether = v4, ether or {"state": "unconfigured"}
+    def __init__(self, client: "_Resolver", v4: dict[str, Any], ether: dict[str, Any] | None = None) -> None:
+        """Holds the ipv4 layer config, the ether one (unconfigured when None) and the VLAN tags."""
+        self.client, self.v4, self.ether = client, v4, ether or {"state": "unconfigured"}
 
     def get_layer_cfg(self) -> dict[str, Any]:
         """The held layer config as {"ipv4": ..., "ether": ...}."""
         return {"ipv4": self.v4, "ether": self.ether}
 
+    def get_vlan_cfg(self) -> list[int]:
+        """Two tags, which VLAN() accepts."""
+        return [10, 20]
+
+    def invalidate_arp(self) -> None:
+        """Counts the call."""
+        self.client.invalidated += 1
+
+    def set_l3_mode(self, src: str, dst: str, mac: str) -> _RC:
+        """Records the call and answers the client's RC."""
+        self.client.l3_calls.append((src, dst, mac))
+        return self.client.l3_rc
+
 
 class _Resolver:
-    def __init__(self, v4: dict[str, Any], exc: BaseException | None,
-                 ether: dict[str, Any] | None = None) -> None:
-        """Holds a port 0 stub with these layer configs, the exception resolve raises (or None), and calls."""
-        self.ports = {0: _Ports(v4, ether)}
-        self.exc, self.calls = exc, []
+    def __init__(self, v4: dict[str, Any], *, reply: bool = True,
+                 run_exc: BaseException | None = None, ctx_exc: BaseException | None = None,
+                 l3_rc: _RC | None = None, psv_exc: BaseException | None = None) -> None:
+        """A stub client with port 0 holding this ipv4 config; its service runs reply (or not), or raise
+        run_exc; create_service_ctx raises ctx_exc if given; set_l3_mode answers l3_rc."""
+        self.ports = {0: _Ports(self, v4)}
+        self.reply, self.run_exc, self.ctx_exc = reply, run_exc, ctx_exc
+        self.l3_rc = _RC() if l3_rc is None else l3_rc
+        self.psv_exc = psv_exc
+        self.invalidated = 0
+        self.validated: list[tuple[str, list[int], tuple[Any, ...]]] = []
+        self.psv = NS(validate=self._validate)
+        self.arps: list[Any] = []
+        self.l3_calls: list[tuple[str, str, str]] = []
 
-    def resolve(self, ports: list[int]) -> None:
-        """Records the ports asked about, then raises the held exception if one was given."""
-        self.calls.append(ports)
-        if self.exc:
-            raise self.exc
+    def _validate(self, cmd: str, ports: list[int], states: tuple[Any, ...]) -> list[int]:
+        """The vendor's port-state check: records the call, raises psv_exc if one was given."""
+        self.validated.append((cmd, ports, states))
+        if self.psv_exc:
+            raise self.psv_exc
+        return ports
+
+    def create_service_ctx(self, port: int) -> _Ctx:
+        """A context, or the ctx_exc."""
+        if self.ctx_exc:
+            raise self.ctx_exc
+        return _Ctx(self)
 
 
 UNRESOLVED = {"src": "1.1.1.1", "dst": "1.1.1.99", "state": "unresolved"}
+NO_REPLY = translate(Exception("Could not resolve following ports: [0]")).message
 
 
-def test_resolve_success_reads_the_mac_from_layer_cfg() -> None:
-    c = _Resolver({**UNRESOLVED, "state": "resolved"}, None, {"dst": PEER_MAC, "state": "configured"})
-    assert port_config.resolve(c, 0) == ("resolved", PEER_MAC, None)
-    assert c.calls == [[0]]
+def test_arp_attempt_reply_sets_the_mac_and_resolves() -> None:
+    trexapi.load()
+    c = _Resolver(UNRESOLVED)
+    assert port_config.arp_attempt(c, 0, 0.5, True) == ("resolved", PEER_MAC, None)
+    assert c.l3_calls == [("1.1.1.1", "1.1.1.99", PEER_MAC)]
+    arp = c.arps[0]
+    assert (arp.dst_ip, arp.src_ip, arp.timeout_sec, arp.vlan.tags) == ("1.1.1.99", "1.1.1.1", 0.5, (10, 20))
 
 
-def test_resolve_unresolved_by_could_not_resolve() -> None:
-    c = _Resolver(UNRESOLVED, Exception("Could not resolve following ports: [0]"))
-    assert port_config.resolve(c, 0) == ("unresolved", None, "Could not resolve following ports: [0]")
+def test_arp_attempt_no_reply_returns_none_and_invalidates_only_on_the_first() -> None:
+    trexapi.load()
+    c = _Resolver(UNRESOLVED, reply=False)
+    assert port_config.arp_attempt(c, 0, 0.5, True) is None
+    assert port_config.arp_attempt(c, 0, 0.5, False) is None
+    assert c.invalidated == 1 and c.l3_calls == []
 
 
-def test_resolve_unresolved_when_link_down_inside_resolve() -> None:
+def test_arp_attempt_bad_set_l3_mode_rc_is_unresolved_with_its_text() -> None:
+    trexapi.load()
+    c = _Resolver(UNRESOLVED, l3_rc=_RC("port is not in L3 mode"))
+    assert port_config.arp_attempt(c, 0, 0.5, True) == ("unresolved", None, "port is not in L3 mode")
+
+
+def test_arp_attempt_bad_set_l3_mode_rc_raises_when_the_layer_is_not_unresolved() -> None:
+    trexapi.load()
+    c = _Resolver({**UNRESOLVED, "state": "none"}, l3_rc=_RC("port is not in L3 mode"))
+    with pytest.raises(TrexApiError, match="port is not in L3 mode"):
+        port_config.arp_attempt(c, 0, 0.5, True)
+
+
+def test_arp_attempt_validates_the_port_as_the_vendor_resolve_does() -> None:
+    trexapi.load()
+    from trex.common.trex_psv import PSV_ACQUIRED, PSV_L3, PSV_SERVICE
+    c = _Resolver(UNRESOLVED)
+    port_config.arp_attempt(c, 0, 0.5, True)
+    assert c.validated == [("arp", [0], (PSV_ACQUIRED, PSV_SERVICE, PSV_L3))]
+
+
+def test_arp_attempt_on_a_port_reset_out_of_l3_does_not_arp_and_raises() -> None:
+    trexapi.load()
+    # the layer is gone between two attempts: the vendor's check fails, the failure rule re-raises it
+    c = _Resolver({"state": "none"}, psv_exc=TrexApiError("port(s) [0]: not configured with L3"))
+    with pytest.raises(TrexApiError, match="not configured with L3"):
+        port_config.arp_attempt(c, 0, 0.5, False)
+    assert c.arps == [] and c.l3_calls == []
+
+
+def test_arp_attempt_unresolved_when_link_down() -> None:
     # the psv text: common/trex_psv.py:78 (format) with :105 (the link-down message). translate() maps it to a
     # plain TrexApiError, not CommandRefused, so the layer_cfg classification still applies to it
+    trexapi.load()
     text = "port(s) [0]: link is DOWN"
     assert type(translate(Exception(text))) is TrexApiError
-    r = port_config.resolve(_Resolver(UNRESOLVED, Exception(text)), 0)
-    assert r.state == "unresolved" and r.mac is None and r.error == text
+    r = port_config.arp_attempt(_Resolver(UNRESOLVED, run_exc=Exception(text)), 0, 0.5, True)
+    assert r == ("unresolved", None, text)
+
+
+def test_arp_attempt_unresolved_when_service_mode_is_off() -> None:
+    # common/trex_psv.py:173, raised by the service context
+    trexapi.load()
+    text = "port(s) [0]: must be under service mode"
+    assert type(translate(Exception(text))) is TrexApiError
+    r = port_config.arp_attempt(_Resolver(UNRESOLVED, ctx_exc=Exception(text)), 0, 0.5, False)
+    assert r == ("unresolved", None, text)
 
 
 def test_recorded_failed_resolve_text_is_not_a_refusal_or_a_loss() -> None:
     # common/trex_client.py:2345 via TRexError
+    trexapi.load()
     text = SUMMARY["apply_unresolved_parts"]["resolve"]["error"]
     assert text == "TRexError: Could not resolve following ports: [0]"
     assert type(translate(Exception(text))) is TrexApiError
-    assert port_config.resolve(_Resolver(UNRESOLVED, Exception(text)), 0).state == "unresolved"
+    assert port_config.arp_attempt(_Resolver(UNRESOLVED, run_exc=Exception(text)), 0, 0.5, True).state == \
+        "unresolved"
 
 
-def test_resolve_reraises_a_lost_connection_even_with_unresolved_layer_cfg() -> None:
+def test_arp_attempt_reraises_a_lost_connection_even_with_unresolved_layer_cfg() -> None:
     # trex_req_resp_client.py:335; the session marks the loss only on a raised ServerUnreachable
-    c = _Resolver(UNRESOLVED, Exception("*** [RPC] - Failed to get server response from tcp://x"))
+    trexapi.load()
+    c = _Resolver(UNRESOLVED, run_exc=Exception("*** [RPC] - Failed to get server response from tcp://x"))
     with pytest.raises(ServerUnreachable):
-        port_config.resolve(c, 0)
+        port_config.arp_attempt(c, 0, 0.5, True)
 
 
-def test_resolve_reraises_a_restart_and_a_refusal() -> None:
+def test_arp_attempt_reraises_a_restart_and_a_refusal() -> None:
+    trexapi.load()
     with pytest.raises(ServerRestarted):
-        port_config.resolve(_Resolver(UNRESOLVED, ServerRestarted("restarted")), 0)
+        port_config.arp_attempt(_Resolver(UNRESOLVED, run_exc=ServerRestarted("restarted")), 0, 0.5, True)
+    refusal = CommandRefused("not_owned", "Port 0 is owned by x")
     with pytest.raises(CommandRefused):
-        port_config.resolve(_Resolver(UNRESOLVED, CommandRefused("not_owned", "Port 0 is owned by x")), 0)
+        port_config.arp_attempt(_Resolver(UNRESOLVED, run_exc=refusal), 0, 0.5, True)
 
 
 @pytest.mark.parametrize("v4", [{"state": "none"}, {**UNRESOLVED, "state": "none"},
-                                {"src": "1.1.1.1", "state": "unresolved"}, {}])
-def test_resolve_reraises_when_layer_cfg_is_not_the_requested_l3(v4) -> None:
+                                {"src": "1.1.1.1", "state": "unresolved"}])
+def test_arp_attempt_reraises_when_layer_cfg_is_not_the_requested_l3(v4) -> None:
+    trexapi.load()
     boom = Exception("unknown method: capture")      # any failure that is not a loss or a refusal
     with pytest.raises(Exception) as e:
-        port_config.resolve(_Resolver(v4, boom), 0)
+        port_config.arp_attempt(_Resolver(v4, run_exc=boom), 0, 0.5, True)
     assert e.value is boom
+
+
+def test_arp_unresolved_carries_the_no_reply_text() -> None:
+    assert NO_REPLY == "Could not resolve following ports: [0]"
+    assert port_config.arp_unresolved(_Resolver(UNRESOLVED), 0) == ("unresolved", None, NO_REPLY)
+
+
+def test_arp_unresolved_raises_when_the_layer_is_not_the_requested_l3() -> None:
+    with pytest.raises(TrexApiError) as e:
+        port_config.arp_unresolved(_Resolver({**UNRESOLVED, "state": "none"}), 0)
+    assert e.value.message == NO_REPLY
 
 
 # ---- ping, against a stub of ping_ip

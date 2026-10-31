@@ -1,9 +1,20 @@
 """make_client's event tap must publish the handler's Event.msg (upstream EventsHandler.on_event returns
 None, so the message has to come from the handler itself). Builds a real STLClient; nothing connects."""
 import json
+import threading
+import time
+from typing import Any
 
 import pytest
-from trex_web_gui.trexapi import ClientEvent, RpcRecord, make_client
+from trex_web_gui.trexapi import (
+    PENDING_ACQUIRE_S,
+    ClientEvent,
+    RpcRecord,
+    acquire_marked,
+    make_client,
+    mark_pending,
+    unmark_pending,
+)
 
 
 def test_tap_passes_handler_message_through() -> None:
@@ -150,3 +161,146 @@ def test_every_profile_event_id_reaches_the_tap(event_id: int, name: str, messag
     assert got[-1].message == message
     assert got[-1].level == level
     assert got[-1].args == [0, "bench"]
+
+
+# --- pending-acquire marks (stop-race-flake-1) ---
+
+OTHER = "another-session-id"
+
+
+class HandlerPort:
+    """A port with a handler and owner, and the two methods the vendor's "port acquired" handler calls."""
+
+    def __init__(self) -> None:
+        """Handler "h1", owner "me"."""
+        self.handler, self.owner = "h1", "me"
+
+    def is_acquired(self) -> bool:
+        """True while a handler is set."""
+        return bool(self.handler)
+
+    def async_event_port_acquired(self, who: str) -> None:
+        """As the vendor port: clears the handler and records the new owner."""
+        self.handler, self.owner = "", who
+
+
+def tap_client(got: list[ClientEvent] | None = None) -> Any:
+    """An unconnected client from make_client whose port 0 is a HandlerPort."""
+    c = make_client("127.0.0.1", 1, 2, 1.0, got.append if got is not None else (lambda e: None))
+    c.ports = {0: HandlerPort()}
+    return c
+
+
+def foreign(c: Any, port: int = 0) -> Any:
+    """Fires a "port acquired" event from another session at `port`."""
+    return c.ctx.event_handler.on_event("port acquired", port, "x", OTHER, True)
+
+
+def own(c: Any, port: int = 0) -> Any:
+    """Fires the "port acquired" event of this client's own session at `port`."""
+    return c.ctx.event_handler.on_event("port acquired", port, "me", c.ctx.session_id, True)
+
+
+def test_marked_port_keeps_handler_on_foreign_event() -> None:
+    got: list[ClientEvent] = []
+    c = tap_client(got)
+    mark_pending(c, [0])
+    assert foreign(c) is None
+    assert c.ports[0].handler == "h1"
+    assert len(got) == 1 and got[0].level == "info"
+    assert got[0].message == "Port 0 was taken by 'x' before our acquire; ignored"
+    assert got[0].name == "port acquired" and got[0].args == [0, "x", OTHER, True]
+    assert not c.ctx.event_handler.events
+
+
+def test_unmarked_port_loses_handler_on_foreign_event() -> None:
+    c = tap_client()
+    foreign(c)
+    assert c.ports[0].handler == ""
+
+
+def test_own_event_clears_one_mark() -> None:
+    c = tap_client()
+    mark_pending(c, [0])
+    own(c)
+    foreign(c)
+    assert c.ports[0].handler == ""
+
+
+def test_two_marks_one_own_event_still_protect() -> None:
+    c = tap_client()
+    mark_pending(c, [0])
+    mark_pending(c, [0])
+    own(c)
+    foreign(c)
+    assert c.ports[0].handler == "h1"
+
+
+def test_unmark_after_own_event_is_a_noop() -> None:
+    c = tap_client()
+    mark_pending(c, [0])
+    own(c)
+    unmark_pending(c, [0])
+    assert 0 not in c.pending_acquire
+
+
+def test_own_event_for_unmarked_port_is_fine() -> None:
+    c = tap_client()
+    own(c)
+    assert c.pending_acquire == {}
+
+
+def test_expired_mark_does_not_protect(monkeypatch: pytest.MonkeyPatch) -> None:
+    c = tap_client()
+    now = time.monotonic()
+    mark_pending(c, [0])
+    monkeypatch.setattr(time, "monotonic", lambda: now + PENDING_ACQUIRE_S + 1)
+    foreign(c)
+    assert c.ports[0].handler == ""
+
+
+def test_raising_on_event_is_logged_not_raised_for_an_ignored_event() -> None:
+    def boom(e: ClientEvent) -> None:
+        raise RuntimeError("sink")
+    c = make_client("127.0.0.1", 1, 2, 1.0, boom)
+    c.ports = {0: HandlerPort()}
+    mark_pending(c, [0])
+    foreign(c)
+    assert c.ports[0].handler == "h1"
+
+
+def test_failed_acquire_leaves_no_mark() -> None:
+    c = tap_client()
+
+    def refuse(**kw: Any) -> None:
+        raise RuntimeError("refused")
+    c.acquire = refuse
+    with pytest.raises(RuntimeError):
+        acquire_marked(c, [0], False)
+    assert c.pending_acquire == {}
+
+
+def test_mark_and_unmark_from_two_threads_leave_nothing() -> None:
+    c = tap_client()
+
+    def loop() -> None:
+        for _ in range(10_000):
+            mark_pending(c, [0])
+            unmark_pending(c, [0])
+    threads = [threading.Thread(target=loop) for _ in range(2)]
+    for t in threads:
+        t.start()
+    for t in threads:
+        t.join()
+    assert 0 not in c.pending_acquire
+
+
+def test_acquire_marked_then_stale_foreign_event_end_to_end(monkeypatch: pytest.MonkeyPatch) -> None:
+    c = tap_client()
+    monkeypatch.setattr(c, "acquire", lambda ports, force: "h2", raising=False)
+    assert acquire_marked(c, [0], True) == "h2"
+    assert c.pending_acquire[0][0] == 1
+    c.ctx.event_handler.on_event("port acquired", 0, "x", OTHER, True)
+    assert c.ports[0].handler == "h1"
+    c.ctx.event_handler.on_event("port acquired", 0, "me", c.ctx.session_id, True)
+    assert 0 not in c.pending_acquire
