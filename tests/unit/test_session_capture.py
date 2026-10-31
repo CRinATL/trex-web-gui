@@ -724,6 +724,35 @@ def test_service_rows_flagged_while_busy(rig: Rig) -> None:
     rig.run(body)
 
 
+def test_service_rows_are_capture_busy_for_stop_save_and_remove(rig: Rig) -> None:
+    """A TRex service's capture is refused capture_busy by stop, save and remove, with no RPC sent."""
+    rig.server.add(5, rx=(1,))
+
+    async def body(s: TrexSession) -> None:
+        await s.capture_sync()
+        s._busy = {1: "ping"}
+        for call in (s.recorder_stop, s.recorder_save, s.recorder_remove):
+            with refused("capture_busy"):
+                await call(5)
+        assert rig.server.n("remove") == 0 and rig.server.n("stop") == 0
+    rig.run(body)
+
+
+def test_a_row_is_removable_once_its_service_ends(rig: Rig) -> None:
+    """The guard reads _busy at call time: a row whose service ended is removable without a resync."""
+    rig.server.add(5, rx=(1,))
+
+    async def body(s: TrexSession) -> None:
+        await s.capture_sync()
+        s._busy = {1: "ping"}
+        with refused("capture_busy"):
+            await s.recorder_remove(5)
+        s._busy = {}                                   # the ping ended: no resync needed
+        await s.recorder_remove(5)
+        assert rig.server.n("remove") == 1
+    rig.run(body)
+
+
 def test_our_own_captures_are_never_service_rows_during_a_ping(rig: Rig) -> None:
     rig.server.add(5, rx=(1,))                                # a foreign capture on the pinged port
 

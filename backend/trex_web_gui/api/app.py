@@ -742,7 +742,8 @@ def create_app(data_dir: Path, server_hint: str | None = None, static_dir: Path 
     @app.post("/api/capture/recorders/{cid}/stop", response_model=None, responses=answers(*RUN_ANSWERS))
     async def recorder_stop(cid: int) -> dict[str, Any] | JSONResponse:
         """Stops one recorder capture; returns its packet count. Refused (409) for the monitor's id, a
-        capture being saved, an endpoint capture, or when not connected or read-only."""
+        TRex service's capture (a ping, scan or Apply holds its Rx port), a capture being saved, an
+        endpoint capture, or when not connected or read-only."""
         return await run(session().recorder_stop(cid), lambda n: {"pkt_count": n})
 
     @app.post("/api/capture/recorders/{cid}/save", response_model=None, responses=answers(*RUN_ANSWERS))
@@ -750,14 +751,16 @@ def create_app(data_dir: Path, server_hint: str | None = None, static_dir: Path 
         """Stops the recorder, then fetches its packets (a destructive fetch) into a pcap file in the
         capture directory, publishing `capture_save` progress, and removes the capture from the server
         after the file is written; returns the file. A failed save keeps any packets already written.
-        Refused (409) for the monitor's id, a capture already being saved, an endpoint capture, no capture
-        directory, a file write failure (spool_error), or when not connected or read-only."""
+        Refused (409) for the monitor's id, a TRex service's capture (a ping, scan or Apply holds its Rx
+        port), a capture already being saved, an endpoint capture, no capture directory, a file write failure
+        (spool_error), or when not connected or read-only."""
         return await run(session().recorder_save(cid), lambda f: {"file": f})
 
     @app.delete("/api/capture/recorders/{cid}", response_model=None, responses=answers(*RUN_ANSWERS))
     async def recorder_remove(cid: int) -> dict[str, Any] | JSONResponse:
-        """Removes one recorder capture from the server. Refused (409) for the monitor's id, a capture
-        being saved, or when not connected or read-only."""
+        """Removes one recorder capture from the server. Refused (409) for the monitor's id, a TRex
+        service's capture (a ping, scan or Apply holds its Rx port), a capture being saved, or when
+        not connected or read-only."""
         return await run(session().recorder_remove(cid), lambda _: {})
 
     # async on purpose: the table is the session's, read and pruned on the loop thread only.
