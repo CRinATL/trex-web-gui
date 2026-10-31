@@ -127,13 +127,13 @@ class TrexSession(PortConfigCommands, CaptureCommands):
         interfaces and capture state (publishing `capture` when there was any), then goes CONNECTING. A
         connect that fails before CONNECTED goes DISCONNECTED with the error and raises it translated; a
         cancel releases both clients and goes DISCONNECTED, and the release waits for the connect jobs however
-        often the caller is cancelled meanwhile; a loss seen during the connect goes LOST and
-        raises TrexApiError. A cancel after CONNECTED (the ports lookup, the interface lookup) is not a
-        connect cancel: it propagates and the session stays CONNECTED with both clients (N2). Otherwise
-        CONNECTED: starts the port poll and stats loops, sets
-        the ports (publishing `ports`), looks up the interfaces off the loop (a failure becomes
-        `ifaces_note`) and publishes `session`; then, only if still CONNECTED, lists the server's captures
-        and starts the capture loop (a failure there is logged, not raised)."""
+        often the caller is cancelled meanwhile, so a cancel can take up to the whole connect (N2); a loss
+        seen during the connect goes LOST and raises TrexApiError. A cancel after CONNECTED (the ports
+        lookup, the interface lookup) is not a connect cancel: it propagates and the session stays CONNECTED
+        with both clients. Otherwise CONNECTED: starts the port poll and stats loops, sets the ports
+        (publishing `ports`), looks up the interfaces off the loop (a failure becomes `ifaces_note`) and
+        publishes `session`; then, only if still CONNECTED, lists the server's captures and starts the
+        capture loop (a failure there is logged, not raised)."""
         if self._closed:
             raise TrexApiError("This session is closed; create a new one.")
         if self._lock.locked() or self._state in (SessionState.CONNECTING, SessionState.CONNECTED):
@@ -259,7 +259,8 @@ class TrexSession(PortConfigCommands, CaptureCommands):
         """End the session for good; a second call returns at once. On the loop thread it sets both clients
         to fail fast, cancels this loop's background tasks, kills every Wireshark the session launched, then
         disconnects (releasing ports when `release_on_exit()` says so) and shuts both executors down off the
-        loop, cancelling their queued jobs."""
+        loop, cancelling their queued jobs; the shutdowns run even when the disconnect raises or is
+        cancelled."""
         if self._closed:
             return
         self._closed = True
