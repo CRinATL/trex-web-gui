@@ -1,5 +1,5 @@
-"""Release gate (P6, D10): `release.py check rc|rc<N>|final [--dry-run]`, `release.py build final`,
-`release.py publish rc|rc<N>|final [--publish-draft]` and `release.py guard`.
+"""Release gate (P6, D10): `release.py check rc|rc<N>|final|patch [--dry-run]`, `release.py build final`,
+`release.py publish rc|rc<N>|final|patch [--publish-draft]` and `release.py guard`.
 
 `check` checks the preconditions, runs the gate chain (each step logged to
 dist/release-<target>-YYYY-MM-DD-HHMMSSZ.log), records the pass in dist/release-<target>-passed.json and
@@ -22,8 +22,11 @@ its release is made as a draft: publish verifies the draft's wheel and stops for
 draft; `--publish-draft` publishes it and verifies the wheel again. That is `release.py publish final
 [--publish-draft]`; make release-publish and PUBLISH_DRAFT=1 now run `publish patch`.
 
-`check patch` and `publish patch` release 1.0.N, the N that backend/pyproject.toml names, as a full (not
-pre-) release: signed tag, a draft first, and main is never pushed (it reaches GitHub through a PR).
+`check patch` and `publish patch` release 1.0.N, the N that backend/pyproject.toml names (a 1.0.N release
+commit sets that version AND commits the backend/uv.lock that uv rewrites for it: CI runs `uv sync --locked`,
+and `check patch` refuses the dirty tree otherwise), as a full (not
+pre-) release: signed tag, a draft first, and main is never pushed (it reaches GitHub through a
+PR).
 
 Run it as `uv run --project backend python -I -B scripts/release.py ...` (make release-rc, make release). Exit
 codes: 0 releasable (published, for publish), 1 a precondition or a step failed, 3 the real tier was skipped
@@ -207,6 +210,10 @@ def host_rows_problems(deferred_text: str) -> list[str]:
     if HOST_SECTION not in deferred_text.splitlines():
         problems.append(f"{DEFERRED} lacks the section {HOST_SECTION!r}")
     for line in deferred_text.splitlines():
+        opened = re.match(r"\s*\|\s*(H-\d+)\s*\|", line)
+        if opened and not re.search(r"(?<!\\)\|$", line.rstrip()):
+            problems.append(f"malformed host row {opened.group(1)}: no closing |")
+            continue
         cells = [c.strip() for c in re.split(r"(?<!\\)\|", line)]
         if len(cells) < 4 or not re.fullmatch(r"H-\d+", cells[1]):
             continue

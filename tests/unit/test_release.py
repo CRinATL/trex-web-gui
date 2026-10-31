@@ -915,6 +915,11 @@ def test_an_open_host_row_is_named_wherever_it_sits() -> None:
     assert release.host_rows_problems(text) == ["open host row H-1: open", "open host row H-2: open"]
 
 
+def test_a_host_row_without_a_closing_pipe_is_malformed_not_a_pass() -> None:
+    text = HOST + "| H-1 | host use, 2026-10-31 | fixed upstream later | open\n"
+    assert release.host_rows_problems(text) == ["malformed host row H-1: no closing |"]
+
+
 def test_a_missing_host_section_is_a_problem() -> None:
     assert release.host_rows_problems("# register\n") == [
         "DEFERRED.md lacks the section '## Host use (1.0.x)'"]
