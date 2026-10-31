@@ -16,6 +16,7 @@ export function roundHalfEven(x: number): number {
 }
 
 // to_table_cpu's Avg: int(round(sum(history[:avg_len]) / avg_len)), avg_len = min(5, len). null when any sample is missing.
+// Each core's own history length is used here; the TUI uses core 0's length for every core (the server always sends 20, so they agree).
 export function cpuAvg(history: (number | null)[]): number | null {
   const n = Math.min(5, history.length)
   if (n === 0) return null

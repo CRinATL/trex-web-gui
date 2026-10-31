@@ -2,7 +2,8 @@ import { useEffect, useState } from 'react'
 import { getAbout, type About } from '../../api'
 import { useAppState } from '../../state'
 
-// The About section of Settings: version, TRex client pin, supported server and the data directory.
+// The About section of Settings: version, TRex client pin, supported server, the data directory and a paragraph on the
+// backend's limits (login URL access, loopback-only listening).
 // `dataDir` is the data directory from the settings GET, used until a settings message supplies one.
 export function AboutSection({ dataDir }: { dataDir?: string | null }) {
   const [about, setAbout] = useState<About | null>(null)

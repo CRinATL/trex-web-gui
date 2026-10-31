@@ -7,7 +7,8 @@ from typing import Any
 from fastapi import APIRouter, Request
 from fastapi.responses import JSONResponse
 
-from trex_web_gui.api.bodies import BodyRefused, err, read_json_capped
+from trex_web_gui.api.bodies import BODY_ANSWERS, BodyRefused, err, read_json_capped
+from trex_web_gui.api.declared import answers
 from trex_web_gui.store import bundle as bundles
 
 BODY_LIMIT = 4 * 1024 * 1024          # bytes in a preview or apply body
@@ -31,7 +32,8 @@ def bundle_router(stores: bundles.Stores, app_version: str, publish: Callable[[d
         """The bundle for the current settings, port labels and test setups."""
         return bundles.export(stores, app_version)
 
-    @router.post("/api/settings/bundle/preview", response_model=None)
+    @router.post("/api/settings/bundle/preview", response_model=None,
+                 responses=answers(*BODY_ANSWERS, (422, "bundle")))
     async def preview_bundle(request: Request) -> dict[str, Any] | JSONResponse:
         """What applying the body (a bundle) would do. 411/413/422 from the body read, 422
         unsupported_bundle for a wrong format or version."""
@@ -42,7 +44,11 @@ def bundle_router(stores: bundles.Stores, app_version: str, publish: Callable[[d
         except bundles.BundleError as e:
             return err(422, e.code, str(e))
 
-    @router.post("/api/settings/bundle/apply", response_model=None)
+    @router.post("/api/settings/bundle/apply", response_model=None,
+                 responses=answers(
+                     *BODY_ANSWERS,
+                     (422, "bundle"),
+                     (500, "storage_error", "a file cannot be written; `written` and `failed` list them")))
     async def apply_bundle(request: Request) -> dict[str, Any] | JSONResponse:
         """Apply `{bundle, modes}`; modes maps a section to replace, merge or skip. 411/413/422 from the
         body read, 422 bad_request, unsupported_bundle or invalid_bundle (naming the section), 500
