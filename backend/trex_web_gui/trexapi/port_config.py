@@ -120,7 +120,7 @@ def arp_attempt(c: Any, port: int, listen_s: float, first: bool) -> ArpResult | 
     from trex.common.services.trex_service_arp import ServiceARP
     from trex.common.trex_psv import PSV_ACQUIRED, PSV_L3, PSV_SERVICE
     try:
-        # the vendor's own check (trex_client.py:2299): a port reset out of L3 between attempts fails here
+        # the vendor's own check (trex_client.py:2300): a port reset out of L3 between attempts fails here
         c.psv.validate("arp", [port], (PSV_ACQUIRED, PSV_SERVICE, PSV_L3))
         p = c.ports[port]
         if first:
