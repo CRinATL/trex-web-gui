@@ -191,9 +191,10 @@ def _install_rpc_tap(c: Any, on_rpc: Callable[[RpcRecord], None]) -> None:
 def make_client(host: str, sync_port: int, async_port: int, timeout_s: float,
                 on_event: Callable[[ClientEvent], None],
                 on_rpc: Callable[[RpcRecord], None] | None = None) -> Any:
-    """A new, unconnected STLClient with the subscriber-crash handler and the event tap installed,
-    and the RPC tap when on_rpc is given. Loads the vendored trex package. on_event and on_rpc
-    run on whichever thread fires them, so they must only hand off."""
+    """A new, unconnected STLClient with the subscriber-crash handler, the event tap and the
+    pending-acquire marks (see mark_pending) installed, and the RPC tap when on_rpc is given. Loads the
+    vendored trex package. on_event and on_rpc run on whichever thread fires them, so they must only
+    hand off."""
     load()
     from trex.common.trex_events import Event
     from trex.stl.api import STLClient
@@ -232,8 +233,9 @@ def make_client(host: str, sync_port: int, async_port: int, timeout_s: float,
     original = eh.on_event
 
     def tap(name: str, *args: Any, **kwargs: Any) -> Any:
-        """Event handler wrapper: runs upstream's handler, stores its Event, and unless the name is in _SKIP
-        passes a ClientEvent to on_event (a failure there is logged, not raised). An unhandled name raises."""
+        """Event handler wrapper: runs upstream's handler, except for a stale foreign "port acquired" on a
+        marked port (_stale_foreign), stores its Event, and unless the name is in _SKIP passes a ClientEvent
+        to on_event (a failure there is logged, not raised). An unhandled name raises."""
         # Mirrors upstream EventsHandler.on_event (trex_events.py:112-126), which returns None, so the
         # handler's Event (and its msg) must be taken here rather than from original()'s return value.
         if name not in eh.events_handlers:

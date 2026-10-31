@@ -273,16 +273,11 @@ def test_failed_acquire_leaves_no_mark() -> None:
     c = tap_client()
 
     def refuse(**kw: Any) -> None:
-        raise trexapi_error()
+        raise RuntimeError("refused")
     c.acquire = refuse
     with pytest.raises(RuntimeError):
         acquire_marked(c, [0], False)
     assert c.pending_acquire == {}
-
-
-def trexapi_error() -> Exception:
-    """The refusal the stub acquire raises."""
-    return RuntimeError("refused")
 
 
 def test_mark_and_unmark_from_two_threads_leave_nothing() -> None:
