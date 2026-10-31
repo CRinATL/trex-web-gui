@@ -172,15 +172,25 @@ class _Ports:
 class _Resolver:
     def __init__(self, v4: dict[str, Any], *, reply: bool = True,
                  run_exc: BaseException | None = None, ctx_exc: BaseException | None = None,
-                 l3_rc: _RC | None = None) -> None:
+                 l3_rc: _RC | None = None, psv_exc: BaseException | None = None) -> None:
         """A stub client with port 0 holding this ipv4 config; its service runs reply (or not), or raise
         run_exc; create_service_ctx raises ctx_exc if given; set_l3_mode answers l3_rc."""
         self.ports = {0: _Ports(self, v4)}
         self.reply, self.run_exc, self.ctx_exc = reply, run_exc, ctx_exc
         self.l3_rc = _RC() if l3_rc is None else l3_rc
+        self.psv_exc = psv_exc
         self.invalidated = 0
+        self.validated: list[tuple[str, list[int], tuple[Any, ...]]] = []
+        self.psv = NS(validate=self._validate)
         self.arps: list[Any] = []
         self.l3_calls: list[tuple[str, str, str]] = []
+
+    def _validate(self, cmd: str, ports: list[int], states: tuple[Any, ...]) -> list[int]:
+        """The vendor's port-state check: records the call, raises psv_exc if one was given."""
+        self.validated.append((cmd, ports, states))
+        if self.psv_exc:
+            raise self.psv_exc
+        return ports
 
     def create_service_ctx(self, port: int) -> _Ctx:
         """A context, or the ctx_exc."""
@@ -221,6 +231,23 @@ def test_arp_attempt_bad_set_l3_mode_rc_raises_when_the_layer_is_not_unresolved(
     c = _Resolver({**UNRESOLVED, "state": "none"}, l3_rc=_RC("port is not in L3 mode"))
     with pytest.raises(TrexApiError, match="port is not in L3 mode"):
         port_config.arp_attempt(c, 0, 0.5, True)
+
+
+def test_arp_attempt_validates_the_port_as_the_vendor_resolve_does() -> None:
+    trexapi.load()
+    from trex.common.trex_psv import PSV_ACQUIRED, PSV_L3, PSV_SERVICE
+    c = _Resolver(UNRESOLVED)
+    port_config.arp_attempt(c, 0, 0.5, True)
+    assert c.validated == [("arp", [0], (PSV_ACQUIRED, PSV_SERVICE, PSV_L3))]
+
+
+def test_arp_attempt_on_a_port_reset_out_of_l3_does_not_arp_and_raises() -> None:
+    trexapi.load()
+    # the layer is gone between two attempts: the vendor's check fails, the failure rule re-raises it
+    c = _Resolver({"state": "none"}, psv_exc=TrexApiError("port(s) [0]: not configured with L3"))
+    with pytest.raises(TrexApiError, match="not configured with L3"):
+        port_config.arp_attempt(c, 0, 0.5, False)
+    assert c.arps == [] and c.l3_calls == []
 
 
 def test_arp_attempt_unresolved_when_link_down() -> None:

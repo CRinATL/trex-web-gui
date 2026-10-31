@@ -16,6 +16,7 @@ PING_INTERVAL_S = 1.0                  # between two echoes, spent on the loop, 
 ARP_ATTEMPT_S = 0.5                    # one ARP try's listen: a job on the control executor
 ARP_BUDGET_S = 3.0                     # the resolve's whole listen, the vendor's one try (ServiceARP)
 ARP_ENDED = "the connection ended; the resolve stopped"
+ARP_ENDED_RESULT = trexapi.ArpResult("unresolved", None, ARP_ENDED)
 CONFIGURABLE = frozenset({"IDLE", "STREAMS", "ASTF_LOADED"})    # server stx/common/trex_port.cpp:378-380 etc.
 LEGACY_IPV6 = "IPv6 configuration needs the linux_based stack; this server runs legacy"
 
@@ -159,12 +160,12 @@ class PortConfigCommands:
                 return fn(c, port, *args)
             return job
 
-        # the ARP resolve as short attempts, one job each; an ended connection is the ARP_ENDED result
+        # the ARP resolve as short attempts, one job each; an ended connection is the ARP_ENDED_RESULT
         async def resolve() -> trexapi.ArpResult:
             attempts = math.ceil(ARP_BUDGET_S / ARP_ATTEMPT_S)
             for i in range(attempts):
                 if not self._connected_to(c):
-                    return trexapi.ArpResult("unresolved", None, ARP_ENDED)
+                    return ARP_ENDED_RESULT
                 r = await self._job(label, step(trexapi.arp_attempt, ARP_ATTEMPT_S, i == 0))
                 if r is not None:
                     return r                      # type: ignore[no-any-return]
@@ -180,7 +181,7 @@ class PortConfigCommands:
             else:
                 await self._job(label, step(trexapi.set_l3, req.src_ipv4 or "", req.dst_ipv4 or ""))
                 arp = await resolve()
-                if arp.error == ARP_ENDED:
+                if arp is ARP_ENDED_RESULT:
                     return arp                    # like ping: nothing more runs on a connection that ended
             if req.ipv6 is not None:
                 await self._job(label, step(trexapi.conf_ipv6, req.ipv6[0], req.ipv6[1]))
@@ -195,7 +196,8 @@ class PortConfigCommands:
             self._log("warning", f"{label}: L3 set, ARP unresolved: {arp.error}")
         else:
             self._log("info", f"{label}: done")
-        await self._refresh_quietly(c)
+        if self._connected_to(c):                  # a connection that ended is not refreshed, as ping does
+            await self._refresh_quietly(c)
         return ApplyResult(arp, restore_error)
 
     async def ping(self, port: int, dst: str, count: int, pkt_size: int) -> PingResult:

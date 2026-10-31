@@ -110,15 +110,18 @@ def _unresolved_or_raise(c: Any, port: int, e: Exception) -> ArpResult:
 
 
 def arp_attempt(c: Any, port: int, listen_s: float, first: bool) -> ArpResult | None:
-    """One ARP try on the port: a ServiceARP listening listen_s seconds in its own service context, which is
-    torn down when it returns (the vendor's STLClient.resolve, trex_client.py:2281, run in short pieces so
-    other jobs can run between them). On `first` the port's ARP is invalidated. A reply sets the port's L3
-    mode with the MAC (a bad RC raises TrexApiError) and returns "resolved"; no reply returns None (try
-    again). A failure follows the resolve rule: a loss or refusal is raised translated, any other failure is
-    "unresolved" with its text when src and dst are set and the layer state is unresolved, else re-raised
-    untranslated. Executor thread only."""
+    """One ARP try on the port: the vendor's acquired, service and L3 checks, then a ServiceARP listening
+    listen_s seconds in its own service context, which is torn down when it returns (the vendor's
+    STLClient.resolve, trex_client.py:2281, run in short pieces so other jobs can run between them). On
+    `first` the port's ARP is invalidated. A reply sets the port's L3 mode with the MAC (a bad RC raises
+    TrexApiError) and returns "resolved"; no reply returns None (try again). A failure follows the resolve
+    rule: a loss or refusal is raised translated, any other failure is "unresolved" with its text when src
+    and dst are set and the layer state is unresolved, else re-raised untranslated. Executor thread only."""
     from trex.common.services.trex_service_arp import ServiceARP
+    from trex.common.trex_psv import PSV_ACQUIRED, PSV_L3, PSV_SERVICE
     try:
+        # the vendor's own check (trex_client.py:2299): a port reset out of L3 between attempts fails here
+        c.psv.validate("arp", [port], (PSV_ACQUIRED, PSV_SERVICE, PSV_L3))
         p = c.ports[port]
         if first:
             p.invalidate_arp()

@@ -301,9 +301,12 @@ def test_the_connection_ending_between_attempts_stops_the_resolve(rig: Rig,
     async def body(s: TrexSession) -> None:
         r = await s.apply_layer(1, req)
         assert r.arp == ("unresolved", None, "the connection ended; the resolve stopped")
+        jobs.append(rig.jobs)                           # before close() runs its own disconnect job
+    jobs: list[int] = []
     rig.run(body)
     order = names(rig)
-    assert order.count("arp_attempt") == 2 and order[-1] == "arp_attempt"     # no further job of any kind
+    assert order.count("arp_attempt") == 2 and order[-1] == "arp_attempt"
+    assert jobs == [rig.log[-1][1]]                  # no job of any kind after the last attempt
     assert ("Apply L3 configuration to port 1: L3 set, ARP unresolved: the connection ended; the resolve "
             "stopped") in rig.logs("warning")
     assert not [m for m in rig.logs("info") if m.endswith(": done")] and rig.logs("error") == []
