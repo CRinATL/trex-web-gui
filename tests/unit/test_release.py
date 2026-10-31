@@ -750,3 +750,181 @@ def test_gate_2_hands_over_to_f1_instead_of_printing_private_release_commands(
     assert "nothing is tagged or released from this repo" in out
     assert "make release-build" in out and "make release-publish" in out
     assert "# wheel sha256 (a record" in out
+
+
+# --- the records helpers: the private records repo is read through its git dir ---------------------------
+
+HOST = "## Host use (1.0.x)\n\n| ID | Origin | Text | Status |\n|---|---|---|---|\n"
+
+
+def rec(repo: Path, gd: Path, *args: str) -> str:
+    """Runs git against the scratch records (git dir plus work tree, never the clone pytest runs in)."""
+    r = subprocess.run(["git", f"--git-dir={gd}", f"--work-tree={repo}", *args], cwd=repo, check=True,
+                       capture_output=True, text=True)
+    return r.stdout
+
+
+def records_repo(tmp_path: Path) -> tuple[Path, Path]:
+    """A public scratch repo plus a scratch records git dir (work tree = the repo) with a bare origin."""
+    repo, gd, remote = tmp_path / "repo", tmp_path / "records.git", tmp_path / "records-remote.git"
+    repo.mkdir()
+    (repo / ".gitignore").write_text("/dist/\n/PLAN.md\n/DEFERRED.md\n/.superpowers/\n/.sdd.conf\n"
+                                     "/docs/releases/host-use-*.md\n")
+    git(repo, "init", "-q", "-b", "main")
+    git(repo, "config", "user.name", "t")
+    git(repo, "config", "user.email", "t@example.com")
+    git(repo, "add", ".gitignore")
+    git(repo, "commit", "-qm", "init")
+    subprocess.run(["git", "init", "-q", "--bare", "-b", "main", str(remote)], check=True)
+    subprocess.run(["git", f"--git-dir={gd}", "init", "-q", "-b", "main"], check=True)
+    rec(repo, gd, "config", "user.name", "t")
+    rec(repo, gd, "config", "user.email", "t@example.com")
+    rec(repo, gd, "remote", "add", "origin", str(remote))
+    (repo / "docs" / "releases").mkdir(parents=True)
+    (repo / ".superpowers" / "sdd" / "a").mkdir(parents=True)
+    (repo / "PLAN.md").write_text("plan\n")
+    (repo / "DEFERRED.md").write_text(HOST)
+    (repo / release.HOST_USE_LOG).write_text("2026-10-31 installed 1.0.0\n")
+    (repo / ".superpowers" / "sdd" / "a" / "progress.md").write_text("ledger\n")
+    (repo / ".sdd.conf").write_text(f"LEDGER_GIT_DIR={gd}\n")
+    rec(repo, gd, "add", "-f", "PLAN.md", "DEFERRED.md", release.HOST_USE_LOG,
+        ".superpowers/sdd/a/progress.md", ".sdd.conf")
+    rec(repo, gd, "commit", "-qm", "records")
+    rec(repo, gd, "push", "-q", "origin", "main")
+    return repo, gd
+
+
+def test_records_git_dir_reads_sdd_conf_like_the_sdd_scripts(tmp_path: Path) -> None:
+    repo, gd = records_repo(tmp_path)
+    assert release.records_git_dir(repo, "/h") == gd
+    (repo / ".sdd.conf").write_text("LEDGER_GIT_DIR=/nowhere\nLEDGER_GIT_DIR=~/records.git\n")
+    assert release.records_git_dir(repo, str(tmp_path)) == gd          # last line wins, ~ is home
+
+
+@pytest.mark.parametrize("conf", [None, "PYTEST=x\n"])
+def test_records_git_dir_is_none_when_no_records_are_configured(tmp_path: Path, conf: str | None) -> None:
+    repo, _ = records_repo(tmp_path)
+    if conf is None:
+        (repo / ".sdd.conf").unlink()
+    else:
+        (repo / ".sdd.conf").write_text(conf)
+    assert release.records_git_dir(repo, "/h") is None
+
+
+@pytest.mark.parametrize("conf, why", [("LEDGER_GIT_DIR=.git\n", "inside the repo"),
+                                       ("LEDGER_GIT_DIR=/nowhere\n", "not a git dir")])
+def test_records_git_dir_says_why_a_set_key_is_unusable(tmp_path: Path, conf: str, why: str) -> None:
+    repo, _ = records_repo(tmp_path)
+    (repo / ".sdd.conf").write_text(conf)
+    got = release.records_git_dir(repo, "/h")
+    assert isinstance(got, str) and why in got
+
+
+def test_guard_refuses_a_set_but_unusable_key(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    repo, _ = records_repo(tmp_path)
+    (repo / ".sdd.conf").write_text("LEDGER_GIT_DIR=/nowhere\n")
+    assert release.main(["guard"], root=repo, env={"HOME": "/h"}) == 1
+    assert "records:" in capsys.readouterr().out
+
+
+def test_records_on_another_branch_are_a_problem(tmp_path: Path) -> None:
+    repo, gd = records_repo(tmp_path)
+    rec(repo, gd, "switch", "-q", "-c", "other")
+    assert "records are on other, not main" in release.records_problems(repo, gd)
+
+
+def test_records_in_sync_have_no_problems(tmp_path: Path) -> None:
+    repo, gd = records_repo(tmp_path)
+    assert release.records_problems(repo, gd) == []
+
+
+def test_a_modified_or_staged_record_is_a_problem(tmp_path: Path) -> None:
+    repo, gd = records_repo(tmp_path)
+    (repo / "DEFERRED.md").write_text(HOST + "edited\n")
+    got = release.records_problems(repo, gd)
+    assert len(got) == 1 and "DEFERRED.md" in got[0]
+    rec(repo, gd, "add", "-f", "DEFERRED.md")
+    got = release.records_problems(repo, gd)
+    assert len(got) == 1 and "DEFERRED.md" in got[0]
+    rec(repo, gd, "reset", "-q", "--hard")
+    (repo / ".superpowers" / "sdd" / "a" / "new.txt").write_text("untracked\n")
+    assert release.records_problems(repo, gd) == []
+
+
+def test_records_ahead_of_or_behind_their_remote_are_a_problem(tmp_path: Path) -> None:
+    repo, gd = records_repo(tmp_path)
+    (repo / "DEFERRED.md").write_text(HOST + "ahead\n")
+    rec(repo, gd, "commit", "-qam", "ahead")
+    got = release.records_problems(repo, gd)
+    assert len(got) == 1 and "git rec push" in got[0]
+    rec(repo, gd, "reset", "-q", "--hard", "HEAD~1")
+    other = tmp_path / "other-clone"
+    subprocess.run(["git", "clone", "-q", str(tmp_path / "records-remote.git"), str(other)], check=True)
+    git(other, "config", "user.name", "t")
+    git(other, "config", "user.email", "t@example.com")
+    (other / "DEFERRED.md").write_text(HOST + "elsewhere\n")
+    git(other, "commit", "-qam", "elsewhere")
+    git(other, "push", "-q", "origin", "main")
+    got = release.records_problems(repo, gd)
+    assert len(got) == 1 and "git rec push" in got[0]
+
+
+def test_an_unreachable_records_remote_is_a_git_error(tmp_path: Path) -> None:
+    repo, gd = records_repo(tmp_path)
+    subprocess.run(["git", f"--git-dir={gd}", "remote", "set-url", "origin", str(tmp_path / "gone.git")],
+                   check=True)
+    # by its base class: `release` reloads the script per attribute access, so GitError differs per load
+    with pytest.raises(RuntimeError, match="ls-remote"):
+        release.records_problems(repo, gd)
+
+
+def test_missing_tracked_records_are_problems(tmp_path: Path) -> None:
+    repo, gd = records_repo(tmp_path)
+    (repo / release.HOST_USE_LOG).unlink()
+    got = release.records_problems(repo, gd)
+    assert len(got) == 1 and release.HOST_USE_LOG in got[0]
+    rec(repo, gd, "rm", "-q", "--cached", release.HOST_USE_LOG)
+    rec(repo, gd, "commit", "-qm", "untrack the log")
+    rec(repo, gd, "push", "-q", "origin", "main")
+    got = release.records_problems(repo, gd)
+    assert len(got) == 1 and release.HOST_USE_LOG in got[0]
+
+
+def test_host_rows_closed_three_ways_pass() -> None:
+    rows = "".join(f"| H-{i} | host use, 2026-10-31 | f{i} | {s} |\n"
+                   for i, s in enumerate(["fixed in abc1234", "wontfix: for 1.0.x (user, 2026-10-31)",
+                                          "recorded: kept"], 1))
+    assert release.host_rows_problems(HOST + rows) == []
+    assert release.host_rows_problems(HOST) == []                          # no finding yet
+
+
+def test_an_open_host_row_is_named_wherever_it_sits() -> None:
+    text = HOST + "| H-1 | host use, 2026-10-31 | a \\| b, fixed later | open |\n"
+    text += "## Register\n\n| H-2 | host use, 2026-10-31 | misplaced | open |\n"
+    assert release.host_rows_problems(text) == ["open host row H-1: open", "open host row H-2: open"]
+
+
+def test_a_missing_host_section_is_a_problem() -> None:
+    assert release.host_rows_problems("# register\n") == [
+        "DEFERRED.md lacks the section '## Host use (1.0.x)'"]
+
+
+def test_use_log_problems_names_the_path_it_is_given() -> None:
+    assert release.use_log_problems(None, "x.md") == ["x.md is missing"]
+    assert release.use_log_problems("no date\n", "x.md") == [
+        "x.md has no line starting with a date (YYYY-MM-DD)"]
+    assert release.use_log_problems("2026-10-31 ok\n", "x.md") == []
+
+
+def test_the_guard_reads_the_records_through_their_git_dir(tmp_path: Path) -> None:
+    repo, gd = records_repo(tmp_path)
+    (repo / "PLAN.md").write_text("see /var/tmp/x.log\n")
+    texts, tracked = release._guard_inputs(repo, gd)
+    assert "PLAN.md" in texts and release.guard_problems(texts, tracked)   # the public scan reads nothing
+    assert release._guard_inputs(repo)[0] == {}
+    (repo / "docs" / "evidence").mkdir()
+    (repo / "docs" / "evidence" / "x.log").write_text("log\n")
+    (repo / "PLAN.md").write_text("see /var/tmp/x.log (committed: docs/evidence/x.log)\n")
+    rec(repo, gd, "add", "-f", "docs/evidence/x.log")
+    texts, tracked = release._guard_inputs(repo, gd)
+    assert release.guard_problems(texts, tracked) == []

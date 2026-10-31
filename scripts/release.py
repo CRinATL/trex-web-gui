@@ -185,13 +185,34 @@ def rc1_open_rows(deferred_text: str) -> list[str]:
     return open_rows
 
 
-def use_log_problems(text: str | None) -> list[str]:
-    """The rc1 week's use log must exist and hold at least one line starting with a date."""
+def use_log_problems(text: str | None, path: str = USE_LOG) -> list[str]:
+    """A week's use log must exist and hold at least one line starting with a date."""
     if text is None:
-        return [f"{USE_LOG} is missing"]
+        return [f"{path} is missing"]
     if not re.search(r"^\d{4}-\d{2}-\d{2}", text, re.M):
-        return [f"{USE_LOG} has no line starting with a date (YYYY-MM-DD)"]
+        return [f"{path} has no line starting with a date (YYYY-MM-DD)"]
     return []
+
+
+HOST_USE_LOG = "docs/releases/host-use-1.0.x.md"
+HOST_SECTION = "## Host use (1.0.x)"
+CONF = ".sdd.conf"
+
+
+def host_rows_problems(deferred_text: str) -> list[str]:
+    """The register must hold the host-use section, and every `H-<n>` row anywhere in it must be closed
+    (status starts `fixed`, `wontfix` or `recorded`); the status is the last cell, never the finding text."""
+    problems = []
+    if HOST_SECTION not in deferred_text.splitlines():
+        problems.append(f"{DEFERRED} lacks the section {HOST_SECTION!r}")
+    for line in deferred_text.splitlines():
+        cells = [c.strip() for c in re.split(r"(?<!\\)\|", line)]
+        if len(cells) < 4 or not re.fullmatch(r"H-\d+", cells[1]):
+            continue
+        status = cells[-2]
+        if not status.startswith(("fixed", "wontfix", "recorded")):
+            problems.append(f"open host row {cells[1]}: {status}")
+    return problems
 
 
 def steps(target: Target) -> list[list[str]]:
@@ -243,11 +264,68 @@ def _read(path: Path) -> str | None:
     return path.read_text() if path.is_file() else None
 
 
-def _guard_inputs(root: Path) -> tuple[dict[str, str], set[str]]:
-    """The guarded texts (PLAN.md, DEFERRED.md, tracked ledgers) and the set of tracked paths."""
-    tracked = {p for p in _git(root, "ls-files").splitlines() if p}
-    names = [n for n in GUARDED if n in tracked]
-    names += sorted(p for p in tracked if re.fullmatch(r"\.superpowers/sdd/[^/]+/progress\.md", p))
+def records_git_dir(root: Path, home: str) -> Path | str | None:
+    """The records' git dir, read from root's .sdd.conf like the sdd scripts' ledger_git_dir(): the last
+    `LEDGER_GIT_DIR=` line, no quote stripping, a leading `~` is home, a relative path is relative to root.
+    None when no records are configured; a str reason when the key is set but unusable (inside the repo, or
+    not a git dir), so the caller refuses rather than scan nothing."""
+    conf = root / CONF
+    if not conf.is_file():
+        return None
+    values = re.findall(r"^LEDGER_GIT_DIR=(.*)$", conf.read_text(), re.M)
+    if not values or not values[-1]:
+        return None
+    value = values[-1]
+    raw = home + value[1:] if value.startswith("~") else value
+    path = Path(os.path.normpath(raw if raw.startswith("/") else str(root / raw)))
+    top = Path(os.path.normpath(root))
+    if path == top or top in path.parents:
+        return (f"{CONF} sets LEDGER_GIT_DIR={value}, which is inside the repo ({top}); "
+                "only a git dir outside it is used")
+    try:
+        _git(root, f"--git-dir={path}", "rev-parse", "--git-dir")
+    except GitError:
+        return f"{CONF} sets LEDGER_GIT_DIR={value}, which is not a git dir"
+    return path
+
+
+def _rec(root: Path, gd: Path, *args: str) -> str:
+    """`git <args>` against the records' git dir, whose work tree is the public clone."""
+    return _git(root, f"--git-dir={gd}", f"--work-tree={root}", *args)
+
+
+def records_problems(root: Path, gd: Path) -> list[str]:
+    """The records must track the register, the host-use log and .sdd.conf, hold no uncommitted change to a
+    tracked record, sit on main, and have main equal to their remote's (ls-remote only; a failure raises)."""
+    problems = []
+    tracked = set(_rec(root, gd, "ls-files").splitlines())
+    problems += [f"{name} is not tracked by the records" for name in (DEFERRED, HOST_USE_LOG, CONF)
+                 if name not in tracked]
+    dirty = _rec(root, gd, "status", "--porcelain", "--untracked-files=no").splitlines()
+    problems += [f"records have an uncommitted change: {line.strip()}" for line in dirty if line.strip()]
+    branch = _rec(root, gd, "rev-parse", "--abbrev-ref", "HEAD").strip()
+    if branch != "main":
+        problems.append(f"records are on {branch}, not main")
+    local = _rec(root, gd, "rev-parse", "main").strip()
+    remote = _rec(root, gd, "ls-remote", "origin", "refs/heads/main").split()
+    remote_sha = remote[0] if remote else "nothing"
+    if local != remote_sha:
+        problems.append(f"records main is {local}, its remote has {remote_sha}: commit and push the records "
+                        "(git rec push)")
+    return problems
+
+
+def _guard_inputs(root: Path, gd: Path | None = None) -> tuple[dict[str, str], set[str]]:
+    """The guarded texts (PLAN.md, DEFERRED.md, tracked ledgers) and the set of tracked paths; with the
+    records' git dir, the paths the records track count and name the guarded files."""
+    public = {p for p in _git(root, "ls-files").splitlines() if p}
+    if gd is None:
+        tracked = names_from = public
+    else:
+        names_from = {p for p in _rec(root, gd, "ls-files").splitlines() if p}
+        tracked = public | names_from
+    names = [n for n in GUARDED if n in names_from]
+    names += sorted(p for p in names_from if re.fullmatch(r"\.superpowers/sdd/[^/]+/progress\.md", p))
     return {n: (root / n).read_text() for n in names if (root / n).is_file()}, tracked
 
 
@@ -613,10 +691,14 @@ def main(argv: list[str] | None = None, run: Callable[[list[str], Path], int] = 
     args = ap.parse_args(argv)
     try:
         if args.cmd == "guard":
-            if not (root / "PLAN.md").is_file():   # a public clone: with no records, nothing would be scanned
+            gd = records_git_dir(root, env.get("HOME", ""))
+            if isinstance(gd, str):   # a set but unusable key must not fall back to a scan that reads nothing
+                print(f"records: {gd}")
+                return 1
+            if gd is None and not (root / "PLAN.md").is_file():   # a public clone: nothing would be scanned
                 print("PLAN.md not found: the guard scans the records, which are in the private repo")
                 return 1
-            texts, tracked = _guard_inputs(root)
+            texts, tracked = _guard_inputs(root, gd)
             found = guard_problems(texts, tracked)
             print("\n".join(found) if found else "guard: ok")
             return 1 if found else 0
