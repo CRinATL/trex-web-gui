@@ -820,6 +820,15 @@ def test_records_git_dir_says_why_a_set_key_is_unusable(tmp_path: Path, conf: st
     assert isinstance(got, str) and why in got
 
 
+def test_records_git_dir_follows_symlinks_into_the_repo(tmp_path: Path) -> None:
+    repo, _ = records_repo(tmp_path)
+    link = tmp_path / "link.git"
+    link.symlink_to(repo / ".git")
+    (repo / ".sdd.conf").write_text(f"LEDGER_GIT_DIR={link}\n")
+    got = release.records_git_dir(repo, "/h")
+    assert isinstance(got, str) and "inside the repo" in got
+
+
 def test_guard_refuses_a_set_but_unusable_key(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
     repo, _ = records_repo(tmp_path)
     (repo / ".sdd.conf").write_text("LEDGER_GIT_DIR=/nowhere\n")
@@ -874,8 +883,9 @@ def test_an_unreachable_records_remote_is_a_git_error(tmp_path: Path) -> None:
     subprocess.run(["git", f"--git-dir={gd}", "remote", "set-url", "origin", str(tmp_path / "gone.git")],
                    check=True)
     # by its base class: `release` reloads the script per attribute access, so GitError differs per load
-    with pytest.raises(RuntimeError, match="ls-remote"):
+    with pytest.raises(RuntimeError, match="ls-remote") as excinfo:
         release.records_problems(repo, gd)
+    assert excinfo.type.__name__ == "GitError"
 
 
 def test_missing_tracked_records_are_problems(tmp_path: Path) -> None:

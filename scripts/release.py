@@ -277,8 +277,8 @@ def records_git_dir(root: Path, home: str) -> Path | str | None:
         return None
     value = values[-1]
     raw = home + value[1:] if value.startswith("~") else value
-    path = Path(os.path.normpath(raw if raw.startswith("/") else str(root / raw)))
-    top = Path(os.path.normpath(root))
+    path = Path(os.path.realpath(raw if raw.startswith("/") else str(root / raw)))
+    top = Path(os.path.realpath(root))
     if path == top or top in path.parents:
         return (f"{CONF} sets LEDGER_GIT_DIR={value}, which is inside the repo ({top}); "
                 "only a git dir outside it is used")
@@ -302,7 +302,7 @@ def records_problems(root: Path, gd: Path) -> list[str]:
     problems += [f"{name} is not tracked by the records" for name in (DEFERRED, HOST_USE_LOG, CONF)
                  if name not in tracked]
     dirty = _rec(root, gd, "status", "--porcelain", "--untracked-files=no").splitlines()
-    problems += [f"records have an uncommitted change: {line.strip()}" for line in dirty if line.strip()]
+    problems += [f"records have an uncommitted change: {line.rstrip()}" for line in dirty if line.strip()]
     branch = _rec(root, gd, "rev-parse", "--abbrev-ref", "HEAD").strip()
     if branch != "main":
         problems.append(f"records are on {branch}, not main")
