@@ -37,7 +37,7 @@ status of the refusal.
   setups, the Studio library, packet templates, uploads, bundle imports); the message says which.
 - Any other code is the route's own, or one of the refusals below; each route's Responses list names the
   ones it can answer. A route's list is every pair its handler's code can reach, including codes a shared
-  helper answers only for other routes; the route's description says which apply.
+  helper answers only for other routes, so a listed code is one the route may answer, not one it must.
 
 ### Refusals
 
