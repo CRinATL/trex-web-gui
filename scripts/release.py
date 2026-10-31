@@ -21,6 +21,9 @@ with `git verify-tag` against ~/.config/git/allowed_signers) and its release is 
 verifies the draft's wheel and stops for the person to look at the draft; `--publish-draft` (make
 release-publish PUBLISH_DRAFT=1) publishes it and verifies the wheel again.
 
+`check patch` and `publish patch` release 1.0.N, the N that backend/pyproject.toml names, as a full (not
+pre-) release.
+
 Run it as `uv run --project backend python -I -B scripts/release.py ...` (make release-rc, make release). Exit
 codes: 0 releasable (published, for publish), 1 a precondition or a step failed, 3 the real tier was skipped
 (RELEASE_REAL=skip)."""
@@ -67,23 +70,38 @@ def rc_target(n: int) -> Target:
     return Target(f"rc{n}", f"1.0.0rc{n}", f"v1.0.0-rc{n}", f"docs/releases/v1.0.0-rc{n}.md", True)
 
 
+PATCH_VERSION = re.compile(r"1\.0\.([1-9]\d*)")
+
+
+def patch_target(n: int) -> Target:
+    """Patch n of 1.0: version 1.0.<n>, tag v1.0.<n>, its own public notes file; a full release."""
+    return Target("patch", f"1.0.{n}", f"v1.0.{n}", f"docs/releases/v1.0.{n}.md", False)
+
+
 def resolve_target(name: str, pyproject_text: str) -> Target | str:
-    """The Target for `final`, `rc<N>`, or `rc` (the candidate pyproject's version names, so make release-rc
-    needs no edit per candidate); a str says why there is none."""
+    """The Target for `final`, `rc<N>`, `rc` or `patch` (the last two take the version pyproject names, so
+    neither needs an edit per release); a str says why there is none."""
     if name == "final":
         return FINAL
     if m := RC_NAME.fullmatch(name):
         return rc_target(int(m.group(1)))
-    if name != "rc":
-        return f"unknown target {name!r}: rc, rc<N> or final"
+    if name not in ("rc", "patch"):
+        return f"unknown target {name!r}: rc, rc<N>, final or patch"
     try:
         version = tomllib.loads(pyproject_text).get("project", {}).get("version")
     except tomllib.TOMLDecodeError as e:
         return f"backend/pyproject.toml is not valid TOML: {e}"
+    if name == "patch":
+        m = PATCH_VERSION.fullmatch(version) if isinstance(version, str) else None
+        if m is None:
+            return f"backend/pyproject.toml version is {version!r}, not a 1.0.x patch (1.0.1 or later)"
+        return patch_target(int(m.group(1)))
     m = re.fullmatch(r"1\.0\.0rc([1-9]\d*)", version) if isinstance(version, str) else None
     if m is None:
         return f"backend/pyproject.toml version is {version!r}, not a 1.0.0 release candidate"
     return rc_target(int(m.group(1)))
+
+
 USE_LOG = "docs/releases/v1.0.0-rc1-use.md"
 DEFERRED = "DEFERRED.md"
 REQUIRED_SECTIONS = ("## What is in", "## Install", "## Supported", "## Known limitations", "## Deviations",

@@ -301,6 +301,19 @@ def test_targets_resolve_rc_n_and_rc_from_the_pyproject_version() -> None:
     assert got == ["docs/releases/v1.0.0-rc2.md lacks the section '## What to record during the week'"]
 
 
+def test_patch_resolves_from_the_pyproject_version() -> None:
+    t = release.resolve_target("patch", '[project]\nversion = "1.0.12"\n')
+    assert (t.name, t.version, t.tag, t.notes, t.prerelease) == (
+        "patch", "1.0.12", "v1.0.12", "docs/releases/v1.0.12.md", False)
+    assert release.wheel_name(t.version) == "trex_web_gui-1.0.12-py3-none-any.whl"
+
+
+@pytest.mark.parametrize("version", ["1.0.0", "1.0.0rc5", "1.1.0", "1.0.01", "2.0.1"])
+def test_patch_refuses_a_version_that_is_not_a_patch(version: str) -> None:
+    why = release.resolve_target("patch", f'[project]\nversion = "{version}"\n')
+    assert isinstance(why, str) and repr(version) in why and "1.0.x patch" in why
+
+
 def test_check_rc_takes_the_candidate_from_pyproject(tmp_path: Path) -> None:
     repo = make_repo(tmp_path)
     rec = Recorder(repo)
