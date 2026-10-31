@@ -100,10 +100,18 @@ def test_refusal_sites_reads_positional_keyword_and_attribute_calls(tmp_path: Pa
         'def g():\n'
         '    raise trexapi.CommandRefused(code="b", message="m")\n'
         'def h():\n'
-        '    raise DaemonRefused(x, "m")\n')
+        '    raise DaemonRefused(x, "m")\n'
+        'def i():\n'
+        '    raise BundleError()\n')
     sites = load_checker().refusal_sites(tmp_path)
     assert sites == {("session", "a"): ["m.py:2"], ("session", "b"): ["m.py:4"],
-                     ("daemon", "<non-literal>"): ["m.py:6"]}
+                     ("daemon", "<non-literal>"): ["m.py:6"], ("bundle", "<non-literal>"): ["m.py:8"]}
+
+
+def test_refusal_sites_skips_vendored_code(tmp_path: Path) -> None:
+    (tmp_path / "_vendor").mkdir()
+    (tmp_path / "_vendor" / "x.py").write_text('raise CommandRefused("zz", "m")\n')
+    assert ("session", "zz") not in load_checker().refusal_sites(tmp_path)
 
 
 def test_refusal_table_statuses_follow_the_mapping_sites() -> None:

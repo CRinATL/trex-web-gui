@@ -1,5 +1,6 @@
-"""The refusal codes of the three session families, the shared table of docs/api.md. A route that can reach
-the mapping site of a family declares the family (`answers((409, "session"))`) instead of each code.
+"""The refusal codes of the three refusal families (session, daemon, bundle), the shared table of
+docs/api.md. A route that can reach the mapping site of a family declares the family
+(`answers((409, "session"))`) instead of each code.
 
 Mapping sites: `CommandRefused` is 409 (422 for `bad_request`) at `run` in api/app.py; `DaemonRefused` is 409
 at `_answer` in api/daemon.py; `BundleError` is 422 in api/bundle.py. A code raised by two families has a row

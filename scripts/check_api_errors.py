@@ -32,15 +32,18 @@ def refusal_sites(root: Path) -> dict[tuple[str, str], list[str]]:
     `"<non-literal>"` of its family."""
     sites: dict[tuple[str, str], list[str]] = {}
     for path in sorted(root.rglob("*.py")):
+        rel = path.relative_to(root)
+        if "_vendor" in rel.parts:              # vendored third-party code is not ours to scan
+            continue
         tree = ast.parse(path.read_text(), filename=str(path))
         for node in ast.walk(tree):
-            if not isinstance(node, ast.Call) or _class_name(node.func) not in FAMILIES:
+            if not isinstance(node, ast.Call):
+                continue
+            name = _class_name(node.func)
+            if name not in FAMILIES:
                 continue
             arg = _code_arg(node)
-            if arg is None:
-                continue
             literal = isinstance(arg, ast.Constant) and isinstance(arg.value, str)
-            key = arg.value if literal else NON_LITERAL  # type: ignore[union-attr]
-            family = FAMILIES[_class_name(node.func)]  # type: ignore[index]
-            sites.setdefault((family, key), []).append(f"{path.relative_to(root)}:{node.lineno}")
+            key = arg.value if isinstance(arg, ast.Constant) and literal else NON_LITERAL
+            sites.setdefault((FAMILIES[name], str(key)), []).append(f"{rel}:{node.lineno}")
     return sites
