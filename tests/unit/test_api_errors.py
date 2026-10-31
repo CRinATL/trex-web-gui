@@ -6,6 +6,7 @@ import textwrap
 from pathlib import Path
 from types import ModuleType
 
+import pytest
 from fastapi import APIRouter, FastAPI
 from support import ROOT
 from trex_web_gui.api.declared import answers, family_line
@@ -144,6 +145,7 @@ def test_errors_lead_sentence_admits_the_plain_text_400() -> None:
 
 # The imports every synthetic module starts with, as the real api/ modules spell them.
 HEAD = ("import asyncio\n"
+        "import functools\n"
         "from fastapi import APIRouter\n"
         "from fastapi.responses import FileResponse, JSONResponse, Response\n"
         "from trex_web_gui import trexapi\n"
@@ -365,7 +367,7 @@ def test_method_calls_and_parameters_are_data() -> None:
 
 
 def test_body_refused_response_is_read_json_capped() -> None:
-    assert reach('''
+    src = '''
         def make():
             async def guarded(work):
                 try:
@@ -374,8 +376,37 @@ def test_body_refused_response_is_read_json_capped() -> None:
                     return e.response
 
             async def h():
-                return await guarded(lambda: 1)
-        ''') == READ_JSON_CAPPED
+                async def go():
+                    return {"ok": True}
+                return await guarded(go)
+
+            async def h2(request):
+                async def go():
+                    return await read_json_capped(request, 10)
+                return await guarded(go)
+
+            async def h3():
+                async def go():
+                    raise BodyRefused(err(404, "not_found", "m"))
+                return await guarded(go)
+
+            async def h4(request):
+                try:
+                    return await request.json()
+                except (BodyRefused, ValueError) as e:
+                    return e.response
+
+            async def h5(request):
+                try:
+                    return await read_json_capped(request, 10)
+                except (ValueError, BodyRefused) as e:
+                    return e.response
+        '''
+    assert reach(src) == set()
+    assert reach(src, "h2") == READ_JSON_CAPPED
+    assert reach(src, "h3") == {(404, "not_found")} | READ_JSON_CAPPED
+    assert reach(src, "h4") == set()
+    assert reach(src, "h5") == READ_JSON_CAPPED
 
 
 def test_unresolvable_call_is_reported_not_skipped() -> None:
@@ -389,7 +420,12 @@ def test_unresolvable_call_is_reported_not_skipped() -> None:
                  'def h():\n    try:\n        return 1\n    except ValueError as e:\n'
                  '        return err(409, e.code, "m")\n',
                  'def h():\n    return mystery()\n',
-                 'def h(p):\n    return upload_path(p)\n'):
+                 'def h(p):\n    return upload_path(p)\n',
+                 'def h():\n    respond = err\n    return respond(404, "x", "m")\n',
+                 'def h():\n    f = functools.partial(err, 404)\n    return f("x", "m")\n',
+                 'def h(body):\n    return JSONResponse(body, status)\n',
+                 'def h():\n    try:\n        return 1\n    except OSError as e:\n'
+                 '        return e.response\n'):
         assert why(reach(body)), body
     spec = {"paths": {"/api/x": {"get": op()}}}
     sources = {"m.py": HEAD + 'def h(status_var):\n    return err(status_var, "x", "m")\n'}
@@ -448,10 +484,54 @@ def test_problems_names_route_and_pair() -> None:
     routes = {"GET /api/h": ("m.py", "h"), "GET /api/bad": ("m.py", "bad"), "GET /api/quiet": ("m.py", "bad")}
     checker = load_checker()
     found = checker.problems(spec, routes, {"m.py": src}, REFUSALS, {"GET /api/quiet": "a test reason"})
-    assert found[0].startswith("GET /api/bad: cannot be followed: line 18: "), found
+    bad_line = src.splitlines().index('    return err(s, "x", "m")') + 1
+    assert found[0].startswith(f"GET /api/bad: cannot be followed: line {bad_line}: "), found
     assert found[1:] == ["GET /api/h: 404 not_found answered but not declared",
                          "GET /api/h: 409 exists declared but never answered"]
     spec["paths"]["/api/h"]["get"] = op("409 not_owned when taken.", s304=[""], s404=["not_found"])
     allowed = {"GET /api/bad": "a test reason", "GET /api/quiet": "a test reason"}
     assert checker.problems(spec, routes, {"m.py": src}, REFUSALS, allowed) == [
         "GET /api/h: 409 not_owned named in the docstring but not declared"]
+
+
+def test_classes_are_data_and_positional_statuses_are_read() -> None:
+    assert reach('''
+        class Notes:
+            pass
+
+        def h(body, n):
+            Notes()
+            if n:
+                return JSONResponse({"error": "stale", "message": "m"}, 409)
+            if body:
+                return JSONResponse(body, 422)
+            return Response(None, 304)
+        ''') == {(409, "stale"), (422, ""), (304, "")}
+
+
+def test_routes_of_refuses_a_duplicate_route() -> None:
+    app = FastAPI()
+
+    @app.get("/api/x")
+    def first() -> dict[str, str]:
+        return {}
+
+    @app.get("/api/x")
+    def second() -> dict[str, str]:
+        return {}
+
+    with pytest.raises(ValueError, match="GET /api/x"):
+        load_checker().routes_of(app)
+
+
+def test_declared_reads_real_answers_through_openapi() -> None:
+    app = FastAPI()
+
+    @app.get("/api/x/y", responses=declared())  # type: ignore[arg-type]
+    def route() -> dict[str, str]:
+        return {}
+
+    operation = app.openapi()["paths"]["/api/x/y"]["get"]
+    assert load_checker()._declared(operation) == {
+        (409, "exists"), (404, "not_found"), (409, "family:session"), (422, "profile_error"),
+        (422, "family:bundle"), (304, "")}

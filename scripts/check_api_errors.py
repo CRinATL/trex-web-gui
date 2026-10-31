@@ -117,8 +117,8 @@ def _children(node: ast.AST) -> list[ast.AST]:
 
 def _bindings(scope: Scope) -> dict[str, tuple[str, Any]]:
     """Name -> (kind, detail) for each name bound in `scope` itself (nested functions and classes are bound,
-    not entered). Kinds: def (a function or a lambda assigned to a name; detail is its node), param, import
-    (detail is the module, "" for `import x`), local (any other binding)."""
+    not entered). Kinds: def (a function or a lambda assigned to a name; detail is its node), param, class,
+    import (detail is the module, "" for `import x`), local (any other binding)."""
     found: dict[str, tuple[str, Any]] = {}
 
     def bind(name: str, kind: str, detail: Any = None) -> None:
@@ -140,7 +140,7 @@ def _bindings(scope: Scope) -> dict[str, tuple[str, Any]]:
             bind(node.name, "def", node)
             continue
         if isinstance(node, ast.ClassDef):
-            bind(node.name, "local")
+            bind(node.name, "class")
             continue
         if isinstance(node, ast.Lambda):
             continue
@@ -175,6 +175,8 @@ class _Walk:
         self.scopes: dict[int, dict[str, tuple[str, Any]]] = {}
         self.pairs: set[Pair] = set()
         self.seen: set[int] = set()
+        self.response_caught = False     # an `e.response` of a caught BodyRefused was reached
+        self.body_refusable = False      # a read_json_capped call or a BodyRefused(...) was reached
         self.functions: list[ast.FunctionDef | ast.AsyncFunctionDef] = []
         for node in tree.body:
             self._index(node, tree)
@@ -223,9 +225,9 @@ class _Walk:
         for node in _children(fn):
             self.visit(node, chain, {})
 
-    def visit(self, node: ast.AST, chain: list[Scope], caught: dict[str, str | None]) -> None:
+    def visit(self, node: ast.AST, chain: list[Scope], caught: dict[str, tuple[str, ...]]) -> None:
         """Collect the pairs under `node`. `caught` maps each name bound by an enclosing `except X as name` to
-        the class name of X (None for a tuple)."""
+        the class names of X (each member of a tuple; "" for a class given by an expression)."""
         if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
             return                                   # followed only where it is referenced
         if isinstance(node, ast.Lambda):
@@ -240,9 +242,9 @@ class _Walk:
                 self.visit(part, chain, caught)
             for handler in node.handlers:
                 inner = caught
-                if handler.name:
-                    cls = _class_name(handler.type) if handler.type is not None else None
-                    inner = {**caught, handler.name: cls}
+                if handler.name and handler.type is not None:
+                    types = handler.type.elts if isinstance(handler.type, ast.Tuple) else [handler.type]
+                    inner = {**caught, handler.name: tuple(_class_name(t) or "" for t in types)}
                 for part in handler.body:
                     self.visit(part, chain, inner)
             return
@@ -253,16 +255,18 @@ class _Walk:
             if kind == "def":
                 self.follow(detail)
         elif (isinstance(node, ast.Attribute) and node.attr == "response" and isinstance(node.value, ast.Name)
-              and caught.get(node.value.id, "") == BODY_REFUSED):
-            if "read_json_capped" not in self.shared:
-                raise _Stop(f"line {node.lineno}: e.response of BodyRefused needs read_json_capped in shared")
-            self.pairs |= self.shared["read_json_capped"]
+              and node.value.id in caught):
+            classes = caught[node.value.id]
+            if BODY_REFUSED not in classes:
+                raise _Stop(f"line {node.lineno}: {node.value.id}.response of a caught {', '.join(classes)}, "
+                            f"not {BODY_REFUSED}")
+            self.response_caught = True
         for child in ast.iter_child_nodes(node):
             if isinstance(node, ast.Call) and child is node.func and isinstance(child, ast.Name):
                 continue                             # the called name was classified by `call`
             self.visit(child, chain, caught)
 
-    def call(self, node: ast.Call, chain: list[Scope], caught: dict[str, str | None]) -> None:
+    def call(self, node: ast.Call, chain: list[Scope], caught: dict[str, tuple[str, ...]]) -> None:
         """Classify a call: a response, a followed function, a SHARED name, data, or a reason to give up."""
         if not isinstance(node.func, ast.Name):
             return                                   # a method call or a call of a call: data
@@ -270,26 +274,29 @@ class _Walk:
         kind, detail = self.resolve(name, chain)
         if kind == "def":
             self.follow(detail)
-        elif kind in ("param", "local", "builtin"):
+        elif kind in ("param", "class", "builtin"):
             return
+        elif kind == "local":
+            raise _Stop(f"line {line}: call to {name}, a local the walk cannot follow")
         elif name in RESPONSES:
             self.response(node, caught)
         elif kind == "unbound":
             raise _Stop(f"line {line}: call to {name}, which is not defined, imported or a builtin")
         elif API_MODULE.match(detail):
+            self.body_refusable |= name in ("read_json_capped", BODY_REFUSED)
             if name in self.shared:
                 self.pairs |= self.shared[name]
             elif name != BODY_REFUSED:
                 raise _Stop(f"line {line}: call to {name}, imported from {detail} and not in SHARED")
 
-    def response(self, node: ast.Call, caught: dict[str, str | None]) -> None:
+    def response(self, node: ast.Call, caught: dict[str, tuple[str, ...]]) -> None:
         """The pairs of an `err`, `JSONResponse` or `Response` call (see `reachable`)."""
         name, line = node.func.id, node.lineno            # type: ignore[attr-defined]
         if name == "err":
             status = node.args[0] if node.args else _keyword(node, "status")
             code = node.args[1] if len(node.args) > 1 else _keyword(node, "code")
         else:
-            status = _keyword(node, "status_code")
+            status = node.args[1] if len(node.args) > 1 else _keyword(node, "status_code")
             body = node.args[0] if node.args else _keyword(node, "content")
             code = None
             if isinstance(body, ast.Dict):
@@ -310,10 +317,11 @@ class _Walk:
         if literal is not None:
             self.pairs |= {(s, literal) for s in statuses}
             return
-        if (name == "err" and isinstance(code, ast.Attribute) and code.attr == "code"
-                and isinstance(code.value, ast.Name) and caught.get(code.value.id) in FAMILIES):
-            family = FAMILIES[str(caught[code.value.id])]
-            self.pairs |= {(s, f"family:{family}") for s in statuses}
+        classes: tuple[str, ...] = ()
+        if isinstance(code, ast.Attribute) and code.attr == "code" and isinstance(code.value, ast.Name):
+            classes = caught.get(code.value.id, ())
+        if name == "err" and classes and all(c in FAMILIES for c in classes):
+            self.pairs |= {(s, f"family:{FAMILIES[c]}") for s in statuses for c in classes}
             return
         raise _Stop(f"line {line}: {name} with a code that is not a literal or a family's e.code")
 
@@ -330,16 +338,19 @@ def reachable(module_src: str, handler: str, shared: dict[str, set[Pair]]) -> se
 
     Pairs: `err(<status>, "<code>", ...)`; `JSONResponse({"error": "<code>", ...}, status_code=<status>)`;
     `Response(status_code=<status>)` or a code-less `JSONResponse(..., status_code=<status>)` as
-    `(status, "")` (status 200 is a success, not a pair); an IfExp status gives both branches;
-    `err(<status>, e.code, ...)` under `except CommandRefused|DaemonRefused|BundleError as e` (bare or
-    qualified) gives `(status, "family:<session|daemon|bundle>")`; `e.response` under
-    `except BodyRefused as e` gives `shared["read_json_capped"]`; a call to a key of `shared` gives its pairs.
-    Method calls, calls into other packages, builtins, locals, parameters, classes and `BodyRefused(...)` (its
-    argument is walked) are data.
+    `(status, "")` (status 200 is a success, not a pair; the status may also be the second positional
+    argument); an IfExp status gives both branches; `err(<status>, e.code, ...)` under
+    `except CommandRefused|DaemonRefused|BundleError as e` (bare or qualified, or a tuple of them) gives
+    `(status, "family:<session|daemon|bundle>")` for each; `e.response` under `except BodyRefused as e` (or a
+    tuple holding it) gives `shared["read_json_capped"]`, but only when the walk also reaches a
+    `read_json_capped` call or a `BodyRefused(...)`, since otherwise nothing can raise it; a call to a key of
+    `shared` gives its pairs. Method calls, calls into other packages, builtins, parameters, classes and
+    `BodyRefused(...)` (its argument is walked) are data.
 
     Unresolved: an `err`/`JSONResponse`/`Response` whose status or code is not a literal (outside the family
-    sites above), a call to a name nothing binds that is not a builtin, or a call to a name imported from
-    another api/ module other than `err`, `BodyRefused` and the keys of `shared`."""
+    sites above), `e.response` of an exception that is not a BodyRefused, a call to a local name that is not a
+    function (`respond = err; respond(...)`), a call to a name nothing binds that is not a builtin, or a call
+    to a name imported from another api/ module other than `err`, `BodyRefused` and the keys of `shared`."""
     tree = ast.parse(module_src)
     walk = _Walk(tree, shared)
     found = [f for f in walk.functions if f.name == handler]
@@ -349,6 +360,10 @@ def reachable(module_src: str, handler: str, shared: dict[str, set[Pair]]) -> se
         walk.follow(found[0])
     except _Stop as e:
         return Unresolved(str(e))
+    if walk.response_caught and walk.body_refusable:
+        if "read_json_capped" not in shared:
+            return Unresolved("e.response of BodyRefused needs read_json_capped in shared")
+        walk.pairs |= shared["read_json_capped"]
     return walk.pairs
 
 
@@ -357,7 +372,8 @@ def routes_of(app: Any, prefix: str = "") -> dict[str, tuple[str, str]]:
     FastAPI import). An entry with `endpoint`, `path_format`, `methods` and a true `include_in_schema` is a
     route; one with `original_router` and `include_context.prefix` (FastAPI's wrapper of an
     `include_router`) is recursed into with its prefix prepended. `path_format` already drops `{name:path}`
-    converters and holds the router's own prefix."""
+    converters and holds the router's own prefix. A method and path served by two handlers raises
+    ValueError (Starlette would answer with the first, so the second could not be paired)."""
     out: dict[str, tuple[str, str]] = {}
     for route in app.routes:
         if hasattr(route, "original_router"):
@@ -369,7 +385,10 @@ def routes_of(app: Any, prefix: str = "") -> dict[str, tuple[str, str]]:
             continue
         where = (Path(inspect.getfile(route.endpoint)).name, route.endpoint.__name__)
         for method in route.methods:
-            out[f"{method.upper()} {prefix}{route.path_format}"] = where
+            key = f"{method.upper()} {prefix}{route.path_format}"
+            if key in out:
+                raise ValueError(f"{key} has two handlers: {out[key]} and {where}")
+            out[key] = where
     return out
 
 
