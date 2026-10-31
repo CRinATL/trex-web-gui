@@ -183,3 +183,50 @@ def test_full_queue_drops_and_counts(tmp_path: Path, pipes: Any) -> None:
         p.write(0.0, FRAME, 60)
     assert p.dropped == 5
     assert p.running
+
+
+def _gone(pid: int) -> bool:
+    """The process is gone or a zombie (a reaped one has no /proc entry; it may vanish mid-read)."""
+    try:
+        return open(f"/proc/{pid}/stat").read().split()[2] == "Z"
+    except FileNotFoundError:
+        return True
+
+
+def test_a_group_member_that_outlives_the_leader_is_signalled(
+        tmp_path: Path, pipes: Any, loop: Any) -> None:
+    """A child still in the group after the leader exited gets SIGTERM from process_alive (131)."""
+    child = tmp_path / "child.pid"
+    make, _ = pipes
+    p = make()
+    p.start(stub(tmp_path, f'sleep 30 & echo $! > "{child}"; exit 0'))     # the leader exits, its child stays
+    wait_until(loop, lambda: child.exists() and child.read_text().strip() != "")
+    cpid = int(child.read_text())
+    wait_until(loop, lambda: not p.process_alive)       # sees the exit and signals the group
+    wait_until(loop, lambda: _gone(cpid))
+
+
+def test_stop_while_opening_with_nothing_queued_delivers_an_empty_capture(
+        tmp_path: Path, pipes: Any, loop: Any) -> None:
+    """A stop before Wireshark opened the pipe still writes the pcap header, then EOF (p3c-capture-132)."""
+    out = tmp_path / "out.pcap"
+    make, changes = pipes
+    p = make()
+    p.start(stub(tmp_path, f'sleep 0.5; cat "$3" > "{out}"; exec sleep 30'))   # opens the pipe late
+    p.stop()                                            # before Wireshark opened it, nothing queued
+    wait_until(loop, lambda: out.exists() and out.stat().st_size == 24)        # the pcap header, then EOF
+    assert p.error is None and changes == []
+
+
+def test_a_stopped_pipe_past_its_open_deadline_leaves_the_window(
+        tmp_path: Path, pipes: Any, loop: Any) -> None:
+    """A stop then an open deadline gives up quietly and leaves Wireshark running (p3c-capture-132)."""
+    make, changes = pipes
+    p = make()
+    p.start(stub(tmp_path, "exec sleep 30"), open_deadline_s=0.3)            # never opens the pipe
+    p.stop()
+    pid = p.pid
+    assert pid is not None
+    wait_until(loop, lambda: p.fifo is None or not p.fifo.parent.exists())   # the writer gave up
+    os.kill(pid, 0)                                     # still running: the stop did not kill it
+    assert p.error is None and changes == []

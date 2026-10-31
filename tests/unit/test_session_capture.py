@@ -1460,8 +1460,9 @@ def test_a_monitor_gone_from_the_server_ends_the_pipe(rig: Rig, tmp_path: Path,
 
 def test_disconnect_leaves_the_wireshark_window_open(rig: Rig, tmp_path: Path,
                                                      monkeypatch: pytest.MonkeyPatch) -> None:
-    """Spec 6.4: a disconnect stops the pipe and leaves the window; close() kills it."""
-    exe = ws_stub(tmp_path, monkeypatch)
+    """Spec 6.4: a disconnect stops the pipe and leaves the window; close() kills it. The stub opens the
+    pipe, as Wireshark does: a stop always lets the writer finish, so it waits for a reader."""
+    exe = ws_stub(tmp_path, monkeypatch, 'cat "$3" > /dev/null; exec sleep 30')
 
     async def body(s: TrexSession) -> None:
         await s.monitor_start([], [1], "")
