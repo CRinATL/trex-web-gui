@@ -402,10 +402,10 @@ def studio_router(library: ProfileLibrary, data_dir: Path) -> APIRouter:
     @router.put("/api/studio/uploads", response_model=None,
                 responses=answers(
                     (400, "bad_request", "the client disconnected during the upload"),
+                    (409, "too_many", "8 uploads are already kept; import or wait for one to expire"),
                     (411, "length_required", "the request has no valid Content-Length"),
                     (413, "too_large", "the upload is over 64 MiB"),
                     (422, "bad_request", "the name is over 255 characters or has an unusable suffix"),
-                    (409, "too_many", "8 uploads are already kept; import or wait for one to expire"),
                     (500, "storage_error", "the upload cannot be stored")))
     async def put_upload(request: Request, name: Annotated[str, Query(max_length=UPLOAD_NAME_MAX)]
                          ) -> dict[str, Any] | JSONResponse:

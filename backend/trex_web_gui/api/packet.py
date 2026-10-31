@@ -669,7 +669,8 @@ def packet_router(engine: PacketEngine, store: TemplateStore, prefs_fn: Callable
     async def build_preset(preset_id: str, request: Request) -> Any:
         """`{doc, flags}` for preset `preset_id` over the JSON object in the body (parameters left out take
         their defaults); 404 for an unknown preset, 422 invalid_params naming the parameter. `flags` is the
-        stream's MAC-mode bits, or null when the preset leaves them alone. The worker is not involved."""
+        stream's MAC-mode bits, or null when the preset leaves them alone. The worker is not involved; the
+        engine codes listed above are the shared set (see Errors), not ones this route answers."""
         async def go() -> Any:
             """Read the parameters, build."""
             raw = await read_json_capped(request, PACKET_BODY_MAX)
@@ -688,7 +689,8 @@ def packet_router(engine: PacketEngine, store: TemplateStore, prefs_fn: Callable
                      (413, "too_large", "the request body, or the capture file, is over its size cap"),
                      *ENGINE_ANSWERS,
                      (404, "not_found", "no such upload or file"),
-                     (422, "bad_request", "the body is invalid, or `path` is relative or not a file")))
+                     (422, "bad_request",
+                      "the body is invalid, or `path` is relative, not a file, or cannot be read")))
     async def pcap_list(request: Request) -> Any:
         """One page of a capture, `{total, rows, warnings}`: the offset clamps to >= 0 and the limit to 1-100;
         `warnings` are the capture's cut or truncated records. The capture is an upload (`upload_id`) or an
@@ -709,7 +711,8 @@ def packet_router(engine: PacketEngine, store: TemplateStore, prefs_fn: Callable
                      (413, "too_large", "the request body, or the capture file, is over its size cap"),
                      *ENGINE_ANSWERS,
                      (404, "not_found", "no such upload or file"),
-                     (422, "bad_request", "the body is invalid, or `path` is relative or not a file")))
+                     (422, "bad_request",
+                      "the body is invalid, or `path` is relative, not a file, or cannot be read")))
     async def pcap_packet(request: Request) -> Any:
         """One packet of a capture as `{binary, doc, warnings}`: the document holds literals only. The
         capture and its refusals (404 not_found, 422 bad_request, 413 too_large) are those of

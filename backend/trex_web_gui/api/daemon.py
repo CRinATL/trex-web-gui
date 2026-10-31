@@ -207,7 +207,8 @@ def daemon_router(daemon: Callable[[], DaemonSession]) -> APIRouter:
 
     @router.post("/api/daemon/config/preview", response_model=None, responses=answers(*DAEMON_ANSWERS))
     async def config_preview(b: ConfigPreviewBody) -> Any:
-        """{yaml, values, errors} for form values or YAML text; makes no daemon call."""
+        """{yaml, values, errors} for form values or YAML text; makes no daemon call, so the listed
+        daemon codes are the shared set (see Errors), not ones this route can answer."""
         return await _answer(lambda: daemon().preview(b.values, b.text))
 
     @router.post("/api/daemon/config/push", response_model=None, responses=answers(*DAEMON_ANSWERS))

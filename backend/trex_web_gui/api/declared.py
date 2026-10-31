@@ -23,7 +23,12 @@ def answers(*items: Item) -> dict[int | str, dict[str, Any]]:
     """The `responses=` dict for `items`; see the module docstring. Codes and families are sorted."""
     codes: dict[int, list[list[str]]] = {}
     families: dict[int, list[str]] = {}
+    seen: set[tuple[int, str]] = set()
     for item in items:
+        pair = (item[0], item[1])
+        if pair in seen:
+            raise ValueError(f"answers: {item[0]} {item[1]!r} given twice")
+        seen.add(pair)
         if len(item) == 3:
             codes.setdefault(item[0], []).append([item[1], item[2]])
         else:

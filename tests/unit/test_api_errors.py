@@ -1,10 +1,12 @@
 """The `answers` declaration helper (trex_web_gui.api.declared) and its rendering by
-scripts/gen_api_docs.py."""
+scripts/gen_api_docs.py, the shared refusal table, and scripts/check_api_errors.py: the checker's tracing of
+each handler's answers, its docstring and declaration comparison, and a run over the real app."""
 import importlib.util
 import re
 import textwrap
 from pathlib import Path
 from types import ModuleType
+from typing import Any
 
 import pytest
 from fastapi import APIRouter, FastAPI
@@ -23,7 +25,7 @@ def load_generator() -> ModuleType:
     return module
 
 
-def declared() -> dict[int | str, dict[str, object]]:
+def declared() -> dict[int | str, dict[str, Any]]:
     """The mixed set of declarations both tests use: codes, families and a code-less 304."""
     return answers((409, "exists", "the name is taken"), (404, "not_found", "no such template"),
                    (409, "session"), (422, "profile_error", "the profile does not load"), (422, "bundle"),
@@ -43,8 +45,8 @@ def test_answers_builds_responses_with_codes_and_families() -> None:
 def test_generator_renders_declared_codes_and_families() -> None:
     app = FastAPI()
 
-    @app.get("/api/x/y", responses=declared())  # type: ignore[arg-type]
-    def route() -> dict[str, str]:
+    @app.get("/api/x/y", responses=declared())
+    def route(q: int = 0) -> dict[str, str]:
         """Does y."""
         return {}
 
@@ -63,6 +65,25 @@ def test_generator_renders_declared_codes_and_families() -> None:
     assert lines.index(default_422) < lines.index(own_422)
     not_found, exists = "- `404` `not_found`: no such template", "- `409` `exists`: the name is taken"
     assert lines.index(not_found) < lines.index(exists)
+
+
+def test_answers_rejects_a_pair_given_twice() -> None:
+    with pytest.raises(ValueError, match=r"409 'exists'"):
+        answers((409, "exists", "a"), (404, "not_found", "b"), (409, "exists", "c"))
+
+
+def test_generator_prints_no_default_422_without_parameters_or_body() -> None:
+    app = FastAPI()
+
+    @app.get("/api/x/z", responses=answers((422, "bad_request", "the raw body is invalid")))
+    def route() -> dict[str, str]:
+        """Does z."""
+        return {}
+
+    spec = app.openapi()
+    lines = load_generator().route_section("/api/x/z", "get", spec["paths"]["/api/x/z"]["get"], {})
+    got = [ln for ln in lines if ln.startswith("- `422`")]
+    assert got == ["- `422` `bad_request`: the raw body is invalid"]
 
 
 # --- the refusal table -------------------------------------------------------------------------------------
@@ -424,7 +445,7 @@ def test_unresolvable_call_is_reported_not_skipped() -> None:
                  'def h(p):\n    return upload_path(p)\n',
                  'def h():\n    respond = err\n    return respond(404, "x", "m")\n',
                  'def h():\n    f = functools.partial(err, 404)\n    return f("x", "m")\n',
-                 'def h(body):\n    return JSONResponse(body, status)\n',
+                 'def h(body, status):\n    return JSONResponse(body, status)\n',
                  'def h():\n    try:\n        return 1\n    except OSError as e:\n'
                  '        return e.response\n'):
         assert why(reach(body)), body
@@ -528,7 +549,7 @@ def test_routes_of_refuses_a_duplicate_route() -> None:
 def test_declared_reads_real_answers_through_openapi() -> None:
     app = FastAPI()
 
-    @app.get("/api/x/y", responses=declared())  # type: ignore[arg-type]
+    @app.get("/api/x/y", responses=declared())
     def route() -> dict[str, str]:
         return {}
 

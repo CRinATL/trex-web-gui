@@ -155,7 +155,7 @@ def route_section(path: str, method: str, op: dict[str, Any], schemas: dict[str,
     out += ["**Responses**", ""]
     for status in sorted(op["responses"], key=int):
         entry = op["responses"][status]
-        if status == "422":
+        if status == "422" and (op.get("parameters") or op.get("requestBody")):
             out.append("- `422` `bad_request`: the body or query failed validation "
                        "(`{\"error\": \"bad_request\", \"message\": <text>}`)")
         codes = entry.get("x-codes", [])
@@ -225,7 +225,8 @@ status of the refusal.
 - 500 `storage_error`: a file the backend keeps could not be read or written (settings, port labels, test
   setups, the Studio library, packet templates, uploads, bundle imports); the message says which.
 - Any other code is the route's own, or one of the refusals below; each route's Responses list names the
-  ones it can answer.
+  ones it can answer. A route's list is every pair its handler's code can reach, including codes a shared
+  helper answers only for other routes; the route's description says which apply.
 
 ### Refusals
 

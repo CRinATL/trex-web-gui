@@ -9,7 +9,7 @@ no code and its route declares its own 422 `invalid`, so it is not in this table
 
 tests/unit/test_api_errors.py keeps the table equal to the raise sites found by
 scripts/check_api_errors.py."""
-from .declared import Family
+from trex_web_gui.api.declared import Family
 
 REFUSALS: dict[tuple[Family, str], tuple[int, str]] = {
     # CommandRefused (session)

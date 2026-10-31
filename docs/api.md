@@ -36,7 +36,8 @@ status of the refusal.
 - 500 `storage_error`: a file the backend keeps could not be read or written (settings, port labels, test
   setups, the Studio library, packet templates, uploads, bundle imports); the message says which.
 - Any other code is the route's own, or one of the refusals below; each route's Responses list names the
-  ones it can answer.
+  ones it can answer. A route's list is every pair its handler's code can reach, including codes a shared
+  helper answers only for other routes; the route's description says which apply.
 
 ### Refusals
 
@@ -148,7 +149,6 @@ The capture snapshot, after a refresh from the server while connected.
 - `200`: the body is described above
 - `400` `trex_error`: the server refused the command
 - `409`: a session refusal, see Errors
-- `422` `bad_request`: the body or query failed validation (`{"error": "bad_request", "message": <text>}`)
 - `422` `profile_error`: the profile cannot be loaded
 - `422`: a session refusal, see Errors
 - `502` `unreachable`: the server is unreachable, or restarted
@@ -249,7 +249,6 @@ or read-only.
 - `200`: the body is described above
 - `400` `trex_error`: the server refused the command
 - `409`: a session refusal, see Errors
-- `422` `bad_request`: the body or query failed validation (`{"error": "bad_request", "message": <text>}`)
 - `422` `profile_error`: the profile cannot be loaded
 - `422`: a session refusal, see Errors
 - `502` `unreachable`: the server is unreachable, or restarted
@@ -372,7 +371,6 @@ connected, or Wireshark cannot be launched.
 - `200`: the body is described above
 - `400` `trex_error`: the server refused the command
 - `409`: a session refusal, see Errors
-- `422` `bad_request`: the body or query failed validation (`{"error": "bad_request", "message": <text>}`)
 - `422` `profile_error`: the profile cannot be loaded
 - `422`: a session refusal, see Errors
 - `502` `unreachable`: the server is unreachable, or restarted
@@ -386,7 +384,6 @@ Closes the Wireshark pipe, leaving its window open; returns the capture snapshot
 - `200`: the body is described above
 - `400` `trex_error`: the server refused the command
 - `409`: a session refusal, see Errors
-- `422` `bad_request`: the body or query failed validation (`{"error": "bad_request", "message": <text>}`)
 - `422` `profile_error`: the profile cannot be loaded
 - `422`: a session refusal, see Errors
 - `502` `unreachable`: the server is unreachable, or restarted
@@ -430,7 +427,8 @@ The daemon session's snapshot (the `daemon` hub message).
 
 ### POST /api/daemon/config/preview
 
-{yaml, values, errors} for form values or YAML text; makes no daemon call.
+{yaml, values, errors} for form values or YAML text; makes no daemon call, so the listed
+daemon codes are the shared set (see Errors), not ones this route can answer.
 
 **Request body** (`application/json`, schema `ConfigPreviewBody`)
 
@@ -951,7 +949,6 @@ read-only.
 - `200`: the body is described above
 - `400` `trex_error`: the server refused the command
 - `409`: a session refusal, see Errors
-- `422` `bad_request`: the body or query failed validation (`{"error": "bad_request", "message": <text>}`)
 - `422` `profile_error`: the profile cannot be loaded
 - `422`: a session refusal, see Errors
 - `502` `unreachable`: the server is unreachable, or restarted
@@ -1317,7 +1314,6 @@ storage_error with {written, failed} when a file cannot be written (the state is
 - `200`: the body is described above
 - `411` `length_required`: the request has no valid Content-Length
 - `413` `too_large`: the request body is over its size cap
-- `422` `bad_request`: the body or query failed validation (`{"error": "bad_request", "message": <text>}`)
 - `422` `bad_request`: the body is not valid JSON, or a field is wrong
 - `422`: a bundle refusal, see Errors
 - `500` `storage_error`: a file cannot be written; `written` and `failed` list them
@@ -1332,7 +1328,6 @@ unsupported_bundle for a wrong format or version.
 - `200`: the body is described above
 - `411` `length_required`: the request has no valid Content-Length
 - `413` `too_large`: the request body is over its size cap
-- `422` `bad_request`: the body or query failed validation (`{"error": "bad_request", "message": <text>}`)
 - `422` `bad_request`: the body is not valid JSON, or a field is wrong
 - `422`: a bundle refusal, see Errors
 
@@ -1381,7 +1376,6 @@ Build the document; a build error is a 200 with `error` set.
 - `200`: the body is described above
 - `411` `length_required`: the request has no valid Content-Length
 - `413` `too_large`: the request body is over its size cap
-- `422` `bad_request`: the body or query failed validation (`{"error": "bad_request", "message": <text>}`)
 - `422` `bad_request`: the body is not valid JSON, or a field is wrong
 - `422` `invalid_doc`: the document or file is invalid; `where` is the position
 - `422` `packet_error`: the packet worker refused the request
@@ -1398,7 +1392,6 @@ A VM's instructions as editor parameters.
 - `200`: the body is described above
 - `411` `length_required`: the request has no valid Content-Length
 - `413` `too_large`: the request body is over its size cap
-- `422` `bad_request`: the body or query failed validation (`{"error": "bad_request", "message": <text>}`)
 - `422` `bad_request`: the body is not valid JSON, or a field is wrong
 - `422` `invalid_stream`: a stream is invalid; `index` and `field` name it
 - `422` `packet_error`: the packet worker refused the request
@@ -1429,7 +1422,6 @@ A literal-only document for packet bytes and, optionally, a stream's VM.
 - `200`: the body is described above
 - `411` `length_required`: the request has no valid Content-Length
 - `413` `too_large`: the request body is over its size cap
-- `422` `bad_request`: the body or query failed validation (`{"error": "bad_request", "message": <text>}`)
 - `422` `bad_request`: the body is not valid JSON, or a field is wrong
 - `422` `invalid_stream`: a stream is invalid; `index` and `field` name it
 - `422` `packet_error`: the packet worker refused the request
@@ -1446,7 +1438,6 @@ The values a Field Engine parameter may take for the document.
 - `200`: the body is described above
 - `411` `length_required`: the request has no valid Content-Length
 - `413` `too_large`: the request body is over its size cap
-- `422` `bad_request`: the body or query failed validation (`{"error": "bad_request", "message": <text>}`)
 - `422` `bad_request`: the body is not valid JSON, or a field is wrong
 - `422` `invalid_doc`: the document or file is invalid; `where` is the position
 - `422` `packet_error`: the packet worker refused the request
@@ -1463,7 +1454,6 @@ The protocols the document's last layer may carry.
 - `200`: the body is described above
 - `411` `length_required`: the request has no valid Content-Length
 - `413` `too_large`: the request body is over its size cap
-- `422` `bad_request`: the body or query failed validation (`{"error": "bad_request", "message": <text>}`)
 - `422` `bad_request`: the body is not valid JSON, or a field is wrong
 - `422` `invalid_doc`: the document or file is invalid; `where` is the position
 - `422` `packet_error`: the packet worker refused the request
@@ -1485,8 +1475,7 @@ a relative path or a file that is not a regular file, 413 too_large above the Se
 - `404` `not_found`: no such upload or file
 - `411` `length_required`: the request has no valid Content-Length
 - `413` `too_large`: the request body, or the capture file, is over its size cap
-- `422` `bad_request`: the body or query failed validation (`{"error": "bad_request", "message": <text>}`)
-- `422` `bad_request`: the body is invalid, or `path` is relative or not a file
+- `422` `bad_request`: the body is invalid, or `path` is relative, not a file, or cannot be read
 - `422` `packet_error`: the packet worker refused the request
 - `503` `engine_busy`: the packet worker is busy
 - `503` `engine_closed`: the packet worker is closed
@@ -1504,8 +1493,7 @@ capture and its refusals (404 not_found, 422 bad_request, 413 too_large) are tho
 - `404` `not_found`: no such upload or file
 - `411` `length_required`: the request has no valid Content-Length
 - `413` `too_large`: the request body, or the capture file, is over its size cap
-- `422` `bad_request`: the body or query failed validation (`{"error": "bad_request", "message": <text>}`)
-- `422` `bad_request`: the body is invalid, or `path` is relative or not a file
+- `422` `bad_request`: the body is invalid, or `path` is relative, not a file, or cannot be read
 - `422` `packet_error`: the packet worker refused the request
 - `503` `engine_busy`: the packet worker is busy
 - `503` `engine_closed`: the packet worker is closed
@@ -1523,7 +1511,8 @@ The presets as `{presets: [{id, name, defaults}]}`; `defaults` are what a form s
 
 `{doc, flags}` for preset `preset_id` over the JSON object in the body (parameters left out take
 their defaults); 404 for an unknown preset, 422 invalid_params naming the parameter. `flags` is the
-stream's MAC-mode bits, or null when the preset leaves them alone. The worker is not involved.
+stream's MAC-mode bits, or null when the preset leaves them alone. The worker is not involved; the
+engine codes listed above are the shared set (see Errors), not ones this route answers.
 
 **Path parameters**
 
@@ -1554,7 +1543,6 @@ The document after a byte edit.
 - `200`: the body is described above
 - `411` `length_required`: the request has no valid Content-Length
 - `413` `too_large`: the request body is over its size cap
-- `422` `bad_request`: the body or query failed validation (`{"error": "bad_request", "message": <text>}`)
 - `422` `bad_request`: the body is not valid JSON, or a field is wrong
 - `422` `invalid_doc`: the document or file is invalid; `where` is the position
 - `422` `packet_error`: the packet worker refused the request
@@ -1570,7 +1558,6 @@ service cannot build), the user's template names, and the user directory.
 **Responses**
 
 - `200`: the body is described above
-- `422` `bad_request`: the body or query failed validation (`{"error": "bad_request", "message": <text>}`)
 - `422` `packet_error`: the packet worker refused the request
 - `503` `engine_busy`: the packet worker is busy
 - `503` `engine_closed`: the packet worker is closed
@@ -1674,7 +1661,6 @@ Remove the user template `name`; `{}`.
 - `200`: the body is described above
 - `411` `length_required`: the request has no valid Content-Length
 - `413` `too_large`: the request body is over its size cap
-- `422` `bad_request`: the body or query failed validation (`{"error": "bad_request", "message": <text>}`)
 - `422` `bad_request`: the body is not valid JSON, or a field is wrong
 - `422` `invalid_doc`: the document or file is invalid; `where` is the position
 - `422` `invalid_stream`: a stream is invalid; `index` and `field` name it
@@ -1692,7 +1678,6 @@ The Python that builds the document's Field Engine.
 - `200`: the body is described above
 - `411` `length_required`: the request has no valid Content-Length
 - `413` `too_large`: the request body is over its size cap
-- `422` `bad_request`: the body or query failed validation (`{"error": "bad_request", "message": <text>}`)
 - `422` `bad_request`: the body is not valid JSON, or a field is wrong
 - `422` `invalid_doc`: the document or file is invalid; `where` is the position
 - `422` `packet_error`: the packet worker refused the request
@@ -1712,7 +1697,6 @@ Every profile, the files that failed to load and the library directory.
 - `409` `sidecar_unreadable`: the profile's sidecar file does not parse; fix or delete it before editing
 - `409` `stale`: the profile changed since it was read; the body carries `rev`
 - `409` `too_many`: the profile library is full
-- `422` `bad_request`: the body or query failed validation (`{"error": "bad_request", "message": <text>}`)
 - `422` `invalid_name`: the profile name is not valid
 - `422` `invalid_stream`: a stream is invalid; `index` and `field` name it
 - `422` `profile_error`: the profile cannot be loaded or converted
@@ -2041,7 +2025,6 @@ The default new stream, built in the worker.
 - `409` `sidecar_unreadable`: the profile's sidecar file does not parse; fix or delete it before editing
 - `409` `stale`: the profile changed since it was read; the body carries `rev`
 - `409` `too_many`: the profile library is full
-- `422` `bad_request`: the body or query failed validation (`{"error": "bad_request", "message": <text>}`)
 - `422` `invalid_name`: the profile name is not valid
 - `422` `invalid_stream`: a stream is invalid; `index` and `field` name it
 - `422` `profile_error`: the profile cannot be loaded or converted
