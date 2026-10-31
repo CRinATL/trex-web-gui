@@ -716,7 +716,8 @@ class TrexSession(PortConfigCommands, CaptureCommands):
         """Every stats_s, three separate jobs on the reader executor: read_stats, read_pgid_stats and
         read_util, published as the coalesced `stats`, `pgid` and `util` messages (stats carries
         `stats_epoch`). They run on the read-only reader client, so a command holding the control
-        executor (Stop, an Apply, a scan) no longer delays them, and Stop no longer waits behind a read.
+        executor (Stop, an Apply, a scan) no longer delays them, and Stop no longer waits behind a read: it
+        waits for at most the control job already running (a port poll, say), then its own follow-up refresh.
         Three jobs rather than one: they bound how stale each kind is relative to the others. A failure
         is handled like a port-poll failure: a loss-class error marks the session lost, any other logs
         one warning per streak, with one streak counter per read. Loss detection is not shortened."""

@@ -26,6 +26,7 @@ from trex_web_gui.api.bodies import err
 from trex_web_gui.api.bundle import bundle_router
 from trex_web_gui.api.capture import MonitorBody, PacketBody, RecorderBody
 from trex_web_gui.api.daemon import daemon_router
+from trex_web_gui.api.declared import Item, answers
 from trex_web_gui.api.hub import Hub
 from trex_web_gui.api.monitor import MONITOR_ONLY_MESSAGE, MonitorOnly, monitor_router, require_full_mode
 from trex_web_gui.api.origin import LoopbackOriginMiddleware
@@ -173,6 +174,16 @@ async def close_to_completion(s: TrexSession | MonitorSession | DaemonSession) -
     task.result()
     if cancelled:
         raise asyncio.CancelledError
+
+
+# What a route through `run` declares: its mapping of a session command's errors.
+RUN_ANSWERS: tuple[Item, ...] = (
+    (400, "trex_error", "the server refused the command"),
+    (409, "session"),
+    (422, "session"),
+    (422, "profile_error", "the profile cannot be loaded"),
+    (502, "unreachable", "the server is unreachable, or restarted"),
+)
 
 
 def create_app(data_dir: Path, server_hint: str | None = None, static_dir: Path | None = None, *,
@@ -360,7 +371,7 @@ def create_app(data_dir: Path, server_hint: str | None = None, static_dir: Path 
         return {"settings": dataclasses.asdict(s), "load_error": store.load_error, "data_dir": str(data_dir)}
 
     @app.get("/api/auth/login", response_model=None, status_code=303,
-             responses={403: {"description": "bad_token: the token does not match"}})
+             responses=answers((403, "bad_token", "the token does not match")))
     def login(token: str = "") -> Response:
         """GET: with a matching token, a 303 to `/` that sets the session cookie (HttpOnly,
         SameSite=Strict); otherwise 403 bad_token. Reachable without the cookie (auth.EXEMPT)."""
@@ -406,7 +417,11 @@ def create_app(data_dir: Path, server_hint: str | None = None, static_dir: Path 
         (null when it loaded), and the backend's data directory."""
         return settings_json()
 
-    @app.put("/api/settings", response_model=None)
+    @app.put("/api/settings", response_model=None,
+             responses=answers(
+                 (400, "invalid_settings", "the settings store refuses the settings"),
+                 (422, "invalid_settings", "the settings do not validate"),
+                 (500, "storage_error", "the settings file cannot be written")))
     async def put_settings(body: dict[str, Any]) -> dict[str, Any] | JSONResponse:
         """Validates the body (parse_settings) and saves it; returns the saved settings and publishes
         `settings` to the hub. A save after a load error renames the bad file to
@@ -437,7 +452,10 @@ def create_app(data_dir: Path, server_hint: str | None = None, static_dir: Path 
         """The port labels and any load error."""
         return labels_json()
 
-    @app.put("/api/port-labels", response_model=None)
+    @app.put("/api/port-labels", response_model=None,
+             responses=answers(
+                 (422, "invalid_label", "the label is rejected"),
+                 (500, "storage_error", "the port labels file cannot be written")))
     async def put_port_labels(b: PortLabelBody) -> dict[str, Any] | JSONResponse:
         """Sets one port label (an empty name and description delete it) and publishes `port_labels` to the
         hub. 422 invalid_label for a rejected label, 500 storage_error when the file cannot be written."""
@@ -471,7 +489,12 @@ def create_app(data_dir: Path, server_hint: str | None = None, static_dir: Path 
         """The session's snapshot."""
         return session().snapshot()
 
-    @app.post("/api/session/connect", response_model=None)
+    @app.post("/api/session/connect", response_model=None,
+              responses=answers(
+                  (409, "busy", "the session is connecting, connected or changing"),
+                  (422, "unsupported_version", "the server's version is not supported"),
+                  (502, "trex_error", "the server answered with an error"),
+                  (502, "unreachable", "the server is unreachable")))
     async def connect(body: ConnectBody) -> dict[str, Any] | JSONResponse:
         """Connects the session to a TRex server; returns {info: ServerInfo}. 409 busy while a session is
         connecting, connected or changing, 422 unsupported_version, 502 unreachable or trex_error."""
@@ -532,32 +555,32 @@ def create_app(data_dir: Path, server_hint: str | None = None, static_dir: Path 
         """The session's current port views (empty while disconnected)."""
         return with_ports()
 
-    @app.post("/api/ports/acquire", response_model=None)
+    @app.post("/api/ports/acquire", response_model=None, responses=answers(*RUN_ANSWERS))
     async def acquire(b: AcquireBody) -> dict[str, Any] | JSONResponse:
         """Acquires the ports for this session, taking them from another owner when `force`. Refused (409)
         when not connected, read-only or for an unknown port."""
         return await run(session().acquire(b.ports, b.force), with_ports)
 
-    @app.post("/api/ports/release", response_model=None)
+    @app.post("/api/ports/release", response_model=None, responses=answers(*RUN_ANSWERS))
     async def release(b: Ports) -> dict[str, Any] | JSONResponse:
         """Releases the ports. Refused (409) when not connected, read-only, for an unknown or unowned port,
         or while a ping or scan holds one (port_busy)."""
         return await run(session().release(b.ports), with_ports)
 
-    @app.post("/api/ports/reacquire", response_model=None)
+    @app.post("/api/ports/reacquire", response_model=None, responses=answers(*RUN_ANSWERS))
     async def reacquire() -> dict[str, Any] | JSONResponse:
         """Force-acquires the ports the server lists as this OS user's but held by no handler of this
         session; returns them as `reacquired` with the port views. Refused (409) when not connected or
         read-only."""
         return await run(session().reacquire(), lambda r: {"reacquired": r, **with_ports()})
 
-    @app.post("/api/ports/service", response_model=None)
+    @app.post("/api/ports/service", response_model=None, responses=answers(*RUN_ANSWERS))
     async def service(b: ServiceBody) -> dict[str, Any] | JSONResponse:
         """Sets service mode off, on or filtered (with a mask) on the ports. Refused (409) when not
         connected, read-only, for an unknown or unowned port, or while a ping or scan holds one."""
         return await run(session().set_service(b.ports, b.enabled, b.filtered, b.mask), with_ports)
 
-    @app.post("/api/ports/attr", response_model=None)
+    @app.post("/api/ports/attr", response_model=None, responses=answers(*RUN_ANSWERS))
     async def attr(b: AttrBody) -> dict[str, Any] | JSONResponse:
         """Sets the port attributes given (promiscuous, multicast, link_up, led_on, flow_ctrl). 422
         bad_request when none is given; otherwise refused as `service` is."""
@@ -565,7 +588,7 @@ def create_app(data_dir: Path, server_hint: str | None = None, static_dir: Path 
             b.ports, promiscuous=b.promiscuous, multicast=b.multicast, link_up=b.link_up, led_on=b.led_on,
             flow_ctrl=b.flow_ctrl), with_ports)
 
-    @app.post("/api/ports/reset", response_model=None)
+    @app.post("/api/ports/reset", response_model=None, responses=answers(*RUN_ANSWERS))
     async def reset(b: Ports) -> dict[str, Any] | JSONResponse:
         """Resets the ports through the client: force-acquire, stop traffic, remove streams, clear stats,
         promiscuous (where supported), rx queue and service mode off, and remove EVERY capture on the
@@ -574,7 +597,7 @@ def create_app(data_dir: Path, server_hint: str | None = None, static_dir: Path 
         read-only, for an unknown port, or while a ping or scan holds one."""
         return await run(session().reset(b.ports), with_ports)
 
-    @app.post("/api/ports/layer", response_model=None)
+    @app.post("/api/ports/layer", response_model=None, responses=answers(*RUN_ANSWERS))
     async def layer(b: LayerBody) -> dict[str, Any] | JSONResponse:
         """Applies an L2 or L3 configuration to one port inside a service-mode bracket (VLAN, MAC or IPv4,
         the ARP resolve for L3, optional IPv6); returns the ports, the ARP result and any
@@ -584,7 +607,7 @@ def create_app(data_dir: Path, server_hint: str | None = None, static_dir: Path 
             **with_ports(), "arp": None if r.arp is None else r.arp._asdict(),
             "service_restore_error": r.service_restore_error})
 
-    @app.post("/api/ports/ping", response_model=None)
+    @app.post("/api/ports/ping", response_model=None, responses=answers(*RUN_ANSWERS))
     async def ping(b: PingBody) -> dict[str, Any] | JSONResponse:
         """Pings `dst` from one port inside a service-mode bracket, publishing each echo as a `ping`
         message and the port as busy; returns the run id, the lines and any service_restore_error. An echo
@@ -594,7 +617,7 @@ def create_app(data_dir: Path, server_hint: str | None = None, static_dir: Path 
             "run": r.run, "lines": [x._asdict() for x in r.lines],
             "service_restore_error": r.service_restore_error})
 
-    @app.post("/api/ports/scan6", response_model=None)
+    @app.post("/api/ports/scan6", response_model=None, responses=answers(*RUN_ANSWERS))
     async def scan6(b: ScanBody) -> dict[str, Any] | JSONResponse:
         """Scans one port for IPv6 neighbours inside a service-mode bracket, holding it busy; returns the
         neighbours and any service_restore_error. Refused (409) as `layer` is, bar IPv6."""
@@ -602,13 +625,13 @@ def create_app(data_dir: Path, server_hint: str | None = None, static_dir: Path 
             "neighbours": [x._asdict() for x in r.neighbours],
             "service_restore_error": r.service_restore_error})
 
-    @app.get("/api/ports/{pid}/xstats", response_model=None)
+    @app.get("/api/ports/{pid}/xstats", response_model=None, responses=answers(*RUN_ANSWERS))
     async def xstats(pid: int) -> dict[str, Any] | JSONResponse:
         """Reads one port's extended stats: no ownership needed and no refresh. Refused (409) when not
         connected or for an unknown port."""
         return await run(session().xstats(pid), lambda v: {"port": v.port, "values": v.values})
 
-    @app.post("/api/profiles/inspect", response_model=None)
+    @app.post("/api/profiles/inspect", response_model=None, responses=answers(*RUN_ANSWERS))
     async def inspect(b: InspectBody) -> dict[str, Any] | JSONResponse:
         """Loads a profile in the profile worker subprocess for these ports and tunables and returns its
         summary; touches no server and no session. 422 profile_error when it cannot be loaded or exceeds
@@ -619,7 +642,7 @@ def create_app(data_dir: Path, server_hint: str | None = None, static_dir: Path 
             lambda lp: {"path": lp.path, "kind": lp.kind, "tunables": lp.tunables, "summary": lp.summary,
                         "stream_count": lp.stream_count})
 
-    @app.post("/api/ports/assign", response_model=None)
+    @app.post("/api/ports/assign", response_model=None, responses=answers(*RUN_ANSWERS))
     async def assign(b: AssignBody) -> dict[str, Any] | JSONResponse:
         """Replaces the streams on the ports with a profile's: loads it in the worker, adds the streams,
         validates and returns the summary, per-port rates and the port views. `stop_first` stops
@@ -638,7 +661,7 @@ def create_app(data_dir: Path, server_hint: str | None = None, static_dir: Path 
         return await run(go(), lambda r: {"summary": r[0].summary, "stream_count": r[0].stream_count,
                                           "rate": {str(p): v for p, v in r[1].items()}, **with_ports()})
 
-    @app.get("/api/ports/{pid}/assigned", response_model=None)
+    @app.get("/api/ports/{pid}/assigned", response_model=None, responses=answers(*RUN_ANSWERS))
     async def assigned(pid: int) -> dict[str, Any] | JSONResponse:
         """What is on the port: `streams`, whether its default profile holds streams, and `assigned`, this
         connection's last Assign to it (path, name, tunables, summary, stream_count), or null when there is
@@ -647,44 +670,44 @@ def create_app(data_dir: Path, server_hint: str | None = None, static_dir: Path 
         unknown port."""
         return await run(session().assigned(pid), lambda r: r)
 
-    @app.post("/api/ports/start", response_model=None)
+    @app.post("/api/ports/start", response_model=None, responses=answers(*RUN_ANSWERS))
     async def start(b: StartBody) -> dict[str, Any] | JSONResponse:
         """Starts traffic on the ports at `mult`, for `duration` seconds or until stopped (-1). Refused
         (409) when not connected, read-only, for an unowned port, or while a ping or scan holds one."""
         return await run(session().start(b.ports, b.mult, b.duration, b.force), with_ports)
 
-    @app.post("/api/ports/update", response_model=None)
+    @app.post("/api/ports/update", response_model=None, responses=answers(*RUN_ANSWERS))
     async def update(b: UpdateBody) -> dict[str, Any] | JSONResponse:
         """Changes the multiplier of ports that are transmitting. Refused (409) when not connected,
         read-only, for an unowned port, or one whose default profile is not transmitting."""
         return await run(session().update(b.ports, b.mult), with_ports)
 
-    @app.post("/api/ports/pause", response_model=None)
+    @app.post("/api/ports/pause", response_model=None, responses=answers(*RUN_ANSWERS))
     async def pause(b: Ports) -> dict[str, Any] | JSONResponse:
         """Pauses transmitting ports. Refused (409) when not connected, read-only, for an unowned port, or
         one whose default profile is not transmitting."""
         return await run(session().pause(b.ports), with_ports)
 
-    @app.post("/api/ports/resume", response_model=None)
+    @app.post("/api/ports/resume", response_model=None, responses=answers(*RUN_ANSWERS))
     async def resume(b: Ports) -> dict[str, Any] | JSONResponse:
         """Resumes paused ports. Refused (409) when not connected, read-only, for an unowned port, or one
         whose default profile is not paused."""
         return await run(session().resume(b.ports), with_ports)
 
-    @app.post("/api/ports/stop", response_model=None)
+    @app.post("/api/ports/stop", response_model=None, responses=answers(*RUN_ANSWERS))
     async def stop(b: Ports) -> dict[str, Any] | JSONResponse:
         """Stops every profile the client knows on the ports. Refused (409) when not connected, read-only,
         or for an unowned port."""
         return await run(session().stop(b.ports), with_ports)
 
-    @app.get("/api/ports/{pid}/rate", response_model=None)
+    @app.get("/api/ports/{pid}/rate", response_model=None, responses=answers(*RUN_ANSWERS))
     async def rate(pid: int) -> dict[str, Any] | JSONResponse:
         """Validates the port's default profile on the server and returns its rate info. The port must
         be owned (409 not_owned, so always in a read-only session). 400 trex_error when the server rejects
         the streams."""
         return await run(session().rate_info(pid), lambda r: {"rate": r})
 
-    @app.get("/api/capture", response_model=None)
+    @app.get("/api/capture", response_model=None, responses=answers(*RUN_ANSWERS))
     async def get_capture() -> dict[str, Any] | JSONResponse:
         """The capture snapshot, after a refresh from the server while connected."""
         async def go() -> None:
@@ -692,7 +715,7 @@ def create_app(data_dir: Path, server_hint: str | None = None, static_dir: Path 
             await session().capture_refresh()            # only while CONNECTED; otherwise no RPC
         return await run(go(), lambda _: session().capture_snapshot())
 
-    @app.post("/api/capture/monitor", response_model=None)
+    @app.post("/api/capture/monitor", response_model=None, responses=answers(*RUN_ANSWERS))
     async def monitor_start(b: MonitorBody) -> dict[str, Any] | JSONResponse:
         """Starts the live capture monitor (a cyclic capture of `limit` packets) and the capture loop, and
         publishes the capture state; returns the monitor. Refused (409) when one is running, an Rx port is
@@ -702,7 +725,7 @@ def create_app(data_dir: Path, server_hint: str | None = None, static_dir: Path 
         return await run(session().monitor_start(b.tx, b.rx, b.bpf, b.limit),
                          lambda m: {"monitor": dataclasses.asdict(m)})
 
-    @app.delete("/api/capture/monitor", response_model=None)
+    @app.delete("/api/capture/monitor", response_model=None, responses=answers(*RUN_ANSWERS))
     async def monitor_stop() -> dict[str, Any] | JSONResponse:
         """Stops the live monitor with a capture-stop RPC, drains its remaining packets with destructive
         fetches (published as `capture_pkts`), removes the capture from the server, ends its Wireshark pipe
@@ -710,19 +733,19 @@ def create_app(data_dir: Path, server_hint: str | None = None, static_dir: Path 
         or read-only."""
         return await run(session().monitor_stop(), lambda _: {})
 
-    @app.post("/api/capture/recorders", response_model=None)
+    @app.post("/api/capture/recorders", response_model=None, responses=answers(*RUN_ANSWERS))
     async def recorder_start(b: RecorderBody) -> dict[str, Any] | JSONResponse:
         """Starts a fixed-size recorder capture of `limit` packets; returns its id. Refused (409) as
         `monitor_start` is, bar a running monitor."""
         return await run(session().recorder_start(b.tx, b.rx, b.bpf, b.limit), lambda i: {"id": i})
 
-    @app.post("/api/capture/recorders/{cid}/stop", response_model=None)
+    @app.post("/api/capture/recorders/{cid}/stop", response_model=None, responses=answers(*RUN_ANSWERS))
     async def recorder_stop(cid: int) -> dict[str, Any] | JSONResponse:
         """Stops one recorder capture; returns its packet count. Refused (409) for the monitor's id, a
         capture being saved, an endpoint capture, or when not connected or read-only."""
         return await run(session().recorder_stop(cid), lambda n: {"pkt_count": n})
 
-    @app.post("/api/capture/recorders/{cid}/save", response_model=None)
+    @app.post("/api/capture/recorders/{cid}/save", response_model=None, responses=answers(*RUN_ANSWERS))
     async def recorder_save(cid: int) -> dict[str, Any] | JSONResponse:
         """Stops the recorder, then fetches its packets (a destructive fetch) into a pcap file in the
         capture directory, publishing `capture_save` progress, and removes the capture from the server
@@ -731,7 +754,7 @@ def create_app(data_dir: Path, server_hint: str | None = None, static_dir: Path 
         directory, a file write failure (spool_error), or when not connected or read-only."""
         return await run(session().recorder_save(cid), lambda f: {"file": f})
 
-    @app.delete("/api/capture/recorders/{cid}", response_model=None)
+    @app.delete("/api/capture/recorders/{cid}", response_model=None, responses=answers(*RUN_ANSWERS))
     async def recorder_remove(cid: int) -> dict[str, Any] | JSONResponse:
         """Removes one recorder capture from the server. Refused (409) for the monitor's id, a capture
         being saved, or when not connected or read-only."""
@@ -744,7 +767,8 @@ def create_app(data_dir: Path, server_hint: str | None = None, static_dir: Path 
         on what they show: `{neighbours, note}`."""
         return {"neighbours": session().lldp_neighbours(), "note": lldp.NOTE}
 
-    @app.post("/api/capture/packet/tree", response_model=None)
+    @app.post("/api/capture/packet/tree", response_model=None,
+              responses=answers((400, "bad_packet", "the packet could not be dissected")))
     async def packet_tree(b: PacketBody) -> dict[str, Any] | JSONResponse:
         """Dissects one base64 frame with Scapy on the scapy executor and returns the tree. 400 bad_packet
         when dissection raises."""
@@ -761,7 +785,7 @@ def create_app(data_dir: Path, server_hint: str | None = None, static_dir: Path 
         ok, reason = wireshark.preflight(store.load().preferences.wireshark_path)
         return {"ok": ok, "reason": reason}
 
-    @app.post("/api/capture/wireshark", response_model=None)
+    @app.post("/api/capture/wireshark", response_model=None, responses=answers(*RUN_ANSWERS))
     async def wireshark_start() -> dict[str, Any] | JSONResponse:
         """Launches Wireshark (a child process) on the monitor's packets, using the saved path; a pipe
         already running is kept. Returns the capture snapshot. Refused (409) when no monitor runs, not
@@ -769,12 +793,12 @@ def create_app(data_dir: Path, server_hint: str | None = None, static_dir: Path 
         return await run(session().wireshark_start(store.load().preferences.wireshark_path),
                          lambda _: session().capture_snapshot())
 
-    @app.delete("/api/capture/wireshark", response_model=None)
+    @app.delete("/api/capture/wireshark", response_model=None, responses=answers(*RUN_ANSWERS))
     async def wireshark_stop() -> dict[str, Any] | JSONResponse:
         """Closes the Wireshark pipe, leaving its window open; returns the capture snapshot."""
         return await run(session().wireshark_stop(), lambda _: session().capture_snapshot())
 
-    @app.get("/api/capture/files", response_model=None)
+    @app.get("/api/capture/files", response_model=None, responses=answers((409, "session")))
     async def capture_files() -> dict[str, Any] | JSONResponse:
         """Lists the files in the capture directory. 409 spool_unavailable when the backend has none."""
         try:
@@ -784,7 +808,11 @@ def create_app(data_dir: Path, server_hint: str | None = None, static_dir: Path 
         files = spool.list()
         return {"dir": str(spool.dir), "files": files, "total": len(files)}
 
-    @app.get("/api/capture/files/{name}", response_model=None)
+    @app.get("/api/capture/files/{name}", response_model=None,
+             responses=answers(
+                 (400, "bad_name", "the name is not a usable capture file name"),
+                 (404, "not_found", "no such capture file"),
+                 (409, "session")))
     async def capture_file(name: str) -> FileResponse | JSONResponse:
         """Serves one capture file as a pcap download. 409 spool_unavailable, 400 bad_name for an unusable
         name, 404 when there is no such file."""
@@ -798,7 +826,12 @@ def create_app(data_dir: Path, server_hint: str | None = None, static_dir: Path 
             return err(404, "not_found", f"No capture file {name}")
         return FileResponse(path, media_type="application/vnd.tcpdump.pcap", filename=name)
 
-    @app.delete("/api/capture/files/{name}", response_model=None)
+    @app.delete("/api/capture/files/{name}", response_model=None,
+                responses=answers(
+                    (400, "bad_name", "the name is not a usable capture file name"),
+                    (404, "not_found", "no such capture file"),
+                    (409, "capture_busy", "a Save is writing the file"),
+                    (409, "session")))
     async def capture_file_delete(name: str) -> dict[str, Any] | JSONResponse:
         """Deletes one capture file. 409 spool_unavailable, or capture_busy while a Save is writing it; 400
         bad_name; 404 when there is no such file."""
@@ -822,7 +855,11 @@ def create_app(data_dir: Path, server_hint: str | None = None, static_dir: Path 
         s.set_rpc_console(b.enabled, b.include_polling)
         return {"enabled": b.enabled, "include_polling": s.snapshot()["include_polling"]}
 
-    @app.get("/api/fs/list", response_model=None)
+    @app.get("/api/fs/list", response_model=None,
+             responses=answers(
+                 (400, "bad_path", "the path cannot be resolved"),
+                 (403, "forbidden", "the backend may not read the directory"),
+                 (404, "not_found", "the path is not a directory")))
     def fs_list(path: str | None = None, include_pcap: bool = False) -> dict[str, Any] | JSONResponse:
         """Localhost single-user file browser for profile paths. Lists the directory `path` (when empty, the
         Settings workspace directory, else the backend user's home): subdirectories first, then files with

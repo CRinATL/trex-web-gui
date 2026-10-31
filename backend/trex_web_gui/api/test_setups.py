@@ -7,7 +7,8 @@ from fastapi import APIRouter, Request
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
-from trex_web_gui.api.bodies import BodyRefused, err, read_json_capped
+from trex_web_gui.api.bodies import BODY_ANSWERS, BodyRefused, err, read_json_capped
+from trex_web_gui.api.declared import Item, answers
 from trex_web_gui.store.test_setups import (
     SetupError,
     SetupExists,
@@ -22,6 +23,16 @@ PUT_LIMIT = 256 * 1024          # bytes in a PUT body
 
 class NameBody(BaseModel):
     name: str
+
+
+# What a route through `failure` declares.
+SETUP_ANSWERS: tuple[Item, ...] = (
+    (404, "not_found", "no such test setup"),
+    (409, "exists", "a test setup of that name already exists"),
+    (409, "too_many", "the test setup directory is full"),
+    (422, "invalid_setup", "the test setup does not validate"),
+    (500, "storage_error", "the test setup files cannot be read or written"),
+)
 
 
 def test_setups_router(store: TestSetupStore, publish: Callable[[dict[str, Any]], None],
@@ -56,7 +67,7 @@ def test_setups_router(store: TestSetupStore, publish: Callable[[dict[str, Any]]
         """Every setup and the files that failed to load."""
         return listing()
 
-    @router.get("/api/test-setups/{slug}", response_model=None)
+    @router.get("/api/test-setups/{slug}", response_model=None, responses=answers(*SETUP_ANSWERS))
     async def get_setup(slug: str) -> dict[str, Any] | JSONResponse:
         """One setup; 404 not_found."""
         try:
@@ -64,7 +75,8 @@ def test_setups_router(store: TestSetupStore, publish: Callable[[dict[str, Any]]
         except (SetupNotFound, OSError, ValueError) as e:
             return failure(e)
 
-    @router.put("/api/test-setups/{slug}", response_model=None)
+    @router.put("/api/test-setups/{slug}", response_model=None,
+                responses=answers(*BODY_ANSWERS, *SETUP_ANSWERS))
     async def put_setup(slug: str, request: Request) -> dict[str, Any] | JSONResponse:
         """Create or replace the setup. 404 for a bad slug, 411/413/422 from the body read, 422
         invalid_setup (naming the field, or "slug does not match name"), 409 too_many."""
@@ -82,7 +94,7 @@ def test_setups_router(store: TestSetupStore, publish: Callable[[dict[str, Any]]
         changed()
         return dict(saved)
 
-    @router.delete("/api/test-setups/{slug}", response_model=None)
+    @router.delete("/api/test-setups/{slug}", response_model=None, responses=answers(*SETUP_ANSWERS))
     async def delete_setup(slug: str) -> dict[str, Any] | JSONResponse:
         """Delete the setup; 404 not_found."""
         try:
@@ -92,7 +104,7 @@ def test_setups_router(store: TestSetupStore, publish: Callable[[dict[str, Any]]
         changed()
         return listing()
 
-    @router.post("/api/test-setups/{slug}/rename", response_model=None)
+    @router.post("/api/test-setups/{slug}/rename", response_model=None, responses=answers(*SETUP_ANSWERS))
     async def rename_setup(slug: str, b: NameBody) -> dict[str, Any] | JSONResponse:
         """Rename the setup (its slug follows the name); 404, 409 exists, 422 invalid_setup."""
         try:
@@ -102,7 +114,7 @@ def test_setups_router(store: TestSetupStore, publish: Callable[[dict[str, Any]]
         changed()
         return dict(saved)
 
-    @router.post("/api/test-setups/{slug}/duplicate", response_model=None)
+    @router.post("/api/test-setups/{slug}/duplicate", response_model=None, responses=answers(*SETUP_ANSWERS))
     async def duplicate_setup(slug: str, b: NameBody) -> dict[str, Any] | JSONResponse:
         """Copy the setup under a new name; 404, 409 exists or too_many, 422 invalid_setup."""
         try:

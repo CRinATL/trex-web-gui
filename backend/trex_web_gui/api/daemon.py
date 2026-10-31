@@ -12,6 +12,7 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel, ConfigDict, Field, StrictBool, StrictInt, field_validator, model_validator
 
 from trex_web_gui.api.bodies import err
+from trex_web_gui.api.declared import Item, answers
 from trex_web_gui.daemon.client import DaemonFault, DaemonUnreachable, StfOptions
 from trex_web_gui.daemon.config import MAX_YAML_BYTES
 from trex_web_gui.daemon.session import (
@@ -173,13 +174,24 @@ async def _answer(make: Callable[[], Any]) -> Any:
         return err(422, "bad_request", str(e))
 
 
+# What a route through `_answer` declares.
+DAEMON_ANSWERS: tuple[Item, ...] = (
+    (409, "daemon"),
+    (422, "bad_request", "an argument breaks a rule the session checks; the message names it"),
+    (502, "daemon_fault", "the daemon answered with an error"),
+    (502, "daemon_unreachable", "the daemon cannot be reached"),
+)
+
+
 def daemon_router(daemon: Callable[[], DaemonSession]) -> APIRouter:
     """The /api/daemon routes over the lifespan's DaemonSession."""
     router = APIRouter()
 
-    @router.post("/api/daemon/connect", response_model=None)
+    @router.post("/api/daemon/connect", response_model=None, responses=answers(*DAEMON_ANSWERS))
     async def connect(b: DaemonConnectBody) -> Any:
-        """Connect to the daemon at host:port; returns its version, config, metadata, devices, files dir."""
+        """Connect to the daemon at host:port; returns its version, config, metadata, devices, files dir. 409
+        with `busy` (another daemon operation is in flight), or `not_connected` (a disconnect arrived while
+        connecting). 502 when the daemon cannot be reached or faults."""
         return await _answer(lambda: daemon().connect(b.host, b.port))
 
     @router.post("/api/daemon/disconnect")
@@ -193,29 +205,31 @@ def daemon_router(daemon: Callable[[], DaemonSession]) -> APIRouter:
         """The daemon session's snapshot (the `daemon` hub message)."""
         return daemon().snapshot()
 
-    @router.post("/api/daemon/config/preview", response_model=None)
+    @router.post("/api/daemon/config/preview", response_model=None, responses=answers(*DAEMON_ANSWERS))
     async def config_preview(b: ConfigPreviewBody) -> Any:
-        """{yaml, values, errors} for form values or YAML text; makes no daemon call."""
+        """{yaml, values, errors} for form values or YAML text; makes no daemon call, so the listed
+        daemon codes are the shared set (see Errors), not ones this route can answer."""
         return await _answer(lambda: daemon().preview(b.values, b.text))
 
-    @router.post("/api/daemon/config/push", response_model=None)
+    @router.post("/api/daemon/config/push", response_model=None, responses=answers(*DAEMON_ANSWERS))
     async def config_push(b: ConfigPushBody) -> Any:
         """Push the config as `filename` into the daemon's files dir; needs confirm; returns {path}."""
         return await _answer(lambda: daemon().push(b.yaml, b.filename, b.confirm))
 
-    @router.post("/api/daemon/start/preview", response_model=None)
+    @router.post("/api/daemon/start/preview", response_model=None, responses=answers(*DAEMON_ANSWERS))
     async def start_preview(b: StartPreviewBody) -> Any:
         """{command_preview}: the exact command a Start would run."""
         return await _answer(lambda: {"command_preview": daemon().command_preview(
             b.cfg_path, dict(b.options), b.trex_args, b.stf_options())})
 
-    @router.post("/api/daemon/start", response_model=None)
+    @router.post("/api/daemon/start", response_model=None, responses=answers(*DAEMON_ANSWERS))
     async def start(b: StartBody) -> Any:
         """Start TRex; needs `confirm`; returns {seq, command_preview, run}. 422 bad_request when `cfg_path`
         is not absolute or has `..` or characters outside A-Z a-z 0-9 _ . / -, when `options` holds
         anything but `c` (1-64), when `trex_args` has more than 20 tokens, an unbalanced quote, a token
         with other characters or a forbidden flag, when `stf` is sent with `mode` stl or left out with
-        `mode` stf, or for a bad stateful `stf` (out-of-range values, or any `trex_args`). 409 with
+        `mode` stf, when `timeout` is outside 5..300, or for a bad stateful `stf` (out-of-range values, or
+        any `trex_args`). 409 with
         `not_connected` (no daemon connection), `confirm_required`, `busy` (another daemon operation is in
         flight), `already_running`, `reserved`, or `foreign_trex` (a TRex this daemon did not start is
         running), and `invalid_profile` for a stateful profile that is refused. 502 when the daemon cannot
@@ -223,7 +237,7 @@ def daemon_router(daemon: Callable[[], DaemonSession]) -> APIRouter:
         return await _answer(lambda: daemon().start(
             b.cfg_path, dict(b.options), b.trex_args, b.timeout, b.confirm, b.stf_options()))
 
-    @router.post("/api/daemon/stop", response_model=None)
+    @router.post("/api/daemon/stop", response_model=None, responses=answers(*DAEMON_ANSWERS))
     async def stop(b: StopBody) -> Any:
         """Stop (or, with `force`, Force stop) TRex; needs confirm; returns {running, stop_s}. 409 with
         `confirm_required`, `not_connected` (no daemon connection), `busy` (another daemon operation is in
@@ -232,25 +246,25 @@ def daemon_router(daemon: Callable[[], DaemonSession]) -> APIRouter:
         `in_use` (another user owns a port; never lifted). 502 when the daemon cannot be reached or faults."""
         return await _answer(lambda: daemon().stop(b.rpc_port, b.confirm, b.force, b.owners_unknown_ack))
 
-    @router.get("/api/daemon/stf/profiles", response_model=None)
+    @router.get("/api/daemon/stf/profiles", response_model=None, responses=answers(*DAEMON_ANSWERS))
     async def stf_profiles(source: Literal["stock", "uploaded"]) -> Any:
         """{source, files}: the stock or the uploaded STF profiles the daemon lists."""
         return await _answer(lambda: daemon().stf_profiles(source))
 
-    @router.post("/api/daemon/stf/profile", response_model=None)
+    @router.post("/api/daemon/stf/profile", response_model=None, responses=answers(*DAEMON_ANSWERS))
     async def stf_profile(b: ProfileBody) -> Any:
         """{path, duration, templates, errors, warnings} for one profile; 409 invalid_profile for a path
         outside the path rule."""
         return await _answer(lambda: daemon().stf_profile(b.path))
 
-    @router.post("/api/daemon/stf/upload/preview", response_model=None)
+    @router.post("/api/daemon/stf/upload/preview", response_model=None, responses=answers(*DAEMON_ANSWERS))
     async def stf_upload_preview(b: UploadPreviewBody) -> Any:
         """What an upload of the local profile `path` would write: {profile, files, total_bytes, yaml,
         yaml_remote, yaml_bytes, yaml_exists, warnings}; 409 invalid_profile when the plan is refused. Writes
         nothing."""
         return await _answer(lambda: daemon().stf_upload_preview(b.path))
 
-    @router.post("/api/daemon/stf/upload", response_model=None)
+    @router.post("/api/daemon/stf/upload", response_model=None, responses=answers(*DAEMON_ANSWERS))
     async def stf_upload(b: UploadBody) -> Any:
         """Push the local profile `path` and its pcaps to the daemon's files dir; needs confirm; 409
         plan_changed when the files differ from the preview's `expected_yaml_remote` or the connected
@@ -258,7 +272,7 @@ def daemon_router(daemon: Callable[[], DaemonSession]) -> APIRouter:
         return await _answer(lambda: daemon().stf_upload(
             b.path, b.confirm, b.expected_yaml_remote, b.expected_target))
 
-    @router.get("/api/daemon/log", response_model=None)
+    @router.get("/api/daemon/log", response_model=None, responses=answers(*DAEMON_ANSWERS))
     async def log(which: Literal["trex", "daemon"]) -> Any:
         """{which, text}: the tail of TRex's log or the daemon's own."""
         out = await _answer(lambda: daemon().log(which))
