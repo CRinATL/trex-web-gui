@@ -25,6 +25,59 @@ def loss_bound(timeout_s: float, margin: float = 2.0) -> float:
     trex_conn.py:201), plus the subscriber's 0.5 s trigger wait (trex_subscriber.py get_timeout_msec)."""
     return 4 * timeout_s + 0.5 + margin
 _SKIP = frozenset({"global stats update"})  # 2 Hz; the stats pump owns it (P3)
+PENDING_ACQUIRE_S = 5.0     # how long a pending-acquire mark protects its port from a foreign event
+
+
+def mark_pending(c: Any, ports: list[int]) -> None:
+    """Executor thread, before an acquire RPC: count one more pending acquire per port and push its
+    deadline to PENDING_ACQUIRE_S from now. While a port has an unexpired mark, the event tap ignores a
+    "port acquired" from another session: it was published before our acquire and would clear the handler
+    we are about to get (the server publishes acquisitions in the order it performs them, so ours follows).
+    The marks are a dict {port: (count, deadline)} on the client, under its lock, held for the dict
+    operation only."""
+    deadline = time.monotonic() + PENDING_ACQUIRE_S
+    with c.pending_acquire_lock:
+        for port in ports:
+            count = c.pending_acquire.get(port, (0, 0.0))[0]
+            c.pending_acquire[port] = (count + 1, deadline)
+
+
+def _decrement(c: Any, port: int) -> None:
+    """One mark off `port`, the entry dropped at 0; absent entry: no-op. Takes the lock itself."""
+    with c.pending_acquire_lock:
+        entry = c.pending_acquire.get(port)
+        if entry is None:
+            return
+        if entry[0] <= 1:
+            del c.pending_acquire[port]
+        else:
+            c.pending_acquire[port] = (entry[0] - 1, entry[1])
+
+
+def unmark_pending(c: Any, ports: list[int]) -> None:
+    """Executor thread: take back one mark per port (an acquire that failed). A port with no entry is skipped:
+    the tap already took the mark when a partial acquire or a failing reset published our own event, then
+    raised."""
+    for port in ports:
+        _decrement(c, port)
+
+
+def acquire_marked(c: Any, ports: list[int], force: bool) -> Any:
+    """Executor thread: mark `ports` pending, then c.acquire(ports=ports, force=force) and return its result;
+    on any exception take the marks back and re-raise."""
+    mark_pending(c, ports)
+    try:
+        return c.acquire(ports=ports, force=force)
+    except BaseException:
+        unmark_pending(c, ports)
+        raise
+
+
+def _is_protected(c: Any, port: int) -> bool:
+    """True when `port` has an unexpired mark."""
+    with c.pending_acquire_lock:
+        entry = c.pending_acquire.get(port)
+    return entry is not None and time.monotonic() < entry[1]
 
 
 @dataclass(frozen=True)
@@ -156,6 +209,25 @@ def make_client(host: str, sync_port: int, async_port: int, timeout_s: float,
             c.conn.mark_for_disconnect(msg)
         return Event("local", "warning", msg)
 
+    c.pending_acquire = {}                 # port -> (count, deadline); see mark_pending
+    c.pending_acquire_lock = threading.Lock()
+
+    def _stale_foreign(c: Any, args: tuple[Any, ...]) -> str | None:
+        """Subscriber thread, for a "port acquired" event: our own event takes one mark off its port and
+        returns None; a foreign one on a port with an unexpired mark returns the text to report instead of
+        running the handler; anything else None. Never raises (an escape here marks the client for
+        disconnect); a malformed event takes the handler's path."""
+        try:
+            port_id, who, session_id = args[0], args[1], args[2]
+            if session_id == c.ctx.session_id:
+                _decrement(c, port_id)
+                return None
+            if _is_protected(c, port_id):
+                return f"Port {port_id} was taken by '{who}' before our acquire; ignored"
+        except Exception:
+            log.exception("pending-acquire check failed")
+        return None
+
     eh.register_event_handler("subscriber crashed", crashed)  # replaces upstream's SIGTERM path
     original = eh.on_event
 
@@ -166,14 +238,23 @@ def make_client(host: str, sync_port: int, async_port: int, timeout_s: float,
         # handler's Event (and its msg) must be taken here rather than from original()'s return value.
         if name not in eh.events_handlers:
             return original(name, *args, **kwargs)   # raises upstream's "unhandled event" TRexError
-        ev = eh.events_handlers[name](*args, **kwargs)
+        stale: str | None = None
+        if name == "port acquired":
+            stale = _stale_foreign(c, args)
+        if stale is None:
+            ev = eh.events_handlers[name](*args, **kwargs)
+        else:
+            ev = None                  # the handler would clear our acquire in flight: the handler stays
         if ev:
             eh.events.append(ev)
         if name not in _SKIP:
             try:
                 args_json = [_jsonable(a) for a in args]
-                on_event(ClientEvent(name, args_json, getattr(ev, "msg", None), time.time(),
-                                        level=getattr(ev, "ev_type", "info") or "info"))
+                if stale is None:
+                    on_event(ClientEvent(name, args_json, getattr(ev, "msg", None), time.time(),
+                                         level=getattr(ev, "ev_type", "info") or "info"))
+                else:
+                    on_event(ClientEvent(name, args_json, stale, time.time(), level="info"))
             except Exception:  # never let our pump crash the subscriber thread
                 log.exception("event tap failed for %s", name)
         return ev

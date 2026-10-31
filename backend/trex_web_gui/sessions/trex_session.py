@@ -302,7 +302,7 @@ class TrexSession(PortConfigCommands, CaptureCommands):
         def blocking(c: Any) -> Any:
             if not force:
                 trexapi.check_not_foreign(c, ports)
-            return c.acquire(ports=ports, force=force)
+            return trexapi.acquire_marked(c, ports, force)
         await self._command(label, blocking, ports=ports, need_owned=False)
         self._forget_assigned(ports)                 # what another owner left there is not this session's
 
@@ -322,7 +322,7 @@ class TrexSession(PortConfigCommands, CaptureCommands):
             mine = sorted(pid for pid, p in c.ports.items()
                           if not p.is_acquired() and p.owner == c.ctx.username)
             if mine:
-                c.acquire(ports=mine, force=True)
+                trexapi.acquire_marked(c, mine, True)
             return mine
         result: list[int] = await self._command("Re-acquire my ports", blocking)
         return result
@@ -602,7 +602,12 @@ class TrexSession(PortConfigCommands, CaptureCommands):
         def blocking(c: Any) -> None:
             nonlocal entered
             entered = True
-            c.reset(ports=ports)
+            trexapi.mark_pending(c, ports)       # c.reset force-acquires first; its own event takes the mark
+            try:
+                c.reset(ports=ports)
+            except BaseException:
+                trexapi.unmark_pending(c, ports)
+                raise
 
         # reader executor: clears the reader's port counters, then bumps the epoch even when the clear raised
         def reader_job(rd: Any) -> None:
