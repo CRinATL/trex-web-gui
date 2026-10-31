@@ -26,6 +26,7 @@ from trex_web_gui.api.bodies import err
 from trex_web_gui.api.bundle import bundle_router
 from trex_web_gui.api.capture import MonitorBody, PacketBody, RecorderBody
 from trex_web_gui.api.daemon import daemon_router
+from trex_web_gui.api.declared import answers
 from trex_web_gui.api.hub import Hub
 from trex_web_gui.api.monitor import MONITOR_ONLY_MESSAGE, MonitorOnly, monitor_router, require_full_mode
 from trex_web_gui.api.origin import LoopbackOriginMiddleware
@@ -360,7 +361,7 @@ def create_app(data_dir: Path, server_hint: str | None = None, static_dir: Path 
         return {"settings": dataclasses.asdict(s), "load_error": store.load_error, "data_dir": str(data_dir)}
 
     @app.get("/api/auth/login", response_model=None, status_code=303,
-             responses={403: {"description": "bad_token: the token does not match"}})
+             responses=answers((403, "bad_token", "the token does not match")))
     def login(token: str = "") -> Response:
         """GET: with a matching token, a 303 to `/` that sets the session cookie (HttpOnly,
         SameSite=Strict); otherwise 403 bad_token. Reachable without the cookie (auth.EXEMPT)."""

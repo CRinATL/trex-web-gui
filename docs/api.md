@@ -27,6 +27,9 @@ Every error is JSON, `{"error": <code>, "message": <text>}`, with the HTTP statu
 
 - 422 `bad_request`: the body or a query parameter failed validation (the message lists the first three
   problems). This replaces FastAPI's own 422 body, which is never sent.
+- 401 `unauthenticated`: no valid session cookie (see Access).
+- 403 `forbidden_origin`: the request's `Origin` header is not an allowed origin (see Access).
+- 400: the `Host` header is not `127.0.0.1` or `localhost` (see Access), with a plain-text body.
 - 404 `not_found` and 405 `method_not_allowed`: an unknown route or a wrong method.
 - 500 `internal`: an unhandled exception (the message is its type and text).
 - 500 `storage_error`: a file the backend keeps could not be read or written (settings, port labels, test
@@ -38,9 +41,8 @@ Every error is JSON, `{"error": <code>, "message": <text>}`, with the HTTP statu
 `/api/ws` is a WebSocket, which OpenAPI does not describe. It needs the cookie, sends a `hello` first and then
 the current state, then forwards the hub's JSON messages, each with a `type`. State messages are coalesced (a
 newer message replaces the queued older one of its type): `busy`, `capture`, `daemon`, `monitor`, `pgid`, `port_labels`, `ports`, `session`, `settings`, `stats`, `test_setups`, `util`. Bulk messages are never coalesced but are
-capped: `capture_pkts` (at most 20 queued per subscriber). For a subscriber whose queue overflows, the hub drops the oldest queued message that is
-not a state message, whatever its type (`log`, `event`, `capture_pkts` and the rest); state messages are never
-dropped.
+capped: `capture_pkts` (at most 20 queued per subscriber). For a subscriber whose queue overflows, the hub drops the oldest queued message whose type
+is not a state type (the list above); state messages are never dropped.
 
 ## /api/about
 
@@ -70,7 +72,7 @@ SameSite=Strict); otherwise 403 bad_token. Reachable without the cookie (auth.EX
 **Responses**
 
 - `303`: the body is described above
-- `403`: the body is described above
+- `403` `bad_token`: the token does not match
 - `422` `bad_request`: the body or query failed validation (`{"error": "bad_request", "message": <text>}`)
 
 ### POST /api/auth/logout
