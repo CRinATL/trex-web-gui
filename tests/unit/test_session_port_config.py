@@ -52,8 +52,7 @@ def test_apply_runs_one_job_per_call(rig: Rig) -> None:
 
 
 def test_apply_unresolved_is_a_warning_not_done(rig: Rig, monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr(trexapi, "resolve",
-                        rig.stub("resolve", trexapi.ArpResult("unresolved", None, "no reply")))
+    monkeypatch.setattr(trexapi, "arp_attempt", rig.stub("arp_attempt", None))      # no reply, every attempt
 
     async def body(s: TrexSession) -> None:
         r = await s.apply_layer(0, L3)
@@ -61,7 +60,7 @@ def test_apply_unresolved_is_a_warning_not_done(rig: Rig, monkeypatch: pytest.Mo
     rig.run(body)
     assert rig.logs("warning") == ["Apply L3 configuration to port 0: L3 set, ARP unresolved: no reply"]
     assert not [m for m in rig.logs("info") if m.endswith(": done")]
-    assert [n for n, *_ in rig.log] == ["set_vlan", "set_l3", "resolve"]
+    assert [n for n, *_ in rig.log] == ["set_vlan", "set_l3", *["arp_attempt"] * 6, "arp_unresolved"]
     assert rig.c.calls[-1] == ("set_service_mode", 0, False)      # restored either way
 
 

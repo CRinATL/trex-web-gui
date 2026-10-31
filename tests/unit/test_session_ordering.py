@@ -1,12 +1,17 @@
 """Pause, Resume and Update sync the ports before they check the cached profile state (stop-race-out-1): a
 port whose cache still says idle (or TX) while the server has moved on is controlled after the sync, not
-refused from the stale cache. The stub client logs sync and the RPC in one list to pin their order."""
+refused from the stale cache. The stub client logs sync and the RPC in one list to pin their order. Every
+acquire of ours is marked first (stop-race-flake-1), and the ARP resolve is short attempts, one job each
+(FU4-2)."""
+import asyncio
+import time
 from typing import Any
 
 import pytest
-from session_rig import IDLE, PAUSE, TX, Rig, StubClient, StubPort
+from session_rig import IDLE, PAUSE, PEER_MAC, TX, Rig, StubClient, StubPort
 from trex_web_gui import trexapi
-from trex_web_gui.sessions import TrexSession
+from trex_web_gui.sessions import SessionState, TrexSession
+from trex_web_gui.sessions.port_config import LayerRequest
 from trex_web_gui.trexapi import CommandRefused
 
 
@@ -160,3 +165,145 @@ def test_failed_reset_unmarks(rig: Rig, monkeypatch: pytest.MonkeyPatch) -> None
             await s.reset([0])
     rig.run(body)
     assert log == ["mark [0]", "reset", "unmark [0]"]
+
+
+# --- the ARP resolve is short attempts, one control-executor job each (FU4-2) ---
+
+L3 = LayerRequest("L3", None, "1.1.1.1", "1.1.1.99", [], None)
+ARP_TEXT = "port(s) [1]: link is DOWN"
+
+
+def attempts(rig: Rig, monkeypatch: pytest.MonkeyPatch,
+             answers: dict[int, Any] | None = None) -> list[tuple[float, bool]]:
+    """Stubs arp_attempt: each call sleeps 0.05 s, logs "arp_attempt" into rig.log, records (listen_s, first)
+    in the returned list and answers answers[n] for attempt n (1-based; an exception is raised), else None."""
+    seen: list[tuple[float, bool]] = []
+
+    # one stubbed attempt
+    def attempt(c: Any, port: int, listen_s: float, first: bool) -> Any:
+        seen.append((listen_s, first))
+        n = len(seen)
+        t0 = time.monotonic()
+        time.sleep(0.05)
+        rig.log.append(("arp_attempt", rig.jobs, t0, time.monotonic()))
+        a = (answers or {}).get(n)
+        if isinstance(a, Exception):
+            raise a
+        return a
+    monkeypatch.setattr(trexapi, "arp_attempt", attempt)
+    return seen
+
+
+def names(rig: Rig) -> list[str]:
+    """The stubbed calls in the order they ran."""
+    return [n for n, *_ in rig.log]
+
+
+def test_a_job_queued_after_the_first_attempt_runs_before_the_last(rig: Rig,
+                                                                   monkeypatch: pytest.MonkeyPatch) -> None:
+    attempts(rig, monkeypatch)
+
+    async def body(s: TrexSession) -> None:
+        apply = asyncio.ensure_future(s.apply_layer(1, L3))
+        while not any(n == "arp_attempt" for n, *_ in rig.log):    # the first attempt has run
+            await asyncio.sleep(0.005)
+        await s._run(rig.stub("other", None))
+        await apply
+    rig.run(body)
+    order = names(rig)
+    assert order.index("other") < len(order) - 1 - order[::-1].index("arp_attempt")
+
+
+def test_six_attempts_then_arp_unresolved(rig: Rig, monkeypatch: pytest.MonkeyPatch) -> None:
+    seen = attempts(rig, monkeypatch)
+
+    async def body(s: TrexSession) -> None:
+        r = await s.apply_layer(1, L3)
+        assert r.arp == ("unresolved", None, "no reply")
+    rig.run(body)
+    assert names(rig) == ["set_vlan", "set_l3", *["arp_attempt"] * 6, "arp_unresolved"]
+    assert seen == [(0.5, True)] + [(0.5, False)] * 5
+
+
+def test_a_reply_on_attempt_2_stops_the_loop(rig: Rig, monkeypatch: pytest.MonkeyPatch) -> None:
+    attempts(rig, monkeypatch, {2: trexapi.ArpResult("resolved", PEER_MAC, None)})
+
+    async def body(s: TrexSession) -> None:
+        assert (await s.apply_layer(1, L3)).arp == ("resolved", PEER_MAC, None)
+    rig.run(body)
+    assert names(rig) == ["set_vlan", "set_l3", "arp_attempt", "arp_attempt"]
+
+
+def test_an_unresolved_failure_on_attempt_2_stops_the_loop(rig: Rig, monkeypatch: pytest.MonkeyPatch) -> None:
+    attempts(rig, monkeypatch, {2: trexapi.ArpResult("unresolved", None, ARP_TEXT)})
+
+    async def body(s: TrexSession) -> None:
+        assert (await s.apply_layer(1, L3)).arp == ("unresolved", None, ARP_TEXT)
+    rig.run(body)
+    assert names(rig) == ["set_vlan", "set_l3", "arp_attempt", "arp_attempt"]
+    assert rig.logs("warning") == [f"Apply L3 configuration to port 1: L3 set, ARP unresolved: {ARP_TEXT}"]
+
+
+def test_service_turned_off_between_attempts_ends_unresolved_and_restores(
+        rig: Rig, monkeypatch: pytest.MonkeyPatch) -> None:
+    text = "port(s) [1]: must be under service mode"
+    attempts(rig, monkeypatch, {2: trexapi.ArpResult("unresolved", None, text)})
+
+    async def body(s: TrexSession) -> None:
+        assert (await s.apply_layer(1, L3)).arp == ("unresolved", None, text)
+    rig.run(body)
+    assert rig.c.calls == [("set_service_mode", 1, True), ("set_service_mode", 1, False)]
+
+
+def test_a_loss_in_an_attempt_raises_marks_lost_and_stops(rig: Rig, monkeypatch: pytest.MonkeyPatch) -> None:
+    seen = attempts(rig, monkeypatch, {1: trexapi.ServerUnreachable("gone")})
+
+    async def body(s: TrexSession) -> None:
+        with pytest.raises(trexapi.ServerUnreachable):
+            await s.apply_layer(1, L3)
+        assert s._state == SessionState.LOST
+    rig.run(body)
+    assert len(seen) == 1 and "arp_unresolved" not in names(rig)
+
+
+def test_stop_on_the_applys_port_runs_between_two_attempts(rig: Rig, monkeypatch: pytest.MonkeyPatch) -> None:
+    attempts(rig, monkeypatch)
+    monkeypatch.setattr(trexapi, "check_ports", lambda c, ports, need_owned=True: None)
+    rig.s._stop_all_profiles = lambda c, ports: rig.stub("stop", None)()      # type: ignore[method-assign]
+
+    async def body(s: TrexSession) -> None:
+        apply = asyncio.ensure_future(s.apply_layer(1, L3))
+        while not any(n == "arp_attempt" for n, *_ in rig.log):
+            await asyncio.sleep(0.005)
+        await s.stop([1])                                       # accepted: the Apply's port is not refused
+        assert (await apply).arp == ("unresolved", None, "no reply")
+    rig.run(body)
+    order = names(rig)
+    i = order.index("stop")
+    assert order[i - 1] == "arp_attempt" and order[i + 1] == "arp_attempt"
+    assert order.count("arp_attempt") == 6
+
+
+def test_the_connection_ending_between_attempts_stops_the_resolve(rig: Rig,
+                                                                  monkeypatch: pytest.MonkeyPatch) -> None:
+    n = 0
+
+    # attempt 2 ends the connection, as a loss noticed elsewhere would
+    def attempt(c: Any, port: int, listen_s: float, first: bool) -> None:
+        nonlocal n
+        n += 1
+        rig.log.append(("arp_attempt", rig.jobs, 0.0, 0.0))
+        if n == 2:
+            rig.s._state = SessionState.LOST
+    monkeypatch.setattr(trexapi, "arp_attempt", attempt)
+    req = LayerRequest("L3", None, "1.1.1.1", "1.1.1.99", [], (False, None))
+
+    async def body(s: TrexSession) -> None:
+        r = await s.apply_layer(1, req)
+        assert r.arp == ("unresolved", None, "the connection ended; the resolve stopped")
+    rig.run(body)
+    order = names(rig)
+    assert order.count("arp_attempt") == 2 and order[-1] == "arp_attempt"     # no further job of any kind
+    assert ("Apply L3 configuration to port 1: L3 set, ARP unresolved: the connection ended; the resolve "
+            "stopped") in rig.logs("warning")
+    assert not [m for m in rig.logs("info") if m.endswith(": done")] and rig.logs("error") == []

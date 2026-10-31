@@ -2,6 +2,7 @@
 neighbour scan and xstats. A mixin, so the session's lock, executor and loss handling stay in one class;
 every command runs its client calls as executor jobs through the session's `_job` / `_run`."""
 import asyncio
+import math
 import time
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
@@ -12,6 +13,9 @@ from trex_web_gui.trexapi import TrexApiError
 from trex_web_gui.trexapi.ports import STATE_NAMES
 
 PING_INTERVAL_S = 1.0                  # between two echoes, spent on the loop, not on the executor
+ARP_ATTEMPT_S = 0.5                    # one ARP try's listen: a job on the control executor
+ARP_BUDGET_S = 3.0                     # the resolve's whole listen, the vendor's one try (ServiceARP)
+ARP_ENDED = "the connection ended; the resolve stopped"
 CONFIGURABLE = frozenset({"IDLE", "STREAMS", "ASTF_LOADED"})    # server stx/common/trex_port.cpp:378-380 etc.
 LEGACY_IPV6 = "IPv6 configuration needs the linux_based stack; this server runs legacy"
 
@@ -139,7 +143,11 @@ class PortConfigCommands:
 
     async def apply_layer(self, port: int, req: LayerRequest) -> ApplyResult:
         """Jobs in order: service on, VLAN, L2 or L3, then (L3) the ARP resolve, then IPv6 if given, and the
-        restore. An unresolved ARP is a warning: the L3 configuration stays."""
+        restore. The resolve is ceil(ARP_BUDGET_S / ARP_ATTEMPT_S) short attempts, one job each, so other
+        commands (Stop) run between them; the first reply, or a failure that ends it, is the result, and
+        arp_unresolved is the last job when none replied. If the connection ends between attempts the resolve
+        stops "unresolved" and IPv6 is not attempted. An unresolved ARP is a warning: the L3 configuration
+        stays."""
         c = self.require_control()
         label = f"Apply {req.mode} configuration to port {port}"
 
@@ -151,6 +159,18 @@ class PortConfigCommands:
                 return fn(c, port, *args)
             return job
 
+        # the ARP resolve as short attempts, one job each; an ended connection is the ARP_ENDED result
+        async def resolve() -> trexapi.ArpResult:
+            attempts = math.ceil(ARP_BUDGET_S / ARP_ATTEMPT_S)
+            for i in range(attempts):
+                if not self._connected_to(c):
+                    return trexapi.ArpResult("unresolved", None, ARP_ENDED)
+                r = await self._job(label, step(trexapi.arp_attempt, ARP_ATTEMPT_S, i == 0))
+                if r is not None:
+                    return r                      # type: ignore[no-any-return]
+            no_reply: trexapi.ArpResult = await self._job(label, step(trexapi.arp_unresolved))
+            return no_reply
+
         # inside the service bracket: the configuration jobs in order; returns the ARP result (L3 only)
         async def body() -> trexapi.ArpResult | None:
             arp: trexapi.ArpResult | None = None
@@ -159,7 +179,9 @@ class PortConfigCommands:
                 await self._job(label, step(trexapi.set_l2, req.dst_mac or ""))
             else:
                 await self._job(label, step(trexapi.set_l3, req.src_ipv4 or "", req.dst_ipv4 or ""))
-                arp = await self._job(label, step(trexapi.resolve))
+                arp = await resolve()
+                if arp.error == ARP_ENDED:
+                    return arp                    # like ping: nothing more runs on a connection that ended
             if req.ipv6 is not None:
                 await self._job(label, step(trexapi.conf_ipv6, req.ipv6[0], req.ipv6[1]))
             return arp

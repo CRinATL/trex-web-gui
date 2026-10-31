@@ -69,9 +69,9 @@ class StubClient:
 class Rig:
     def __init__(self, mp: pytest.MonkeyPatch, stack: str = "linux_based") -> None:
         """A TrexSession on a StubClient, already CONNECTED, publishing into msgs. Wraps its _run to count
-        jobs in self.jobs. Patches trexapi: set_vlan, set_l2, set_l3, conf_ipv6, resolve, ping_once and
-        scan_neighbours get logging stubs (log tuples carry the job count); port_views and read_xstats get
-        fixed answers that log nothing; the ping interval is 0.05 s."""
+        jobs in self.jobs. Patches trexapi: set_vlan, set_l2, set_l3, conf_ipv6, arp_attempt (resolves at
+        once), arp_unresolved, ping_once and scan_neighbours get logging stubs (log tuples carry the job
+        count); port_views and read_xstats get fixed answers that log nothing; the ping interval is 0.05 s."""
         self.msgs: list[dict[str, Any]] = []
         self.s = TrexSession(self.msgs.append, release_on_exit=lambda: False)
         self.c = StubClient(stack)
@@ -90,7 +90,10 @@ class Rig:
         mp.setattr(port_config, "PING_INTERVAL_S", 0.05)
         for name in ("set_vlan", "set_l2", "set_l3", "conf_ipv6"):
             mp.setattr(trexapi, name, self.stub(name, None))
-        mp.setattr(trexapi, "resolve", self.stub("resolve", trexapi.ArpResult("resolved", PEER_MAC, None)))
+        mp.setattr(trexapi, "arp_attempt",
+                   self.stub("arp_attempt", trexapi.ArpResult("resolved", PEER_MAC, None)))
+        mp.setattr(trexapi, "arp_unresolved",
+                   self.stub("arp_unresolved", trexapi.ArpResult("unresolved", None, "no reply")))
         mp.setattr(trexapi, "ping_once", self.stub("ping_once", OK))
         mp.setattr(trexapi, "scan_neighbours", self.stub("scan", [trexapi.Neighbour(**NEIGH)]))
         mp.setattr(trexapi, "read_xstats", lambda c, p: trexapi.XstatsView(p, {"rx_good_packets": 5}))
