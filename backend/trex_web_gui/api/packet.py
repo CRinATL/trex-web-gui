@@ -25,7 +25,8 @@ from fastapi import APIRouter, Header, Request
 from fastapi.responses import JSONResponse, Response
 from pydantic import BaseModel, ConfigDict, Field, ValidationError, field_validator, model_validator
 
-from trex_web_gui.api.bodies import BodyRefused, err, read_json_capped
+from trex_web_gui.api.bodies import BODY_ANSWERS, BodyRefused, err, read_json_capped
+from trex_web_gui.api.declared import Item, answers
 from trex_web_gui.api.studio import UPLOAD_ID_RE
 from trex_web_gui.store.settings import Preferences
 from trex_web_gui.studio.packetdoc import DocError, PacketDoc, check_ids, model_of, parse_doc
@@ -280,6 +281,15 @@ def bundled_doc(template_id: str) -> PacketDoc | None:
     return parse_doc(json.loads(path.read_text(encoding="utf-8")))
 
 
+# What a route through `guarded` declares from `engine_failure`.
+ENGINE_ANSWERS: tuple[Item, ...] = (
+    (422, "packet_error", "the packet worker refused the request"),
+    (503, "engine_busy", "the packet worker is busy"),
+    (503, "engine_closed", "the packet worker is closed"),
+    (503, "engine_restarted", "the packet worker restarted; the next call starts a fresh one"),
+)
+
+
 def packet_router(engine: PacketEngine, store: TemplateStore, prefs_fn: Callable[[], Preferences],
                   data_dir: Path) -> APIRouter:
     """The /api/studio/packet routes over `engine`, the user templates in `store`, and the uploads in
@@ -333,7 +343,10 @@ def packet_router(engine: PacketEngine, store: TemplateStore, prefs_fn: Callable
             raise BodyRefused(doc_failure(e)) from None
         return doc
 
-    @router.get("/definitions", response_model=None)
+    @router.get("/definitions", response_model=None,
+                responses=answers(
+                    *ENGINE_ANSWERS,
+                    (304, "", "the `If-None-Match` ETag is current; nothing is sent")))
     async def definitions(if_none_match: str | None = Header(None)) -> Response:
         """The protocol and Field Engine definitions with an ETag; 304 when `If-None-Match` has it."""
         async def go() -> Response:
@@ -346,7 +359,11 @@ def packet_router(engine: PacketEngine, store: TemplateStore, prefs_fn: Callable
             return JSONResponse(defs, headers={"ETag": tag})
         return await guarded(go)
 
-    @router.post("/build", response_model=None)
+    @router.post("/build", response_model=None,
+                 responses=answers(
+                     *BODY_ANSWERS,
+                     *ENGINE_ANSWERS,
+                     (422, "invalid_doc", "the document or file is invalid; `where` is the position")))
     async def build(request: Request) -> Any:
         """Build the document; a build error is a 200 with `error` set."""
         async def go() -> Any:
@@ -356,7 +373,11 @@ def packet_router(engine: PacketEngine, store: TemplateStore, prefs_fn: Callable
             return await engine.build(packet, fe)
         return await guarded(go)
 
-    @router.post("/payload-classes", response_model=None)
+    @router.post("/payload-classes", response_model=None,
+                 responses=answers(
+                     *BODY_ANSWERS,
+                     *ENGINE_ANSWERS,
+                     (422, "invalid_doc", "the document or file is invalid; `where` is the position")))
     async def payload_classes(request: Request) -> Any:
         """The protocols the document's last layer may carry."""
         async def go() -> Any:
@@ -365,7 +386,11 @@ def packet_router(engine: PacketEngine, store: TemplateStore, prefs_fn: Callable
             return {"classes": await engine.payload_classes(model_of(await checked(b.doc))[0])}
         return await guarded(go)
 
-    @router.post("/param-values", response_model=None)
+    @router.post("/param-values", response_model=None,
+                 responses=answers(
+                     *BODY_ANSWERS,
+                     *ENGINE_ANSWERS,
+                     (422, "invalid_doc", "the document or file is invalid; `where` is the position")))
     async def param_values(request: Request) -> Any:
         """The values a Field Engine parameter may take for the document."""
         async def go() -> Any:
@@ -375,7 +400,11 @@ def packet_router(engine: PacketEngine, store: TemplateStore, prefs_fn: Callable
             return {"map": await engine.param_values(packet, fe, b.param_id)}
         return await guarded(go)
 
-    @router.post("/doc-from-binary", response_model=None)
+    @router.post("/doc-from-binary", response_model=None,
+                 responses=answers(
+                     *BODY_ANSWERS,
+                     *ENGINE_ANSWERS,
+                     (422, "invalid_stream", "a stream is invalid; `index` and `field` name it")))
     async def doc_from_binary(request: Request) -> Any:
         """A literal-only document for packet bytes and, optionally, a stream's VM."""
         async def go() -> Any:
@@ -386,7 +415,11 @@ def packet_router(engine: PacketEngine, store: TemplateStore, prefs_fn: Callable
             return await engine.doc_from_binary(b.binary, b.vm)
         return await guarded(go)
 
-    @router.post("/reconstruct", response_model=None)
+    @router.post("/reconstruct", response_model=None,
+                 responses=answers(
+                     *BODY_ANSWERS,
+                     *ENGINE_ANSWERS,
+                     (422, "invalid_doc", "the document or file is invalid; `where` is the position")))
     async def reconstruct(request: Request) -> Any:
         """The document after a byte edit."""
         async def go() -> Any:
@@ -397,7 +430,11 @@ def packet_router(engine: PacketEngine, store: TemplateStore, prefs_fn: Callable
             return await engine.reconstruct_edit(doc, b.binary, edited)
         return await guarded(go)
 
-    @router.post("/decompile", response_model=None)
+    @router.post("/decompile", response_model=None,
+                 responses=answers(
+                     *BODY_ANSWERS,
+                     *ENGINE_ANSWERS,
+                     (422, "invalid_stream", "a stream is invalid; `index` and `field` name it")))
     async def decompile(request: Request) -> Any:
         """A VM's instructions as editor parameters."""
         async def go() -> Any:
@@ -423,7 +460,12 @@ def packet_router(engine: PacketEngine, store: TemplateStore, prefs_fn: Callable
         return JSONResponse({"error": "invalid_stream", "message": f"{field}: {message}", "field": field},
                             status_code=422)
 
-    @router.post("/to-stream", response_model=None)
+    @router.post("/to-stream", response_model=None,
+                 responses=answers(
+                     *BODY_ANSWERS,
+                     *ENGINE_ANSWERS,
+                     (422, "invalid_doc", "the document or file is invalid; `where` is the position"),
+                     (422, "invalid_stream", "a stream is invalid; `index` and `field` name it")))
     async def to_stream(request: Request) -> Any:
         """`{packet, vm}` for a stream, each half validated as P4a validates a stream's."""
         async def go() -> Any:
@@ -441,7 +483,11 @@ def packet_router(engine: PacketEngine, store: TemplateStore, prefs_fn: Callable
             return parts
         return await guarded(go)
 
-    @router.post("/vm-python", response_model=None)
+    @router.post("/vm-python", response_model=None,
+                 responses=answers(
+                     *BODY_ANSWERS,
+                     *ENGINE_ANSWERS,
+                     (422, "invalid_doc", "the document or file is invalid; `where` is the position")))
     async def vm_python(request: Request) -> Any:
         """The Python that builds the document's Field Engine."""
         async def go() -> Any:
@@ -451,7 +497,7 @@ def packet_router(engine: PacketEngine, store: TemplateStore, prefs_fn: Callable
             return {"code": await engine.vm_python(packet, fe)}
         return await guarded(go)
 
-    @router.get("/templates", response_model=None)
+    @router.get("/templates", response_model=None, responses=answers(*ENGINE_ANSWERS))
     async def templates() -> Any:
         """`{server, user, dir}`: the server's templates (`buildable` false with a `reason` for one the
         service cannot build), the user's template names, and the user directory."""
@@ -465,7 +511,12 @@ def packet_router(engine: PacketEngine, store: TemplateStore, prefs_fn: Callable
             return {"server": server, "user": names, "dir": directory}
         return await guarded(go)
 
-    @router.get("/templates/server/{template_id:path}", response_model=None)
+    @router.get("/templates/server/{template_id:path}", response_model=None,
+                responses=answers(
+                    *ENGINE_ANSWERS,
+                    (404, "not_found", "no such server template"),
+                    (422, "invalid_doc", "the document or file is invalid; `where` is the position"),
+                    (500, "storage_error", "the templates directory cannot be used")))
     async def server_template(template_id: str) -> Any:
         """The server template `template_id` as `{doc}`; 404 unless the listing gave that id."""
         async def go() -> Any:
@@ -508,7 +559,13 @@ def packet_router(engine: PacketEngine, store: TemplateStore, prefs_fn: Callable
     store_errors = (TemplateNotFound, TemplateExists, TemplateTooLarge, TemplateNameError, DocError,
                     ValueError, OSError)
 
-    @router.get("/templates/user/{name:path}", response_model=None)
+    @router.get("/templates/user/{name:path}", response_model=None,
+                responses=answers(
+                    (404, "not_found", "no such template"),
+                    (409, "exists", "a template of that name already exists"),
+                    (413, "too_large", "the template file is over its size cap"),
+                    (422, "invalid_doc", "the document or file is invalid; `where` is the position"),
+                    (500, "storage_error", "the templates directory cannot be used")))
     async def get_user_template(name: str) -> Any:
         """The user template `name` as `{doc}`; a name the rules refuse is a 404."""
         try:
@@ -518,7 +575,14 @@ def packet_router(engine: PacketEngine, store: TemplateStore, prefs_fn: Callable
         except store_errors as e:
             return template_failure(e)
 
-    @router.put("/templates/user/{name:path}", response_model=None)
+    @router.put("/templates/user/{name:path}", response_model=None,
+                responses=answers(
+                    *BODY_ANSWERS,
+                    *ENGINE_ANSWERS,
+                    (404, "not_found", "no such template"),
+                    (409, "exists", "a template of that name already exists"),
+                    (422, "invalid_doc", "the document or file is invalid; `where` is the position"),
+                    (500, "storage_error", "the templates directory cannot be used")))
     async def put_user_template(name: str, request: Request) -> Any:
         """Save the document as the user template `name` (409 exists without `overwrite`); `{doc}`. A name
         the rules refuse is a 404, answered before the body is read or the worker is asked for anything."""
@@ -538,7 +602,13 @@ def packet_router(engine: PacketEngine, store: TemplateStore, prefs_fn: Callable
             return {"doc": doc}
         return await guarded(go)
 
-    @router.delete("/templates/user/{name:path}", response_model=None)
+    @router.delete("/templates/user/{name:path}", response_model=None,
+                   responses=answers(
+                       (404, "not_found", "no such template"),
+                       (409, "exists", "a template of that name already exists"),
+                       (413, "too_large", "the template file is over its size cap"),
+                       (422, "invalid_doc", "the document or file is invalid; `where` is the position"),
+                       (500, "storage_error", "the templates directory cannot be used")))
     async def delete_user_template(name: str) -> Any:
         """Remove the user template `name`; `{}`."""
         try:
@@ -585,7 +655,12 @@ def packet_router(engine: PacketEngine, store: TemplateStore, prefs_fn: Callable
         """The presets as `{presets: [{id, name, defaults}]}`; `defaults` are what a form starts from."""
         return {"presets": [{"id": i, "name": NAMES[i], "defaults": defaults(i)} for i in PRESETS]}
 
-    @router.post("/presets/{preset_id}", response_model=None)
+    @router.post("/presets/{preset_id}", response_model=None,
+                 responses=answers(
+                     *BODY_ANSWERS,
+                     *ENGINE_ANSWERS,
+                     (404, "not_found", "no such preset"),
+                     (422, "invalid_params", "the preset parameters are invalid; `where` names the field")))
     async def build_preset(preset_id: str, request: Request) -> Any:
         """`{doc, flags}` for preset `preset_id` over the JSON object in the body (parameters left out take
         their defaults); 404 for an unknown preset, 422 invalid_params naming the parameter. `flags` is the
@@ -602,7 +677,11 @@ def packet_router(engine: PacketEngine, store: TemplateStore, prefs_fn: Callable
                                     status_code=422)
         return await guarded(go)
 
-    @router.post("/pcap/list", response_model=None)
+    @router.post("/pcap/list", response_model=None,
+                 responses=answers(
+                     *BODY_ANSWERS,
+                     *ENGINE_ANSWERS,
+                     (404, "not_found", "no such upload or file")))
     async def pcap_list(request: Request) -> Any:
         """One page of a capture, `{total, rows, warnings}`: the offset clamps to >= 0 and the limit to 1-100;
         `warnings` are the capture's cut or truncated records. The capture is an upload (`upload_id`) or an
@@ -617,7 +696,11 @@ def packet_router(engine: PacketEngine, store: TemplateStore, prefs_fn: Callable
             return {**page, "warnings": notes}
         return await guarded(go)
 
-    @router.post("/pcap/packet", response_model=None)
+    @router.post("/pcap/packet", response_model=None,
+                 responses=answers(
+                     *BODY_ANSWERS,
+                     *ENGINE_ANSWERS,
+                     (404, "not_found", "no such upload or file")))
     async def pcap_packet(request: Request) -> Any:
         """One packet of a capture as `{binary, doc, warnings}`: the document holds literals only. The
         capture and its refusals (404 not_found, 422 bad_request, 413 too_large) are those of

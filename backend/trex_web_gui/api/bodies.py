@@ -4,10 +4,20 @@ import json
 from fastapi import Request
 from fastapi.responses import JSONResponse
 
+from trex_web_gui.api.declared import Item
+
 
 def err(status: int, code: str, message: str) -> JSONResponse:
     """A JSON error response, `{error: code, message}`, with HTTP status `status`."""
     return JSONResponse({"error": code, "message": message}, status_code=status)
+
+
+# What a route that reads its body with `read_json_capped` declares (the 411, 413 and 422 it raises).
+BODY_ANSWERS: tuple[Item, ...] = (
+    (411, "length_required", "the request has no valid Content-Length"),
+    (413, "too_large", "the request body is over its size cap"),
+    (422, "bad_request", "the body is not valid JSON, or a field is wrong"),
+)
 
 
 class BodyRefused(Exception):

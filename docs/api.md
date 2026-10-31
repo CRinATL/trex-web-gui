@@ -146,6 +146,12 @@ The capture snapshot, after a refresh from the server while connected.
 **Responses**
 
 - `200`: the body is described above
+- `400` `trex_error`: the server refused the command
+- `409`: a session refusal, see Errors
+- `422` `bad_request`: the body or query failed validation (`{"error": "bad_request", "message": <text>}`)
+- `422` `profile_error`: the profile cannot be loaded
+- `422`: a session refusal, see Errors
+- `502` `unreachable`: the server is unreachable, or restarted
 
 ### GET /api/capture/files
 
@@ -154,6 +160,7 @@ Lists the files in the capture directory. 409 spool_unavailable when the backend
 **Responses**
 
 - `200`: the body is described above
+- `409`: a session refusal, see Errors
 
 ### GET /api/capture/files/{name}
 
@@ -169,6 +176,9 @@ name, 404 when there is no such file.
 **Responses**
 
 - `200`: the body is described above
+- `400` `bad_name`: the name is not a usable capture file name
+- `404` `not_found`: no such capture file
+- `409`: a session refusal, see Errors
 - `422` `bad_request`: the body or query failed validation (`{"error": "bad_request", "message": <text>}`)
 
 ### DELETE /api/capture/files/{name}
@@ -185,6 +195,10 @@ bad_name; 404 when there is no such file.
 **Responses**
 
 - `200`: the body is described above
+- `400` `bad_name`: the name is not a usable capture file name
+- `404` `not_found`: no such capture file
+- `409` `capture_busy`: a Save is writing the file
+- `409`: a session refusal, see Errors
 - `422` `bad_request`: the body or query failed validation (`{"error": "bad_request", "message": <text>}`)
 
 ### GET /api/capture/lldp
@@ -216,7 +230,12 @@ table.
 **Responses**
 
 - `200`: the body is described above
+- `400` `trex_error`: the server refused the command
+- `409`: a session refusal, see Errors
 - `422` `bad_request`: the body or query failed validation (`{"error": "bad_request", "message": <text>}`)
+- `422` `profile_error`: the profile cannot be loaded
+- `422`: a session refusal, see Errors
+- `502` `unreachable`: the server is unreachable, or restarted
 
 ### DELETE /api/capture/monitor
 
@@ -228,6 +247,12 @@ or read-only.
 **Responses**
 
 - `200`: the body is described above
+- `400` `trex_error`: the server refused the command
+- `409`: a session refusal, see Errors
+- `422` `bad_request`: the body or query failed validation (`{"error": "bad_request", "message": <text>}`)
+- `422` `profile_error`: the profile cannot be loaded
+- `422`: a session refusal, see Errors
+- `502` `unreachable`: the server is unreachable, or restarted
 
 ### POST /api/capture/packet/tree
 
@@ -243,6 +268,7 @@ when dissection raises.
 **Responses**
 
 - `200`: the body is described above
+- `400` `bad_packet`: the packet could not be dissected
 - `422` `bad_request`: the body or query failed validation (`{"error": "bad_request", "message": <text>}`)
 
 ### POST /api/capture/recorders
@@ -262,7 +288,12 @@ Starts a fixed-size recorder capture of `limit` packets; returns its id. Refused
 **Responses**
 
 - `200`: the body is described above
+- `400` `trex_error`: the server refused the command
+- `409`: a session refusal, see Errors
 - `422` `bad_request`: the body or query failed validation (`{"error": "bad_request", "message": <text>}`)
+- `422` `profile_error`: the profile cannot be loaded
+- `422`: a session refusal, see Errors
+- `502` `unreachable`: the server is unreachable, or restarted
 
 ### DELETE /api/capture/recorders/{cid}
 
@@ -278,7 +309,12 @@ being saved, or when not connected or read-only.
 **Responses**
 
 - `200`: the body is described above
+- `400` `trex_error`: the server refused the command
+- `409`: a session refusal, see Errors
 - `422` `bad_request`: the body or query failed validation (`{"error": "bad_request", "message": <text>}`)
+- `422` `profile_error`: the profile cannot be loaded
+- `422`: a session refusal, see Errors
+- `502` `unreachable`: the server is unreachable, or restarted
 
 ### POST /api/capture/recorders/{cid}/save
 
@@ -297,7 +333,12 @@ directory, a file write failure (spool_error), or when not connected or read-onl
 **Responses**
 
 - `200`: the body is described above
+- `400` `trex_error`: the server refused the command
+- `409`: a session refusal, see Errors
 - `422` `bad_request`: the body or query failed validation (`{"error": "bad_request", "message": <text>}`)
+- `422` `profile_error`: the profile cannot be loaded
+- `422`: a session refusal, see Errors
+- `502` `unreachable`: the server is unreachable, or restarted
 
 ### POST /api/capture/recorders/{cid}/stop
 
@@ -313,7 +354,12 @@ capture being saved, an endpoint capture, or when not connected or read-only.
 **Responses**
 
 - `200`: the body is described above
+- `400` `trex_error`: the server refused the command
+- `409`: a session refusal, see Errors
 - `422` `bad_request`: the body or query failed validation (`{"error": "bad_request", "message": <text>}`)
+- `422` `profile_error`: the profile cannot be loaded
+- `422`: a session refusal, see Errors
+- `502` `unreachable`: the server is unreachable, or restarted
 
 ### POST /api/capture/wireshark
 
@@ -324,6 +370,12 @@ connected, or Wireshark cannot be launched.
 **Responses**
 
 - `200`: the body is described above
+- `400` `trex_error`: the server refused the command
+- `409`: a session refusal, see Errors
+- `422` `bad_request`: the body or query failed validation (`{"error": "bad_request", "message": <text>}`)
+- `422` `profile_error`: the profile cannot be loaded
+- `422`: a session refusal, see Errors
+- `502` `unreachable`: the server is unreachable, or restarted
 
 ### DELETE /api/capture/wireshark
 
@@ -332,6 +384,12 @@ Closes the Wireshark pipe, leaving its window open; returns the capture snapshot
 **Responses**
 
 - `200`: the body is described above
+- `400` `trex_error`: the server refused the command
+- `409`: a session refusal, see Errors
+- `422` `bad_request`: the body or query failed validation (`{"error": "bad_request", "message": <text>}`)
+- `422` `profile_error`: the profile cannot be loaded
+- `422`: a session refusal, see Errors
+- `502` `unreachable`: the server is unreachable, or restarted
 
 ### GET /api/capture/wireshark/preflight
 
@@ -384,7 +442,11 @@ The daemon session's snapshot (the `daemon` hub message).
 **Responses**
 
 - `200`: the body is described above
+- `409`: a daemon refusal, see Errors
 - `422` `bad_request`: the body or query failed validation (`{"error": "bad_request", "message": <text>}`)
+- `422` `bad_request`: a rule the body model missed
+- `502` `daemon_fault`: the daemon answered with an error
+- `502` `daemon_unreachable`: the daemon cannot be reached
 
 ### POST /api/daemon/config/push
 
@@ -401,11 +463,17 @@ Push the config as `filename` into the daemon's files dir; needs confirm; return
 **Responses**
 
 - `200`: the body is described above
+- `409`: a daemon refusal, see Errors
 - `422` `bad_request`: the body or query failed validation (`{"error": "bad_request", "message": <text>}`)
+- `422` `bad_request`: a rule the body model missed
+- `502` `daemon_fault`: the daemon answered with an error
+- `502` `daemon_unreachable`: the daemon cannot be reached
 
 ### POST /api/daemon/connect
 
-Connect to the daemon at host:port; returns its version, config, metadata, devices, files dir.
+Connect to the daemon at host:port; returns its version, config, metadata, devices, files dir. 409
+with `busy` (another daemon operation is in flight), or `not_connected` (a disconnect arrived while
+connecting). 502 when the daemon cannot be reached or faults.
 
 **Request body** (`application/json`, schema `DaemonConnectBody`)
 
@@ -417,7 +485,11 @@ Connect to the daemon at host:port; returns its version, config, metadata, devic
 **Responses**
 
 - `200`: the body is described above
+- `409`: a daemon refusal, see Errors
 - `422` `bad_request`: the body or query failed validation (`{"error": "bad_request", "message": <text>}`)
+- `422` `bad_request`: a rule the body model missed
+- `502` `daemon_fault`: the daemon answered with an error
+- `502` `daemon_unreachable`: the daemon cannot be reached
 
 ### POST /api/daemon/disconnect
 
@@ -440,7 +512,11 @@ Drop the connection; returns the snapshot.
 **Responses**
 
 - `200`: the body is described above
+- `409`: a daemon refusal, see Errors
 - `422` `bad_request`: the body or query failed validation (`{"error": "bad_request", "message": <text>}`)
+- `422` `bad_request`: a rule the body model missed
+- `502` `daemon_fault`: the daemon answered with an error
+- `502` `daemon_unreachable`: the daemon cannot be reached
 
 ### POST /api/daemon/start
 
@@ -448,7 +524,8 @@ Start TRex; needs `confirm`; returns {seq, command_preview, run}. 422 bad_reques
 is not absolute or has `..` or characters outside A-Z a-z 0-9 _ . / -, when `options` holds
 anything but `c` (1-64), when `trex_args` has more than 20 tokens, an unbalanced quote, a token
 with other characters or a forbidden flag, when `stf` is sent with `mode` stl or left out with
-`mode` stf, or for a bad stateful `stf` (out-of-range values, or any `trex_args`). 409 with
+`mode` stf, when `timeout` is outside 5..300, or for a bad stateful `stf` (out-of-range values, or
+any `trex_args`). 409 with
 `not_connected` (no daemon connection), `confirm_required`, `busy` (another daemon operation is in
 flight), `already_running`, `reserved`, or `foreign_trex` (a TRex this daemon did not start is
 running), and `invalid_profile` for a stateful profile that is refused. 502 when the daemon cannot
@@ -469,7 +546,11 @@ be reached or faults.
 **Responses**
 
 - `200`: the body is described above
+- `409`: a daemon refusal, see Errors
 - `422` `bad_request`: the body or query failed validation (`{"error": "bad_request", "message": <text>}`)
+- `422` `bad_request`: a rule the body model missed
+- `502` `daemon_fault`: the daemon answered with an error
+- `502` `daemon_unreachable`: the daemon cannot be reached
 
 ### POST /api/daemon/start/preview
 
@@ -488,7 +569,11 @@ be reached or faults.
 **Responses**
 
 - `200`: the body is described above
+- `409`: a daemon refusal, see Errors
 - `422` `bad_request`: the body or query failed validation (`{"error": "bad_request", "message": <text>}`)
+- `422` `bad_request`: a rule the body model missed
+- `502` `daemon_fault`: the daemon answered with an error
+- `502` `daemon_unreachable`: the daemon cannot be reached
 
 ### POST /api/daemon/stf/profile
 
@@ -504,7 +589,11 @@ outside the path rule.
 **Responses**
 
 - `200`: the body is described above
+- `409`: a daemon refusal, see Errors
 - `422` `bad_request`: the body or query failed validation (`{"error": "bad_request", "message": <text>}`)
+- `422` `bad_request`: a rule the body model missed
+- `502` `daemon_fault`: the daemon answered with an error
+- `502` `daemon_unreachable`: the daemon cannot be reached
 
 ### GET /api/daemon/stf/profiles
 
@@ -519,7 +608,11 @@ outside the path rule.
 **Responses**
 
 - `200`: the body is described above
+- `409`: a daemon refusal, see Errors
 - `422` `bad_request`: the body or query failed validation (`{"error": "bad_request", "message": <text>}`)
+- `422` `bad_request`: a rule the body model missed
+- `502` `daemon_fault`: the daemon answered with an error
+- `502` `daemon_unreachable`: the daemon cannot be reached
 
 ### POST /api/daemon/stf/upload
 
@@ -539,7 +632,11 @@ daemon is not `expected_target`; returns {profile, pushed, skipped}.
 **Responses**
 
 - `200`: the body is described above
+- `409`: a daemon refusal, see Errors
 - `422` `bad_request`: the body or query failed validation (`{"error": "bad_request", "message": <text>}`)
+- `422` `bad_request`: a rule the body model missed
+- `502` `daemon_fault`: the daemon answered with an error
+- `502` `daemon_unreachable`: the daemon cannot be reached
 
 ### POST /api/daemon/stf/upload/preview
 
@@ -556,7 +653,11 @@ nothing.
 **Responses**
 
 - `200`: the body is described above
+- `409`: a daemon refusal, see Errors
 - `422` `bad_request`: the body or query failed validation (`{"error": "bad_request", "message": <text>}`)
+- `422` `bad_request`: a rule the body model missed
+- `502` `daemon_fault`: the daemon answered with an error
+- `502` `daemon_unreachable`: the daemon cannot be reached
 
 ### POST /api/daemon/stop
 
@@ -578,7 +679,11 @@ flight), `not_ours` (Stop when this backend holds no run, or a stateful run it d
 **Responses**
 
 - `200`: the body is described above
+- `409`: a daemon refusal, see Errors
 - `422` `bad_request`: the body or query failed validation (`{"error": "bad_request", "message": <text>}`)
+- `422` `bad_request`: a rule the body model missed
+- `502` `daemon_fault`: the daemon answered with an error
+- `502` `daemon_unreachable`: the daemon cannot be reached
 
 ## /api/fs
 
@@ -602,6 +707,9 @@ bad_path for a path that cannot be resolved.
 **Responses**
 
 - `200`: the body is described above
+- `400` `bad_path`: the path cannot be resolved
+- `403` `forbidden`: the backend may not read the directory
+- `404` `not_found`: the path is not a directory
 - `422` `bad_request`: the body or query failed validation (`{"error": "bad_request", "message": <text>}`)
 
 ## /api/monitor
@@ -630,6 +738,7 @@ when libzmq refuses the endpoint.
 
 - `200`: the body is described above
 - `422` `bad_request`: the body or query failed validation (`{"error": "bad_request", "message": <text>}`)
+- `422` `invalid`: libzmq refuses the endpoint
 
 ### POST /api/monitor/disconnect
 
@@ -667,6 +776,8 @@ hub. 422 invalid_label for a rejected label, 500 storage_error when the file can
 
 - `200`: the body is described above
 - `422` `bad_request`: the body or query failed validation (`{"error": "bad_request", "message": <text>}`)
+- `422` `invalid_label`: the label is rejected
+- `500` `storage_error`: the port labels file cannot be written
 
 ## /api/ports
 
@@ -693,7 +804,12 @@ when not connected, read-only or for an unknown port.
 **Responses**
 
 - `200`: the body is described above
+- `400` `trex_error`: the server refused the command
+- `409`: a session refusal, see Errors
 - `422` `bad_request`: the body or query failed validation (`{"error": "bad_request", "message": <text>}`)
+- `422` `profile_error`: the profile cannot be loaded
+- `422`: a session refusal, see Errors
+- `502` `unreachable`: the server is unreachable, or restarted
 
 ### POST /api/ports/assign
 
@@ -715,7 +831,12 @@ profile.
 **Responses**
 
 - `200`: the body is described above
+- `400` `trex_error`: the server refused the command
+- `409`: a session refusal, see Errors
 - `422` `bad_request`: the body or query failed validation (`{"error": "bad_request", "message": <text>}`)
+- `422` `profile_error`: the profile cannot be loaded
+- `422`: a session refusal, see Errors
+- `502` `unreachable`: the server is unreachable, or restarted
 
 ### POST /api/ports/attr
 
@@ -736,7 +857,12 @@ bad_request when none is given; otherwise refused as `service` is.
 **Responses**
 
 - `200`: the body is described above
+- `400` `trex_error`: the server refused the command
+- `409`: a session refusal, see Errors
 - `422` `bad_request`: the body or query failed validation (`{"error": "bad_request", "message": <text>}`)
+- `422` `profile_error`: the profile cannot be loaded
+- `422`: a session refusal, see Errors
+- `502` `unreachable`: the server is unreachable, or restarted
 
 ### POST /api/ports/layer
 
@@ -760,7 +886,12 @@ the port is unowned or transmitting, busy, or IPv6 is asked of a legacy stack.
 **Responses**
 
 - `200`: the body is described above
+- `400` `trex_error`: the server refused the command
+- `409`: a session refusal, see Errors
 - `422` `bad_request`: the body or query failed validation (`{"error": "bad_request", "message": <text>}`)
+- `422` `profile_error`: the profile cannot be loaded
+- `422`: a session refusal, see Errors
+- `502` `unreachable`: the server is unreachable, or restarted
 
 ### POST /api/ports/pause
 
@@ -776,7 +907,12 @@ one whose default profile is not transmitting.
 **Responses**
 
 - `200`: the body is described above
+- `400` `trex_error`: the server refused the command
+- `409`: a session refusal, see Errors
 - `422` `bad_request`: the body or query failed validation (`{"error": "bad_request", "message": <text>}`)
+- `422` `profile_error`: the profile cannot be loaded
+- `422`: a session refusal, see Errors
+- `502` `unreachable`: the server is unreachable, or restarted
 
 ### POST /api/ports/ping
 
@@ -797,7 +933,12 @@ unreachable with no final line. Refused (409) up front as `layer` is, bar IPv6.
 **Responses**
 
 - `200`: the body is described above
+- `400` `trex_error`: the server refused the command
+- `409`: a session refusal, see Errors
 - `422` `bad_request`: the body or query failed validation (`{"error": "bad_request", "message": <text>}`)
+- `422` `profile_error`: the profile cannot be loaded
+- `422`: a session refusal, see Errors
+- `502` `unreachable`: the server is unreachable, or restarted
 
 ### POST /api/ports/reacquire
 
@@ -808,6 +949,12 @@ read-only.
 **Responses**
 
 - `200`: the body is described above
+- `400` `trex_error`: the server refused the command
+- `409`: a session refusal, see Errors
+- `422` `bad_request`: the body or query failed validation (`{"error": "bad_request", "message": <text>}`)
+- `422` `profile_error`: the profile cannot be loaded
+- `422`: a session refusal, see Errors
+- `502` `unreachable`: the server is unreachable, or restarted
 
 ### POST /api/ports/release
 
@@ -823,7 +970,12 @@ or while a ping or scan holds one (port_busy).
 **Responses**
 
 - `200`: the body is described above
+- `400` `trex_error`: the server refused the command
+- `409`: a session refusal, see Errors
 - `422` `bad_request`: the body or query failed validation (`{"error": "bad_request", "message": <text>}`)
+- `422` `profile_error`: the profile cannot be loaded
+- `422`: a session refusal, see Errors
+- `502` `unreachable`: the server is unreachable, or restarted
 
 ### POST /api/ports/reset
 
@@ -842,7 +994,12 @@ read-only, for an unknown port, or while a ping or scan holds one.
 **Responses**
 
 - `200`: the body is described above
+- `400` `trex_error`: the server refused the command
+- `409`: a session refusal, see Errors
 - `422` `bad_request`: the body or query failed validation (`{"error": "bad_request", "message": <text>}`)
+- `422` `profile_error`: the profile cannot be loaded
+- `422`: a session refusal, see Errors
+- `502` `unreachable`: the server is unreachable, or restarted
 
 ### POST /api/ports/resume
 
@@ -858,7 +1015,12 @@ whose default profile is not paused.
 **Responses**
 
 - `200`: the body is described above
+- `400` `trex_error`: the server refused the command
+- `409`: a session refusal, see Errors
 - `422` `bad_request`: the body or query failed validation (`{"error": "bad_request", "message": <text>}`)
+- `422` `profile_error`: the profile cannot be loaded
+- `422`: a session refusal, see Errors
+- `502` `unreachable`: the server is unreachable, or restarted
 
 ### POST /api/ports/scan6
 
@@ -874,7 +1036,12 @@ neighbours and any service_restore_error. Refused (409) as `layer` is, bar IPv6.
 **Responses**
 
 - `200`: the body is described above
+- `400` `trex_error`: the server refused the command
+- `409`: a session refusal, see Errors
 - `422` `bad_request`: the body or query failed validation (`{"error": "bad_request", "message": <text>}`)
+- `422` `profile_error`: the profile cannot be loaded
+- `422`: a session refusal, see Errors
+- `502` `unreachable`: the server is unreachable, or restarted
 
 ### POST /api/ports/service
 
@@ -893,7 +1060,12 @@ connected, read-only, for an unknown or unowned port, or while a ping or scan ho
 **Responses**
 
 - `200`: the body is described above
+- `400` `trex_error`: the server refused the command
+- `409`: a session refusal, see Errors
 - `422` `bad_request`: the body or query failed validation (`{"error": "bad_request", "message": <text>}`)
+- `422` `profile_error`: the profile cannot be loaded
+- `422`: a session refusal, see Errors
+- `502` `unreachable`: the server is unreachable, or restarted
 
 ### POST /api/ports/start
 
@@ -912,7 +1084,12 @@ Starts traffic on the ports at `mult`, for `duration` seconds or until stopped (
 **Responses**
 
 - `200`: the body is described above
+- `400` `trex_error`: the server refused the command
+- `409`: a session refusal, see Errors
 - `422` `bad_request`: the body or query failed validation (`{"error": "bad_request", "message": <text>}`)
+- `422` `profile_error`: the profile cannot be loaded
+- `422`: a session refusal, see Errors
+- `502` `unreachable`: the server is unreachable, or restarted
 
 ### POST /api/ports/stop
 
@@ -928,7 +1105,12 @@ or for an unowned port.
 **Responses**
 
 - `200`: the body is described above
+- `400` `trex_error`: the server refused the command
+- `409`: a session refusal, see Errors
 - `422` `bad_request`: the body or query failed validation (`{"error": "bad_request", "message": <text>}`)
+- `422` `profile_error`: the profile cannot be loaded
+- `422`: a session refusal, see Errors
+- `502` `unreachable`: the server is unreachable, or restarted
 
 ### POST /api/ports/update
 
@@ -945,7 +1127,12 @@ read-only, for an unowned port, or one whose default profile is not transmitting
 **Responses**
 
 - `200`: the body is described above
+- `400` `trex_error`: the server refused the command
+- `409`: a session refusal, see Errors
 - `422` `bad_request`: the body or query failed validation (`{"error": "bad_request", "message": <text>}`)
+- `422` `profile_error`: the profile cannot be loaded
+- `422`: a session refusal, see Errors
+- `502` `unreachable`: the server is unreachable, or restarted
 
 ### GET /api/ports/{pid}/assigned
 
@@ -964,7 +1151,12 @@ unknown port.
 **Responses**
 
 - `200`: the body is described above
+- `400` `trex_error`: the server refused the command
+- `409`: a session refusal, see Errors
 - `422` `bad_request`: the body or query failed validation (`{"error": "bad_request", "message": <text>}`)
+- `422` `profile_error`: the profile cannot be loaded
+- `422`: a session refusal, see Errors
+- `502` `unreachable`: the server is unreachable, or restarted
 
 ### GET /api/ports/{pid}/rate
 
@@ -981,7 +1173,12 @@ the streams.
 **Responses**
 
 - `200`: the body is described above
+- `400` `trex_error`: the server refused the command
+- `409`: a session refusal, see Errors
 - `422` `bad_request`: the body or query failed validation (`{"error": "bad_request", "message": <text>}`)
+- `422` `profile_error`: the profile cannot be loaded
+- `422`: a session refusal, see Errors
+- `502` `unreachable`: the server is unreachable, or restarted
 
 ### GET /api/ports/{pid}/xstats
 
@@ -997,7 +1194,12 @@ connected or for an unknown port.
 **Responses**
 
 - `200`: the body is described above
+- `400` `trex_error`: the server refused the command
+- `409`: a session refusal, see Errors
 - `422` `bad_request`: the body or query failed validation (`{"error": "bad_request", "message": <text>}`)
+- `422` `profile_error`: the profile cannot be loaded
+- `422`: a session refusal, see Errors
+- `502` `unreachable`: the server is unreachable, or restarted
 
 ## /api/profiles
 
@@ -1018,7 +1220,12 @@ summary; touches no server and no session. 422 profile_error when it cannot be l
 **Responses**
 
 - `200`: the body is described above
+- `400` `trex_error`: the server refused the command
+- `409`: a session refusal, see Errors
 - `422` `bad_request`: the body or query failed validation (`{"error": "bad_request", "message": <text>}`)
+- `422` `profile_error`: the profile cannot be loaded
+- `422`: a session refusal, see Errors
+- `502` `unreachable`: the server is unreachable, or restarted
 
 ## /api/session
 
@@ -1048,7 +1255,11 @@ connecting, connected or changing, 422 unsupported_version, 502 unreachable or t
 **Responses**
 
 - `200`: the body is described above
+- `409` `busy`: the session is connecting, connected or changing
 - `422` `bad_request`: the body or query failed validation (`{"error": "bad_request", "message": <text>}`)
+- `422` `unsupported_version`: the server's version is not supported
+- `502` `trex_error`: the server answered with an error
+- `502` `unreachable`: the server is unreachable
 
 ### POST /api/session/disconnect
 
@@ -1082,7 +1293,10 @@ invalid_settings when the store refuses it, 500 storage_error when the file cann
 **Responses**
 
 - `200`: the body is described above
+- `400` `invalid_settings`: the settings store refuses the settings
 - `422` `bad_request`: the body or query failed validation (`{"error": "bad_request", "message": <text>}`)
+- `422` `invalid_settings`: the settings do not validate
+- `500` `storage_error`: the settings file cannot be written
 
 ### GET /api/settings/bundle
 
@@ -1101,6 +1315,12 @@ storage_error with {written, failed} when a file cannot be written (the state is
 **Responses**
 
 - `200`: the body is described above
+- `411` `length_required`: the request has no valid Content-Length
+- `413` `too_large`: the request body is over its size cap
+- `422` `bad_request`: the body or query failed validation (`{"error": "bad_request", "message": <text>}`)
+- `422` `bad_request`: the body is not valid JSON, or a field is wrong
+- `422`: a bundle refusal, see Errors
+- `500` `storage_error`: a file cannot be written; `written` and `failed` list them
 
 ### POST /api/settings/bundle/preview
 
@@ -1110,6 +1330,11 @@ unsupported_bundle for a wrong format or version.
 **Responses**
 
 - `200`: the body is described above
+- `411` `length_required`: the request has no valid Content-Length
+- `413` `too_large`: the request body is over its size cap
+- `422` `bad_request`: the body or query failed validation (`{"error": "bad_request", "message": <text>}`)
+- `422` `bad_request`: the body is not valid JSON, or a field is wrong
+- `422`: a bundle refusal, see Errors
 
 ## /api/studio
 
@@ -1135,7 +1360,17 @@ upload deletes it, a failed one keeps it for a retry.
 **Responses**
 
 - `200`: the body is described above
+- `404` `not_found`: no such upload (it may have expired)
+- `409` `exists`: a profile of that name already exists
+- `409` `sidecar_unreadable`: a stream's sidecar file does not parse; it is left as it is
+- `409` `stale`: the profile changed since it was read; the body carries `rev`
+- `409` `too_many`: the profile library is full
 - `422` `bad_request`: the body or query failed validation (`{"error": "bad_request", "message": <text>}`)
+- `422` `bad_request`: the import options (tunables, pcap) or the file are wrong
+- `422` `invalid_name`: the profile name is not valid
+- `422` `invalid_stream`: a stream is invalid; `index` and `field` name it
+- `422` `profile_error`: the profile cannot be loaded or converted
+- `500` `storage_error`: the profile library files cannot be read or written
 
 ### POST /api/studio/packet/build
 
@@ -1144,6 +1379,15 @@ Build the document; a build error is a 200 with `error` set.
 **Responses**
 
 - `200`: the body is described above
+- `411` `length_required`: the request has no valid Content-Length
+- `413` `too_large`: the request body is over its size cap
+- `422` `bad_request`: the body or query failed validation (`{"error": "bad_request", "message": <text>}`)
+- `422` `bad_request`: the body is not valid JSON, or a field is wrong
+- `422` `invalid_doc`: the document or file is invalid; `where` is the position
+- `422` `packet_error`: the packet worker refused the request
+- `503` `engine_busy`: the packet worker is busy
+- `503` `engine_closed`: the packet worker is closed
+- `503` `engine_restarted`: the packet worker restarted; the next call starts a fresh one
 
 ### POST /api/studio/packet/decompile
 
@@ -1152,6 +1396,15 @@ A VM's instructions as editor parameters.
 **Responses**
 
 - `200`: the body is described above
+- `411` `length_required`: the request has no valid Content-Length
+- `413` `too_large`: the request body is over its size cap
+- `422` `bad_request`: the body or query failed validation (`{"error": "bad_request", "message": <text>}`)
+- `422` `bad_request`: the body is not valid JSON, or a field is wrong
+- `422` `invalid_stream`: a stream is invalid; `index` and `field` name it
+- `422` `packet_error`: the packet worker refused the request
+- `503` `engine_busy`: the packet worker is busy
+- `503` `engine_closed`: the packet worker is closed
+- `503` `engine_restarted`: the packet worker restarted; the next call starts a fresh one
 
 ### GET /api/studio/packet/definitions
 
@@ -1160,7 +1413,12 @@ The protocol and Field Engine definitions with an ETag; 304 when `If-None-Match`
 **Responses**
 
 - `200`: the body is described above
+- `304`: the `If-None-Match` ETag is current; nothing is sent
 - `422` `bad_request`: the body or query failed validation (`{"error": "bad_request", "message": <text>}`)
+- `422` `packet_error`: the packet worker refused the request
+- `503` `engine_busy`: the packet worker is busy
+- `503` `engine_closed`: the packet worker is closed
+- `503` `engine_restarted`: the packet worker restarted; the next call starts a fresh one
 
 ### POST /api/studio/packet/doc-from-binary
 
@@ -1169,6 +1427,15 @@ A literal-only document for packet bytes and, optionally, a stream's VM.
 **Responses**
 
 - `200`: the body is described above
+- `411` `length_required`: the request has no valid Content-Length
+- `413` `too_large`: the request body is over its size cap
+- `422` `bad_request`: the body or query failed validation (`{"error": "bad_request", "message": <text>}`)
+- `422` `bad_request`: the body is not valid JSON, or a field is wrong
+- `422` `invalid_stream`: a stream is invalid; `index` and `field` name it
+- `422` `packet_error`: the packet worker refused the request
+- `503` `engine_busy`: the packet worker is busy
+- `503` `engine_closed`: the packet worker is closed
+- `503` `engine_restarted`: the packet worker restarted; the next call starts a fresh one
 
 ### POST /api/studio/packet/param-values
 
@@ -1177,6 +1444,15 @@ The values a Field Engine parameter may take for the document.
 **Responses**
 
 - `200`: the body is described above
+- `411` `length_required`: the request has no valid Content-Length
+- `413` `too_large`: the request body is over its size cap
+- `422` `bad_request`: the body or query failed validation (`{"error": "bad_request", "message": <text>}`)
+- `422` `bad_request`: the body is not valid JSON, or a field is wrong
+- `422` `invalid_doc`: the document or file is invalid; `where` is the position
+- `422` `packet_error`: the packet worker refused the request
+- `503` `engine_busy`: the packet worker is busy
+- `503` `engine_closed`: the packet worker is closed
+- `503` `engine_restarted`: the packet worker restarted; the next call starts a fresh one
 
 ### POST /api/studio/packet/payload-classes
 
@@ -1185,6 +1461,15 @@ The protocols the document's last layer may carry.
 **Responses**
 
 - `200`: the body is described above
+- `411` `length_required`: the request has no valid Content-Length
+- `413` `too_large`: the request body is over its size cap
+- `422` `bad_request`: the body or query failed validation (`{"error": "bad_request", "message": <text>}`)
+- `422` `bad_request`: the body is not valid JSON, or a field is wrong
+- `422` `invalid_doc`: the document or file is invalid; `where` is the position
+- `422` `packet_error`: the packet worker refused the request
+- `503` `engine_busy`: the packet worker is busy
+- `503` `engine_closed`: the packet worker is closed
+- `503` `engine_restarted`: the packet worker restarted; the next call starts a fresh one
 
 ### POST /api/studio/packet/pcap/list
 
@@ -1197,6 +1482,15 @@ a relative path or a file that is not a regular file, 413 too_large above the Se
 **Responses**
 
 - `200`: the body is described above
+- `404` `not_found`: no such upload or file
+- `411` `length_required`: the request has no valid Content-Length
+- `413` `too_large`: the request body is over its size cap
+- `422` `bad_request`: the body or query failed validation (`{"error": "bad_request", "message": <text>}`)
+- `422` `bad_request`: the body is not valid JSON, or a field is wrong
+- `422` `packet_error`: the packet worker refused the request
+- `503` `engine_busy`: the packet worker is busy
+- `503` `engine_closed`: the packet worker is closed
+- `503` `engine_restarted`: the packet worker restarted; the next call starts a fresh one
 
 ### POST /api/studio/packet/pcap/packet
 
@@ -1207,6 +1501,15 @@ capture and its refusals (404 not_found, 422 bad_request, 413 too_large) are tho
 **Responses**
 
 - `200`: the body is described above
+- `404` `not_found`: no such upload or file
+- `411` `length_required`: the request has no valid Content-Length
+- `413` `too_large`: the request body is over its size cap
+- `422` `bad_request`: the body or query failed validation (`{"error": "bad_request", "message": <text>}`)
+- `422` `bad_request`: the body is not valid JSON, or a field is wrong
+- `422` `packet_error`: the packet worker refused the request
+- `503` `engine_busy`: the packet worker is busy
+- `503` `engine_closed`: the packet worker is closed
+- `503` `engine_restarted`: the packet worker restarted; the next call starts a fresh one
 
 ### GET /api/studio/packet/presets
 
@@ -1231,7 +1534,16 @@ stream's MAC-mode bits, or null when the preset leaves them alone. The worker is
 **Responses**
 
 - `200`: the body is described above
+- `404` `not_found`: no such preset
+- `411` `length_required`: the request has no valid Content-Length
+- `413` `too_large`: the request body is over its size cap
 - `422` `bad_request`: the body or query failed validation (`{"error": "bad_request", "message": <text>}`)
+- `422` `bad_request`: the body is not valid JSON, or a field is wrong
+- `422` `invalid_params`: the preset parameters are invalid; `where` names the field
+- `422` `packet_error`: the packet worker refused the request
+- `503` `engine_busy`: the packet worker is busy
+- `503` `engine_closed`: the packet worker is closed
+- `503` `engine_restarted`: the packet worker restarted; the next call starts a fresh one
 
 ### POST /api/studio/packet/reconstruct
 
@@ -1240,6 +1552,15 @@ The document after a byte edit.
 **Responses**
 
 - `200`: the body is described above
+- `411` `length_required`: the request has no valid Content-Length
+- `413` `too_large`: the request body is over its size cap
+- `422` `bad_request`: the body or query failed validation (`{"error": "bad_request", "message": <text>}`)
+- `422` `bad_request`: the body is not valid JSON, or a field is wrong
+- `422` `invalid_doc`: the document or file is invalid; `where` is the position
+- `422` `packet_error`: the packet worker refused the request
+- `503` `engine_busy`: the packet worker is busy
+- `503` `engine_closed`: the packet worker is closed
+- `503` `engine_restarted`: the packet worker restarted; the next call starts a fresh one
 
 ### GET /api/studio/packet/templates
 
@@ -1249,6 +1570,11 @@ service cannot build), the user's template names, and the user directory.
 **Responses**
 
 - `200`: the body is described above
+- `422` `bad_request`: the body or query failed validation (`{"error": "bad_request", "message": <text>}`)
+- `422` `packet_error`: the packet worker refused the request
+- `503` `engine_busy`: the packet worker is busy
+- `503` `engine_closed`: the packet worker is closed
+- `503` `engine_restarted`: the packet worker restarted; the next call starts a fresh one
 
 ### GET /api/studio/packet/templates/server/{template_id}
 
@@ -1263,7 +1589,14 @@ The server template `template_id` as `{doc}`; 404 unless the listing gave that i
 **Responses**
 
 - `200`: the body is described above
+- `404` `not_found`: no such server template
 - `422` `bad_request`: the body or query failed validation (`{"error": "bad_request", "message": <text>}`)
+- `422` `invalid_doc`: the document or file is invalid; `where` is the position
+- `422` `packet_error`: the packet worker refused the request
+- `500` `storage_error`: the templates directory cannot be used
+- `503` `engine_busy`: the packet worker is busy
+- `503` `engine_closed`: the packet worker is closed
+- `503` `engine_restarted`: the packet worker restarted; the next call starts a fresh one
 
 ### GET /api/studio/packet/templates/user/{name}
 
@@ -1278,7 +1611,12 @@ The user template `name` as `{doc}`; a name the rules refuse is a 404.
 **Responses**
 
 - `200`: the body is described above
+- `404` `not_found`: no such template
+- `409` `exists`: a template of that name already exists
+- `413` `too_large`: the template file is over its size cap
 - `422` `bad_request`: the body or query failed validation (`{"error": "bad_request", "message": <text>}`)
+- `422` `invalid_doc`: the document or file is invalid; `where` is the position
+- `500` `storage_error`: the templates directory cannot be used
 
 ### PUT /api/studio/packet/templates/user/{name}
 
@@ -1294,7 +1632,18 @@ the rules refuse is a 404, answered before the body is read or the worker is ask
 **Responses**
 
 - `200`: the body is described above
+- `404` `not_found`: no such template
+- `409` `exists`: a template of that name already exists
+- `411` `length_required`: the request has no valid Content-Length
+- `413` `too_large`: the request body is over its size cap
 - `422` `bad_request`: the body or query failed validation (`{"error": "bad_request", "message": <text>}`)
+- `422` `bad_request`: the body is not valid JSON, or a field is wrong
+- `422` `invalid_doc`: the document or file is invalid; `where` is the position
+- `422` `packet_error`: the packet worker refused the request
+- `500` `storage_error`: the templates directory cannot be used
+- `503` `engine_busy`: the packet worker is busy
+- `503` `engine_closed`: the packet worker is closed
+- `503` `engine_restarted`: the packet worker restarted; the next call starts a fresh one
 
 ### DELETE /api/studio/packet/templates/user/{name}
 
@@ -1309,7 +1658,12 @@ Remove the user template `name`; `{}`.
 **Responses**
 
 - `200`: the body is described above
+- `404` `not_found`: no such template
+- `409` `exists`: a template of that name already exists
+- `413` `too_large`: the template file is over its size cap
 - `422` `bad_request`: the body or query failed validation (`{"error": "bad_request", "message": <text>}`)
+- `422` `invalid_doc`: the document or file is invalid; `where` is the position
+- `500` `storage_error`: the templates directory cannot be used
 
 ### POST /api/studio/packet/to-stream
 
@@ -1318,6 +1672,16 @@ Remove the user template `name`; `{}`.
 **Responses**
 
 - `200`: the body is described above
+- `411` `length_required`: the request has no valid Content-Length
+- `413` `too_large`: the request body is over its size cap
+- `422` `bad_request`: the body or query failed validation (`{"error": "bad_request", "message": <text>}`)
+- `422` `bad_request`: the body is not valid JSON, or a field is wrong
+- `422` `invalid_doc`: the document or file is invalid; `where` is the position
+- `422` `invalid_stream`: a stream is invalid; `index` and `field` name it
+- `422` `packet_error`: the packet worker refused the request
+- `503` `engine_busy`: the packet worker is busy
+- `503` `engine_closed`: the packet worker is closed
+- `503` `engine_restarted`: the packet worker restarted; the next call starts a fresh one
 
 ### POST /api/studio/packet/vm-python
 
@@ -1326,6 +1690,15 @@ The Python that builds the document's Field Engine.
 **Responses**
 
 - `200`: the body is described above
+- `411` `length_required`: the request has no valid Content-Length
+- `413` `too_large`: the request body is over its size cap
+- `422` `bad_request`: the body or query failed validation (`{"error": "bad_request", "message": <text>}`)
+- `422` `bad_request`: the body is not valid JSON, or a field is wrong
+- `422` `invalid_doc`: the document or file is invalid; `where` is the position
+- `422` `packet_error`: the packet worker refused the request
+- `503` `engine_busy`: the packet worker is busy
+- `503` `engine_closed`: the packet worker is closed
+- `503` `engine_restarted`: the packet worker restarted; the next call starts a fresh one
 
 ### GET /api/studio/profiles
 
@@ -1334,6 +1707,16 @@ Every profile, the files that failed to load and the library directory.
 **Responses**
 
 - `200`: the body is described above
+- `404` `not_found`: no such profile
+- `409` `exists`: a profile of that name already exists
+- `409` `sidecar_unreadable`: a stream's sidecar file does not parse; it is left as it is
+- `409` `stale`: the profile changed since it was read; the body carries `rev`
+- `409` `too_many`: the profile library is full
+- `422` `bad_request`: the body or query failed validation (`{"error": "bad_request", "message": <text>}`)
+- `422` `invalid_name`: the profile name is not valid
+- `422` `invalid_stream`: a stream is invalid; `index` and `field` name it
+- `422` `profile_error`: the profile cannot be loaded or converted
+- `500` `storage_error`: the profile library files cannot be read or written
 
 ### POST /api/studio/profiles
 
@@ -1348,7 +1731,16 @@ An empty profile named `name` (source kind `new`); 409 exists or too_many, 422 i
 **Responses**
 
 - `200`: the body is described above
+- `404` `not_found`: no such profile
+- `409` `exists`: a profile of that name already exists
+- `409` `sidecar_unreadable`: a stream's sidecar file does not parse; it is left as it is
+- `409` `stale`: the profile changed since it was read; the body carries `rev`
+- `409` `too_many`: the profile library is full
 - `422` `bad_request`: the body or query failed validation (`{"error": "bad_request", "message": <text>}`)
+- `422` `invalid_name`: the profile name is not valid
+- `422` `invalid_stream`: a stream is invalid; `index` and `field` name it
+- `422` `profile_error`: the profile cannot be loaded or converted
+- `500` `storage_error`: the profile library files cannot be read or written
 
 ### GET /api/studio/profiles/{slug}
 
@@ -1363,7 +1755,16 @@ The entry, the rev and the sidecar (a default one when the file is absent or bad
 **Responses**
 
 - `200`: the body is described above
+- `404` `not_found`: no such profile
+- `409` `exists`: a profile of that name already exists
+- `409` `sidecar_unreadable`: a stream's sidecar file does not parse; it is left as it is
+- `409` `stale`: the profile changed since it was read; the body carries `rev`
+- `409` `too_many`: the profile library is full
 - `422` `bad_request`: the body or query failed validation (`{"error": "bad_request", "message": <text>}`)
+- `422` `invalid_name`: the profile name is not valid
+- `422` `invalid_stream`: a stream is invalid; `index` and `field` name it
+- `422` `profile_error`: the profile cannot be loaded or converted
+- `500` `storage_error`: the profile library files cannot be read or written
 
 ### DELETE /api/studio/profiles/{slug}
 
@@ -1378,7 +1779,16 @@ Remove both files; the listing.
 **Responses**
 
 - `200`: the body is described above
+- `404` `not_found`: no such profile
+- `409` `exists`: a profile of that name already exists
+- `409` `sidecar_unreadable`: a stream's sidecar file does not parse; it is left as it is
+- `409` `stale`: the profile changed since it was read; the body carries `rev`
+- `409` `too_many`: the profile library is full
 - `422` `bad_request`: the body or query failed validation (`{"error": "bad_request", "message": <text>}`)
+- `422` `invalid_name`: the profile name is not valid
+- `422` `invalid_stream`: a stream is invalid; `index` and `field` name it
+- `422` `profile_error`: the profile cannot be loaded or converted
+- `500` `storage_error`: the profile library files cannot be read or written
 
 ### POST /api/studio/profiles/{slug}/duplicate
 
@@ -1399,7 +1809,16 @@ A copy under a new name; 409 exists or too_many, 422 invalid_name.
 **Responses**
 
 - `200`: the body is described above
+- `404` `not_found`: no such profile
+- `409` `exists`: a profile of that name already exists
+- `409` `sidecar_unreadable`: a stream's sidecar file does not parse; it is left as it is
+- `409` `stale`: the profile changed since it was read; the body carries `rev`
+- `409` `too_many`: the profile library is full
 - `422` `bad_request`: the body or query failed validation (`{"error": "bad_request", "message": <text>}`)
+- `422` `invalid_name`: the profile name is not valid
+- `422` `invalid_stream`: a stream is invalid; `index` and `field` name it
+- `422` `profile_error`: the profile cannot be loaded or converted
+- `500` `storage_error`: the profile library files cannot be read or written
 
 ### GET /api/studio/profiles/{slug}/export
 
@@ -1423,7 +1842,17 @@ format but the whole-profile json is a 422 invalid_stream when a stored stream b
 **Responses**
 
 - `200`: the body is described above
+- `404` `not_found`: no such profile
+- `409` `exists`: a profile of that name already exists
+- `409` `sidecar_unreadable`: a stream's sidecar file does not parse; it is left as it is
+- `409` `stale`: the profile changed since it was read; the body carries `rev`
+- `409` `too_many`: the profile library is full
 - `422` `bad_request`: the body or query failed validation (`{"error": "bad_request", "message": <text>}`)
+- `422` `bad_request`: the format or stream query is wrong
+- `422` `invalid_name`: the profile name is not valid
+- `422` `invalid_stream`: a stream is invalid; `index` and `field` name it
+- `422` `profile_error`: the profile cannot be loaded or converted
+- `500` `storage_error`: the profile library files cannot be read or written
 
 ### POST /api/studio/profiles/{slug}/rename
 
@@ -1446,7 +1875,16 @@ invalid_name.
 **Responses**
 
 - `200`: the body is described above
+- `404` `not_found`: no such profile
+- `409` `exists`: a profile of that name already exists
+- `409` `sidecar_unreadable`: a stream's sidecar file does not parse; it is left as it is
+- `409` `stale`: the profile changed since it was read; the body carries `rev`
+- `409` `too_many`: the profile library is full
 - `422` `bad_request`: the body or query failed validation (`{"error": "bad_request", "message": <text>}`)
+- `422` `invalid_name`: the profile name is not valid
+- `422` `invalid_stream`: a stream is invalid; `index` and `field` name it
+- `422` `profile_error`: the profile cannot be loaded or converted
+- `500` `storage_error`: the profile library files cannot be read or written
 
 ### POST /api/studio/profiles/{slug}/simulate
 
@@ -1461,7 +1899,16 @@ The offline simulation: the profile checked, round-tripped in the worker and rep
 **Responses**
 
 - `200`: the body is described above
+- `404` `not_found`: no such profile
+- `409` `exists`: a profile of that name already exists
+- `409` `sidecar_unreadable`: a stream's sidecar file does not parse; it is left as it is
+- `409` `stale`: the profile changed since it was read; the body carries `rev`
+- `409` `too_many`: the profile library is full
 - `422` `bad_request`: the body or query failed validation (`{"error": "bad_request", "message": <text>}`)
+- `422` `invalid_name`: the profile name is not valid
+- `422` `invalid_stream`: a stream is invalid; `index` and `field` name it
+- `422` `profile_error`: the profile cannot be loaded or converted
+- `500` `storage_error`: the profile library files cannot be read or written
 
 ### GET /api/studio/profiles/{slug}/source
 
@@ -1479,7 +1926,21 @@ backend may not read, 413 too_large over 1 MiB. The text is UTF-8, undecodable b
 **Responses**
 
 - `200`: the body is described above
+- `403` `source_unreadable`: the imported source file cannot be read (permission denied)
+- `404` `not_found`: no such profile
+- `404` `source_missing`: the imported source file no longer exists
+- `409` `exists`: a profile of that name already exists
+- `409` `no_source`: the profile was not imported from a .py file
+- `409` `sidecar_unreadable`: a stream's sidecar file does not parse; it is left as it is
+- `409` `stale`: the profile changed since it was read; the body carries `rev`
+- `409` `too_many`: the profile library is full
+- `413` `too_large`: the source file is over 1 MiB
 - `422` `bad_request`: the body or query failed validation (`{"error": "bad_request", "message": <text>}`)
+- `422` `bad_request`: the source is not a .py file, or cannot be read as one
+- `422` `invalid_name`: the profile name is not valid
+- `422` `invalid_stream`: a stream is invalid; `index` and `field` name it
+- `422` `profile_error`: the profile cannot be loaded or converted
+- `500` `storage_error`: the profile library files cannot be read or written
 
 ### GET /api/studio/profiles/{slug}/streams
 
@@ -1503,7 +1964,16 @@ the reason, so one bad stream in a hand-edited file does not hide the page.
 **Responses**
 
 - `200`: the body is described above
+- `404` `not_found`: no such profile or stream
+- `409` `exists`: a profile of that name already exists
+- `409` `sidecar_unreadable`: a stream's sidecar file does not parse; it is left as it is
+- `409` `stale`: the profile changed since it was read; the body carries `rev`
+- `409` `too_many`: the profile library is full
 - `422` `bad_request`: the body or query failed validation (`{"error": "bad_request", "message": <text>}`)
+- `422` `invalid_name`: the profile name is not valid
+- `422` `invalid_stream`: a stream is invalid; `index` and `field` name it
+- `422` `profile_error`: the profile cannot be loaded or converted
+- `500` `storage_error`: the profile library files cannot be read or written
 
 ### PUT /api/studio/profiles/{slug}/streams
 
@@ -1519,7 +1989,19 @@ the index and field, 411/413/422 bad_request from the body.
 **Responses**
 
 - `200`: the body is described above
+- `404` `not_found`: no such profile or stream
+- `409` `exists`: a profile of that name already exists
+- `409` `sidecar_unreadable`: a stream's sidecar file does not parse; it is left as it is
+- `409` `stale`: the profile changed since it was read; the body carries `rev`
+- `409` `too_many`: the profile library is full
+- `411` `length_required`: the request has no valid Content-Length
+- `413` `too_large`: the request body is over its size cap
 - `422` `bad_request`: the body or query failed validation (`{"error": "bad_request", "message": <text>}`)
+- `422` `bad_request`: the body is not valid JSON, or a field is wrong
+- `422` `invalid_name`: the profile name is not valid
+- `422` `invalid_stream`: a stream is invalid; `index` and `field` name it
+- `422` `profile_error`: the profile cannot be loaded or converted
+- `500` `storage_error`: the profile library files cannot be read or written
 
 ### GET /api/studio/profiles/{slug}/streams/{index}/sidecar
 
@@ -1536,7 +2018,16 @@ of range. Served per row because an entry can hold a 256 KiB editor document.
 **Responses**
 
 - `200`: the body is described above
+- `404` `not_found`: no such profile or stream
+- `409` `exists`: a profile of that name already exists
+- `409` `sidecar_unreadable`: a stream's sidecar file does not parse; it is left as it is
+- `409` `stale`: the profile changed since it was read; the body carries `rev`
+- `409` `too_many`: the profile library is full
 - `422` `bad_request`: the body or query failed validation (`{"error": "bad_request", "message": <text>}`)
+- `422` `invalid_name`: the profile name is not valid
+- `422` `invalid_stream`: a stream is invalid; `index` and `field` name it
+- `422` `profile_error`: the profile cannot be loaded or converted
+- `500` `storage_error`: the profile library files cannot be read or written
 
 ### GET /api/studio/template
 
@@ -1545,6 +2036,16 @@ The default new stream, built in the worker.
 **Responses**
 
 - `200`: the body is described above
+- `404` `not_found`: no such profile
+- `409` `exists`: a profile of that name already exists
+- `409` `sidecar_unreadable`: a stream's sidecar file does not parse; it is left as it is
+- `409` `stale`: the profile changed since it was read; the body carries `rev`
+- `409` `too_many`: the profile library is full
+- `422` `bad_request`: the body or query failed validation (`{"error": "bad_request", "message": <text>}`)
+- `422` `invalid_name`: the profile name is not valid
+- `422` `invalid_stream`: a stream is invalid; `index` and `field` name it
+- `422` `profile_error`: the profile cannot be loaded or converted
+- `500` `storage_error`: the profile library files cannot be read or written
 
 ### PUT /api/studio/uploads
 
@@ -1562,7 +2063,13 @@ The partial file is removed on a refusal and on a client disconnect.
 **Responses**
 
 - `200`: the body is described above
+- `400` `bad_request`: the client disconnected during the upload
+- `409` `too_many`: 8 uploads are already kept; import or wait for one to expire
+- `411` `length_required`: the request has no valid Content-Length
+- `413` `too_large`: the upload is over 64 MiB
 - `422` `bad_request`: the body or query failed validation (`{"error": "bad_request", "message": <text>}`)
+- `422` `bad_request`: the name is over 255 characters or has an unusable suffix
+- `500` `storage_error`: the upload cannot be stored
 
 ## /api/test-setups
 
@@ -1587,7 +2094,12 @@ One setup; 404 not_found.
 **Responses**
 
 - `200`: the body is described above
+- `404` `not_found`: no such test setup
+- `409` `exists`: a test setup of that name already exists
+- `409` `too_many`: the test setup directory is full
 - `422` `bad_request`: the body or query failed validation (`{"error": "bad_request", "message": <text>}`)
+- `422` `invalid_setup`: the test setup does not validate
+- `500` `storage_error`: the test setup files cannot be read or written
 
 ### PUT /api/test-setups/{slug}
 
@@ -1603,7 +2115,15 @@ invalid_setup (naming the field, or "slug does not match name"), 409 too_many.
 **Responses**
 
 - `200`: the body is described above
+- `404` `not_found`: no such test setup
+- `409` `exists`: a test setup of that name already exists
+- `409` `too_many`: the test setup directory is full
+- `411` `length_required`: the request has no valid Content-Length
+- `413` `too_large`: the request body is over its size cap
 - `422` `bad_request`: the body or query failed validation (`{"error": "bad_request", "message": <text>}`)
+- `422` `bad_request`: the body is not valid JSON, or a field is wrong
+- `422` `invalid_setup`: the test setup does not validate
+- `500` `storage_error`: the test setup files cannot be read or written
 
 ### DELETE /api/test-setups/{slug}
 
@@ -1618,7 +2138,12 @@ Delete the setup; 404 not_found.
 **Responses**
 
 - `200`: the body is described above
+- `404` `not_found`: no such test setup
+- `409` `exists`: a test setup of that name already exists
+- `409` `too_many`: the test setup directory is full
 - `422` `bad_request`: the body or query failed validation (`{"error": "bad_request", "message": <text>}`)
+- `422` `invalid_setup`: the test setup does not validate
+- `500` `storage_error`: the test setup files cannot be read or written
 
 ### POST /api/test-setups/{slug}/duplicate
 
@@ -1639,7 +2164,12 @@ Copy the setup under a new name; 404, 409 exists or too_many, 422 invalid_setup.
 **Responses**
 
 - `200`: the body is described above
+- `404` `not_found`: no such test setup
+- `409` `exists`: a test setup of that name already exists
+- `409` `too_many`: the test setup directory is full
 - `422` `bad_request`: the body or query failed validation (`{"error": "bad_request", "message": <text>}`)
+- `422` `invalid_setup`: the test setup does not validate
+- `500` `storage_error`: the test setup files cannot be read or written
 
 ### POST /api/test-setups/{slug}/rename
 
@@ -1660,7 +2190,12 @@ Rename the setup (its slug follows the name); 404, 409 exists, 422 invalid_setup
 **Responses**
 
 - `200`: the body is described above
+- `404` `not_found`: no such test setup
+- `409` `exists`: a test setup of that name already exists
+- `409` `too_many`: the test setup directory is full
 - `422` `bad_request`: the body or query failed validation (`{"error": "bad_request", "message": <text>}`)
+- `422` `invalid_setup`: the test setup does not validate
+- `500` `storage_error`: the test setup files cannot be read or written
 
 ## Schemas
 

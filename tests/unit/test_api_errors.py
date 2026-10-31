@@ -9,6 +9,7 @@ from types import ModuleType
 import pytest
 from fastapi import APIRouter, FastAPI
 from support import ROOT
+from trex_web_gui.api.app import create_app
 from trex_web_gui.api.declared import answers, family_line
 from trex_web_gui.api.refusals import REFUSALS
 
@@ -535,3 +536,37 @@ def test_declared_reads_real_answers_through_openapi() -> None:
     assert load_checker()._declared(operation) == {
         (409, "exists"), (404, "not_found"), (409, "family:session"), (422, "profile_error"),
         (422, "family:bundle"), (304, "")}
+
+
+# --- the real package --------------------------------------------------------------------------------------
+
+# A route whose answers the checker cannot tell from its source, `"METHOD /path" -> reason`. None exist.
+UNRESOLVED_ALLOWED: dict[str, str] = {}
+
+
+def api_sources() -> dict[str, str]:
+    """The source of each module under backend/trex_web_gui/api/, by file name."""
+    return {p.name: p.read_text() for p in (PKG / "api").glob("*.py")}
+
+
+def test_every_route_declares_what_it_answers(tmp_path: Path) -> None:
+    checker = load_checker()
+    app = create_app(tmp_path)
+    spec = app.openapi()
+    routes = checker.routes_of(app)
+    operations = {f"{m.upper()} {p}" for p, ops in spec["paths"].items() for m in ops}
+    assert set(routes) == operations
+    found = checker.problems(spec, routes, api_sources(), REFUSALS, UNRESOLVED_ALLOWED)
+    assert found == [], "\n".join(found)
+
+
+def test_an_undeclared_answer_is_reported_on_the_real_app(tmp_path: Path) -> None:
+    checker = load_checker()
+    app = create_app(tmp_path)
+    sources = api_sources()
+    marker = ('SameSite=Strict); otherwise 403 bad_token. Reachable without the cookie (auth.EXEMPT)."""\n')
+    assert sources["app.py"].count(marker) == 1
+    sources["app.py"] = sources["app.py"].replace(
+        marker, marker + '        return err(409, "zz_test", "x")\n')
+    found = checker.problems(app.openapi(), checker.routes_of(app), sources, REFUSALS, UNRESOLVED_ALLOWED)
+    assert found == ["GET /api/auth/login: 409 zz_test answered but not declared"]

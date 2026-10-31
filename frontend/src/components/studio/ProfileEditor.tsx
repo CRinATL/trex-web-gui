@@ -30,7 +30,7 @@ function infoLine(entry: LibraryEntry, count: number): string {
 }
 
 // "Export ▾": downloads of the whole profile. A .py entry's Python is written from the frozen JSON, not its source.
-// The import route's 404 for an expired upload (backend/trex_web_gui/api/studio.py:439 "No upload"): the profile is not gone.
+// The import route's 404 for an expired upload (backend/trex_web_gui/api/studio.py:485 "No upload"): the profile is not gone.
 const uploadGone = (x: unknown) => x instanceof ApiError && x.status === 404 && x.message.startsWith('No upload')
 
 function ExportMenu({ slug, py, disabled, active }: { slug: string; py: boolean; disabled: boolean; active: boolean }) {

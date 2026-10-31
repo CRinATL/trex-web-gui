@@ -24,7 +24,8 @@ from pydantic import BaseModel, ConfigDict, Field, ValidationError, model_valida
 from starlette.requests import ClientDisconnect
 
 from trex_web_gui import trexapi
-from trex_web_gui.api.bodies import BodyRefused, err, read_json_capped
+from trex_web_gui.api.bodies import BODY_ANSWERS, BodyRefused, err, read_json_capped
+from trex_web_gui.api.declared import Item, answers
 from trex_web_gui.studio import convert, simulate
 from trex_web_gui.studio.library import (
     LibraryEntry,
@@ -162,6 +163,19 @@ def failure(e: Exception) -> JSONResponse:
     raise e
 
 
+# What a route through `guarded` declares from `failure`, apart from its 404 (what is missing differs).
+LIBRARY_ANSWERS: tuple[Item, ...] = (
+    (409, "exists", "a profile of that name already exists"),
+    (409, "sidecar_unreadable", "a stream's sidecar file does not parse; it is left as it is"),
+    (409, "stale", "the profile changed since it was read; the body carries `rev`"),
+    (409, "too_many", "the profile library is full"),
+    (422, "invalid_name", "the profile name is not valid"),
+    (422, "invalid_stream", "a stream is invalid; `index` and `field` name it"),
+    (422, "profile_error", "the profile cannot be loaded or converted"),
+    (500, "storage_error", "the profile library files cannot be read or written"),
+)
+
+
 def studio_router(library: ProfileLibrary, data_dir: Path) -> APIRouter:
     """The /api/studio routes over `library`; uploads live in `data_dir / "uploads"`."""
     router = APIRouter()
@@ -207,17 +221,20 @@ def studio_router(library: ProfileLibrary, data_dir: Path) -> APIRouter:
         return {"kind": "new", "path": None, "args": [], "tunables": None, "ports_differ": False,
                 "imported": now()}
 
-    @router.get("/api/studio/profiles", response_model=None)
+    @router.get("/api/studio/profiles", response_model=None,
+                responses=answers(*LIBRARY_ANSWERS, (404, "not_found", "no such profile")))
     async def list_profiles() -> dict[str, Any] | JSONResponse:
         """Every profile, the files that failed to load and the library directory."""
         return await guarded(lambda: io(listing))
 
-    @router.post("/api/studio/profiles", response_model=None)
+    @router.post("/api/studio/profiles", response_model=None,
+                 responses=answers(*LIBRARY_ANSWERS, (404, "not_found", "no such profile")))
     async def create_profile(b: NameBody) -> LibraryEntry | JSONResponse:
         """An empty profile named `name` (source kind `new`); 409 exists or too_many, 422 invalid_name."""
         return await guarded(lambda: io(lambda: library.create(b.name, [], new_source())))
 
-    @router.get("/api/studio/profiles/{slug}", response_model=None)
+    @router.get("/api/studio/profiles/{slug}", response_model=None,
+                responses=answers(*LIBRARY_ANSWERS, (404, "not_found", "no such profile")))
     async def get_profile(slug: str) -> dict[str, Any] | JSONResponse:
         """The entry, the rev and the sidecar (a default one when the file is absent or bad)."""
         def read() -> dict[str, Any]:
@@ -231,7 +248,8 @@ def studio_router(library: ProfileLibrary, data_dir: Path) -> APIRouter:
             return await io(read)
         return await guarded(go)
 
-    @router.delete("/api/studio/profiles/{slug}", response_model=None)
+    @router.delete("/api/studio/profiles/{slug}", response_model=None,
+                   responses=answers(*LIBRARY_ANSWERS, (404, "not_found", "no such profile")))
     async def delete_profile(slug: str) -> dict[str, Any] | JSONResponse:
         """Remove both files; the listing."""
         def delete() -> dict[str, Any]:
@@ -245,7 +263,8 @@ def studio_router(library: ProfileLibrary, data_dir: Path) -> APIRouter:
             return await io(delete)
         return await guarded(go)
 
-    @router.post("/api/studio/profiles/{slug}/rename", response_model=None)
+    @router.post("/api/studio/profiles/{slug}/rename", response_model=None,
+                 responses=answers(*LIBRARY_ANSWERS, (404, "not_found", "no such profile")))
     async def rename_profile(slug: str, b: RenameBody) -> LibraryEntry | JSONResponse:
         """A new name (and the slug it derives) when the profile is still at `rev`; 409 stale or exists, 422
         invalid_name."""
@@ -255,7 +274,8 @@ def studio_router(library: ProfileLibrary, data_dir: Path) -> APIRouter:
             return await io(library.rename, slug, b.name, b.rev)
         return await guarded(go)
 
-    @router.post("/api/studio/profiles/{slug}/duplicate", response_model=None)
+    @router.post("/api/studio/profiles/{slug}/duplicate", response_model=None,
+                 responses=answers(*LIBRARY_ANSWERS, (404, "not_found", "no such profile")))
     async def duplicate_profile(slug: str, b: NameBody) -> LibraryEntry | JSONResponse:
         """A copy under a new name; 409 exists or too_many, 422 invalid_name."""
         async def go() -> LibraryEntry:
@@ -264,7 +284,8 @@ def studio_router(library: ProfileLibrary, data_dir: Path) -> APIRouter:
             return await io(library.duplicate, slug, b.name)
         return await guarded(go)
 
-    @router.get("/api/studio/profiles/{slug}/streams", response_model=None)
+    @router.get("/api/studio/profiles/{slug}/streams", response_model=None,
+                responses=answers(*LIBRARY_ANSWERS, (404, "not_found", "no such profile or stream")))
     async def stream_page(slug: str, offset: Annotated[int, Query(ge=0)] = 0,
                           limit: Annotated[int, Query(ge=1, le=PAGE_MAX)] = PAGE_MAX
                           ) -> dict[str, Any] | JSONResponse:
@@ -287,7 +308,8 @@ def studio_router(library: ProfileLibrary, data_dir: Path) -> APIRouter:
                     "offset": offset, "rows": rows, "warnings": simulate.disabled_next_pairs(p.streams)}
         return await guarded(go)
 
-    @router.get("/api/studio/profiles/{slug}/streams/{index}/sidecar", response_model=None)
+    @router.get("/api/studio/profiles/{slug}/streams/{index}/sidecar", response_model=None,
+                responses=answers(*LIBRARY_ANSWERS, (404, "not_found", "no such profile or stream")))
     async def stream_sidecar(slug: str, index: int) -> dict[str, Any] | JSONResponse:
         """`{rev, entry}`: the sidecar entry of stream `index` (`{}` when it has none); 404 for an index out
         of range. Served per row because an entry can hold a 256 KiB editor document."""
@@ -301,7 +323,15 @@ def studio_router(library: ProfileLibrary, data_dir: Path) -> APIRouter:
             return {"rev": p.rev, "entry": side[index] if index < len(side) else {}}
         return await guarded(go)
 
-    @router.get("/api/studio/profiles/{slug}/source", response_model=None)
+    @router.get("/api/studio/profiles/{slug}/source", response_model=None,
+                responses=answers(
+                    *LIBRARY_ANSWERS,
+                    (403, "source_unreadable", "the imported source file cannot be read (permission denied)"),
+                    (404, "not_found", "no such profile"),
+                    (404, "source_missing", "the imported source file no longer exists"),
+                    (409, "no_source", "the profile was not imported from a .py file"),
+                    (413, "too_large", "the source file is over 1 MiB"),
+                    (422, "bad_request", "the source is not a .py file, or cannot be read as one")))
     async def profile_source(slug: str) -> dict[str, Any] | JSONResponse:
         """`{path, text}` of the .py a profile was imported from. Reads only the path its sidecar names:
         409 no_source unless the source kind is py, 404 source_missing for an absent file, 422 bad_request
@@ -341,7 +371,11 @@ def studio_router(library: ProfileLibrary, data_dir: Path) -> APIRouter:
             return await asyncio.to_thread(read, src["path"])
         return await guarded(go)
 
-    @router.put("/api/studio/profiles/{slug}/streams", response_model=None)
+    @router.put("/api/studio/profiles/{slug}/streams", response_model=None,
+                responses=answers(
+                    *BODY_ANSWERS,
+                    *LIBRARY_ANSWERS,
+                    (404, "not_found", "no such profile or stream")))
     async def put_streams(slug: str, request: Request) -> dict[str, Any] | JSONResponse:
         """Apply a StreamsDiff (body at most 16 MiB); 409 stale, 422 invalid_stream naming
         the index and field, 411/413/422 bad_request from the body."""
@@ -359,12 +393,20 @@ def studio_router(library: ProfileLibrary, data_dir: Path) -> APIRouter:
             return diff_reply(res, rev)
         return await guarded(go)
 
-    @router.get("/api/studio/template", response_model=None)
+    @router.get("/api/studio/template", response_model=None,
+                responses=answers(*LIBRARY_ANSWERS, (404, "not_found", "no such profile")))
     async def template() -> dict[str, Any] | JSONResponse:
         """The default new stream, built in the worker."""
         return await guarded(trexapi.template_stream)
 
-    @router.put("/api/studio/uploads", response_model=None)
+    @router.put("/api/studio/uploads", response_model=None,
+                responses=answers(
+                    (400, "bad_request", "the client disconnected during the upload"),
+                    (411, "length_required", "the request has no valid Content-Length"),
+                    (413, "too_large", "the upload is over 64 MiB"),
+                    (422, "bad_request", "the name is over 255 characters or has an unusable suffix"),
+                    (409, "too_many", "8 uploads are already kept; import or wait for one to expire"),
+                    (500, "storage_error", "the upload cannot be stored")))
     async def put_upload(request: Request, name: Annotated[str, Query(max_length=UPLOAD_NAME_MAX)]
                          ) -> dict[str, Any] | JSONResponse:
         """Store the raw body as an upload. 422 bad_request for a `name` over 255 characters or with a suffix
@@ -424,7 +466,11 @@ def studio_router(library: ProfileLibrary, data_dir: Path) -> APIRouter:
                 path.unlink(missing_ok=True)
         return {"upload_id": upload_id, "name": name, "size": size}
 
-    @router.post("/api/studio/import", response_model=None)
+    @router.post("/api/studio/import", response_model=None,
+                 responses=answers(
+                     *LIBRARY_ANSWERS,
+                     (404, "not_found", "no such upload (it may have expired)"),
+                     (422, "bad_request", "the import options (tunables, pcap) or the file are wrong")))
     async def import_profile(b: ImportBody) -> dict[str, Any] | JSONResponse:
         """Import a file into a new profile, or append it to `append_to` (409 stale on a changed profile).
         The file is checked and converted in the worker outside the library lock; a successful import of an
@@ -471,7 +517,11 @@ def studio_router(library: ProfileLibrary, data_dir: Path) -> APIRouter:
             return reply
         return await guarded(go)
 
-    @router.get("/api/studio/profiles/{slug}/export", response_model=None)
+    @router.get("/api/studio/profiles/{slug}/export", response_model=None,
+                responses=answers(
+                    *LIBRARY_ANSWERS,
+                    (404, "not_found", "no such profile"),
+                    (422, "bad_request", "the format or stream query is wrong")))
     async def export(slug: str, format: str, stream: int | None = None) -> Response:
         """The profile as an attachment `<slug>.<ext>` (`<slug>-<i>.<ext>` for one stream): json is the
         library file itself, yaml the stl-sim form, py written by the worker (whole profiles only). Every
@@ -517,7 +567,8 @@ def studio_router(library: ProfileLibrary, data_dir: Path) -> APIRouter:
         """The attachment header for `fname` (a slug and a suffix, so it needs no quoting)."""
         return {"Content-Disposition": f'attachment; filename="{fname}"'}
 
-    @router.post("/api/studio/profiles/{slug}/simulate", response_model=None)
+    @router.post("/api/studio/profiles/{slug}/simulate", response_model=None,
+                 responses=answers(*LIBRARY_ANSWERS, (404, "not_found", "no such profile")))
     async def simulate_profile(slug: str) -> simulate.SimReport | JSONResponse:
         """The offline simulation: the profile checked, round-tripped in the worker and reported."""
         async def go() -> simulate.SimReport:

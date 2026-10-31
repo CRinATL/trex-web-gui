@@ -9,6 +9,8 @@ from typing import Any, Literal
 
 Family = Literal["session", "daemon", "bundle"]
 
+Item = tuple[int, str, str] | tuple[int, Family]       # one argument of `answers`
+
 ARTICLE = {"session": "a session", "daemon": "a daemon", "bundle": "a bundle"}
 
 
@@ -17,7 +19,7 @@ def family_line(family: str) -> str:
     return f"{ARTICLE[family]} refusal, see Errors"
 
 
-def answers(*items: tuple[int, str, str] | tuple[int, Family]) -> dict[int | str, dict[str, Any]]:
+def answers(*items: Item) -> dict[int | str, dict[str, Any]]:
     """The `responses=` dict for `items`; see the module docstring. Codes and families are sorted."""
     codes: dict[int, list[list[str]]] = {}
     families: dict[int, list[str]] = {}

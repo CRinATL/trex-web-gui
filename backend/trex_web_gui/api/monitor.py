@@ -8,6 +8,7 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field, field_validator
 
 from trex_web_gui.api.bodies import err
+from trex_web_gui.api.declared import answers
 from trex_web_gui.monitor.host import check_monitor_host
 from trex_web_gui.monitor.session import MonitorHostRefused, MonitorSession
 from trex_web_gui.validation import check_host
@@ -70,7 +71,8 @@ def monitor_router(monitor: Callable[[], MonitorSession]) -> APIRouter:
         """The Monitor's snapshot."""
         return monitor().snapshot()
 
-    @router.post("/api/monitor/connect", response_model=None)
+    @router.post("/api/monitor/connect", response_model=None,
+                 responses=answers((422, "invalid", "libzmq refuses the endpoint")))
     async def connect(b: ConnectBody) -> dict[str, Any] | JSONResponse:
         """Point the Monitor at host:port (replacing any earlier target); returns the snapshot. 422 invalid
         when libzmq refuses the endpoint."""
