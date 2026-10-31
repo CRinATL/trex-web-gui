@@ -505,28 +505,34 @@ class TrexSession(PortConfigCommands, CaptureCommands):
         await self._command(label, blocking, ports=ports, guard=True)
 
     async def update(self, ports: list[int], mult: str) -> None:
-        """Change the rate of `ports` to `mult` through _command; refused unless owned, or (from the client's
-        cache) unless profile "_" transmits on each."""
-        # control executor: the profile "_" check, then the update RPC
+        """Change the rate of `ports` to `mult` through _command; refused unless owned, or unless profile "_"
+        transmits on each (the ports are synced first, so the check sees the server's state)."""
+        # control executor: sync the ports, the profile "_" check, then the update RPC
         def blocking(c: Any) -> None:
+            for p in ports:
+                trexapi.sync_port(c, p)
             self._require_profile_state(c, ports, {c.ports[p].STATE_TX for p in ports}, "not transmitting")
             c.update(ports=ports, mult=mult)
         await self._command(f"Update port(s) {ports} to {mult}", blocking, ports=ports)
 
     async def pause(self, ports: list[int]) -> None:
-        """Pause `ports` through _command; refused unless owned, or (from the client's cache) unless profile
-        "_" transmits on each."""
-        # control executor: the profile "_" check, then the pause RPC
+        """Pause `ports` through _command; refused unless owned, or unless profile "_" transmits on each (the
+        ports are synced first, so the check sees the server's state)."""
+        # control executor: sync the ports, the profile "_" check, then the pause RPC
         def blocking(c: Any) -> None:
+            for p in ports:
+                trexapi.sync_port(c, p)
             self._require_profile_state(c, ports, {c.ports[p].STATE_TX for p in ports}, "not transmitting")
             c.pause(ports=ports)
         await self._command(f"Pause port(s) {ports}", blocking, ports=ports)
 
     async def resume(self, ports: list[int]) -> None:
-        """Resume `ports` through _command; refused unless owned, or (from the client's cache) unless profile
-        "_" is paused on each."""
-        # control executor: the profile "_" check, then the resume RPC
+        """Resume `ports` through _command; refused unless owned, or unless profile "_" is paused on each (the
+        ports are synced first, so the check sees the server's state)."""
+        # control executor: sync the ports, the profile "_" check, then the resume RPC
         def blocking(c: Any) -> None:
+            for p in ports:
+                trexapi.sync_port(c, p)
             self._require_profile_state(c, ports, {c.ports[p].STATE_PAUSE for p in ports}, "not paused")
             c.resume(ports=ports)
         await self._command(f"Resume port(s) {ports}", blocking, ports=ports)
