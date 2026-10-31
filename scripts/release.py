@@ -6,23 +6,24 @@ dist/release-<target>-YYYY-MM-DD-HHMMSSZ.log), records the pass in dist/release-
 PRINTS the push, tag and release commands. It never runs `git push`, `git tag` or `gh` (canon:WRK-3) and
 writes nothing outside dist/.
 
-`publish` is those commands, run only when the person runs it (make release-rc-publish, make release-publish;
-nothing else calls it): for the commit a passing `check` recorded it pushes main if needed, tags, pushes the
-tag, creates the GitHub release and downloads the released wheel to compare its sha256 with the built one.
-Each step reads GitHub's state first and is skipped when already done, a GitHub 5xx or dropped connection is
-retried with backoff, and a failed write is re-read before anything else (GitHub can answer 500 and keep the
-change), so a rerun resumes where a failure stopped. It never replaces a tag or a release that differs; it
-refuses.
+`publish` is those commands, run only when the person runs it (make release-rc-publish, make
+release-publish, which runs `publish patch`; nothing else calls it): for the commit a passing `check`
+recorded it pushes main if needed, tags, pushes the tag, creates the GitHub release and downloads the
+released wheel to compare its sha256 with the built one. Each step reads GitHub's state first and is skipped
+when already done, a GitHub 5xx or dropped connection is retried with backoff, and a failed write is re-read
+before anything else (GitHub can answer 500 and keep the change), so a rerun resumes where a failure
+stopped. It never replaces a tag or a release that differs; it refuses.
 
 v1.0.0 is published from the public clone (F1), which has no records, so gate 2's `check final` cannot run
-there: `build final` (make release-build) runs `make wheel` and `make install-smoke` in that tree and records
-the wheel, and `publish final` refuses any tree holding the records. Its tag is signed (`git tag -s`, checked
-with `git verify-tag` against ~/.config/git/allowed_signers) and its release is made as a draft: publish
-verifies the draft's wheel and stops for the person to look at the draft; `--publish-draft` (make
-release-publish PUBLISH_DRAFT=1) publishes it and verifies the wheel again.
+there: `build final` (`release.py build final`; make release-build) runs `make wheel` and `make
+install-smoke` in that tree and records the wheel, and `publish final` refuses any tree holding the records.
+Its tag is signed (`git tag -s`, checked with `git verify-tag` against ~/.config/git/allowed_signers) and
+its release is made as a draft: publish verifies the draft's wheel and stops for the person to look at the
+draft; `--publish-draft` publishes it and verifies the wheel again. That is `release.py publish final
+[--publish-draft]`; make release-publish and PUBLISH_DRAFT=1 now run `publish patch`.
 
 `check patch` and `publish patch` release 1.0.N, the N that backend/pyproject.toml names, as a full (not
-pre-) release.
+pre-) release: signed tag, a draft first, and main is never pushed (it reaches GitHub through a PR).
 
 Run it as `uv run --project backend python -I -B scripts/release.py ...` (make release-rc, make release). Exit
 codes: 0 releasable (published, for publish), 1 a precondition or a step failed, 3 the real tier was skipped
@@ -412,8 +413,8 @@ def _check(target: Target, dry_run: bool, run: Callable[[list[str], Path], int],
     if target.name == "final":     # v1.0.0 is tagged and released from the public clone, not from here
         print(f"Gate 2 passed at {sha}; nothing is tagged or released from this repo.\n"
               "v1.0.0 is published by F1 (docs/superpowers/plans/2026-10-26-p12-public-split.md):\n"
-              "export this commit to the public clone, then make release-build and make release-publish\n"
-              "there.")
+              "export this commit to the public clone, then run release.py build final and\n"
+              "release.py publish final there.")
         print(release_commands(target, sha, wheel, digest)[-1])
         return 0
     if target.name == "patch":
@@ -486,7 +487,9 @@ def _passed(root: Path, target: Target) -> Path:
 
 def _publish_make(target: Target) -> str:
     """The make target that runs publish for this target."""
-    return "make release-publish" if target.name in ("final", "patch") else "make release-rc-publish"
+    if target.name == "final":     # make release-publish now runs publish patch
+        return "uv run --project backend python -I -B scripts/release.py publish final"
+    return "make release-publish" if target.name == "patch" else "make release-rc-publish"
 
 
 def run_captured(root: Path) -> Sh:
@@ -558,6 +561,13 @@ class Publisher:
         names = [ln.split("\t")[0] for ln in out.splitlines() if ln.endswith("\t" + ref)]
         return names[0] if names else None
 
+    def tag_object(self, ref: str, sha: str) -> str | None:
+        """The local tag object of ref when it points at sha, else None."""
+        rc, _ = self.sh(["git", "rev-parse", "-q", "--verify", ref])
+        if rc != 0 or _git(self.root, "rev-parse", f"{ref}^{{commit}}").strip() != sha:
+            return None
+        return _git(self.root, "rev-parse", ref).strip()
+
     def view(self) -> dict | None:
         """The GitHub release of the tag (isDraft, isPrerelease, assets), or None when there is none."""
         rc, out = self.call("reading the release", ["gh", "release", "view", self.target.tag, "--json",
@@ -601,8 +611,8 @@ class Publisher:
         return rec
 
     def run(self) -> str:
-        """Every step in order, each skipped when GitHub already has it; "draft" when v1.0.0's release waits
-        for the person's review, else "released"."""
+        """Every step in order, each skipped when GitHub already has it; "draft" when the final or patch
+        release waits for the person's review, else "released"."""
         t, rec = self.target, self.record()
         sha, wheel = rec["sha"], f"dist/{rec['wheel']}"
         main_ref = "refs/heads/main"
@@ -614,8 +624,14 @@ class Publisher:
         if there_main == sha:
             print(f"main: GitHub has {sha[:12]}")
         elif self.patch:   # a patch never pushes main: it reaches main through a PR
-            raise PublishError(f"main moved since the check (GitHub has {there_main}, the check was for "
-                               f"{sha}); rerun make release")
+            has = there_main or "no main"
+            tag_there = self.remote(f"refs/tags/{t.tag}")
+            if tag_there is None or tag_there != self.tag_object(f"refs/tags/{t.tag}", sha):
+                raise PublishError(f"main moved since the check (GitHub has {has}, the check was for "
+                                   f"{sha}); rerun make release")
+            # an earlier run pushed the tag, which pins the commit: a later main changes nothing that ships
+            print(f"main: GitHub has {has[:12]}, moved since the check; the tag {t.tag} already pins "
+                  f"{sha[:12]}")
         else:
             self.write("pushing main", ["git", "push", "origin", f"{sha}:{main_ref}"],
                        lambda: self.remote(main_ref) == sha)
@@ -717,8 +733,9 @@ def _publish(target: Target, root: Path, sh: Sh, sleep: Callable[[float], None],
               f"`{_publish_make(target)}` after fixing the cause")
         return 1
     if state == "draft":
+        flag = "PUBLISH_DRAFT=1" if target.name == "patch" else "--publish-draft"
         print(f"publish {target.name}: {target.tag} is a draft. Check it on the Releases page, then run "
-              f"`{_publish_make(target)} PUBLISH_DRAFT=1` to publish it.")
+              f"`{_publish_make(target)} {flag}` to publish it.")
         return 0
     wheel, digest = wheel_name(target.version), json.loads(_read(_passed(root, target)) or "{}").get("sha256")
     print(f"publish {target.name}: {target.tag} is released. On the host:\n"

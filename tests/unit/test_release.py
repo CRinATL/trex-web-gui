@@ -676,7 +676,7 @@ def test_publish_final_signs_the_tag_and_stops_at_a_draft(tmp_path: Path,
     create = [c for c in gh.calls if c[:3] == ["gh", "release", "create"]][0]
     assert "--draft" in create and "--prerelease" not in create
     assert "verify: the released wheel's sha256" in out                       # the draft's wheel is checked
-    assert "make release-publish PUBLISH_DRAFT=1" in out and "is released" not in out
+    assert "release.py publish final --publish-draft" in out and "is released" not in out
 
 
 def test_publish_draft_publishes_it_and_checks_the_wheel_again(tmp_path: Path,
@@ -749,7 +749,7 @@ def test_gate_2_hands_over_to_f1_instead_of_printing_private_release_commands(
     out = capsys.readouterr().out
     assert "git tag" not in out and "gh release create" not in out and "git push" not in out
     assert "nothing is tagged or released from this repo" in out
-    assert "make release-build" in out and "make release-publish" in out
+    assert "release.py build final" in out and "release.py publish final" in out
     assert "# wheel sha256 (a record" in out
 
 
@@ -1124,12 +1124,39 @@ def test_publish_patch_draft_publishes_and_checks_the_wheel_again(tmp_path: Path
     repo, _ = checked_patch_repo(tmp_path)
     gh = FakeGitHub(repo)
     assert publish_patch(repo, gh) == 0
+    assert gh.release is not None and gh.release["draft"] is True      # the first run left a draft
     capsys.readouterr()
     assert publish_patch(repo, gh, "--publish-draft") == 0
     out = capsys.readouterr().out
-    assert gh.release is not None and gh.release["draft"] is False
+    assert gh.release["draft"] is False
+    assert ["gh", "release", "edit", "v1.0.1", "--draft=false"] in gh.calls
     assert "v1.0.1 is released" in out
     assert f"curl -fLO https://github.com/CRinATL/trex-web-gui/releases/download/v1.0.1/{PATCH_WHEEL}" in out
+
+
+def test_publish_patch_resumes_when_main_moved_after_the_tag_was_pushed(
+        tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    repo, _ = checked_patch_repo(tmp_path)
+    gh = FakeGitHub(repo)
+    assert publish_patch(repo, gh) == 0                                  # tag pushed, release a draft
+    capsys.readouterr()
+    gh.refs["refs/heads/main"] = "0" * 40                                # a merge landed during the review
+    before = len(gh.calls)
+    assert publish_patch(repo, gh, "--publish-draft") == 0
+    out = capsys.readouterr().out
+    assert "moved since the check; the tag v1.0.1 already pins" in out and "v1.0.1 is released" in out
+    assert gh.release is not None and gh.release["draft"] is False
+    assert not any(c[:2] == ["git", "push"] for c in gh.calls[before:])
+
+
+def test_publish_patch_says_when_github_has_no_main(tmp_path: Path,
+                                                    capsys: pytest.CaptureFixture[str]) -> None:
+    repo, _ = checked_patch_repo(tmp_path)
+    gh = FakeGitHub(repo)
+    del gh.refs["refs/heads/main"]
+    assert publish_patch(repo, gh) == 1
+    out = capsys.readouterr().out
+    assert "GitHub has no main" in out and "None" not in out and gh.writes() == []
 
 
 def test_publish_patch_refuses_when_githubs_main_moved(tmp_path: Path,
