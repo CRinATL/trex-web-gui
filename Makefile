@@ -74,8 +74,8 @@ release-rc-publish:  # historical (the private candidates / v1.0.0's F1): after 
 release-build:       # historical (the private candidates / v1.0.0's F1): F1, in the public clone (no records, so no gate 2 there): make wheel and install-smoke, then the record release-publish reads
 	$(UV) python -I -B scripts/release.py build final
 
-release-publish:     # F1, in the public clone after release-build: signed tag, the release as a draft, the draft's wheel checked; PUBLISH_DRAFT=1 publishes the reviewed draft
-	$(UV) python -I -B scripts/release.py publish final $(if $(PUBLISH_DRAFT),--publish-draft,)
+release-publish:     # after a passing make release: signed tag, the release as a draft, the draft's wheel checked; never pushes main; PUBLISH_DRAFT=1 publishes the reviewed draft (run by the person, canon:WRK-3)
+	$(UV) python -I -B scripts/release.py publish patch $(if $(PUBLISH_DRAFT),--publish-draft,)
 
 check-py:         # tests/unit on 3.12, 3.13 and 3.14, one step each
 	@python3 -I scripts/gate.py run check-py

@@ -486,7 +486,7 @@ def _passed(root: Path, target: Target) -> Path:
 
 def _publish_make(target: Target) -> str:
     """The make target that runs publish for this target."""
-    return "make release-publish" if target.name == "final" else "make release-rc-publish"
+    return "make release-publish" if target.name in ("final", "patch") else "make release-rc-publish"
 
 
 def run_captured(root: Path) -> Sh:
@@ -506,10 +506,12 @@ class Publisher:
 
     def __init__(self, target: Target, root: Path, sh: Sh, sleep: Callable[[float], None],
                  env: Mapping[str, str], publish_draft: bool) -> None:
-        """Nothing runs until run(). publish_draft: publish v1.0.0's reviewed draft (final only)."""
+        """Nothing runs until run(). publish_draft: publish the reviewed draft (final and patch)."""
         self.target, self.root, self.sh, self.sleep = target, root, sh, sleep
         self.env, self.publish_draft = env, publish_draft
         self.final = target.name == "final"
+        self.patch = target.name == "patch"
+        self.public = self.final or self.patch   # the tag is signed and the release stops at a draft
 
     def backoff(self, what: str, i: int, rc: int, out: str) -> None:
         """After failure i (0-based) of what: wait before the next try, or PublishError when the error is
@@ -569,19 +571,18 @@ class Publisher:
     def record(self) -> dict:
         """The pass `check` recorded, after checking it matches HEAD, a clean main and the wheel on disk."""
         t, root = self.target, self.root
+        again = "make release-build" if self.final else "make release" if self.patch else "make release-rc"
         if self.final and ((root / "PLAN.md").is_file() or (root / DEFERRED).is_file()):
             raise PublishError("publish final runs in the public clone (F1); this tree holds the private "
                                "records")
         text = _read(_passed(root, t))
         if text is None:
             raise PublishError(f"no passing `{'build' if self.final else 'check'} {t.name}` recorded "
-                               f"({_passed(root, t).relative_to(root)}); run "
-                               f"make {'release-build' if self.final else 'release-rc'} first")
+                               f"({_passed(root, t).relative_to(root)}); run {again} first")
         rec = json.loads(text)
         want = "build" if self.final else "check"
         if rec.get("gate") != want:
-            raise PublishError(f"the pass was recorded by {rec.get('gate')}, not by {want}; run "
-                               f"make {'release-build' if self.final else 'release-rc'}")
+            raise PublishError(f"the pass was recorded by {rec.get('gate')}, not by {want}; run {again}")
         dirty = _git(root, "status", "--porcelain").splitlines()
         problems = [f"working tree is not clean: {ln}" for ln in dirty]
         branch = _git(root, "rev-parse", "--abbrev-ref", "HEAD").strip()
@@ -605,8 +606,16 @@ class Publisher:
         t, rec = self.target, self.record()
         sha, wheel = rec["sha"], f"dist/{rec['wheel']}"
         main_ref = "refs/heads/main"
-        if self.remote(main_ref) == sha:
+        if self.patch:   # the records may have changed since the check; nothing is written until they hold
+            found = records_gate_problems(self.root, self.env.get("HOME", ""))
+            if found:
+                raise PublishError("\n".join(found) + "\nnothing was tagged or released")
+        there_main = self.remote(main_ref)
+        if there_main == sha:
             print(f"main: GitHub has {sha[:12]}")
+        elif self.patch:   # a patch never pushes main: it reaches main through a PR
+            raise PublishError(f"main moved since the check (GitHub has {there_main}, the check was for "
+                               f"{sha}); rerun make release")
         else:
             self.write("pushing main", ["git", "push", "origin", f"{sha}:{main_ref}"],
                        lambda: self.remote(main_ref) == sha)
@@ -619,12 +628,13 @@ class Publisher:
                 raise PublishError(f"tag {t.tag} points at {on}, not {sha}; it is never moved here")
             print(f"tag: {t.tag} exists on {sha[:12]}")
         else:
-            argv = ["git", "tag", "-s" if self.final else "-a", t.tag, "-m", f"trex-web-gui {t.version}", sha]
+            argv = ["git", "tag", "-s" if self.public else "-a", t.tag, "-m", f"trex-web-gui {t.version}",
+                    sha]
             rc, out = self.sh(argv)
             if rc != 0:
                 raise PublishError(f"making tag {t.tag} failed (exit {rc}): {out.strip()}")
-            print(f"tag: made {t.tag} on {sha[:12]}{', signed' if self.final else ''}")
-        if self.final:
+            print(f"tag: made {t.tag} on {sha[:12]}{', signed' if self.public else ''}")
+        if self.public:
             signers = f"{self.env.get('HOME', '~')}/.config/git/allowed_signers"
             rc, out = self.sh(["git", "-c", f"gpg.ssh.allowedSignersFile={signers}", "verify-tag", t.tag])
             if rc != 0:
@@ -659,11 +669,11 @@ class Publisher:
                 argv = ["gh", "release", "create", t.tag, wheel, "--title", f"trex-web-gui {t.version}",
                         "--notes-file", t.notes]
                 argv += (["--prerelease"] if t.prerelease else []) + ["--verify-tag"]
-                argv += ["--draft"] if self.final else []
+                argv += ["--draft"] if self.public else []
                 what = "creating the release"
             elif not has:
                 argv, what = ["gh", "release", "upload", t.tag, wheel, "--clobber"], "uploading the wheel"
-            elif rel["isDraft"] and self.final and not self.publish_draft:
+            elif rel["isDraft"] and self.public and not self.publish_draft:
                 print(f"release: {t.tag} is a draft with {rec['wheel']}")
                 return "draft"
             elif rel["isDraft"]:
@@ -721,16 +731,17 @@ def _publish(target: Target, root: Path, sh: Sh, sleep: Callable[[float], None],
 def main(argv: list[str] | None = None, run: Callable[[list[str], Path], int] = run_logged,
          env: Mapping[str, str] = os.environ, root: Path = ROOT, sh: Sh | None = None,
          sleep: Callable[[float], None] = time.sleep) -> int:
-    """Entry point: `guard`, `check <rc|rc<N>|final> [--dry-run]` or `publish <rc|rc<N>|final>`."""
+    """Entry point: `guard`, `check <target> [--dry-run]` or `publish <target>` (rc, rc<N>, final, patch)."""
     ap = argparse.ArgumentParser(prog="release.py")
     sub = ap.add_subparsers(dest="cmd", required=True)
     sub.add_parser("guard", help="refuse /var/tmp citations without a committed copy")
     chk = sub.add_parser("check", help="preconditions, the gate chain, then the printed commands")
-    chk.add_argument("target", help="rc (the candidate pyproject names), rc<N> or final")
+    chk.add_argument("target", help="rc (the candidate pyproject names), rc<N>, final or patch")
     chk.add_argument("--dry-run", action="store_true", help="allow a branch other than main")
     pub = sub.add_parser("publish", help="tag, push, release and verify what a passing check recorded")
-    pub.add_argument("target", help="rc (the candidate pyproject names), rc<N> or final")
-    pub.add_argument("--publish-draft", action="store_true", help="final: publish the reviewed draft release")
+    pub.add_argument("target", help="rc (the candidate pyproject names), rc<N>, final or patch")
+    pub.add_argument("--publish-draft", action="store_true",
+                     help="final, patch: publish the reviewed draft release")
     bld = sub.add_parser("build", help="final, in the public clone: make wheel and install-smoke, then the "
                          "record")
     bld.add_argument("target", help="final")

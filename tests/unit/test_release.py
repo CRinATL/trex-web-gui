@@ -1078,3 +1078,105 @@ def test_check_patch_refuses_an_undated_use_log(tmp_path: Path, capsys: pytest.C
     code, run = check_patch(repo)
     assert code == 1 and f"{release.HOST_USE_LOG} has no line starting with a date" in capsys.readouterr().out
     assert run.calls == []
+
+
+# --- publish patch ---------------------------------------------------------------------------------------
+
+def checked_patch_repo(tmp_path: Path) -> tuple[Path, Path]:
+    """patch_repo after a passing `check patch`."""
+    repo, gd = patch_repo(tmp_path)
+    assert check_patch(repo)[0] == 0
+    return repo, gd
+
+
+def local_tags(repo: Path) -> str:
+    """The repo's tags, one per line."""
+    return subprocess.run(["git", "tag", "--list"], cwd=repo, capture_output=True, text=True,
+                          check=True).stdout.strip()
+
+
+def publish_patch(repo: Path, gh: FakeGitHub, *extra: str) -> int:
+    """`publish patch` against the fake remote; the records re-check runs real git, not gh."""
+    return release.main(["publish", "patch", *extra], root=repo, sh=gh, sleep=lambda s: None,
+                        env={"HOME": "/h"})
+
+
+def test_publish_patch_signs_the_tag_and_stops_at_a_draft(tmp_path: Path,
+                                                         capsys: pytest.CaptureFixture[str]) -> None:
+    repo, _ = checked_patch_repo(tmp_path)
+    capsys.readouterr()
+    gh = FakeGitHub(repo)
+    assert publish_patch(repo, gh) == 0
+    out = capsys.readouterr().out
+    assert gh.signed == {"v1.0.1"}
+    assert ["git", "-c", "gpg.ssh.allowedSignersFile=/h/.config/git/allowed_signers", "verify-tag",
+            "v1.0.1"] in gh.calls
+    create = [c for c in gh.calls if c[:3] == ["gh", "release", "create"]][0]
+    assert "--draft" in create and "--prerelease" not in create
+    assert "make release-publish PUBLISH_DRAFT=1" in out and "is released" not in out
+    assert not any(c[:2] == ["git", "push"] and "refs/heads/main" in c[-1] for c in gh.calls)
+    assert [c for c in gh.writes() if c[:2] == ["git", "push"]] == [["git", "push", "origin",
+                                                                      "refs/tags/v1.0.1"]]
+
+
+def test_publish_patch_draft_publishes_and_checks_the_wheel_again(tmp_path: Path,
+                                                                 capsys: pytest.CaptureFixture[str]) -> None:
+    repo, _ = checked_patch_repo(tmp_path)
+    gh = FakeGitHub(repo)
+    assert publish_patch(repo, gh) == 0
+    capsys.readouterr()
+    assert publish_patch(repo, gh, "--publish-draft") == 0
+    out = capsys.readouterr().out
+    assert gh.release is not None and gh.release["draft"] is False
+    assert "v1.0.1 is released" in out
+    assert f"curl -fLO https://github.com/CRinATL/trex-web-gui/releases/download/v1.0.1/{PATCH_WHEEL}" in out
+
+
+def test_publish_patch_refuses_when_githubs_main_moved(tmp_path: Path,
+                                                       capsys: pytest.CaptureFixture[str]) -> None:
+    repo, _ = checked_patch_repo(tmp_path)
+    gh = FakeGitHub(repo)
+    gh.refs["refs/heads/main"] = "0" * 40
+    assert publish_patch(repo, gh) == 1
+    assert "main moved since the check" in capsys.readouterr().out
+    assert gh.writes() == []
+    assert local_tags(repo) == ""
+
+
+def test_publish_patch_rechecks_the_records(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    repo, gd = checked_patch_repo(tmp_path)
+    gh = FakeGitHub(repo)
+    (repo / "DEFERRED.md").write_text(HOST + "| H-1 | host use, 2026-11-01 | a finding | open |\n")
+    rec(repo, gd, "commit", "-qam", "row")
+    rec(repo, gd, "push", "-q", "origin", "main")
+    capsys.readouterr()
+    assert publish_patch(repo, gh) == 1
+    out = capsys.readouterr().out
+    assert "open host row H-1" in out and "nothing was tagged or released" in out
+    assert gh.writes() == []
+    (repo / "DEFERRED.md").write_text(HOST)            # closed again, but committed and not pushed
+    rec(repo, gd, "commit", "-qam", "close")
+    assert publish_patch(repo, gh) == 1
+    assert "commit and push the records" in capsys.readouterr().out
+    assert gh.writes() == [] and local_tags(repo) == ""
+
+
+def test_publish_patch_refuses_a_stale_pass_from_the_previous_patch(
+        tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    repo, _ = checked_patch_repo(tmp_path)
+    (repo / "backend" / "pyproject.toml").write_text('[project]\nversion = "1.0.2"\n')
+    (repo / "docs" / "releases" / "v1.0.2.md").write_text(NOTES)
+    git(repo, "add", "backend/pyproject.toml", "docs/releases/v1.0.2.md")
+    git(repo, "commit", "-qm", "1.0.2")
+    gh = FakeGitHub(repo)                               # GitHub's main is this HEAD
+    assert publish_patch(repo, gh) == 1
+    assert "passing check was for v1.0.1" in capsys.readouterr().out
+    assert gh.writes() == []
+
+
+def test_publish_patch_accepts_a_tree_holding_the_records(tmp_path: Path,
+                                                         capsys: pytest.CaptureFixture[str]) -> None:
+    repo, _ = checked_patch_repo(tmp_path)
+    assert (repo / "PLAN.md").is_file() and (repo / "DEFERRED.md").is_file()
+    assert publish_patch(repo, FakeGitHub(repo)) == 0
+    assert "publish final runs in the public clone" not in capsys.readouterr().out
