@@ -2,9 +2,11 @@
 port whose cache still says idle (or TX) while the server has moved on is controlled after the sync, not
 refused from the stale cache. The stub client logs sync and the RPC in one list to pin their order. Every
 acquire of ours is marked first (stop-race-flake-1), and the ARP resolve is short attempts, one job each
-(FU4-2)."""
+(FU4-2). A cancel is held off by _await_done until the awaited job has ended (P3b-54, P3b-55, D4, P1-67)."""
 import asyncio
+import threading
 import time
+from types import SimpleNamespace as NS
 from typing import Any
 
 import pytest
@@ -12,6 +14,7 @@ from session_rig import IDLE, PAUSE, PEER_MAC, TX, Rig, StubClient, StubPort
 from trex_web_gui import trexapi
 from trex_web_gui.sessions import SessionState, TrexSession
 from trex_web_gui.sessions.port_config import LayerRequest
+from trex_web_gui.sessions.trex_session import ConnectParams
 from trex_web_gui.trexapi import CommandRefused
 
 
@@ -310,3 +313,234 @@ def test_the_connection_ending_between_attempts_stops_the_resolve(rig: Rig,
     assert ("Apply L3 configuration to port 1: L3 set, ARP unresolved: the connection ended; the resolve "
             "stopped") in rig.logs("warning")
     assert not [m for m in rig.logs("info") if m.endswith(": done")] and rig.logs("error") == []
+
+
+# --- the cancellation corners: one re-shielding await, _await_done (P3b-54, P3b-55, P1-67, D4) ---
+
+L2 = LayerRequest("L2", "02:00:00:00:00:01", None, None, [], None)
+
+
+def test_await_done_without_a_cancel_returns_the_result(rig: Rig) -> None:
+    async def body(s: TrexSession) -> None:
+        fut: asyncio.Future[int] = asyncio.get_running_loop().create_future()
+        asyncio.get_running_loop().call_later(0.02, fut.set_result, 7)
+        assert await s._await_done(fut) == 7
+    rig.run(body)
+
+
+def test_await_done_raises_the_futures_exception(rig: Rig) -> None:
+    async def body(s: TrexSession) -> None:
+        fut: asyncio.Future[int] = asyncio.get_running_loop().create_future()
+        asyncio.get_running_loop().call_later(0.02, fut.set_exception, ValueError("job failed"))
+        with pytest.raises(ValueError, match="job failed"):
+            await s._await_done(fut)
+    rig.run(body)
+
+
+@pytest.mark.parametrize("cancels", [1, 2])
+def test_await_done_waits_for_the_future_then_raises_cancelled(rig: Rig, cancels: int) -> None:
+    async def body(s: TrexSession) -> None:
+        fut: asyncio.Future[int] = asyncio.get_running_loop().create_future()
+        t = asyncio.ensure_future(s._await_done(fut))
+        await asyncio.sleep(0)
+        for _ in range(cancels):
+            t.cancel()
+            await asyncio.sleep(0.01)
+        assert not t.done()                                     # held off while the future runs
+        fut.set_result(7)
+        with pytest.raises(asyncio.CancelledError):
+            await t                                             # never the result after a cancel
+    rig.run(body)
+
+
+def test_two_cancels_during_service_on_still_restore(rig: Rig) -> None:
+    """P3b-54: the second cancel used to cut the wait for job 1, so service_restore never ran."""
+    rig.c.hold_on = threading.Event()
+
+    async def body(s: TrexSession) -> None:
+        task = asyncio.create_task(s.apply_layer(0, L2))
+        try:
+            await asyncio.sleep(0.1)                            # service_on is held on the executor
+            task.cancel()
+            await asyncio.sleep(0.02)
+            task.cancel()
+            await asyncio.sleep(0.02)
+        finally:
+            assert rig.c.hold_on is not None
+            rig.c.hold_on.set()
+        with pytest.raises(asyncio.CancelledError):
+            await task
+        assert s.busy() == {}
+    rig.run(body)
+    assert rig.c.calls == [("set_service_mode", 0, True), ("set_service_mode", 0, False)]
+
+
+@pytest.mark.parametrize("command", ["apply", "ping", "scan"])
+def test_a_command_cancelled_in_its_body_schedules_one_refresh(rig: Rig, monkeypatch: pytest.MonkeyPatch,
+                                                               command: str) -> None:
+    """P3b-55: a cancelled command left the Control tab on the stale port state."""
+    monkeypatch.setattr(trexapi, "set_vlan", rig.stub("set_vlan", None, hold_s=0.3))
+    monkeypatch.setattr(trexapi, "ping_once", rig.stub("ping_once", None, hold_s=0.3))
+    monkeypatch.setattr(trexapi, "scan_neighbours", rig.stub("scan", [], hold_s=0.3))
+    calls: list[int] = []
+    rig.s._schedule_refresh = lambda: calls.append(1)           # type: ignore[method-assign]
+    run = {"apply": lambda s: s.apply_layer(1, L2), "ping": lambda s: s.ping(1, "1.1.1.99", 3, 64),
+           "scan": lambda s: s.scan(1)}[command]
+
+    async def body(s: TrexSession) -> None:
+        task = asyncio.create_task(run(s))
+        await asyncio.sleep(0.1)                                # inside the body
+        task.cancel()
+        with pytest.raises(asyncio.CancelledError):
+            await task
+    rig.run(body)
+    assert calls == [1]
+
+
+def test_a_cancel_during_the_restore_is_raised_after_the_restore_ends(
+        rig: Rig, monkeypatch: pytest.MonkeyPatch) -> None:
+    """D4: the command ended, and busy cleared, while service_restore was still queued or running."""
+    entered, release = threading.Event(), threading.Event()
+
+    # service_restore stand-in: blocks on the executor until the test lets it end
+    def restore(c: Any, port: int, saved: Any) -> None:
+        entered.set()
+        release.wait(5)
+        return None
+    monkeypatch.setattr(trexapi, "service_restore", restore)
+
+    async def body(s: TrexSession) -> None:
+        task = asyncio.create_task(s.apply_layer(0, L2))
+        try:
+            while not entered.is_set():
+                await asyncio.sleep(0.005)
+            task.cancel()
+            await asyncio.sleep(0.05)
+            assert not task.done() and s.busy() == {0: "apply"}     # held off while the restore runs
+        finally:
+            release.set()
+        with pytest.raises(asyncio.CancelledError):
+            await task
+        assert s.busy() == {}
+    rig.run(body)
+
+
+# connect/disconnect corners on a session with no server: clients are NS stand-ins that log their disconnect
+
+def fake_client(name: str, log: list[str]) -> Any:
+    """A client whose disconnect logs "<name> disconnected"."""
+    return NS(conn=NS(is_connected=lambda: True), get_acquired_ports=lambda: [], ctx=NS(username="me"),
+              disconnect=lambda **kw: log.append(f"{name} disconnected"))
+
+
+def bare(log: list[str], hold: dict[str, threading.Event]) -> TrexSession:
+    """A DISCONNECTED session whose connects return fake clients; the connect named in `hold`
+    ("control" or "reader") waits for its Event (at most 5 s)."""
+    s = TrexSession(lambda m: None, release_on_exit=lambda: False)
+
+    # control connect stand-in
+    def connect_control(p: Any) -> Any:
+        if "control" in hold:
+            hold["control"].wait(5)
+        return fake_client("control", log), NS(hostname="h")
+
+    # reader connect stand-in
+    def connect_reader(p: Any) -> Any:
+        if "reader" in hold:
+            hold["reader"].wait(5)
+        return fake_client("reader", log)
+    s._connect_blocking = connect_control                       # type: ignore[method-assign]
+    s._connect_reader_blocking = connect_reader                 # type: ignore[method-assign]
+    return s
+
+
+@pytest.mark.parametrize("held", ["control", "reader"])
+def test_n1_two_cancels_during_abandon_connect_wait_for_the_release(held: str) -> None:
+    """P1-67 N1: one shield per wait, so a second cancel left while a release job was still queued."""
+    log: list[str] = []
+    hold = {held: threading.Event()}
+
+    async def go() -> None:
+        s = bare(log, hold)
+        task = asyncio.create_task(s.connect(ConnectParams("h")))
+        try:
+            await asyncio.sleep(0.1)                            # one connect job is held
+            for _ in range(3):
+                task.cancel()
+                await asyncio.sleep(0.02)
+            assert not task.done()
+        finally:
+            hold[held].set()
+        with pytest.raises(asyncio.CancelledError):
+            await task
+        assert sorted(log) == ["control disconnected", "reader disconnected"]
+        assert s._state == SessionState.DISCONNECTED
+        await s.close()
+    asyncio.run(go())
+
+
+@pytest.mark.parametrize("side", ["control", "reader"])
+def test_o1_a_cancel_before_the_drop_job_starts_still_disconnects(side: str) -> None:
+    """P1-67 O1: the drop job was cancelled with the task while still queued, so the client stayed open."""
+    log: list[str] = []
+
+    async def go() -> None:
+        s = bare(log, {})
+        s._client, s._reader = fake_client("control", log), fake_client("reader", log)
+        blocker = threading.Event()
+        ex = s._executor if side == "control" else s._reader_executor
+        ex.submit(blocker.wait, 5)                              # keeps the drop job queued behind it
+        task = asyncio.create_task(s._drop_client())
+        try:
+            await asyncio.sleep(0.05)
+            task.cancel()
+            await asyncio.sleep(0.05)
+        finally:
+            blocker.set()
+        with pytest.raises(asyncio.CancelledError):
+            await task
+        assert sorted(log) == ["control disconnected", "reader disconnected"]
+        await s.close()
+    asyncio.run(go())
+
+
+def test_o2_a_disconnect_raising_in_close_still_shuts_both_executors() -> None:
+    """P1-67 O2: close() skipped the executor shutdowns when disconnect() raised."""
+    async def go() -> None:
+        s = bare([], {})
+
+        async def boom(release: bool = True) -> None:
+            raise RuntimeError("disconnect failed")
+        s.disconnect = boom                                     # type: ignore[method-assign]
+        with pytest.raises(RuntimeError, match="disconnect failed"):
+            await s.close()
+        for ex in (s._executor, s._reader_executor):
+            with pytest.raises(RuntimeError, match="after shutdown"):
+                ex.submit(int)
+    asyncio.run(go())
+
+
+def test_n3_a_cancel_after_the_connect_jobs_succeeded_releases_both_clients(
+        monkeypatch: pytest.MonkeyPatch) -> None:
+    """P1-67 N3: the cancel lands in the drain await after both clients were assigned."""
+    log: list[str] = []
+    real_sleep = asyncio.sleep
+    holder: list[asyncio.Task[Any]] = []
+
+    # sleep(0) inside connect (the drain await) is where the cancel lands
+    async def sleep(delay: float, *a: Any) -> Any:
+        if delay == 0 and holder and asyncio.current_task() is holder[0]:
+            holder[0].cancel()
+        return await real_sleep(delay, *a)
+
+    async def go() -> None:
+        s = bare(log, {})
+        holder.append(asyncio.create_task(s.connect(ConnectParams("h"))))
+        monkeypatch.setattr(asyncio, "sleep", sleep)
+        with pytest.raises(asyncio.CancelledError):
+            await holder[0]
+        assert sorted(log) == ["control disconnected", "reader disconnected"]
+        assert s._state == SessionState.DISCONNECTED and s._error == "Connect cancelled."
+        assert s._client is None and s._reader is None
+        await s.close()
+    asyncio.run(go())

@@ -78,6 +78,10 @@ class PortConfigCommands:
         def _mark_lost(self, cause: str) -> None: ...
         # TrexSession's: port_busy when a ping or scan (or, unless held_only, an Apply) holds a port
         def _refuse_busy(self, label: str, ports: list[int], held_only: bool = False) -> None: ...
+        # TrexSession's: one background refresh unless one is pending; loop thread only
+        def _schedule_refresh(self) -> None: ...
+        # TrexSession's: waits for fut however often this task is cancelled, then raises that CancelledError
+        async def _await_done(self, fut: asyncio.Future[Any]) -> Any: ...
         # TrexSession's: claims or frees a port and publishes `busy` on a change
         def _set_busy(self, port: int, kind: str | None) -> None: ...
 
@@ -94,13 +98,15 @@ class PortConfigCommands:
     async def _restore_service(self, c: Any, port: int, label: str,
                                saved: trexapi.ServiceSaved) -> str | None:
         """service_restore as its own job. Skipped when the connection is gone (the server may then keep
-        service mode on). Shielded: a cancelled command still puts the port back."""
+        service mode on). A cancel is held off until the restore job has ended (_await_done), so the command
+        ends after the port is back."""
         if not self._connected_to(c):
             self._log("warning", f"{label}: the connection ended; service mode may still be on "
                                  f"for port {port}")
             return None
         try:
-            err: str | None = await asyncio.shield(self._run(trexapi.service_restore, c, port, saved))
+            err: str | None = await self._await_done(
+                asyncio.ensure_future(self._run(trexapi.service_restore, c, port, saved)))
         except (trexapi.ServerUnreachable, trexapi.ServerRestarted) as e:
             raise self._note_failure(label, e) from e    # a loss during the restore marks the session lost
         if err:
@@ -122,12 +128,12 @@ class PortConfigCommands:
                 return trexapi.service_on(c, port)
             job1 = asyncio.ensure_future(self._job(label, first))
             try:
-                saved = await asyncio.shield(job1)
+                saved = await self._await_done(job1)
             except asyncio.CancelledError:
                 # service_on still completes on the executor: wait for it and put the port back
                 try:
-                    saved = await asyncio.shield(job1)
-                except Exception:
+                    saved = job1.result()
+                except BaseException:
                     pass                                 # job 1 failed: nothing was turned on
                 else:
                     await self._restore_service(c, port, label, saved)
@@ -189,6 +195,9 @@ class PortConfigCommands:
         try:
             arp, restore_error = await self._bracketed(c, port, label, "apply", body,
                                                        ipv6=bool(req.ipv6 and req.ipv6[0]))
+        except asyncio.CancelledError:
+            self._schedule_refresh()                  # the port state may have changed under the command
+            raise
         except Exception:
             await self._refresh_quietly(c)
             raise
@@ -247,7 +256,11 @@ class PortConfigCommands:
                 self._log("ping", f"Port {port}: {line.text}")
                 if seq < count:
                     await asyncio.sleep(PING_INTERVAL_S)
-        _, restore_error = await self._bracketed(c, port, label, "ping", body)
+        try:
+            _, restore_error = await self._bracketed(c, port, label, "ping", body)
+        except asyncio.CancelledError:
+            self._schedule_refresh()
+            raise
         if outcome["failure"] is not None:
             self._log("warning", f"{label}: failed: {outcome['failure']}")
         elif "ended" not in outcome:
@@ -271,7 +284,11 @@ class PortConfigCommands:
                 return trexapi.scan_neighbours(c, port)
             found: list[trexapi.Neighbour] = await self._job(label, scan_job)
             return found
-        found, restore_error = await self._bracketed(c, port, label, "scan", body)
+        try:
+            found, restore_error = await self._bracketed(c, port, label, "scan", body)
+        except asyncio.CancelledError:
+            self._schedule_refresh()
+            raise
         self._log("info", f"{label}: done, {len(found)} found")
         await self._refresh_quietly(c)
         return ScanResult(found, restore_error)
