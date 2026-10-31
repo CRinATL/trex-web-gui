@@ -63,7 +63,7 @@ These need things a clone does not have. They are listed so that their names in 
 |---|---|
 | `make vendor` | A trex-core checkout at the commit in `backend/vendor/TREX_PIN` (`TREX_SRC`). It rebuilds `backend/trex_web_gui/_vendor/` and applies `backend/vendor/patches/`; the result is committed, so nothing else needs the checkout |
 | `make check-real`, `make check-real-all`, `make check-daemon-real` | The KVM test VM ([`vm/README.md`](vm/README.md)), which runs a real TRex. The `record-*` targets re-record the test fixtures against it |
-| `make deferred`, `make release-rc`, `make release` | The maintainer's private development records: the register of deferred items, and the use logs the release gate reads |
+| `make deferred`, `make release-publish`, `make release` | The maintainer's private development records: the register of deferred items, and the use logs the release gate reads |
 | `make parity`, `make parity-sync` | A private planning inventory (`TREX_PLANS`) that the v1.0 parity checklist is generated from |
 
 Three Makefile variables name machine-specific inputs, overridable on the command line or in the environment:

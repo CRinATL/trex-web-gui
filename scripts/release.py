@@ -1,25 +1,32 @@
-"""Release gate (P6, D10): `release.py check rc|rc<N>|final [--dry-run]`, `release.py build final`,
-`release.py publish rc|rc<N>|final [--publish-draft]` and `release.py guard`.
+"""Release gate (P6, D10): `release.py check rc|rc<N>|final|patch [--dry-run]`, `release.py build final`,
+`release.py publish rc|rc<N>|final|patch [--publish-draft]` and `release.py guard`.
 
 `check` checks the preconditions, runs the gate chain (each step logged to
 dist/release-<target>-YYYY-MM-DD-HHMMSSZ.log), records the pass in dist/release-<target>-passed.json and
 PRINTS the push, tag and release commands. It never runs `git push`, `git tag` or `gh` (canon:WRK-3) and
 writes nothing outside dist/.
 
-`publish` is those commands, run only when the person runs it (make release-rc-publish, make release-publish;
-nothing else calls it): for the commit a passing `check` recorded it pushes main if needed, tags, pushes the
-tag, creates the GitHub release and downloads the released wheel to compare its sha256 with the built one.
-Each step reads GitHub's state first and is skipped when already done, a GitHub 5xx or dropped connection is
-retried with backoff, and a failed write is re-read before anything else (GitHub can answer 500 and keep the
-change), so a rerun resumes where a failure stopped. It never replaces a tag or a release that differs; it
-refuses.
+`publish` is those commands, run only when the person runs it (make release-rc-publish, make
+release-publish, which runs `publish patch`; nothing else calls it): for the commit a passing `check`
+recorded it pushes main if needed, tags, pushes the tag, creates the GitHub release and downloads the
+released wheel to compare its sha256 with the built one. Each step reads GitHub's state first and is skipped
+when already done, a GitHub 5xx or dropped connection is retried with backoff, and a failed write is re-read
+before anything else (GitHub can answer 500 and keep the change), so a rerun resumes where a failure
+stopped. It never replaces a tag or a release that differs; it refuses.
 
 v1.0.0 is published from the public clone (F1), which has no records, so gate 2's `check final` cannot run
-there: `build final` (make release-build) runs `make wheel` and `make install-smoke` in that tree and records
-the wheel, and `publish final` refuses any tree holding the records. Its tag is signed (`git tag -s`, checked
-with `git verify-tag` against ~/.config/git/allowed_signers) and its release is made as a draft: publish
-verifies the draft's wheel and stops for the person to look at the draft; `--publish-draft` (make
-release-publish PUBLISH_DRAFT=1) publishes it and verifies the wheel again.
+there: `build final` (`release.py build final`; make release-build) runs `make wheel` and `make
+install-smoke` in that tree and records the wheel, and `publish final` refuses any tree holding the records.
+Its tag is signed (`git tag -s`, checked with `git verify-tag` against ~/.config/git/allowed_signers) and
+its release is made as a draft: publish verifies the draft's wheel and stops for the person to look at the
+draft; `--publish-draft` publishes it and verifies the wheel again. That is `release.py publish final
+[--publish-draft]`; make release-publish and PUBLISH_DRAFT=1 now run `publish patch`.
+
+`check patch` and `publish patch` release 1.0.N, the N that backend/pyproject.toml names (a 1.0.N release
+commit sets that version AND commits the backend/uv.lock that uv rewrites for it: CI runs `uv sync --locked`,
+and `check patch` refuses the dirty tree otherwise), as a full (not
+pre-) release: signed tag, a draft first, and main is never pushed (it reaches GitHub through a
+PR).
 
 Run it as `uv run --project backend python -I -B scripts/release.py ...` (make release-rc, make release). Exit
 codes: 0 releasable (published, for publish), 1 a precondition or a step failed, 3 the real tier was skipped
@@ -67,23 +74,38 @@ def rc_target(n: int) -> Target:
     return Target(f"rc{n}", f"1.0.0rc{n}", f"v1.0.0-rc{n}", f"docs/releases/v1.0.0-rc{n}.md", True)
 
 
+PATCH_VERSION = re.compile(r"1\.0\.([1-9]\d*)")
+
+
+def patch_target(n: int) -> Target:
+    """Patch n of 1.0: version 1.0.<n>, tag v1.0.<n>, its own public notes file; a full release."""
+    return Target("patch", f"1.0.{n}", f"v1.0.{n}", f"docs/releases/v1.0.{n}.md", False)
+
+
 def resolve_target(name: str, pyproject_text: str) -> Target | str:
-    """The Target for `final`, `rc<N>`, or `rc` (the candidate pyproject's version names, so make release-rc
-    needs no edit per candidate); a str says why there is none."""
+    """The Target for `final`, `rc<N>`, `rc` or `patch` (the last two take the version pyproject names, so
+    neither needs an edit per release); a str says why there is none."""
     if name == "final":
         return FINAL
     if m := RC_NAME.fullmatch(name):
         return rc_target(int(m.group(1)))
-    if name != "rc":
-        return f"unknown target {name!r}: rc, rc<N> or final"
+    if name not in ("rc", "patch"):
+        return f"unknown target {name!r}: rc, rc<N>, final or patch"
     try:
         version = tomllib.loads(pyproject_text).get("project", {}).get("version")
     except tomllib.TOMLDecodeError as e:
         return f"backend/pyproject.toml is not valid TOML: {e}"
+    if name == "patch":
+        m = PATCH_VERSION.fullmatch(version) if isinstance(version, str) else None
+        if m is None:
+            return f"backend/pyproject.toml version is {version!r}, not a 1.0.x patch (1.0.1 or later)"
+        return patch_target(int(m.group(1)))
     m = re.fullmatch(r"1\.0\.0rc([1-9]\d*)", version) if isinstance(version, str) else None
     if m is None:
         return f"backend/pyproject.toml version is {version!r}, not a 1.0.0 release candidate"
     return rc_target(int(m.group(1)))
+
+
 USE_LOG = "docs/releases/v1.0.0-rc1-use.md"
 DEFERRED = "DEFERRED.md"
 REQUIRED_SECTIONS = ("## What is in", "## Install", "## Supported", "## Known limitations", "## Deviations",
@@ -167,18 +189,43 @@ def rc1_open_rows(deferred_text: str) -> list[str]:
     return open_rows
 
 
-def use_log_problems(text: str | None) -> list[str]:
-    """The rc1 week's use log must exist and hold at least one line starting with a date."""
+def use_log_problems(text: str | None, path: str = USE_LOG) -> list[str]:
+    """A week's use log must exist and hold at least one line starting with a date."""
     if text is None:
-        return [f"{USE_LOG} is missing"]
+        return [f"{path} is missing"]
     if not re.search(r"^\d{4}-\d{2}-\d{2}", text, re.M):
-        return [f"{USE_LOG} has no line starting with a date (YYYY-MM-DD)"]
+        return [f"{path} has no line starting with a date (YYYY-MM-DD)"]
     return []
+
+
+HOST_USE_LOG = "docs/releases/host-use-1.0.x.md"
+HOST_SECTION = "## Host use (1.0.x)"
+CONF = ".sdd.conf"
+
+
+def host_rows_problems(deferred_text: str) -> list[str]:
+    """The register must hold the host-use section, and every `H-<n>` row anywhere in it must be closed
+    (status starts `fixed`, `wontfix` or `recorded`); the status is the last cell, never the finding text."""
+    problems = []
+    if HOST_SECTION not in deferred_text.splitlines():
+        problems.append(f"{DEFERRED} lacks the section {HOST_SECTION!r}")
+    for line in deferred_text.splitlines():
+        opened = re.match(r"\s*\|\s*(H-\d+)\s*\|", line)
+        if opened and not re.search(r"(?<!\\)\|$", line.rstrip()):
+            problems.append(f"malformed host row {opened.group(1)}: no closing |")
+            continue
+        cells = [c.strip() for c in re.split(r"(?<!\\)\|", line)]
+        if len(cells) < 4 or not re.fullmatch(r"H-\d+", cells[1]):
+            continue
+        status = cells[-2]
+        if not status.startswith(("fixed", "wontfix", "recorded")):
+            problems.append(f"open host row {cells[1]}: {status}")
+    return problems
 
 
 def steps(target: Target) -> list[list[str]]:
     """The gate chain, in order; check-real is last (the longest, and it holds the VM)."""
-    parity = ["make", "parity"] + (["PARITY_GATE=1"] if target.name == "final" else [])
+    parity = ["make", "parity"] + (["PARITY_GATE=1"] if target.name in ("final", "patch") else [])
     return [["make", "check", "VENDOR_TESTS=run"], ["make", "check-py"], ["make", "deferred"], parity,
             ["make", "wheel"], ["make", "install-smoke"], ["make", "check-real"]]
 
@@ -225,12 +272,89 @@ def _read(path: Path) -> str | None:
     return path.read_text() if path.is_file() else None
 
 
-def _guard_inputs(root: Path) -> tuple[dict[str, str], set[str]]:
-    """The guarded texts (PLAN.md, DEFERRED.md, tracked ledgers) and the set of tracked paths."""
-    tracked = {p for p in _git(root, "ls-files").splitlines() if p}
-    names = [n for n in GUARDED if n in tracked]
-    names += sorted(p for p in tracked if re.fullmatch(r"\.superpowers/sdd/[^/]+/progress\.md", p))
+def records_git_dir(root: Path, home: str) -> Path | str | None:
+    """The records' git dir, read from root's .sdd.conf like the sdd scripts' ledger_git_dir(): the last
+    `LEDGER_GIT_DIR=` line, no quote stripping, a leading `~` is home, a relative path is relative to root.
+    None when no records are configured; a str reason when the key is set but unusable (inside the repo, or
+    not a git dir), so the caller refuses rather than scan nothing."""
+    conf = root / CONF
+    if not conf.is_file():
+        return None
+    values = re.findall(r"^LEDGER_GIT_DIR=(.*)$", conf.read_text(), re.M)
+    if not values or not values[-1]:
+        return None
+    value = values[-1]
+    raw = home + value[1:] if value.startswith("~") else value
+    path = Path(os.path.realpath(raw if raw.startswith("/") else str(root / raw)))
+    top = Path(os.path.realpath(root))
+    if path == top or top in path.parents:
+        return (f"{CONF} sets LEDGER_GIT_DIR={value}, which is inside the repo ({top}); "
+                "only a git dir outside it is used")
+    try:
+        _git(root, f"--git-dir={path}", "rev-parse", "--git-dir")
+    except GitError:
+        return f"{CONF} sets LEDGER_GIT_DIR={value}, which is not a git dir"
+    return path
+
+
+def _rec(root: Path, gd: Path, *args: str) -> str:
+    """`git <args>` against the records' git dir, whose work tree is the public clone."""
+    return _git(root, f"--git-dir={gd}", f"--work-tree={root}", *args)
+
+
+def records_problems(root: Path, gd: Path) -> list[str]:
+    """The records must track the register, the host-use log and .sdd.conf, hold no uncommitted change to a
+    tracked record, sit on main, and have main equal to their remote's (ls-remote only; a failure raises)."""
+    problems = []
+    tracked = set(_rec(root, gd, "ls-files").splitlines())
+    problems += [f"{name} is not tracked by the records" for name in (DEFERRED, HOST_USE_LOG, CONF)
+                 if name not in tracked]
+    dirty = _rec(root, gd, "status", "--porcelain", "--untracked-files=no").splitlines()
+    problems += [f"records have an uncommitted change: {line.rstrip()}" for line in dirty if line.strip()]
+    branch = _rec(root, gd, "rev-parse", "--abbrev-ref", "HEAD").strip()
+    if branch != "main":
+        problems.append(f"records are on {branch}, not main")
+    local = _rec(root, gd, "rev-parse", "main").strip()
+    remote = _rec(root, gd, "ls-remote", "origin", "refs/heads/main").split()
+    remote_sha = remote[0] if remote else "nothing"
+    if local != remote_sha:
+        problems.append(f"records main is {local}, its remote has {remote_sha}: commit and push the records "
+                        "(git rec push)")
+    return problems
+
+
+def _guard_inputs(root: Path, gd: Path | None = None) -> tuple[dict[str, str], set[str]]:
+    """The guarded texts (PLAN.md, DEFERRED.md, tracked ledgers) and the set of tracked paths; with the
+    records' git dir, the paths the records track count and name the guarded files."""
+    public = {p for p in _git(root, "ls-files").splitlines() if p}
+    if gd is None:
+        tracked = names_from = public
+    else:
+        names_from = {p for p in _rec(root, gd, "ls-files").splitlines() if p}
+        tracked = public | names_from
+    names = [n for n in GUARDED if n in names_from]
+    names += sorted(p for p in names_from if re.fullmatch(r"\.superpowers/sdd/[^/]+/progress\.md", p))
     return {n: (root / n).read_text() for n in names if (root / n).is_file()}, tracked
+
+
+def records_gate_problems(root: Path, home: str) -> list[str]:
+    """What the records must show before a patch: configured and usable, pushed, every host row closed, every
+    RC1 row closed, a dated use log, and the use log not tracked by the public repo. The publish step runs it
+    again."""
+    gd = records_git_dir(root, home)
+    if not isinstance(gd, Path):
+        reason = gd or f"no LEDGER_GIT_DIR in {CONF}"
+        return [f"no records: {reason}; the patch gate runs in the clone that holds the records"]
+    register = _read(root / DEFERRED)
+    problems = records_problems(root, gd)
+    if register is None:
+        problems.append(f"{DEFERRED} not found")
+    problems += host_rows_problems(register or "")
+    problems += [f"open rc1 row {r}" for r in rc1_open_rows(register or "")]
+    problems += use_log_problems(_read(root / HOST_USE_LOG), HOST_USE_LOG)
+    if _git(root, "ls-files", "--", HOST_USE_LOG).strip():
+        problems.append(f"{HOST_USE_LOG} is tracked by the public repo: host details stay private")
+    return problems
 
 
 def _check(target: Target, dry_run: bool, run: Callable[[list[str], Path], int], env: Mapping[str, str],
@@ -242,8 +366,25 @@ def _check(target: Target, dry_run: bool, run: Callable[[list[str], Path], int],
         problems.append(f"HEAD is on {branch!r}, not main (--dry-run relaxes this)")
     problems += version_problems(_read(root / "backend" / "pyproject.toml") or "", target)
     problems += notes_problems(_read(root / target.notes), target)
-    texts, tracked = _guard_inputs(root)
+    home = env.get("HOME", "")
+    gd = records_git_dir(root, home) if target.name == "patch" else None
+    texts, tracked = _guard_inputs(root, gd if isinstance(gd, Path) else None)
     problems += guard_problems(texts, tracked)
+    if target.name == "patch":
+        problems += records_gate_problems(root, home)
+        head = _git(root, "rev-parse", "HEAD").strip()
+        if not dry_run:
+            main_ref = _git(root, "ls-remote", "origin", "refs/heads/main").split()
+            main_sha = main_ref[0] if main_ref else "nothing"
+            if head != main_sha:
+                problems.append(f"HEAD {head} is not GitHub's main ({main_sha}): merge the release commit "
+                                "through a PR and pull")
+        if _git(root, "tag", "--list", target.tag).strip():
+            problems.append(f"tag {target.tag} already exists locally")
+        if _git(root, "ls-remote", "origin", f"refs/tags/{target.tag}").strip():
+            problems.append(f"tag {target.tag} already exists on origin")
+        if not _git(root, "ls-files", "--", target.notes).strip():
+            problems.append(f"{target.notes} is not tracked by the public repo")
     if target.name == "final":
         register = _read(root / DEFERRED)
         if register is None:          # a public clone: without the register, no open row would read as none
@@ -279,8 +420,17 @@ def _check(target: Target, dry_run: bool, run: Callable[[list[str], Path], int],
     if target.name == "final":     # v1.0.0 is tagged and released from the public clone, not from here
         print(f"Gate 2 passed at {sha}; nothing is tagged or released from this repo.\n"
               "v1.0.0 is published by F1 (docs/superpowers/plans/2026-10-26-p12-public-split.md):\n"
-              "export this commit to the public clone, then make release-build and make release-publish\n"
-              "there.")
+              "export this commit to the public clone, then run release.py build final and\n"
+              "release.py publish final there.")
+        print(release_commands(target, sha, wheel, digest)[-1])
+        return 0
+    if target.name == "patch":
+        if dry_run:
+            print(f"DRY RUN: gate passed at {sha} for {target.tag}; nothing recorded, so "
+                  "make release-publish would refuse")
+        else:
+            print(f"Gate passed at {sha} for {target.tag}. Run make release-publish: it signs the tag and "
+                  "stops at a draft for you to look at; make release-publish PUBLISH_DRAFT=1 publishes it.")
         print(release_commands(target, sha, wheel, digest)[-1])
         return 0
     print("DRY RUN (tag from main after the merge):" if dry_run else
@@ -344,7 +494,9 @@ def _passed(root: Path, target: Target) -> Path:
 
 def _publish_make(target: Target) -> str:
     """The make target that runs publish for this target."""
-    return "make release-publish" if target.name == "final" else "make release-rc-publish"
+    if target.name == "final":     # make release-publish now runs publish patch
+        return "uv run --project backend python -I -B scripts/release.py publish final"
+    return "make release-publish" if target.name == "patch" else "make release-rc-publish"
 
 
 def run_captured(root: Path) -> Sh:
@@ -364,10 +516,12 @@ class Publisher:
 
     def __init__(self, target: Target, root: Path, sh: Sh, sleep: Callable[[float], None],
                  env: Mapping[str, str], publish_draft: bool) -> None:
-        """Nothing runs until run(). publish_draft: publish v1.0.0's reviewed draft (final only)."""
+        """Nothing runs until run(). publish_draft: publish the reviewed draft (final and patch)."""
         self.target, self.root, self.sh, self.sleep = target, root, sh, sleep
         self.env, self.publish_draft = env, publish_draft
         self.final = target.name == "final"
+        self.patch = target.name == "patch"
+        self.public = self.final or self.patch   # the tag is signed and the release stops at a draft
 
     def backoff(self, what: str, i: int, rc: int, out: str) -> None:
         """After failure i (0-based) of what: wait before the next try, or PublishError when the error is
@@ -414,6 +568,13 @@ class Publisher:
         names = [ln.split("\t")[0] for ln in out.splitlines() if ln.endswith("\t" + ref)]
         return names[0] if names else None
 
+    def tag_object(self, ref: str, sha: str) -> str | None:
+        """The local tag object of ref when it points at sha, else None."""
+        rc, _ = self.sh(["git", "rev-parse", "-q", "--verify", ref])
+        if rc != 0 or _git(self.root, "rev-parse", f"{ref}^{{commit}}").strip() != sha:
+            return None
+        return _git(self.root, "rev-parse", ref).strip()
+
     def view(self) -> dict | None:
         """The GitHub release of the tag (isDraft, isPrerelease, assets), or None when there is none."""
         rc, out = self.call("reading the release", ["gh", "release", "view", self.target.tag, "--json",
@@ -427,19 +588,18 @@ class Publisher:
     def record(self) -> dict:
         """The pass `check` recorded, after checking it matches HEAD, a clean main and the wheel on disk."""
         t, root = self.target, self.root
+        again = "make release-build" if self.final else "make release" if self.patch else "make release-rc"
         if self.final and ((root / "PLAN.md").is_file() or (root / DEFERRED).is_file()):
             raise PublishError("publish final runs in the public clone (F1); this tree holds the private "
                                "records")
         text = _read(_passed(root, t))
         if text is None:
             raise PublishError(f"no passing `{'build' if self.final else 'check'} {t.name}` recorded "
-                               f"({_passed(root, t).relative_to(root)}); run "
-                               f"make {'release-build' if self.final else 'release-rc'} first")
+                               f"({_passed(root, t).relative_to(root)}); run {again} first")
         rec = json.loads(text)
         want = "build" if self.final else "check"
         if rec.get("gate") != want:
-            raise PublishError(f"the pass was recorded by {rec.get('gate')}, not by {want}; run "
-                               f"make {'release-build' if self.final else 'release-rc'}")
+            raise PublishError(f"the pass was recorded by {rec.get('gate')}, not by {want}; run {again}")
         dirty = _git(root, "status", "--porcelain").splitlines()
         problems = [f"working tree is not clean: {ln}" for ln in dirty]
         branch = _git(root, "rev-parse", "--abbrev-ref", "HEAD").strip()
@@ -458,13 +618,27 @@ class Publisher:
         return rec
 
     def run(self) -> str:
-        """Every step in order, each skipped when GitHub already has it; "draft" when v1.0.0's release waits
-        for the person's review, else "released"."""
+        """Every step in order, each skipped when GitHub already has it; "draft" when the final or patch
+        release waits for the person's review, else "released"."""
         t, rec = self.target, self.record()
         sha, wheel = rec["sha"], f"dist/{rec['wheel']}"
         main_ref = "refs/heads/main"
-        if self.remote(main_ref) == sha:
+        if self.patch:   # the records may have changed since the check; nothing is written until they hold
+            found = records_gate_problems(self.root, self.env.get("HOME", ""))
+            if found:
+                raise PublishError("\n".join(found) + "\nnothing was tagged or released")
+        there_main = self.remote(main_ref)
+        if there_main == sha:
             print(f"main: GitHub has {sha[:12]}")
+        elif self.patch:   # a patch never pushes main: it reaches main through a PR
+            has = there_main or "no main"
+            tag_there = self.remote(f"refs/tags/{t.tag}")
+            if tag_there is None or tag_there != self.tag_object(f"refs/tags/{t.tag}", sha):
+                raise PublishError(f"main moved since the check (GitHub has {has}, the check was for "
+                                   f"{sha}); rerun make release")
+            # an earlier run pushed the tag, which pins the commit: a later main changes nothing that ships
+            print(f"main: GitHub has {has[:12]}, moved since the check; the tag {t.tag} already pins "
+                  f"{sha[:12]}")
         else:
             self.write("pushing main", ["git", "push", "origin", f"{sha}:{main_ref}"],
                        lambda: self.remote(main_ref) == sha)
@@ -477,12 +651,13 @@ class Publisher:
                 raise PublishError(f"tag {t.tag} points at {on}, not {sha}; it is never moved here")
             print(f"tag: {t.tag} exists on {sha[:12]}")
         else:
-            argv = ["git", "tag", "-s" if self.final else "-a", t.tag, "-m", f"trex-web-gui {t.version}", sha]
+            argv = ["git", "tag", "-s" if self.public else "-a", t.tag, "-m", f"trex-web-gui {t.version}",
+                    sha]
             rc, out = self.sh(argv)
             if rc != 0:
                 raise PublishError(f"making tag {t.tag} failed (exit {rc}): {out.strip()}")
-            print(f"tag: made {t.tag} on {sha[:12]}{', signed' if self.final else ''}")
-        if self.final:
+            print(f"tag: made {t.tag} on {sha[:12]}{', signed' if self.public else ''}")
+        if self.public:
             signers = f"{self.env.get('HOME', '~')}/.config/git/allowed_signers"
             rc, out = self.sh(["git", "-c", f"gpg.ssh.allowedSignersFile={signers}", "verify-tag", t.tag])
             if rc != 0:
@@ -517,11 +692,11 @@ class Publisher:
                 argv = ["gh", "release", "create", t.tag, wheel, "--title", f"trex-web-gui {t.version}",
                         "--notes-file", t.notes]
                 argv += (["--prerelease"] if t.prerelease else []) + ["--verify-tag"]
-                argv += ["--draft"] if self.final else []
+                argv += ["--draft"] if self.public else []
                 what = "creating the release"
             elif not has:
                 argv, what = ["gh", "release", "upload", t.tag, wheel, "--clobber"], "uploading the wheel"
-            elif rel["isDraft"] and self.final and not self.publish_draft:
+            elif rel["isDraft"] and self.public and not self.publish_draft:
                 print(f"release: {t.tag} is a draft with {rec['wheel']}")
                 return "draft"
             elif rel["isDraft"]:
@@ -565,8 +740,9 @@ def _publish(target: Target, root: Path, sh: Sh, sleep: Callable[[float], None],
               f"`{_publish_make(target)}` after fixing the cause")
         return 1
     if state == "draft":
+        flag = "PUBLISH_DRAFT=1" if target.name == "patch" else "--publish-draft"
         print(f"publish {target.name}: {target.tag} is a draft. Check it on the Releases page, then run "
-              f"`{_publish_make(target)} PUBLISH_DRAFT=1` to publish it.")
+              f"`{_publish_make(target)} {flag}` to publish it.")
         return 0
     wheel, digest = wheel_name(target.version), json.loads(_read(_passed(root, target)) or "{}").get("sha256")
     print(f"publish {target.name}: {target.tag} is released. On the host:\n"
@@ -579,26 +755,31 @@ def _publish(target: Target, root: Path, sh: Sh, sleep: Callable[[float], None],
 def main(argv: list[str] | None = None, run: Callable[[list[str], Path], int] = run_logged,
          env: Mapping[str, str] = os.environ, root: Path = ROOT, sh: Sh | None = None,
          sleep: Callable[[float], None] = time.sleep) -> int:
-    """Entry point: `guard`, `check <rc|rc<N>|final> [--dry-run]` or `publish <rc|rc<N>|final>`."""
+    """Entry point: `guard`, `check <target> [--dry-run]` or `publish <target>` (rc, rc<N>, final, patch)."""
     ap = argparse.ArgumentParser(prog="release.py")
     sub = ap.add_subparsers(dest="cmd", required=True)
     sub.add_parser("guard", help="refuse /var/tmp citations without a committed copy")
     chk = sub.add_parser("check", help="preconditions, the gate chain, then the printed commands")
-    chk.add_argument("target", help="rc (the candidate pyproject names), rc<N> or final")
+    chk.add_argument("target", help="rc (the candidate pyproject names), rc<N>, final or patch")
     chk.add_argument("--dry-run", action="store_true", help="allow a branch other than main")
     pub = sub.add_parser("publish", help="tag, push, release and verify what a passing check recorded")
-    pub.add_argument("target", help="rc (the candidate pyproject names), rc<N> or final")
-    pub.add_argument("--publish-draft", action="store_true", help="final: publish the reviewed draft release")
+    pub.add_argument("target", help="rc (the candidate pyproject names), rc<N>, final or patch")
+    pub.add_argument("--publish-draft", action="store_true",
+                     help="final, patch: publish the reviewed draft release")
     bld = sub.add_parser("build", help="final, in the public clone: make wheel and install-smoke, then the "
                          "record")
     bld.add_argument("target", help="final")
     args = ap.parse_args(argv)
     try:
         if args.cmd == "guard":
-            if not (root / "PLAN.md").is_file():   # a public clone: with no records, nothing would be scanned
+            gd = records_git_dir(root, env.get("HOME", ""))
+            if isinstance(gd, str):   # a set but unusable key must not fall back to a scan that reads nothing
+                print(f"records: {gd}")
+                return 1
+            if gd is None and not (root / "PLAN.md").is_file():   # a public clone: nothing would be scanned
                 print("PLAN.md not found: the guard scans the records, which are in the private repo")
                 return 1
-            texts, tracked = _guard_inputs(root)
+            texts, tracked = _guard_inputs(root, gd)
             found = guard_problems(texts, tracked)
             print("\n".join(found) if found else "guard: ok")
             return 1 if found else 0

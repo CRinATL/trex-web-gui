@@ -138,11 +138,12 @@ def test_final_needs_the_use_log() -> None:
 def test_rc1_runs_parity_in_report_mode_and_final_in_gate_mode() -> None:
     assert ["make", "parity"] in release.steps(RC1)
     assert ["make", "parity", "PARITY_GATE=1"] in release.steps(FINAL)
+    assert ["make", "parity", "PARITY_GATE=1"] in release.steps(release.patch_target(1))
     assert ["make", "check", "VENDOR_TESTS=run"] == release.steps(RC1)[0]
 
 
 def test_check_real_is_the_last_step() -> None:
-    for t in (RC1, FINAL):
+    for t in (RC1, FINAL, release.patch_target(1)):
         chain = release.steps(t)
         assert chain[-1] == ["make", "check-real"] and len(chain) == 7
         names = [s[1] for s in chain[:6]]
@@ -299,6 +300,19 @@ def test_targets_resolve_rc_n_and_rc_from_the_pyproject_version() -> None:
     # every candidate's notes say what to record during its week, not only rc1's
     got = release.notes_problems("\n".join(release.REQUIRED_SECTIONS), release.rc_target(2))
     assert got == ["docs/releases/v1.0.0-rc2.md lacks the section '## What to record during the week'"]
+
+
+def test_patch_resolves_from_the_pyproject_version() -> None:
+    t = release.resolve_target("patch", '[project]\nversion = "1.0.12"\n')
+    assert (t.name, t.version, t.tag, t.notes, t.prerelease) == (
+        "patch", "1.0.12", "v1.0.12", "docs/releases/v1.0.12.md", False)
+    assert release.wheel_name(t.version) == "trex_web_gui-1.0.12-py3-none-any.whl"
+
+
+@pytest.mark.parametrize("version", ["1.0.0", "1.0.0rc5", "1.1.0", "1.0.01", "2.0.1"])
+def test_patch_refuses_a_version_that_is_not_a_patch(version: str) -> None:
+    why = release.resolve_target("patch", f'[project]\nversion = "{version}"\n')
+    assert isinstance(why, str) and repr(version) in why and "1.0.x patch" in why
 
 
 def test_check_rc_takes_the_candidate_from_pyproject(tmp_path: Path) -> None:
@@ -662,7 +676,7 @@ def test_publish_final_signs_the_tag_and_stops_at_a_draft(tmp_path: Path,
     create = [c for c in gh.calls if c[:3] == ["gh", "release", "create"]][0]
     assert "--draft" in create and "--prerelease" not in create
     assert "verify: the released wheel's sha256" in out                       # the draft's wheel is checked
-    assert "make release-publish PUBLISH_DRAFT=1" in out and "is released" not in out
+    assert "release.py publish final --publish-draft" in out and "is released" not in out
 
 
 def test_publish_draft_publishes_it_and_checks_the_wheel_again(tmp_path: Path,
@@ -735,5 +749,466 @@ def test_gate_2_hands_over_to_f1_instead_of_printing_private_release_commands(
     out = capsys.readouterr().out
     assert "git tag" not in out and "gh release create" not in out and "git push" not in out
     assert "nothing is tagged or released from this repo" in out
-    assert "make release-build" in out and "make release-publish" in out
+    assert "release.py build final" in out and "release.py publish final" in out
     assert "# wheel sha256 (a record" in out
+
+
+# --- the records helpers: the private records repo is read through its git dir ---------------------------
+
+HOST = "## Host use (1.0.x)\n\n| ID | Origin | Text | Status |\n|---|---|---|---|\n"
+
+
+def rec(repo: Path, gd: Path, *args: str) -> str:
+    """Runs git against the scratch records (git dir plus work tree, never the clone pytest runs in)."""
+    r = subprocess.run(["git", f"--git-dir={gd}", f"--work-tree={repo}", *args], cwd=repo, check=True,
+                       capture_output=True, text=True)
+    return r.stdout
+
+
+def records_repo(tmp_path: Path) -> tuple[Path, Path]:
+    """A public scratch repo plus a scratch records git dir (work tree = the repo) with a bare origin."""
+    repo, gd, remote = tmp_path / "repo", tmp_path / "records.git", tmp_path / "records-remote.git"
+    repo.mkdir()
+    (repo / ".gitignore").write_text("/dist/\n/PLAN.md\n/DEFERRED.md\n/.superpowers/\n/.sdd.conf\n"
+                                     "/docs/releases/host-use-*.md\n")
+    git(repo, "init", "-q", "-b", "main")
+    git(repo, "config", "user.name", "t")
+    git(repo, "config", "user.email", "t@example.com")
+    git(repo, "add", ".gitignore")
+    git(repo, "commit", "-qm", "init")
+    subprocess.run(["git", "init", "-q", "--bare", "-b", "main", str(remote)], check=True)
+    subprocess.run(["git", f"--git-dir={gd}", "init", "-q", "-b", "main"], check=True)
+    rec(repo, gd, "config", "user.name", "t")
+    rec(repo, gd, "config", "user.email", "t@example.com")
+    rec(repo, gd, "remote", "add", "origin", str(remote))
+    (repo / "docs" / "releases").mkdir(parents=True)
+    (repo / ".superpowers" / "sdd" / "a").mkdir(parents=True)
+    (repo / "PLAN.md").write_text("plan\n")
+    (repo / "DEFERRED.md").write_text(HOST)
+    (repo / release.HOST_USE_LOG).write_text("2026-10-31 installed 1.0.0\n")
+    (repo / ".superpowers" / "sdd" / "a" / "progress.md").write_text("ledger\n")
+    (repo / ".sdd.conf").write_text(f"LEDGER_GIT_DIR={gd}\n")
+    rec(repo, gd, "add", "-f", "PLAN.md", "DEFERRED.md", release.HOST_USE_LOG,
+        ".superpowers/sdd/a/progress.md", ".sdd.conf")
+    rec(repo, gd, "commit", "-qm", "records")
+    rec(repo, gd, "push", "-q", "origin", "main")
+    return repo, gd
+
+
+def test_records_git_dir_reads_sdd_conf_like_the_sdd_scripts(tmp_path: Path) -> None:
+    repo, gd = records_repo(tmp_path)
+    assert release.records_git_dir(repo, "/h") == gd
+    (repo / ".sdd.conf").write_text("LEDGER_GIT_DIR=/nowhere\nLEDGER_GIT_DIR=~/records.git\n")
+    assert release.records_git_dir(repo, str(tmp_path)) == gd          # last line wins, ~ is home
+
+
+@pytest.mark.parametrize("conf", [None, "PYTEST=x\n"])
+def test_records_git_dir_is_none_when_no_records_are_configured(tmp_path: Path, conf: str | None) -> None:
+    repo, _ = records_repo(tmp_path)
+    if conf is None:
+        (repo / ".sdd.conf").unlink()
+    else:
+        (repo / ".sdd.conf").write_text(conf)
+    assert release.records_git_dir(repo, "/h") is None
+
+
+@pytest.mark.parametrize("conf, why", [("LEDGER_GIT_DIR=.git\n", "inside the repo"),
+                                       ("LEDGER_GIT_DIR=/nowhere\n", "not a git dir")])
+def test_records_git_dir_says_why_a_set_key_is_unusable(tmp_path: Path, conf: str, why: str) -> None:
+    repo, _ = records_repo(tmp_path)
+    (repo / ".sdd.conf").write_text(conf)
+    got = release.records_git_dir(repo, "/h")
+    assert isinstance(got, str) and why in got
+
+
+def test_records_git_dir_follows_symlinks_into_the_repo(tmp_path: Path) -> None:
+    repo, _ = records_repo(tmp_path)
+    link = tmp_path / "link.git"
+    link.symlink_to(repo / ".git")
+    (repo / ".sdd.conf").write_text(f"LEDGER_GIT_DIR={link}\n")
+    got = release.records_git_dir(repo, "/h")
+    assert isinstance(got, str) and "inside the repo" in got
+
+
+def test_guard_refuses_a_set_but_unusable_key(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    repo, _ = records_repo(tmp_path)
+    (repo / ".sdd.conf").write_text("LEDGER_GIT_DIR=/nowhere\n")
+    assert release.main(["guard"], root=repo, env={"HOME": "/h"}) == 1
+    assert "records:" in capsys.readouterr().out
+
+
+def test_records_on_another_branch_are_a_problem(tmp_path: Path) -> None:
+    repo, gd = records_repo(tmp_path)
+    rec(repo, gd, "switch", "-q", "-c", "other")
+    assert "records are on other, not main" in release.records_problems(repo, gd)
+
+
+def test_records_in_sync_have_no_problems(tmp_path: Path) -> None:
+    repo, gd = records_repo(tmp_path)
+    assert release.records_problems(repo, gd) == []
+
+
+def test_a_modified_or_staged_record_is_a_problem(tmp_path: Path) -> None:
+    repo, gd = records_repo(tmp_path)
+    (repo / "DEFERRED.md").write_text(HOST + "edited\n")
+    got = release.records_problems(repo, gd)
+    assert len(got) == 1 and "DEFERRED.md" in got[0]
+    rec(repo, gd, "add", "-f", "DEFERRED.md")
+    got = release.records_problems(repo, gd)
+    assert len(got) == 1 and "DEFERRED.md" in got[0]
+    rec(repo, gd, "reset", "-q", "--hard")
+    (repo / ".superpowers" / "sdd" / "a" / "new.txt").write_text("untracked\n")
+    assert release.records_problems(repo, gd) == []
+
+
+def test_records_ahead_of_or_behind_their_remote_are_a_problem(tmp_path: Path) -> None:
+    repo, gd = records_repo(tmp_path)
+    (repo / "DEFERRED.md").write_text(HOST + "ahead\n")
+    rec(repo, gd, "commit", "-qam", "ahead")
+    got = release.records_problems(repo, gd)
+    assert len(got) == 1 and "git rec push" in got[0]
+    rec(repo, gd, "reset", "-q", "--hard", "HEAD~1")
+    other = tmp_path / "other-clone"
+    subprocess.run(["git", "clone", "-q", str(tmp_path / "records-remote.git"), str(other)], check=True)
+    git(other, "config", "user.name", "t")
+    git(other, "config", "user.email", "t@example.com")
+    (other / "DEFERRED.md").write_text(HOST + "elsewhere\n")
+    git(other, "commit", "-qam", "elsewhere")
+    git(other, "push", "-q", "origin", "main")
+    got = release.records_problems(repo, gd)
+    assert len(got) == 1 and "git rec push" in got[0]
+
+
+def test_an_unreachable_records_remote_is_a_git_error(tmp_path: Path) -> None:
+    repo, gd = records_repo(tmp_path)
+    subprocess.run(["git", f"--git-dir={gd}", "remote", "set-url", "origin", str(tmp_path / "gone.git")],
+                   check=True)
+    # by its base class: `release` reloads the script per attribute access, so GitError differs per load
+    with pytest.raises(RuntimeError, match="ls-remote") as excinfo:
+        release.records_problems(repo, gd)
+    assert excinfo.type.__name__ == "GitError"
+
+
+def test_missing_tracked_records_are_problems(tmp_path: Path) -> None:
+    repo, gd = records_repo(tmp_path)
+    (repo / release.HOST_USE_LOG).unlink()
+    got = release.records_problems(repo, gd)
+    assert len(got) == 1 and release.HOST_USE_LOG in got[0]
+    rec(repo, gd, "rm", "-q", "--cached", release.HOST_USE_LOG)
+    rec(repo, gd, "commit", "-qm", "untrack the log")
+    rec(repo, gd, "push", "-q", "origin", "main")
+    got = release.records_problems(repo, gd)
+    assert len(got) == 1 and release.HOST_USE_LOG in got[0]
+
+
+def test_host_rows_closed_three_ways_pass() -> None:
+    rows = "".join(f"| H-{i} | host use, 2026-10-31 | f{i} | {s} |\n"
+                   for i, s in enumerate(["fixed in abc1234", "wontfix: for 1.0.x (user, 2026-10-31)",
+                                          "recorded: kept"], 1))
+    assert release.host_rows_problems(HOST + rows) == []
+    assert release.host_rows_problems(HOST) == []                          # no finding yet
+
+
+def test_an_open_host_row_is_named_wherever_it_sits() -> None:
+    text = HOST + "| H-1 | host use, 2026-10-31 | a \\| b, fixed later | open |\n"
+    text += "## Register\n\n| H-2 | host use, 2026-10-31 | misplaced | open |\n"
+    assert release.host_rows_problems(text) == ["open host row H-1: open", "open host row H-2: open"]
+
+
+def test_a_host_row_without_a_closing_pipe_is_malformed_not_a_pass() -> None:
+    text = HOST + "| H-1 | host use, 2026-10-31 | fixed upstream later | open\n"
+    assert release.host_rows_problems(text) == ["malformed host row H-1: no closing |"]
+
+
+def test_a_missing_host_section_is_a_problem() -> None:
+    assert release.host_rows_problems("# register\n") == [
+        "DEFERRED.md lacks the section '## Host use (1.0.x)'"]
+
+
+def test_use_log_problems_names_the_path_it_is_given() -> None:
+    assert release.use_log_problems(None, "x.md") == ["x.md is missing"]
+    assert release.use_log_problems("no date\n", "x.md") == [
+        "x.md has no line starting with a date (YYYY-MM-DD)"]
+    assert release.use_log_problems("2026-10-31 ok\n", "x.md") == []
+
+
+def test_the_guard_reads_the_records_through_their_git_dir(tmp_path: Path) -> None:
+    repo, gd = records_repo(tmp_path)
+    (repo / "PLAN.md").write_text("see /var/tmp/x.log\n")
+    texts, tracked = release._guard_inputs(repo, gd)
+    assert "PLAN.md" in texts and release.guard_problems(texts, tracked)   # the public scan reads nothing
+    assert release._guard_inputs(repo)[0] == {}
+    (repo / "docs" / "evidence").mkdir()
+    (repo / "docs" / "evidence" / "x.log").write_text("log\n")
+    (repo / "PLAN.md").write_text("see /var/tmp/x.log (committed: docs/evidence/x.log)\n")
+    rec(repo, gd, "add", "-f", "docs/evidence/x.log")
+    texts, tracked = release._guard_inputs(repo, gd)
+    assert release.guard_problems(texts, tracked) == []
+
+
+# --- check patch -----------------------------------------------------------------------------------------
+
+PATCH_WHEEL = "trex_web_gui-1.0.1-py3-none-any.whl"
+PATCH_NOTES = "docs/releases/v1.0.1.md"
+
+
+def patch_repo(tmp_path: Path) -> tuple[Path, Path]:
+    """records_repo plus version 1.0.1, tracked public notes, and a bare public origin holding main."""
+    repo, gd = records_repo(tmp_path)
+    (repo / "backend").mkdir()
+    (repo / "backend" / "pyproject.toml").write_text('[project]\nversion = "1.0.1"\n')
+    (repo / PATCH_NOTES).write_text(NOTES.replace("## What to record during the week\n", ""))
+    git(repo, "add", "backend/pyproject.toml", PATCH_NOTES)
+    git(repo, "commit", "-qm", "1.0.1")
+    origin = tmp_path / "origin.git"
+    subprocess.run(["git", "init", "-q", "--bare", "-b", "main", str(origin)], check=True)
+    git(repo, "remote", "add", "origin", str(origin))
+    git(repo, "push", "-q", "origin", "main")
+    return repo, gd
+
+
+def check_patch(repo: Path, *extra: str) -> tuple[int, Recorder]:
+    """`check patch` with a recorder for the steps; HOME is irrelevant because .sdd.conf holds a full path."""
+    rec_run = Recorder(repo, wheel=PATCH_WHEEL)
+    return release.main(["check", "patch", *extra], run=rec_run, env={"HOME": "/h"}, root=repo), rec_run
+
+
+def test_check_patch_passes_and_records_its_pass(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    repo, _ = patch_repo(tmp_path)
+    code, run = check_patch(repo)
+    out = capsys.readouterr().out
+    assert code == 0, out
+    assert [a[1] for a in run.calls] == ["check", "check-py", "deferred", "parity", "wheel", "install-smoke",
+                                         "check-real"]
+    assert ["make", "parity", "PARITY_GATE=1"] in run.calls
+    record = json.loads((repo / "dist" / "release-patch-passed.json").read_text())
+    assert (record["tag"], record["gate"]) == ("v1.0.1", "check")
+    assert "make release-publish" in out
+    assert "git tag" not in out and "gh release create" not in out and "git push" not in out
+
+
+def test_check_patch_refuses_without_records(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    repo, _ = patch_repo(tmp_path)
+    (repo / ".sdd.conf").unlink()
+    code, run = check_patch(repo)
+    assert code == 1 and "no records:" in capsys.readouterr().out
+    assert run.calls == []
+
+
+def test_check_patch_refuses_an_open_host_row(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    repo, gd = patch_repo(tmp_path)
+    (repo / "DEFERRED.md").write_text(HOST + "| H-1 | host use, 2026-11-01 | a finding | open |\n")
+    rec(repo, gd, "commit", "-qam", "row")
+    rec(repo, gd, "push", "-q", "origin", "main")
+    code, run = check_patch(repo)
+    assert code == 1 and "open host row H-1" in capsys.readouterr().out
+    assert run.calls == []
+
+
+def test_check_patch_refuses_unpushed_records(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    repo, gd = patch_repo(tmp_path)
+    (repo / "PLAN.md").write_text("plan 2\n")
+    rec(repo, gd, "commit", "-qam", "unpushed")
+    code, run = check_patch(repo)
+    assert code == 1 and "commit and push the records" in capsys.readouterr().out
+    assert run.calls == []
+
+
+def test_check_patch_refuses_head_that_is_not_githubs_main(tmp_path: Path,
+                                                           capsys: pytest.CaptureFixture[str]) -> None:
+    repo, _ = patch_repo(tmp_path)
+    (repo / "extra.txt").write_text("x\n")
+    git(repo, "add", "extra.txt")
+    git(repo, "commit", "-qm", "unpushed")
+    code, run = check_patch(repo)
+    assert code == 1 and "is not GitHub's main" in capsys.readouterr().out
+    assert run.calls == []
+    git(repo, "checkout", "-q", "-b", "work")
+    code, run = check_patch(repo, "--dry-run")
+    assert code == 0 and len(run.calls) == 7
+
+
+def test_check_patch_refuses_an_existing_tag(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    repo, _ = patch_repo(tmp_path)
+    git(repo, "tag", "v1.0.1")
+    code, run = check_patch(repo)
+    assert code == 1 and "v1.0.1 already exists locally" in capsys.readouterr().out
+    assert run.calls == []
+    git(repo, "push", "-q", "origin", "v1.0.1")
+    git(repo, "tag", "-d", "v1.0.1")
+    code, run = check_patch(repo)
+    assert code == 1 and "v1.0.1 already exists on origin" in capsys.readouterr().out
+    assert run.calls == []
+
+
+def test_check_patch_refuses_untracked_notes_and_a_public_use_log(
+        tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    (tmp_path / "a").mkdir()
+    (tmp_path / "b").mkdir()
+    repo, _ = patch_repo(tmp_path / "a")
+    with (repo / ".gitignore").open("a") as f:
+        f.write("/docs/releases/v1.0.1.md\n")
+    git(repo, "rm", "-q", "--cached", PATCH_NOTES)
+    git(repo, "add", ".gitignore")
+    git(repo, "commit", "-qm", "untrack notes")
+    git(repo, "push", "-q", "origin", "main")
+    code, run = check_patch(repo)
+    assert code == 1 and f"{PATCH_NOTES} is not tracked by the public repo" in capsys.readouterr().out
+    assert run.calls == []
+    repo, _ = patch_repo(tmp_path / "b")
+    git(repo, "add", "-f", release.HOST_USE_LOG)
+    git(repo, "commit", "-qm", "leak the use log")
+    git(repo, "push", "-q", "origin", "main")
+    code, run = check_patch(repo)
+    assert code == 1
+    assert f"{release.HOST_USE_LOG} is tracked by the public repo: host details stay private" in \
+        capsys.readouterr().out
+    assert run.calls == []
+
+
+def test_check_patch_dry_run_says_nothing_was_recorded(tmp_path: Path,
+                                                       capsys: pytest.CaptureFixture[str]) -> None:
+    repo, _ = patch_repo(tmp_path)
+    git(repo, "checkout", "-q", "-b", "work")
+    code, _ = check_patch(repo, "--dry-run")
+    assert code == 0 and "DRY RUN" in capsys.readouterr().out
+    assert not (repo / "dist" / "release-patch-passed.json").exists()
+
+
+def test_check_patch_refuses_an_undated_use_log(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    repo, gd = patch_repo(tmp_path)
+    (repo / release.HOST_USE_LOG).write_text("# log\n")
+    rec(repo, gd, "commit", "-qam", "undated")
+    rec(repo, gd, "push", "-q", "origin", "main")
+    code, run = check_patch(repo)
+    assert code == 1 and f"{release.HOST_USE_LOG} has no line starting with a date" in capsys.readouterr().out
+    assert run.calls == []
+
+
+# --- publish patch ---------------------------------------------------------------------------------------
+
+def checked_patch_repo(tmp_path: Path) -> tuple[Path, Path]:
+    """patch_repo after a passing `check patch`."""
+    repo, gd = patch_repo(tmp_path)
+    assert check_patch(repo)[0] == 0
+    return repo, gd
+
+
+def local_tags(repo: Path) -> str:
+    """The repo's tags, one per line."""
+    return subprocess.run(["git", "tag", "--list"], cwd=repo, capture_output=True, text=True,
+                          check=True).stdout.strip()
+
+
+def publish_patch(repo: Path, gh: FakeGitHub, *extra: str) -> int:
+    """`publish patch` against the fake remote; the records re-check runs real git, not gh."""
+    return release.main(["publish", "patch", *extra], root=repo, sh=gh, sleep=lambda s: None,
+                        env={"HOME": "/h"})
+
+
+def test_publish_patch_signs_the_tag_and_stops_at_a_draft(tmp_path: Path,
+                                                         capsys: pytest.CaptureFixture[str]) -> None:
+    repo, _ = checked_patch_repo(tmp_path)
+    capsys.readouterr()
+    gh = FakeGitHub(repo)
+    assert publish_patch(repo, gh) == 0
+    out = capsys.readouterr().out
+    assert gh.signed == {"v1.0.1"}
+    assert ["git", "-c", "gpg.ssh.allowedSignersFile=/h/.config/git/allowed_signers", "verify-tag",
+            "v1.0.1"] in gh.calls
+    create = [c for c in gh.calls if c[:3] == ["gh", "release", "create"]][0]
+    assert "--draft" in create and "--prerelease" not in create
+    assert "make release-publish PUBLISH_DRAFT=1" in out and "is released" not in out
+    assert not any(c[:2] == ["git", "push"] and "refs/heads/main" in c[-1] for c in gh.calls)
+    assert [c for c in gh.writes() if c[:2] == ["git", "push"]] == [["git", "push", "origin",
+                                                                      "refs/tags/v1.0.1"]]
+
+
+def test_publish_patch_draft_publishes_and_checks_the_wheel_again(tmp_path: Path,
+                                                                 capsys: pytest.CaptureFixture[str]) -> None:
+    repo, _ = checked_patch_repo(tmp_path)
+    gh = FakeGitHub(repo)
+    assert publish_patch(repo, gh) == 0
+    assert gh.release is not None and gh.release["draft"] is True      # the first run left a draft
+    capsys.readouterr()
+    assert publish_patch(repo, gh, "--publish-draft") == 0
+    out = capsys.readouterr().out
+    assert gh.release["draft"] is False
+    assert ["gh", "release", "edit", "v1.0.1", "--draft=false"] in gh.calls
+    assert "v1.0.1 is released" in out
+    assert f"curl -fLO https://github.com/CRinATL/trex-web-gui/releases/download/v1.0.1/{PATCH_WHEEL}" in out
+
+
+def test_publish_patch_resumes_when_main_moved_after_the_tag_was_pushed(
+        tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    repo, _ = checked_patch_repo(tmp_path)
+    gh = FakeGitHub(repo)
+    assert publish_patch(repo, gh) == 0                                  # tag pushed, release a draft
+    capsys.readouterr()
+    gh.refs["refs/heads/main"] = "0" * 40                                # a merge landed during the review
+    before = len(gh.calls)
+    assert publish_patch(repo, gh, "--publish-draft") == 0
+    out = capsys.readouterr().out
+    assert "moved since the check; the tag v1.0.1 already pins" in out and "v1.0.1 is released" in out
+    assert gh.release is not None and gh.release["draft"] is False
+    assert not any(c[:2] == ["git", "push"] for c in gh.calls[before:])
+
+
+def test_publish_patch_says_when_github_has_no_main(tmp_path: Path,
+                                                    capsys: pytest.CaptureFixture[str]) -> None:
+    repo, _ = checked_patch_repo(tmp_path)
+    gh = FakeGitHub(repo)
+    del gh.refs["refs/heads/main"]
+    assert publish_patch(repo, gh) == 1
+    out = capsys.readouterr().out
+    assert "GitHub has no main" in out and "None" not in out and gh.writes() == []
+
+
+def test_publish_patch_refuses_when_githubs_main_moved(tmp_path: Path,
+                                                       capsys: pytest.CaptureFixture[str]) -> None:
+    repo, _ = checked_patch_repo(tmp_path)
+    gh = FakeGitHub(repo)
+    gh.refs["refs/heads/main"] = "0" * 40
+    assert publish_patch(repo, gh) == 1
+    assert "main moved since the check" in capsys.readouterr().out
+    assert gh.writes() == []
+    assert local_tags(repo) == ""
+
+
+def test_publish_patch_rechecks_the_records(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    repo, gd = checked_patch_repo(tmp_path)
+    gh = FakeGitHub(repo)
+    (repo / "DEFERRED.md").write_text(HOST + "| H-1 | host use, 2026-11-01 | a finding | open |\n")
+    rec(repo, gd, "commit", "-qam", "row")
+    rec(repo, gd, "push", "-q", "origin", "main")
+    capsys.readouterr()
+    assert publish_patch(repo, gh) == 1
+    out = capsys.readouterr().out
+    assert "open host row H-1" in out and "nothing was tagged or released" in out
+    assert gh.writes() == []
+    (repo / "DEFERRED.md").write_text(HOST)            # closed again, but committed and not pushed
+    rec(repo, gd, "commit", "-qam", "close")
+    assert publish_patch(repo, gh) == 1
+    assert "commit and push the records" in capsys.readouterr().out
+    assert gh.writes() == [] and local_tags(repo) == ""
+
+
+def test_publish_patch_refuses_a_stale_pass_from_the_previous_patch(
+        tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    repo, _ = checked_patch_repo(tmp_path)
+    (repo / "backend" / "pyproject.toml").write_text('[project]\nversion = "1.0.2"\n')
+    (repo / "docs" / "releases" / "v1.0.2.md").write_text(NOTES)
+    git(repo, "add", "backend/pyproject.toml", "docs/releases/v1.0.2.md")
+    git(repo, "commit", "-qm", "1.0.2")
+    gh = FakeGitHub(repo)                               # GitHub's main is this HEAD
+    assert publish_patch(repo, gh) == 1
+    assert "passing check was for v1.0.1" in capsys.readouterr().out
+    assert gh.writes() == []
+
+
+def test_publish_patch_accepts_a_tree_holding_the_records(tmp_path: Path,
+                                                         capsys: pytest.CaptureFixture[str]) -> None:
+    repo, _ = checked_patch_repo(tmp_path)
+    assert (repo / "PLAN.md").is_file() and (repo / "DEFERRED.md").is_file()
+    assert publish_patch(repo, FakeGitHub(repo)) == 0
+    assert "publish final runs in the public clone" not in capsys.readouterr().out
