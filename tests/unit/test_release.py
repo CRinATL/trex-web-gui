@@ -138,11 +138,12 @@ def test_final_needs_the_use_log() -> None:
 def test_rc1_runs_parity_in_report_mode_and_final_in_gate_mode() -> None:
     assert ["make", "parity"] in release.steps(RC1)
     assert ["make", "parity", "PARITY_GATE=1"] in release.steps(FINAL)
+    assert ["make", "parity", "PARITY_GATE=1"] in release.steps(release.patch_target(1))
     assert ["make", "check", "VENDOR_TESTS=run"] == release.steps(RC1)[0]
 
 
 def test_check_real_is_the_last_step() -> None:
-    for t in (RC1, FINAL):
+    for t in (RC1, FINAL, release.patch_target(1)):
         chain = release.steps(t)
         assert chain[-1] == ["make", "check-real"] and len(chain) == 7
         names = [s[1] for s in chain[:6]]
@@ -938,3 +939,142 @@ def test_the_guard_reads_the_records_through_their_git_dir(tmp_path: Path) -> No
     rec(repo, gd, "add", "-f", "docs/evidence/x.log")
     texts, tracked = release._guard_inputs(repo, gd)
     assert release.guard_problems(texts, tracked) == []
+
+
+# --- check patch -----------------------------------------------------------------------------------------
+
+PATCH_WHEEL = "trex_web_gui-1.0.1-py3-none-any.whl"
+PATCH_NOTES = "docs/releases/v1.0.1.md"
+
+
+def patch_repo(tmp_path: Path) -> tuple[Path, Path]:
+    """records_repo plus version 1.0.1, tracked public notes, and a bare public origin holding main."""
+    repo, gd = records_repo(tmp_path)
+    (repo / "backend").mkdir()
+    (repo / "backend" / "pyproject.toml").write_text('[project]\nversion = "1.0.1"\n')
+    (repo / PATCH_NOTES).write_text(NOTES.replace("## What to record during the week\n", ""))
+    git(repo, "add", "backend/pyproject.toml", PATCH_NOTES)
+    git(repo, "commit", "-qm", "1.0.1")
+    origin = tmp_path / "origin.git"
+    subprocess.run(["git", "init", "-q", "--bare", "-b", "main", str(origin)], check=True)
+    git(repo, "remote", "add", "origin", str(origin))
+    git(repo, "push", "-q", "origin", "main")
+    return repo, gd
+
+
+def check_patch(repo: Path, *extra: str) -> tuple[int, Recorder]:
+    """`check patch` with a recorder for the steps; HOME is irrelevant because .sdd.conf holds a full path."""
+    rec_run = Recorder(repo, wheel=PATCH_WHEEL)
+    return release.main(["check", "patch", *extra], run=rec_run, env={"HOME": "/h"}, root=repo), rec_run
+
+
+def test_check_patch_passes_and_records_its_pass(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    repo, _ = patch_repo(tmp_path)
+    code, run = check_patch(repo)
+    out = capsys.readouterr().out
+    assert code == 0, out
+    assert [a[1] for a in run.calls] == ["check", "check-py", "deferred", "parity", "wheel", "install-smoke",
+                                         "check-real"]
+    assert ["make", "parity", "PARITY_GATE=1"] in run.calls
+    record = json.loads((repo / "dist" / "release-patch-passed.json").read_text())
+    assert (record["tag"], record["gate"]) == ("v1.0.1", "check")
+    assert "make release-publish" in out
+    assert "git tag" not in out and "gh release create" not in out and "git push" not in out
+
+
+def test_check_patch_refuses_without_records(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    repo, _ = patch_repo(tmp_path)
+    (repo / ".sdd.conf").unlink()
+    code, run = check_patch(repo)
+    assert code == 1 and "no records:" in capsys.readouterr().out
+    assert run.calls == []
+
+
+def test_check_patch_refuses_an_open_host_row(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    repo, gd = patch_repo(tmp_path)
+    (repo / "DEFERRED.md").write_text(HOST + "| H-1 | host use, 2026-11-01 | a finding | open |\n")
+    rec(repo, gd, "commit", "-qam", "row")
+    rec(repo, gd, "push", "-q", "origin", "main")
+    code, run = check_patch(repo)
+    assert code == 1 and "open host row H-1" in capsys.readouterr().out
+    assert run.calls == []
+
+
+def test_check_patch_refuses_unpushed_records(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    repo, gd = patch_repo(tmp_path)
+    (repo / "PLAN.md").write_text("plan 2\n")
+    rec(repo, gd, "commit", "-qam", "unpushed")
+    code, run = check_patch(repo)
+    assert code == 1 and "commit and push the records" in capsys.readouterr().out
+    assert run.calls == []
+
+
+def test_check_patch_refuses_head_that_is_not_githubs_main(tmp_path: Path,
+                                                           capsys: pytest.CaptureFixture[str]) -> None:
+    repo, _ = patch_repo(tmp_path)
+    (repo / "extra.txt").write_text("x\n")
+    git(repo, "add", "extra.txt")
+    git(repo, "commit", "-qm", "unpushed")
+    code, run = check_patch(repo)
+    assert code == 1 and "is not GitHub's main" in capsys.readouterr().out
+    assert run.calls == []
+    git(repo, "checkout", "-q", "-b", "work")
+    code, run = check_patch(repo, "--dry-run")
+    assert code == 0 and len(run.calls) == 7
+
+
+def test_check_patch_refuses_an_existing_tag(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    repo, _ = patch_repo(tmp_path)
+    git(repo, "tag", "v1.0.1")
+    code, run = check_patch(repo)
+    assert code == 1 and "v1.0.1 already exists locally" in capsys.readouterr().out
+    assert run.calls == []
+    git(repo, "push", "-q", "origin", "v1.0.1")
+    git(repo, "tag", "-d", "v1.0.1")
+    code, run = check_patch(repo)
+    assert code == 1 and "v1.0.1 already exists on origin" in capsys.readouterr().out
+    assert run.calls == []
+
+
+def test_check_patch_refuses_untracked_notes_and_a_public_use_log(
+        tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    (tmp_path / "a").mkdir()
+    (tmp_path / "b").mkdir()
+    repo, _ = patch_repo(tmp_path / "a")
+    with (repo / ".gitignore").open("a") as f:
+        f.write("/docs/releases/v1.0.1.md\n")
+    git(repo, "rm", "-q", "--cached", PATCH_NOTES)
+    git(repo, "add", ".gitignore")
+    git(repo, "commit", "-qm", "untrack notes")
+    git(repo, "push", "-q", "origin", "main")
+    code, run = check_patch(repo)
+    assert code == 1 and f"{PATCH_NOTES} is not tracked by the public repo" in capsys.readouterr().out
+    assert run.calls == []
+    repo, _ = patch_repo(tmp_path / "b")
+    git(repo, "add", "-f", release.HOST_USE_LOG)
+    git(repo, "commit", "-qm", "leak the use log")
+    git(repo, "push", "-q", "origin", "main")
+    code, run = check_patch(repo)
+    assert code == 1
+    assert f"{release.HOST_USE_LOG} is tracked by the public repo: host details stay private" in \
+        capsys.readouterr().out
+    assert run.calls == []
+
+
+def test_check_patch_dry_run_says_nothing_was_recorded(tmp_path: Path,
+                                                       capsys: pytest.CaptureFixture[str]) -> None:
+    repo, _ = patch_repo(tmp_path)
+    git(repo, "checkout", "-q", "-b", "work")
+    code, _ = check_patch(repo, "--dry-run")
+    assert code == 0 and "DRY RUN" in capsys.readouterr().out
+    assert not (repo / "dist" / "release-patch-passed.json").exists()
+
+
+def test_check_patch_refuses_an_undated_use_log(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    repo, gd = patch_repo(tmp_path)
+    (repo / release.HOST_USE_LOG).write_text("# log\n")
+    rec(repo, gd, "commit", "-qam", "undated")
+    rec(repo, gd, "push", "-q", "origin", "main")
+    code, run = check_patch(repo)
+    assert code == 1 and f"{release.HOST_USE_LOG} has no line starting with a date" in capsys.readouterr().out
+    assert run.calls == []

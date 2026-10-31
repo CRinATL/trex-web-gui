@@ -217,7 +217,7 @@ def host_rows_problems(deferred_text: str) -> list[str]:
 
 def steps(target: Target) -> list[list[str]]:
     """The gate chain, in order; check-real is last (the longest, and it holds the VM)."""
-    parity = ["make", "parity"] + (["PARITY_GATE=1"] if target.name == "final" else [])
+    parity = ["make", "parity"] + (["PARITY_GATE=1"] if target.name in ("final", "patch") else [])
     return [["make", "check", "VENDOR_TESTS=run"], ["make", "check-py"], ["make", "deferred"], parity,
             ["make", "wheel"], ["make", "install-smoke"], ["make", "check-real"]]
 
@@ -329,6 +329,26 @@ def _guard_inputs(root: Path, gd: Path | None = None) -> tuple[dict[str, str], s
     return {n: (root / n).read_text() for n in names if (root / n).is_file()}, tracked
 
 
+def records_gate_problems(root: Path, home: str) -> list[str]:
+    """What the records must show before a patch: configured and usable, pushed, every host row closed, every
+    RC1 row closed, a dated use log, and the use log not tracked by the public repo. The publish step runs it
+    again."""
+    gd = records_git_dir(root, home)
+    if not isinstance(gd, Path):
+        reason = gd or f"no LEDGER_GIT_DIR in {CONF}"
+        return [f"no records: {reason}; the patch gate runs in the clone that holds the records"]
+    register = _read(root / DEFERRED)
+    problems = records_problems(root, gd)
+    if register is None:
+        problems.append(f"{DEFERRED} not found")
+    problems += host_rows_problems(register or "")
+    problems += [f"open rc1 row {r}" for r in rc1_open_rows(register or "")]
+    problems += use_log_problems(_read(root / HOST_USE_LOG), HOST_USE_LOG)
+    if _git(root, "ls-files", "--", HOST_USE_LOG).strip():
+        problems.append(f"{HOST_USE_LOG} is tracked by the public repo: host details stay private")
+    return problems
+
+
 def _check(target: Target, dry_run: bool, run: Callable[[list[str], Path], int], env: Mapping[str, str],
            root: Path) -> int:
     """Preconditions, then the chain, then the printed commands."""
@@ -338,8 +358,25 @@ def _check(target: Target, dry_run: bool, run: Callable[[list[str], Path], int],
         problems.append(f"HEAD is on {branch!r}, not main (--dry-run relaxes this)")
     problems += version_problems(_read(root / "backend" / "pyproject.toml") or "", target)
     problems += notes_problems(_read(root / target.notes), target)
-    texts, tracked = _guard_inputs(root)
+    home = env.get("HOME", "")
+    gd = records_git_dir(root, home) if target.name == "patch" else None
+    texts, tracked = _guard_inputs(root, gd if isinstance(gd, Path) else None)
     problems += guard_problems(texts, tracked)
+    if target.name == "patch":
+        problems += records_gate_problems(root, home)
+        head = _git(root, "rev-parse", "HEAD").strip()
+        if not dry_run:
+            main_ref = _git(root, "ls-remote", "origin", "refs/heads/main").split()
+            main_sha = main_ref[0] if main_ref else "nothing"
+            if head != main_sha:
+                problems.append(f"HEAD {head} is not GitHub's main ({main_sha}): merge the release commit "
+                                "through a PR and pull")
+        if _git(root, "tag", "--list", target.tag).strip():
+            problems.append(f"tag {target.tag} already exists locally")
+        if _git(root, "ls-remote", "origin", f"refs/tags/{target.tag}").strip():
+            problems.append(f"tag {target.tag} already exists on origin")
+        if not _git(root, "ls-files", "--", target.notes).strip():
+            problems.append(f"{target.notes} is not tracked by the public repo")
     if target.name == "final":
         register = _read(root / DEFERRED)
         if register is None:          # a public clone: without the register, no open row would read as none
@@ -377,6 +414,15 @@ def _check(target: Target, dry_run: bool, run: Callable[[list[str], Path], int],
               "v1.0.0 is published by F1 (docs/superpowers/plans/2026-10-26-p12-public-split.md):\n"
               "export this commit to the public clone, then make release-build and make release-publish\n"
               "there.")
+        print(release_commands(target, sha, wheel, digest)[-1])
+        return 0
+    if target.name == "patch":
+        if dry_run:
+            print(f"DRY RUN: gate passed at {sha} for {target.tag}; nothing recorded, so "
+                  "make release-publish would refuse")
+        else:
+            print(f"Gate passed at {sha} for {target.tag}. Run make release-publish: it signs the tag and "
+                  "stops at a draft for you to look at; make release-publish PUBLISH_DRAFT=1 publishes it.")
         print(release_commands(target, sha, wheel, digest)[-1])
         return 0
     print("DRY RUN (tag from main after the merge):" if dry_run else
