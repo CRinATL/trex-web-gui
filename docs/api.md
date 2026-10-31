@@ -444,7 +444,7 @@ The daemon session's snapshot (the `daemon` hub message).
 - `200`: the body is described above
 - `409`: a daemon refusal, see Errors
 - `422` `bad_request`: the body or query failed validation (`{"error": "bad_request", "message": <text>}`)
-- `422` `bad_request`: a rule the body model missed
+- `422` `bad_request`: an argument breaks a rule the session checks; the message names it
 - `502` `daemon_fault`: the daemon answered with an error
 - `502` `daemon_unreachable`: the daemon cannot be reached
 
@@ -465,7 +465,7 @@ Push the config as `filename` into the daemon's files dir; needs confirm; return
 - `200`: the body is described above
 - `409`: a daemon refusal, see Errors
 - `422` `bad_request`: the body or query failed validation (`{"error": "bad_request", "message": <text>}`)
-- `422` `bad_request`: a rule the body model missed
+- `422` `bad_request`: an argument breaks a rule the session checks; the message names it
 - `502` `daemon_fault`: the daemon answered with an error
 - `502` `daemon_unreachable`: the daemon cannot be reached
 
@@ -487,7 +487,7 @@ connecting). 502 when the daemon cannot be reached or faults.
 - `200`: the body is described above
 - `409`: a daemon refusal, see Errors
 - `422` `bad_request`: the body or query failed validation (`{"error": "bad_request", "message": <text>}`)
-- `422` `bad_request`: a rule the body model missed
+- `422` `bad_request`: an argument breaks a rule the session checks; the message names it
 - `502` `daemon_fault`: the daemon answered with an error
 - `502` `daemon_unreachable`: the daemon cannot be reached
 
@@ -514,7 +514,7 @@ Drop the connection; returns the snapshot.
 - `200`: the body is described above
 - `409`: a daemon refusal, see Errors
 - `422` `bad_request`: the body or query failed validation (`{"error": "bad_request", "message": <text>}`)
-- `422` `bad_request`: a rule the body model missed
+- `422` `bad_request`: an argument breaks a rule the session checks; the message names it
 - `502` `daemon_fault`: the daemon answered with an error
 - `502` `daemon_unreachable`: the daemon cannot be reached
 
@@ -548,7 +548,7 @@ be reached or faults.
 - `200`: the body is described above
 - `409`: a daemon refusal, see Errors
 - `422` `bad_request`: the body or query failed validation (`{"error": "bad_request", "message": <text>}`)
-- `422` `bad_request`: a rule the body model missed
+- `422` `bad_request`: an argument breaks a rule the session checks; the message names it
 - `502` `daemon_fault`: the daemon answered with an error
 - `502` `daemon_unreachable`: the daemon cannot be reached
 
@@ -571,7 +571,7 @@ be reached or faults.
 - `200`: the body is described above
 - `409`: a daemon refusal, see Errors
 - `422` `bad_request`: the body or query failed validation (`{"error": "bad_request", "message": <text>}`)
-- `422` `bad_request`: a rule the body model missed
+- `422` `bad_request`: an argument breaks a rule the session checks; the message names it
 - `502` `daemon_fault`: the daemon answered with an error
 - `502` `daemon_unreachable`: the daemon cannot be reached
 
@@ -591,7 +591,7 @@ outside the path rule.
 - `200`: the body is described above
 - `409`: a daemon refusal, see Errors
 - `422` `bad_request`: the body or query failed validation (`{"error": "bad_request", "message": <text>}`)
-- `422` `bad_request`: a rule the body model missed
+- `422` `bad_request`: an argument breaks a rule the session checks; the message names it
 - `502` `daemon_fault`: the daemon answered with an error
 - `502` `daemon_unreachable`: the daemon cannot be reached
 
@@ -610,7 +610,7 @@ outside the path rule.
 - `200`: the body is described above
 - `409`: a daemon refusal, see Errors
 - `422` `bad_request`: the body or query failed validation (`{"error": "bad_request", "message": <text>}`)
-- `422` `bad_request`: a rule the body model missed
+- `422` `bad_request`: an argument breaks a rule the session checks; the message names it
 - `502` `daemon_fault`: the daemon answered with an error
 - `502` `daemon_unreachable`: the daemon cannot be reached
 
@@ -634,7 +634,7 @@ daemon is not `expected_target`; returns {profile, pushed, skipped}.
 - `200`: the body is described above
 - `409`: a daemon refusal, see Errors
 - `422` `bad_request`: the body or query failed validation (`{"error": "bad_request", "message": <text>}`)
-- `422` `bad_request`: a rule the body model missed
+- `422` `bad_request`: an argument breaks a rule the session checks; the message names it
 - `502` `daemon_fault`: the daemon answered with an error
 - `502` `daemon_unreachable`: the daemon cannot be reached
 
@@ -655,7 +655,7 @@ nothing.
 - `200`: the body is described above
 - `409`: a daemon refusal, see Errors
 - `422` `bad_request`: the body or query failed validation (`{"error": "bad_request", "message": <text>}`)
-- `422` `bad_request`: a rule the body model missed
+- `422` `bad_request`: an argument breaks a rule the session checks; the message names it
 - `502` `daemon_fault`: the daemon answered with an error
 - `502` `daemon_unreachable`: the daemon cannot be reached
 
@@ -681,7 +681,7 @@ flight), `not_ours` (Stop when this backend holds no run, or a stateful run it d
 - `200`: the body is described above
 - `409`: a daemon refusal, see Errors
 - `422` `bad_request`: the body or query failed validation (`{"error": "bad_request", "message": <text>}`)
-- `422` `bad_request`: a rule the body model missed
+- `422` `bad_request`: an argument breaks a rule the session checks; the message names it
 - `502` `daemon_fault`: the daemon answered with an error
 - `502` `daemon_unreachable`: the daemon cannot be reached
 
@@ -1362,11 +1362,11 @@ upload deletes it, a failed one keeps it for a retry.
 - `200`: the body is described above
 - `404` `not_found`: no such upload (it may have expired)
 - `409` `exists`: a profile of that name already exists
-- `409` `sidecar_unreadable`: a stream's sidecar file does not parse; it is left as it is
+- `409` `sidecar_unreadable`: the profile's sidecar file does not parse; fix or delete it before editing
 - `409` `stale`: the profile changed since it was read; the body carries `rev`
 - `409` `too_many`: the profile library is full
 - `422` `bad_request`: the body or query failed validation (`{"error": "bad_request", "message": <text>}`)
-- `422` `bad_request`: the import options (tunables, pcap) or the file are wrong
+- `422` `bad_request`: the import options (tunables, pcap) are wrong
 - `422` `invalid_name`: the profile name is not valid
 - `422` `invalid_stream`: a stream is invalid; `index` and `field` name it
 - `422` `profile_error`: the profile cannot be loaded or converted
@@ -1484,9 +1484,9 @@ a relative path or a file that is not a regular file, 413 too_large above the Se
 - `200`: the body is described above
 - `404` `not_found`: no such upload or file
 - `411` `length_required`: the request has no valid Content-Length
-- `413` `too_large`: the request body is over its size cap
+- `413` `too_large`: the request body, or the capture file, is over its size cap
 - `422` `bad_request`: the body or query failed validation (`{"error": "bad_request", "message": <text>}`)
-- `422` `bad_request`: the body is not valid JSON, or a field is wrong
+- `422` `bad_request`: the body is invalid, or `path` is relative or not a file
 - `422` `packet_error`: the packet worker refused the request
 - `503` `engine_busy`: the packet worker is busy
 - `503` `engine_closed`: the packet worker is closed
@@ -1503,9 +1503,9 @@ capture and its refusals (404 not_found, 422 bad_request, 413 too_large) are tho
 - `200`: the body is described above
 - `404` `not_found`: no such upload or file
 - `411` `length_required`: the request has no valid Content-Length
-- `413` `too_large`: the request body is over its size cap
+- `413` `too_large`: the request body, or the capture file, is over its size cap
 - `422` `bad_request`: the body or query failed validation (`{"error": "bad_request", "message": <text>}`)
-- `422` `bad_request`: the body is not valid JSON, or a field is wrong
+- `422` `bad_request`: the body is invalid, or `path` is relative or not a file
 - `422` `packet_error`: the packet worker refused the request
 - `503` `engine_busy`: the packet worker is busy
 - `503` `engine_closed`: the packet worker is closed
@@ -1592,11 +1592,11 @@ The server template `template_id` as `{doc}`; 404 unless the listing gave that i
 - `404` `not_found`: no such server template
 - `422` `bad_request`: the body or query failed validation (`{"error": "bad_request", "message": <text>}`)
 - `422` `invalid_doc`: the document or file is invalid; `where` is the position
-- `422` `packet_error`: the packet worker refused the request
-- `500` `storage_error`: the templates directory cannot be used
+- `422` `packet_error`: the template cannot be built, or the packet worker refused
+- `500` `storage_error`: the shipped template file cannot be read
 - `503` `engine_busy`: the packet worker is busy
 - `503` `engine_closed`: the packet worker is closed
-- `503` `engine_restarted`: the packet worker restarted; the next call starts a fresh one
+- `503` `engine_restarted`: the worker restarted; the next call starts a fresh one
 
 ### GET /api/studio/packet/templates/user/{name}
 
@@ -1635,7 +1635,7 @@ the rules refuse is a 404, answered before the body is read or the worker is ask
 - `404` `not_found`: no such template
 - `409` `exists`: a template of that name already exists
 - `411` `length_required`: the request has no valid Content-Length
-- `413` `too_large`: the request body is over its size cap
+- `413` `too_large`: the body, or the serialised template, is over its size cap
 - `422` `bad_request`: the body or query failed validation (`{"error": "bad_request", "message": <text>}`)
 - `422` `bad_request`: the body is not valid JSON, or a field is wrong
 - `422` `invalid_doc`: the document or file is invalid; `where` is the position
@@ -1709,7 +1709,7 @@ Every profile, the files that failed to load and the library directory.
 - `200`: the body is described above
 - `404` `not_found`: no such profile
 - `409` `exists`: a profile of that name already exists
-- `409` `sidecar_unreadable`: a stream's sidecar file does not parse; it is left as it is
+- `409` `sidecar_unreadable`: the profile's sidecar file does not parse; fix or delete it before editing
 - `409` `stale`: the profile changed since it was read; the body carries `rev`
 - `409` `too_many`: the profile library is full
 - `422` `bad_request`: the body or query failed validation (`{"error": "bad_request", "message": <text>}`)
@@ -1733,7 +1733,7 @@ An empty profile named `name` (source kind `new`); 409 exists or too_many, 422 i
 - `200`: the body is described above
 - `404` `not_found`: no such profile
 - `409` `exists`: a profile of that name already exists
-- `409` `sidecar_unreadable`: a stream's sidecar file does not parse; it is left as it is
+- `409` `sidecar_unreadable`: the profile's sidecar file does not parse; fix or delete it before editing
 - `409` `stale`: the profile changed since it was read; the body carries `rev`
 - `409` `too_many`: the profile library is full
 - `422` `bad_request`: the body or query failed validation (`{"error": "bad_request", "message": <text>}`)
@@ -1757,7 +1757,7 @@ The entry, the rev and the sidecar (a default one when the file is absent or bad
 - `200`: the body is described above
 - `404` `not_found`: no such profile
 - `409` `exists`: a profile of that name already exists
-- `409` `sidecar_unreadable`: a stream's sidecar file does not parse; it is left as it is
+- `409` `sidecar_unreadable`: the profile's sidecar file does not parse; fix or delete it before editing
 - `409` `stale`: the profile changed since it was read; the body carries `rev`
 - `409` `too_many`: the profile library is full
 - `422` `bad_request`: the body or query failed validation (`{"error": "bad_request", "message": <text>}`)
@@ -1781,7 +1781,7 @@ Remove both files; the listing.
 - `200`: the body is described above
 - `404` `not_found`: no such profile
 - `409` `exists`: a profile of that name already exists
-- `409` `sidecar_unreadable`: a stream's sidecar file does not parse; it is left as it is
+- `409` `sidecar_unreadable`: the profile's sidecar file does not parse; fix or delete it before editing
 - `409` `stale`: the profile changed since it was read; the body carries `rev`
 - `409` `too_many`: the profile library is full
 - `422` `bad_request`: the body or query failed validation (`{"error": "bad_request", "message": <text>}`)
@@ -1811,7 +1811,7 @@ A copy under a new name; 409 exists or too_many, 422 invalid_name.
 - `200`: the body is described above
 - `404` `not_found`: no such profile
 - `409` `exists`: a profile of that name already exists
-- `409` `sidecar_unreadable`: a stream's sidecar file does not parse; it is left as it is
+- `409` `sidecar_unreadable`: the profile's sidecar file does not parse; fix or delete it before editing
 - `409` `stale`: the profile changed since it was read; the body carries `rev`
 - `409` `too_many`: the profile library is full
 - `422` `bad_request`: the body or query failed validation (`{"error": "bad_request", "message": <text>}`)
@@ -1844,7 +1844,7 @@ format but the whole-profile json is a 422 invalid_stream when a stored stream b
 - `200`: the body is described above
 - `404` `not_found`: no such profile
 - `409` `exists`: a profile of that name already exists
-- `409` `sidecar_unreadable`: a stream's sidecar file does not parse; it is left as it is
+- `409` `sidecar_unreadable`: the profile's sidecar file does not parse; fix or delete it before editing
 - `409` `stale`: the profile changed since it was read; the body carries `rev`
 - `409` `too_many`: the profile library is full
 - `422` `bad_request`: the body or query failed validation (`{"error": "bad_request", "message": <text>}`)
@@ -1877,7 +1877,7 @@ invalid_name.
 - `200`: the body is described above
 - `404` `not_found`: no such profile
 - `409` `exists`: a profile of that name already exists
-- `409` `sidecar_unreadable`: a stream's sidecar file does not parse; it is left as it is
+- `409` `sidecar_unreadable`: the profile's sidecar file does not parse; fix or delete it before editing
 - `409` `stale`: the profile changed since it was read; the body carries `rev`
 - `409` `too_many`: the profile library is full
 - `422` `bad_request`: the body or query failed validation (`{"error": "bad_request", "message": <text>}`)
@@ -1901,7 +1901,7 @@ The offline simulation: the profile checked, round-tripped in the worker and rep
 - `200`: the body is described above
 - `404` `not_found`: no such profile
 - `409` `exists`: a profile of that name already exists
-- `409` `sidecar_unreadable`: a stream's sidecar file does not parse; it is left as it is
+- `409` `sidecar_unreadable`: the profile's sidecar file does not parse; fix or delete it before editing
 - `409` `stale`: the profile changed since it was read; the body carries `rev`
 - `409` `too_many`: the profile library is full
 - `422` `bad_request`: the body or query failed validation (`{"error": "bad_request", "message": <text>}`)
@@ -1931,7 +1931,7 @@ backend may not read, 413 too_large over 1 MiB. The text is UTF-8, undecodable b
 - `404` `source_missing`: the imported source file no longer exists
 - `409` `exists`: a profile of that name already exists
 - `409` `no_source`: the profile was not imported from a .py file
-- `409` `sidecar_unreadable`: a stream's sidecar file does not parse; it is left as it is
+- `409` `sidecar_unreadable`: the profile's sidecar file does not parse; fix or delete it before editing
 - `409` `stale`: the profile changed since it was read; the body carries `rev`
 - `409` `too_many`: the profile library is full
 - `413` `too_large`: the source file is over 1 MiB
@@ -1966,7 +1966,7 @@ the reason, so one bad stream in a hand-edited file does not hide the page.
 - `200`: the body is described above
 - `404` `not_found`: no such profile or stream
 - `409` `exists`: a profile of that name already exists
-- `409` `sidecar_unreadable`: a stream's sidecar file does not parse; it is left as it is
+- `409` `sidecar_unreadable`: the profile's sidecar file does not parse; fix or delete it before editing
 - `409` `stale`: the profile changed since it was read; the body carries `rev`
 - `409` `too_many`: the profile library is full
 - `422` `bad_request`: the body or query failed validation (`{"error": "bad_request", "message": <text>}`)
@@ -1991,7 +1991,7 @@ the index and field, 411/413/422 bad_request from the body.
 - `200`: the body is described above
 - `404` `not_found`: no such profile or stream
 - `409` `exists`: a profile of that name already exists
-- `409` `sidecar_unreadable`: a stream's sidecar file does not parse; it is left as it is
+- `409` `sidecar_unreadable`: the profile's sidecar file does not parse; fix or delete it before editing
 - `409` `stale`: the profile changed since it was read; the body carries `rev`
 - `409` `too_many`: the profile library is full
 - `411` `length_required`: the request has no valid Content-Length
@@ -2020,7 +2020,7 @@ of range. Served per row because an entry can hold a 256 KiB editor document.
 - `200`: the body is described above
 - `404` `not_found`: no such profile or stream
 - `409` `exists`: a profile of that name already exists
-- `409` `sidecar_unreadable`: a stream's sidecar file does not parse; it is left as it is
+- `409` `sidecar_unreadable`: the profile's sidecar file does not parse; fix or delete it before editing
 - `409` `stale`: the profile changed since it was read; the body carries `rev`
 - `409` `too_many`: the profile library is full
 - `422` `bad_request`: the body or query failed validation (`{"error": "bad_request", "message": <text>}`)
@@ -2038,7 +2038,7 @@ The default new stream, built in the worker.
 - `200`: the body is described above
 - `404` `not_found`: no such profile
 - `409` `exists`: a profile of that name already exists
-- `409` `sidecar_unreadable`: a stream's sidecar file does not parse; it is left as it is
+- `409` `sidecar_unreadable`: the profile's sidecar file does not parse; fix or delete it before editing
 - `409` `stale`: the profile changed since it was read; the body carries `rev`
 - `409` `too_many`: the profile library is full
 - `422` `bad_request`: the body or query failed validation (`{"error": "bad_request", "message": <text>}`)

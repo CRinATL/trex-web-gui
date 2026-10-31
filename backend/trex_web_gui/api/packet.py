@@ -513,10 +513,13 @@ def packet_router(engine: PacketEngine, store: TemplateStore, prefs_fn: Callable
 
     @router.get("/templates/server/{template_id:path}", response_model=None,
                 responses=answers(
-                    *ENGINE_ANSWERS,
                     (404, "not_found", "no such server template"),
                     (422, "invalid_doc", "the document or file is invalid; `where` is the position"),
-                    (500, "storage_error", "the templates directory cannot be used")))
+                    (422, "packet_error", "the template cannot be built, or the packet worker refused"),
+                    (500, "storage_error", "the shipped template file cannot be read"),
+                    (503, "engine_busy", "the packet worker is busy"),
+                    (503, "engine_closed", "the packet worker is closed"),
+                    (503, "engine_restarted", "the worker restarted; the next call starts a fresh one")))
     async def server_template(template_id: str) -> Any:
         """The server template `template_id` as `{doc}`; 404 unless the listing gave that id."""
         async def go() -> Any:
@@ -577,7 +580,9 @@ def packet_router(engine: PacketEngine, store: TemplateStore, prefs_fn: Callable
 
     @router.put("/templates/user/{name:path}", response_model=None,
                 responses=answers(
-                    *BODY_ANSWERS,
+                    (411, "length_required", "the request has no valid Content-Length"),
+                    (413, "too_large", "the body, or the serialised template, is over its size cap"),
+                    (422, "bad_request", "the body is not valid JSON, or a field is wrong"),
                     *ENGINE_ANSWERS,
                     (404, "not_found", "no such template"),
                     (409, "exists", "a template of that name already exists"),
@@ -679,9 +684,11 @@ def packet_router(engine: PacketEngine, store: TemplateStore, prefs_fn: Callable
 
     @router.post("/pcap/list", response_model=None,
                  responses=answers(
-                     *BODY_ANSWERS,
+                     (411, "length_required", "the request has no valid Content-Length"),
+                     (413, "too_large", "the request body, or the capture file, is over its size cap"),
                      *ENGINE_ANSWERS,
-                     (404, "not_found", "no such upload or file")))
+                     (404, "not_found", "no such upload or file"),
+                     (422, "bad_request", "the body is invalid, or `path` is relative or not a file")))
     async def pcap_list(request: Request) -> Any:
         """One page of a capture, `{total, rows, warnings}`: the offset clamps to >= 0 and the limit to 1-100;
         `warnings` are the capture's cut or truncated records. The capture is an upload (`upload_id`) or an
@@ -698,9 +705,11 @@ def packet_router(engine: PacketEngine, store: TemplateStore, prefs_fn: Callable
 
     @router.post("/pcap/packet", response_model=None,
                  responses=answers(
-                     *BODY_ANSWERS,
+                     (411, "length_required", "the request has no valid Content-Length"),
+                     (413, "too_large", "the request body, or the capture file, is over its size cap"),
                      *ENGINE_ANSWERS,
-                     (404, "not_found", "no such upload or file")))
+                     (404, "not_found", "no such upload or file"),
+                     (422, "bad_request", "the body is invalid, or `path` is relative or not a file")))
     async def pcap_packet(request: Request) -> Any:
         """One packet of a capture as `{binary, doc, warnings}`: the document holds literals only. The
         capture and its refusals (404 not_found, 422 bad_request, 413 too_large) are those of

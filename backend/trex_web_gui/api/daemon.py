@@ -177,7 +177,7 @@ async def _answer(make: Callable[[], Any]) -> Any:
 # What a route through `_answer` declares.
 DAEMON_ANSWERS: tuple[Item, ...] = (
     (409, "daemon"),
-    (422, "bad_request", "a rule the body model missed"),
+    (422, "bad_request", "an argument breaks a rule the session checks; the message names it"),
     (502, "daemon_fault", "the daemon answered with an error"),
     (502, "daemon_unreachable", "the daemon cannot be reached"),
 )

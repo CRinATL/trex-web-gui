@@ -166,7 +166,7 @@ def failure(e: Exception) -> JSONResponse:
 # What a route through `guarded` declares from `failure`, apart from its 404 (what is missing differs).
 LIBRARY_ANSWERS: tuple[Item, ...] = (
     (409, "exists", "a profile of that name already exists"),
-    (409, "sidecar_unreadable", "a stream's sidecar file does not parse; it is left as it is"),
+    (409, "sidecar_unreadable", "the profile's sidecar file does not parse; fix or delete it before editing"),
     (409, "stale", "the profile changed since it was read; the body carries `rev`"),
     (409, "too_many", "the profile library is full"),
     (422, "invalid_name", "the profile name is not valid"),
@@ -470,7 +470,7 @@ def studio_router(library: ProfileLibrary, data_dir: Path) -> APIRouter:
                  responses=answers(
                      *LIBRARY_ANSWERS,
                      (404, "not_found", "no such upload (it may have expired)"),
-                     (422, "bad_request", "the import options (tunables, pcap) or the file are wrong")))
+                     (422, "bad_request", "the import options (tunables, pcap) are wrong")))
     async def import_profile(b: ImportBody) -> dict[str, Any] | JSONResponse:
         """Import a file into a new profile, or append it to `append_to` (409 stale on a changed profile).
         The file is checked and converted in the worker outside the library lock; a successful import of an
