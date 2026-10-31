@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { act, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { afterEach, describe, expect, it, vi } from 'vitest'
@@ -142,5 +142,32 @@ describe('StatusBar', () => {
     bar(base)
     await userEvent.click(screen.getByRole('button', { name: 'Disconnect' }))
     expect(await screen.findByRole('alert')).toHaveTextContent('boom')
+  })
+  it('Disconnect is enabled while a Reconnect is pending', async () => {
+    const disconnect = vi.spyOn(api, 'disconnect').mockResolvedValue(base)
+    vi.spyOn(api, 'connect').mockReturnValue(new Promise(() => undefined))
+    const ui = (s: SessionSnapshot) => <MemoryRouter><StatusBar backendOnline session={s} owned={[]} onConnect={() => undefined} /></MemoryRouter>
+    const { rerender } = render(ui({ ...base, state: 'lost', params, error: 'x' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Reconnect' }))
+    rerender(ui({ ...base, state: 'connecting', params }))
+    expect(screen.getByRole('button', { name: 'Disconnect' })).toBeEnabled()
+    await userEvent.click(screen.getByRole('button', { name: 'Disconnect' }))
+    expect(disconnect).toHaveBeenCalledTimes(1)
+  })
+  it('Disconnect stays disabled while its own request is pending, even after the Reconnect settles', async () => {
+    let connectDone!: (v: { info: typeof info }) => void
+    vi.spyOn(api, 'connect').mockReturnValue(new Promise((r) => { connectDone = r }))
+    let disconnectDone!: (v: SessionSnapshot) => void
+    const disconnect = vi.spyOn(api, 'disconnect').mockReturnValue(new Promise((r) => { disconnectDone = r }))
+    const ui = (s: SessionSnapshot) => <MemoryRouter><StatusBar backendOnline session={s} owned={[]} onConnect={() => undefined} /></MemoryRouter>
+    const { rerender } = render(ui({ ...base, state: 'lost', params, error: 'x' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Reconnect' }))
+    rerender(ui({ ...base, state: 'connecting', params }))
+    await userEvent.click(screen.getByRole('button', { name: 'Disconnect' }))
+    await act(async () => { connectDone({ info }) })
+    expect(screen.getByRole('button', { name: 'Disconnect' })).toBeDisabled()
+    await userEvent.click(screen.getByRole('button', { name: 'Disconnect' }))
+    expect(disconnect).toHaveBeenCalledTimes(1)
+    await act(async () => { disconnectDone(base) })
   })
 })

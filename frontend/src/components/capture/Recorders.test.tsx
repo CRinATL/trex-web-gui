@@ -1,4 +1,4 @@
-import { cleanup, render, screen, within } from '@testing-library/react'
+import { act, cleanup, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import * as api from '../../api'
@@ -135,5 +135,45 @@ describe('Recorders', () => {
     expect(text).toMatch(/stopping a capture \(Stop, or Save of a running recorder\)/)
     expect(text).toMatch(/Removing a capture does not\./)
     expect(text).toMatch(/On af_packet, i40e, ice, ixgbe and mlx5 it does not happen, except when TRex runs with --software and more than one DP core/)
+  })
+  // The Save tests below: the call is made with no progress yet, progress arrives, then the call settles (p3c-capture-120).
+  it('a Save whose last progress message never arrived shows the file from its own result', async () => {
+    const r = [row({ id: 1, count: 10 })]
+    mockState(r)
+    let done!: (v: { file: api.SpoolFile }) => void
+    vi.spyOn(api, 'recorderSave').mockReturnValue(new Promise((res) => { done = res }))
+    const { rerender } = render(<Recorders spool={spool()} />)
+    await userEvent.click(within(rowOf(1)).getByRole('button', { name: 'Save' }))
+    mockState(r, { captureSave: { 1: save({ fetched: 5, total: 10 }) } })
+    rerender(<Recorders spool={spool()} />)
+    await act(async () => { done({ file: file() }) })
+    expect(within(rowOf(1)).getByText('Saved as rec-1-x.pcap')).toBeInTheDocument()
+    expect(screen.queryByText(/fetched 5 of 10/)).toBeNull()
+    expect(within(rowOf(1)).queryByRole('button', { name: 'Save' })).toBeNull()
+  })
+  it('a failed Save with progress messages shows the error and Resume', async () => {
+    const r = [row({ id: 1, count: 10 })]
+    mockState(r)
+    let fail!: (e: unknown) => void
+    vi.spyOn(api, 'recorderSave').mockReturnValue(new Promise((_, rej) => { fail = rej }))
+    const { rerender } = render(<Recorders spool={spool()} />)
+    await userEvent.click(within(rowOf(1)).getByRole('button', { name: 'Save' }))
+    mockState(r, { captureSave: { 1: save({ fetched: 5, total: 10 }) } })
+    rerender(<Recorders spool={spool()} />)
+    await act(async () => { fail(new api.ApiError(502, 'x', 'TRex went away')) })
+    expect(within(rowOf(1)).getByRole('alert')).toHaveTextContent('TRex went away')
+    expect(within(rowOf(1)).getByRole('button', { name: 'Resume' })).toBeEnabled()
+  })
+  it('a Save result does not carry over to a new connection', async () => {
+    const r = [row({ id: 1, count: 10 })]
+    mockState(r, { session: session({ connect_seq: 'u:1' }) })
+    vi.spyOn(api, 'recorderSave').mockResolvedValue({ file: file() })
+    const { rerender } = render(<Recorders spool={spool()} />)
+    await userEvent.click(within(rowOf(1)).getByRole('button', { name: 'Save' }))
+    expect(await screen.findByText('Saved as rec-1-x.pcap')).toBeInTheDocument()
+    mockState([row({ id: 1, count: 3 })], { session: session({ connect_seq: 'u:2' }) })
+    rerender(<Recorders spool={spool()} />)
+    expect(within(rowOf(1)).getByRole('button', { name: 'Save' })).toBeEnabled()
+    expect(screen.queryByText(/Saved as/)).toBeNull()
   })
 })

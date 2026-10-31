@@ -19,13 +19,17 @@ export function StatusBar({ backendOnline, session, owned, onConnect }: { backen
   // A failed Disconnect or Reconnect stays until the next attempt or any change of session state; adjusting state during render, as ControlPage does.
   const [seenState, setSeenState] = useState(session.state)
   if (session.state !== seenState) { setSeenState(session.state); setFailure(null) }
-  // One request at a time: the clicked button is disabled while it is in flight (the ref also stops a second click before the re-render).
-  const [busy, setBusy] = useState(false)
-  const inFlight = useRef(false)
-  async function attempt(action: () => Promise<unknown>) {
-    if (inFlight.current) return
-    inFlight.current = true; setBusy(true); setFailure(null)
-    try { await action() } catch (x) { setFailure(failText(x)) } finally { inFlight.current = false; setBusy(false) }
+  // One request per button: each button is disabled only while its own request is in flight (the refs also stop a second
+  // click before the re-render). A Disconnect sent during a Reconnect waits on the backend's session lock and then
+  // disconnects, so neither action's end clears the other's flag.
+  const [disconnecting, setDisconnecting] = useState(false)
+  const [reconnecting, setReconnecting] = useState(false)
+  const disconnectInFlight = useRef(false)
+  const reconnectInFlight = useRef(false)
+  async function attempt(flight: { current: boolean }, setBusy: (b: boolean) => void, action: () => Promise<unknown>) {
+    if (flight.current) return
+    flight.current = true; setBusy(true); setFailure(null)
+    try { await action() } catch (x) { setFailure(failText(x)) } finally { flight.current = false; setBusy(false) }
   }
   let text: string
   if (!backendOnline) text = 'Backend offline, reconnecting…'
@@ -44,7 +48,7 @@ export function StatusBar({ backendOnline, session, owned, onConnect }: { backen
   const connectButton = <button type="button" data-run="go" disabled={!backendOnline} onClick={onConnect}>Connect…</button>
   let buttons: React.ReactNode
   if (!backendOnline) buttons = connectButton
-  else if (session.state === 'connected' || session.state === 'connecting') buttons = <button type="button" disabled={busy} onClick={() => void attempt(disconnect)}>Disconnect</button>
+  else if (session.state === 'connected' || session.state === 'connecting') buttons = <button type="button" disabled={disconnecting} onClick={() => void attempt(disconnectInFlight, setDisconnecting, disconnect)}>Disconnect</button>
   else if (session.state === 'disconnected' && !session.error) buttons = connectButton
   else {
     // lost, or disconnected with an error: only a failed or cancelled connect leaves one (a user Disconnect clears it),
@@ -53,7 +57,7 @@ export function StatusBar({ backendOnline, session, owned, onConnect }: { backen
     buttons = (
       <>
         <NavLink to="/events">See Events</NavLink>
-        {params && <button type="button" disabled={busy} onClick={() => void attempt(() => connect(params))}>Reconnect</button>}
+        {params && <button type="button" disabled={reconnecting} onClick={() => void attempt(reconnectInFlight, setReconnecting, () => connect(params))}>Reconnect</button>}
         {connectButton}
       </>
     )
