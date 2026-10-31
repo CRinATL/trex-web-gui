@@ -23,7 +23,8 @@ a built UI's fallback may answer those paths with its `index.html`): this file i
 
 ## Errors
 
-Every error is JSON, `{"error": <code>, "message": <text>}`, with the HTTP status of the refusal.
+Every error except the trusted-host 400 is JSON, `{"error": <code>, "message": <text>}`, with the HTTP
+status of the refusal.
 
 - 422 `bad_request`: the body or a query parameter failed validation (the message lists the first three
   problems). This replaces FastAPI's own 422 body, which is never sent.
@@ -34,7 +35,50 @@ Every error is JSON, `{"error": <code>, "message": <text>}`, with the HTTP statu
 - 500 `internal`: an unhandled exception (the message is its type and text).
 - 500 `storage_error`: a file the backend keeps could not be read or written (settings, port labels, test
   setups, the Studio library, packet templates, uploads, bundle imports); the message says which.
-- Any other code is the route's own; each route's text names the ones it can answer.
+- Any other code is the route's own, or one of the refusals below; each route's Responses list names the
+  ones it can answer.
+
+### Refusals
+
+A route marked "a session refusal", "a daemon refusal" or "a bundle refusal" can answer any code of that
+family. Sorted by family, then code.
+
+| code | family | status | meaning |
+|---|---|---|---|
+| `bad_request` | bundle | 422 | a bundle import mode that is not allowed |
+| `invalid_bundle` | bundle | 422 | a section of the bundle does not validate |
+| `unsupported_bundle` | bundle | 422 | not a bundle of this format and version |
+| `already_running` | daemon | 409 | TRex is already running on the daemon |
+| `busy` | daemon | 409 | another daemon operation is in progress |
+| `confirm_required` | daemon | 409 | the operation needs `confirm` |
+| `foreign_trex` | daemon | 409 | a TRex this daemon did not start is running |
+| `in_use` | daemon | 409 | a port is in use by another owner |
+| `invalid_config` | daemon | 409 | the config to push is invalid |
+| `invalid_profile` | daemon | 409 | the profile is not a stock profile, or does not load, or changed during the upload |
+| `not_connected` | daemon | 409 | not connected to a TRex daemon |
+| `not_ours` | daemon | 409 | the run is not one this backend started, so Stop does not stop it |
+| `owners_unknown` | daemon | 409 | who owns the ports cannot be told; acknowledge to go on |
+| `plan_changed` | daemon | 409 | the target or files changed since the preview |
+| `reserved` | daemon | 409 | the daemon is reserved |
+| `bad_port` | session | 409 | a port the server does not have, or a profile not loaded for a port |
+| `bad_request` | session | 422 | no attribute to change |
+| `capture_busy` | session | 409 | the capture is being saved, or is the live monitor's |
+| `capture_slots` | session | 409 | the server's capture slots are used up (one is kept for ping, ARP and scan) |
+| `endpoint_capture` | session | 409 | the capture streams to an endpoint, so its packets are not held here |
+| `ipv6_unsupported` | session | 409 | IPv6 configuration needs the linux_based stack; the server runs legacy |
+| `monitor_active` | session | 409 | a capture monitor is already running |
+| `no_monitor` | session | 409 | no capture monitor is running |
+| `not_active` | session | 409 | a port's profile is not one this backend controls |
+| `not_connected` | session | 409 | not connected to a TRex server |
+| `not_owned` | session | 409 | the port is owned by another client; acquire it first |
+| `port_active` | session | 409 | the port is transmitting; stop traffic first |
+| `port_busy` | session | 409 | the port is busy applying a configuration, or pinging or scanning |
+| `read_only` | session | 409 | the session is read-only (observer mode) |
+| `service_filtered` | session | 409 | the port is in filtered service mode; turn service mode on |
+| `service_off` | session | 409 | the ports are not in service mode; turn it on first |
+| `spool_error` | session | 409 | the capture file could not be written |
+| `spool_unavailable` | session | 409 | this backend has no capture directory |
+| `wireshark_unavailable` | session | 409 | Wireshark cannot be launched |
 
 ## WebSocket
 

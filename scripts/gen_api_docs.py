@@ -132,7 +132,7 @@ def parameter_rows(params: list[dict[str, Any]]) -> list[tuple[str, str, str, st
 
 
 FAMILY_TEXT = {"session": "a session refusal, see Errors", "daemon": "a daemon refusal, see Errors",
-               "bundle": "a bundle refusal, see Errors"}
+               "bundle": "a bundle refusal, see Errors"}  # test_api_errors.py ties it to declared.family_line
 # The descriptions FastAPI writes itself; a route that declares none of its own prints the generic line.
 DEFAULT_DESCRIPTIONS = {"Successful Response", "Validation Error"}
 
@@ -212,7 +212,8 @@ a built UI's fallback may answer those paths with its `index.html`): this file i
 
 ## Errors
 
-Every error is JSON, `{"error": <code>, "message": <text>}`, with the HTTP status of the refusal.
+Every error except the trusted-host 400 is JSON, `{"error": <code>, "message": <text>}`, with the HTTP
+status of the refusal.
 
 - 422 `bad_request`: the body or a query parameter failed validation (the message lists the first three
   problems). This replaces FastAPI's own 422 body, which is never sent.
@@ -223,7 +224,15 @@ Every error is JSON, `{"error": <code>, "message": <text>}`, with the HTTP statu
 - 500 `internal`: an unhandled exception (the message is its type and text).
 - 500 `storage_error`: a file the backend keeps could not be read or written (settings, port labels, test
   setups, the Studio library, packet templates, uploads, bundle imports); the message says which.
-- Any other code is the route's own; each route's text names the ones it can answer.
+- Any other code is the route's own, or one of the refusals below; each route's Responses list names the
+  ones it can answer.
+
+### Refusals
+
+A route marked "a session refusal", "a daemon refusal" or "a bundle refusal" can answer any code of that
+family. Sorted by family, then code.
+
+{refusals}
 
 ## WebSocket
 
@@ -233,6 +242,15 @@ newer message replaces the queued older one of its type): {state}. Bulk messages
 capped: {bulk}. For a subscriber whose queue overflows, the hub drops the oldest queued message whose type
 is not a state type (the list above); state messages are never dropped.
 """
+
+
+def refusal_table() -> list[str]:
+    """The rows of the shared refusal table, sorted by family, then code."""
+    from trex_web_gui.api.refusals import REFUSALS
+    rows = [(code(c), fam, str(status), cell(meaning))
+            for (fam, c), (status, meaning) in sorted(REFUSALS.items())]
+    return ["| code | family | status | meaning |", "|---|---|---|---|",
+            *(f"| {a} | {b} | {c} | {d} |" for a, b, c, d in rows)]
 
 
 def preamble() -> list[str]:
@@ -250,7 +268,7 @@ def preamble() -> list[str]:
         "bulk": ", ".join(f"`{t}` (at most {n} queued per subscriber)"
                           for t, n in sorted(BULK_TYPES.items())),
     }
-    text = PREAMBLE
+    text = PREAMBLE.replace("{refusals}", "\n".join(refusal_table()))
     for key, value in fill.items():
         text = text.replace("{" + key + "}", value)
     return text.splitlines() + [""]
