@@ -315,6 +315,50 @@ def test_the_connection_ending_between_attempts_stops_the_resolve(rig: Rig,
     assert not [m for m in rig.logs("info") if m.endswith(": done")] and rig.logs("error") == []
 
 
+def test_the_connection_ending_during_the_last_attempt_runs_no_further_job(
+        rig: Rig, monkeypatch: pytest.MonkeyPatch) -> None:
+    n = 0
+
+    # attempt 6, the last, ends the connection
+    def attempt(c: Any, port: int, listen_s: float, first: bool) -> None:
+        nonlocal n
+        n += 1
+        rig.log.append(("arp_attempt", rig.jobs, 0.0, 0.0))
+        if n == 6:
+            rig.s._state = SessionState.LOST
+    monkeypatch.setattr(trexapi, "arp_attempt", attempt)
+    req = LayerRequest("L3", None, "1.1.1.1", "1.1.1.99", [], (False, None))
+
+    async def body(s: TrexSession) -> None:
+        r = await s.apply_layer(1, req)
+        assert r.arp == ("unresolved", None, "the connection ended; the resolve stopped")
+        jobs.append(rig.jobs)                           # before close() runs its own disconnect job
+    jobs: list[int] = []
+    rig.run(body)
+    order = names(rig)
+    assert order.count("arp_attempt") == 6 and "arp_unresolved" not in order and order[-1] == "arp_attempt"
+    assert jobs == [rig.log[-1][1]]                  # no job of any kind after the last attempt
+    assert ("Apply L3 configuration to port 1: L3 set, ARP unresolved: the connection ended; the resolve "
+            "stopped") in rig.logs("warning")
+
+
+def test_an_l3_apply_cancelled_in_the_attempt_loop_restores_and_refreshes_once(
+        rig: Rig, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Review Focus 5: the cancel lands between attempts; the bracket still restores, one refresh follows."""
+    monkeypatch.setattr(trexapi, "arp_attempt", lambda c, port, listen_s, first: (time.sleep(0.1), None)[1])
+    calls: list[int] = []
+    rig.s._schedule_refresh = lambda: calls.append(1)           # type: ignore[method-assign]
+
+    async def body(s: TrexSession) -> None:
+        task = asyncio.create_task(s.apply_layer(1, L3))
+        await asyncio.sleep(0.25)                               # inside the attempt loop
+        task.cancel()
+        with pytest.raises(asyncio.CancelledError):
+            await task
+    rig.run(body)
+    assert rig.c.calls == [("set_service_mode", 1, True), ("set_service_mode", 1, False)] and calls == [1]
+
+
 # --- the cancellation corners: one re-shielding await, _await_done (P3b-54, P3b-55, P1-67, D4) ---
 
 L2 = LayerRequest("L2", "02:00:00:00:00:01", None, None, [], None)

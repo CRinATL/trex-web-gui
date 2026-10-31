@@ -175,6 +175,8 @@ class PortConfigCommands:
                 r = await self._job(label, step(trexapi.arp_attempt, ARP_ATTEMPT_S, i == 0))
                 if r is not None:
                     return r                      # type: ignore[no-any-return]
+            if not self._connected_to(c):         # lost during the last attempt: no further job
+                return ARP_ENDED_RESULT
             no_reply: trexapi.ArpResult = await self._job(label, step(trexapi.arp_unresolved))
             return no_reply
 

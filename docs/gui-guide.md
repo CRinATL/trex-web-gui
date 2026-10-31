@@ -245,6 +245,9 @@ Right-click a tree row. Disabled items stay listed, greyed ([09](gui-inventory/s
   `Capture <ids> will be removed from the server (<n> unsaved packets). Click again to confirm`; the
   confirmation lapses after 5 s), **Name…** (the Control tab with the Name field focused; this one works in a
   read-only session and on a port you do not own, because a name is the GUI's own file).
+  After an acquire (also Force acquire, Re-acquire and Reset), another session's "port acquired" notice that the
+  server sent before ours is shown in the log as `Port N was taken by '<who>' before our acquire; ignored` and
+  does not change the port's owner.
 
 Reset force-acquires the port, stops its traffic, removes its streams, clears its stats, turns promiscuous mode, RX
 queueing and service mode off, and **removes every capture on the server**: the live monitor, unsaved recorders and
