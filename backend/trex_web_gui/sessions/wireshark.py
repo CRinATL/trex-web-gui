@@ -11,9 +11,11 @@ learns of an end the writer found on its own (the window closed: EPIPE; Wireshar
 only through `loop.call_soon_threadsafe(on_change)`: the hub is loop-thread only. Python ignores SIGPIPE, so a
 write to a closed fifo raises BrokenPipeError rather than killing the process.
 
-`stop()` closes the fifo after the queued frames and leaves the window open; `kill()` ends the process group
-(Wireshark runs in its own session), which also unblocks a write blocked on a full fifo with EPIPE. A pipe
-is used once: a new launch is a new WiresharkPipe. Pipes still alive at interpreter exit are killed
+`stop()` always lets the writer finish: it opens the fifo when Wireshark does, writes the header and the
+queued frames, closes it and leaves the window open (a stop past the open
+deadline gives up without killing it). `kill()` ends the process group (Wireshark runs in its own session),
+which also unblocks a write blocked on a full fifo with EPIPE. A pipe is used once: a new launch is a new
+WiresharkPipe. Pipes still alive at interpreter exit are killed
 (`atexit`), for an exit that skips the session's close()."""
 import asyncio
 import atexit
@@ -72,24 +74,31 @@ class WiresharkPipe:
         self._queue: queue.Queue[object] = queue.Queue()    # bounded by write(): the sentinel always fits
         self._stopping = threading.Event()                 # stop() or kill() was asked: an end is no error
         self._ended = threading.Event()                    # the writer has finished
-        self._drain = False                                # stop() found frames queued: open, deliver them
+        self._reap_lock = threading.Lock()                 # every reap of the leader runs under it
         self._error: str | None = None
         self._dropped = 0
 
     # -- properties (loop thread) ---------------------------------------------------------------
     @property
     def running(self) -> bool:
-        """The pipe is open or opening: not stopped, the writer not finished, the process alive (polling reaps
-        an exited child)."""
+        """The pipe is open or opening: not stopped, the writer not finished, the leader not exited. Does not
+        reap."""
         p = self._proc
         if p is None or self._stopping.is_set() or self._ended.is_set():
             return False
-        return p.poll() is None
+        return not self._leader_exited()
 
     @property
     def process_alive(self) -> bool:
-        """Wireshark still runs, whether or not the pipe does (a stopped pipe leaves the window). Reaps."""
-        return self._proc is not None and self._proc.poll() is None
+        """Wireshark still runs, whether or not the pipe does (a stopped pipe leaves the window).
+        Does not reap a running leader; once it has exited, SIGTERMs the group's surviving members, reaps it
+        and returns False."""
+        if self._proc is None:
+            return False
+        if not self._leader_exited():
+            return True
+        self._reap((signal.SIGTERM,), final_kill=False)
+        return False
 
     @property
     def pid(self) -> int | None:
@@ -143,9 +152,8 @@ class WiresharkPipe:
         self._queue.put_nowait((ts_rel, raw, wirelen))
 
     def stop(self) -> None:
-        """Close the fifo once the queued frames are out (a pipe still opening keeps trying, until its
-        deadline, only when frames are queued); the window stays. Waits up to JOIN_S for the writer."""
-        self._drain = not self._queue.empty()
+        """Close the fifo once the queued frames are out; the window stays. A pipe still opening keeps trying
+        until its deadline, then gives up without killing the window. Waits up to JOIN_S for the writer."""
         self._stopping.set()
         self._queue.put_nowait(_STOP)
         if self._thread is not None:
@@ -162,20 +170,45 @@ class WiresharkPipe:
         _live.discard(self)
 
     # -- internals --------------------------------------------------------------------------------
-    def _terminate(self) -> None:
-        """SIGTERM Wireshark's process group, then SIGKILL after KILL_WAIT_S; nothing when the process already
-        exited and was reaped. Called by kill() and by the writer at the open deadline."""
+    def _leader_exited(self) -> bool:
+        """Wireshark's leader has exited, without reaping it (so its pid and process group stay reserved)."""
         p = self._proc
-        if p is None or p.poll() is not None:            # exited and reaped: its pid may belong to another
-            return
-        for sig in (signal.SIGTERM, signal.SIGKILL):
-            with contextlib.suppress(ProcessLookupError, PermissionError):
-                os.killpg(p.pid, sig)
-            try:
-                p.wait(KILL_WAIT_S)
+        assert p is not None
+        if p.returncode is not None:                     # already reaped
+            return True
+        try:
+            return os.waitid(os.P_PID, p.pid, os.WEXITED | os.WNOHANG | os.WNOWAIT) is not None
+        except ChildProcessError:                        # another thread reaped it between the two checks
+            return True
+
+    def _reap(self, signals: tuple[signal.Signals, ...], final_kill: bool) -> None:
+        """Under the reap lock: send each signal to the process group in turn, waiting up to KILL_WAIT_S for
+        the leader to exit after each; with `final_kill`, SIGKILL the group last (members may outlive the
+        leader, whose group is still reserved); then reap the leader. Nothing when already reaped."""
+        p = self._proc
+        assert p is not None
+        with self._reap_lock:
+            if p.returncode is not None:                 # reaped: its pid may belong to another
                 return
-            except subprocess.TimeoutExpired:
-                continue
+            for sig in signals:
+                with contextlib.suppress(ProcessLookupError, PermissionError):
+                    os.killpg(p.pid, sig)
+                end = time.monotonic() + KILL_WAIT_S
+                while time.monotonic() < end and not self._leader_exited():
+                    time.sleep(OPEN_RETRY_S)
+                if self._leader_exited():
+                    break
+            if final_kill:
+                with contextlib.suppress(ProcessLookupError, PermissionError):
+                    os.killpg(p.pid, signal.SIGKILL)
+            with contextlib.suppress(subprocess.TimeoutExpired):
+                p.wait(KILL_WAIT_S)                      # reaps; a leader stuck in D state: close()
+
+    def _terminate(self) -> None:
+        """SIGTERM Wireshark's process group, then SIGKILL; nothing when the process already exited and was
+        reaped. Called by kill() and by the writer at the open deadline."""
+        if self._proc is not None:
+            self._reap((signal.SIGTERM, signal.SIGKILL), final_kill=True)
 
     def _writer(self, fifo: Path, open_deadline_s: float) -> None:
         """The writer thread: the only code that opens or closes the fifo fd. On the way out it closes the fd,
@@ -209,20 +242,21 @@ class WiresharkPipe:
     def _open(self, fifo: Path, open_deadline_s: float) -> tuple[int | None, str | None]:
         """Writer thread: open the fifo's write end, retried every OPEN_RETRY_S while there is no reader;
         returns (fd, None), (None, the reason) when Wireshark exited first or the deadline passed (which
-        terminates it), or (None, None) when stopped with no frames to deliver. Any other OSError raises."""
+        terminates it), or (None, None) when the deadline passed after a stop (the window stays). Any other
+        OSError raises."""
         end = time.monotonic() + open_deadline_s
         assert self._proc is not None
         while True:
-            if self._stopping.is_set() and not self._drain:
-                return None, None
             try:
                 return os.open(fifo, os.O_WRONLY | os.O_NONBLOCK), None
             except OSError as e:
                 if e.errno != errno.ENXIO:               # ENXIO: no reader yet
                     raise
-            if self._proc.poll() is not None:
+            if self._leader_exited():
                 return None, "Wireshark exited before it opened the pipe"
             if time.monotonic() >= end:
+                if self._stopping.is_set():              # stopped: leave the window, close() kills it
+                    return None, None
                 self._terminate()
                 return None, f"Wireshark did not open the pipe within {open_deadline_s:g} s"
             time.sleep(OPEN_RETRY_S)
@@ -236,7 +270,7 @@ class WiresharkPipe:
             try:
                 item = self._queue.get(timeout=IDLE_CHECK_S)
             except queue.Empty:
-                if self._proc.poll() is not None:        # the window closed while nothing was being written
+                if self._leader_exited():                # the window closed while nothing was being written
                     return CLOSED
                 continue
             if item is _STOP:

@@ -16,7 +16,8 @@ REFUSALS: dict[tuple[Family, str], tuple[int, str]] = {
     ("session", "bad_port"): (409, "a port the server does not have, or a profile not loaded "
                                   "for a port"),
     ("session", "bad_request"): (422, "no attribute to change"),
-    ("session", "capture_busy"): (409, "the capture is being saved, or is the live monitor's"),
+    ("session", "capture_busy"): (409, "the capture is being saved, is the live monitor's, or belongs to a "
+                                    "TRex service"),
     ("session", "capture_slots"): (409, "the server's capture slots are used up (one is kept for ping, ARP "
                                       "and scan)"),
     ("session", "endpoint_capture"): (409, "the capture streams to an endpoint, so its packets are not held "

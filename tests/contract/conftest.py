@@ -24,14 +24,15 @@ class SessionFactory:
 
     def run(self, body: Coroutine[Any, Any, None]) -> None:
         """Run `body` under asyncio.run, then close every session made so far in that same loop, also when
-        `body` raised. A close() that raises skips the sessions after it (close_leftovers gets them)."""
+        `body` raised. Every close runs, last made first; a close() that raises propagates after the rest."""
         # wrapped(): await the body, then close every made session in the same loop, even if it raised
         async def wrapped() -> None:
             try:
                 await body
             finally:
-                for s in self.made:
-                    await s.close()                         # idempotent: a test's own close() is fine
+                async with contextlib.AsyncExitStack() as stack:   # runs every close even if one raises
+                    for s in self.made:
+                        stack.push_async_callback(s.close)  # idempotent: a test's own close() is fine
         asyncio.run(wrapped())
 
     def close_leftovers(self) -> None:

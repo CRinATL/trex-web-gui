@@ -63,7 +63,7 @@ family. Sorted by family, then code.
 | `reserved` | daemon | 409 | the daemon is reserved |
 | `bad_port` | session | 409 | a port the server does not have, or a profile not loaded for a port |
 | `bad_request` | session | 422 | no attribute to change |
-| `capture_busy` | session | 409 | the capture is being saved, or is the live monitor's |
+| `capture_busy` | session | 409 | the capture is being saved, is the live monitor's, or belongs to a TRex service |
 | `capture_slots` | session | 409 | the server's capture slots are used up (one is kept for ping, ARP and scan) |
 | `endpoint_capture` | session | 409 | the capture streams to an endpoint, so its packets are not held here |
 | `ipv6_unsupported` | session | 409 | IPv6 configuration needs the linux_based stack; the server runs legacy |
@@ -296,8 +296,9 @@ Starts a fixed-size recorder capture of `limit` packets; returns its id. Refused
 
 ### DELETE /api/capture/recorders/{cid}
 
-Removes one recorder capture from the server. Refused (409) for the monitor's id, a capture
-being saved, or when not connected or read-only.
+Removes one recorder capture from the server. Refused (409) for the monitor's id, a TRex
+service's capture (a ping, scan or Apply holds its Rx port), a capture being saved, or when
+not connected or read-only.
 
 **Path parameters**
 
@@ -320,8 +321,9 @@ being saved, or when not connected or read-only.
 Stops the recorder, then fetches its packets (a destructive fetch) into a pcap file in the
 capture directory, publishing `capture_save` progress, and removes the capture from the server
 after the file is written; returns the file. A failed save keeps any packets already written.
-Refused (409) for the monitor's id, a capture already being saved, an endpoint capture, no capture
-directory, a file write failure (spool_error), or when not connected or read-only.
+Refused (409) for the monitor's id, a TRex service's capture (a ping, scan or Apply holds its Rx
+port), a capture already being saved, an endpoint capture, no capture directory, a file write failure
+(spool_error), or when not connected or read-only.
 
 **Path parameters**
 
@@ -342,7 +344,8 @@ directory, a file write failure (spool_error), or when not connected or read-onl
 ### POST /api/capture/recorders/{cid}/stop
 
 Stops one recorder capture; returns its packet count. Refused (409) for the monitor's id, a
-capture being saved, an endpoint capture, or when not connected or read-only.
+TRex service's capture (a ping, scan or Apply holds its Rx port), a capture being saved, an
+endpoint capture, or when not connected or read-only.
 
 **Path parameters**
 

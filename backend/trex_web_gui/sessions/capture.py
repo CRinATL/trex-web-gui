@@ -152,15 +152,17 @@ class CaptureCommands:
     def capture_snapshot(self) -> dict[str, Any]:
         """The `capture` message: the monitor, the status rows (each marked `mine`, and `service` for a
         foreign row on a port a ping, scan or Apply holds) and the Wireshark state. Publishes nothing."""
-        held = set(self._busy)
-        mine = set(self._my_ids) | ({self._monitor.id} if self._monitor else set())
-        # "TRex service": a foreign row on a port a P3b service holds; our own captures never are.
-        rows = [{**r, "mine": r["id"] in self._my_ids,
-                 "service": r["id"] not in mine and any(p in held for p in r["rx"])}
+        rows = [{**r, "mine": r["id"] in self._my_ids, "service": self._is_service_row(r)}
                 for r in self._captures]
         return {"type": "capture", "ts": time.time(),
                 "monitor": dataclasses.asdict(self._monitor) if self._monitor else None,
                 "captures": rows, "wireshark": self._wireshark_state()}
+
+    def _is_service_row(self, row: trexapi.CaptureRow) -> bool:
+        """True for a "TRex service" row: a foreign row (neither ours nor the monitor's) on a port a P3b
+        service (ping, scan, Apply) holds in `_busy`; our own captures never are."""
+        mine = set(self._my_ids) | ({self._monitor.id} if self._monitor else set())
+        return row["id"] not in mine and any(p in self._busy for p in row["rx"])
 
     def _wireshark_state(self) -> dict[str, Any]:
         """The snapshot's `wireshark` field: the attached pipe's running flag and error, else not running."""
@@ -232,6 +234,15 @@ class CaptureCommands:
         if row is not None and row["endpoint"]:
             raise trexapi.CommandRefused(
                 "endpoint_capture", f"Capture {id} streams to an endpoint; its packets are not held here.")
+
+    def _refuse_service(self, id: int) -> None:
+        """CommandRefused capture_busy when the cached row of `id` is a TRex service's (_is_service_row,
+        read now); an id with no cached row passes."""
+        row = self._row(id)
+        if row is not None and self._is_service_row(row):
+            ports = ", ".join(str(p) for p in sorted(set(row["rx"]) & set(self._busy)))
+            raise trexapi.CommandRefused(
+                "capture_busy", f"Capture {id} belongs to a running ping, scan or Apply on port(s) {ports}.")
 
     def spool(self) -> Spool:
         """The session's Spool, made on first use (which creates the capture directory, mode 0700);
@@ -614,12 +625,13 @@ class CaptureCommands:
 
     async def recorder_stop(self, id: int) -> int:
         """Stop capture `id` (capture_stop on the control client) and return its packet count. Refused by
-        require_control, capture_busy (the monitor's id, a monitor start in flight, a save of `id`) and
-        endpoint_capture. Resyncs the status afterwards, success or failure, while the same clients are
-        connected."""
+        require_control, capture_busy (the monitor's id, a monitor start in flight, a TRex service's
+        capture, a save of `id`) and endpoint_capture. Resyncs the status afterwards, success or failure,
+        while the same clients are connected."""
         c = self.require_control()
         r = self._reader
         self._refuse_monitor_id(id)
+        self._refuse_service(id)
         if id in self._saving:
             raise trexapi.CommandRefused("capture_busy", f"Capture {id} is being saved.")
         self._refuse_endpoint(id)
@@ -632,12 +644,13 @@ class CaptureCommands:
 
     async def recorder_remove(self, id: int) -> None:
         """Remove capture `id` from the server (capture_remove on the control client). Refused by
-        require_control and capture_busy (the monitor's id, a monitor start in flight, a save of `id`).
-        Afterwards, success or failure, while the same clients are connected: forgets `id` as ours and
-        resyncs the status."""
+        require_control and capture_busy (the monitor's id, a monitor start in flight, a TRex service's
+        capture, a save of `id`). Afterwards, success or failure, while the same clients are connected:
+        forgets `id` as ours and resyncs the status."""
         c = self.require_control()
         r = self._reader
         self._refuse_monitor_id(id)
+        self._refuse_service(id)
         if id in self._saving:
             raise trexapi.CommandRefused("capture_busy", f"Capture {id} is being saved.")
         try:
@@ -650,21 +663,22 @@ class CaptureCommands:
     async def recorder_save(self, id: int) -> SpoolFile:
         """Save capture `id` into the spool, remove it from the server and return the file. Refused by
         require_control, spool_unavailable, capture_busy (the monitor's id, a monitor start in flight, a
-        save of `id` already running) and endpoint_capture. capture_stop always, a peek (pkt_limit 0) for
-        start_ts, a new or resumed spool file, then destructive fetches of FETCH_LIMIT, each batch written
-        before the clients are re-checked (not_connected), progress published as `capture_save` after the
-        first fetch, then every SAVE_PROGRESS_JOBS jobs. TrexApiError when start_ts changed between peek and
-        first fetch (a file this save created is deleted) or SAVE_EMPTY_CUTOFF fetches in a row bring nothing
-        while packets are still pending. A failure once the file is open keeps what was written as a partial
-        file (that deleted new file aside); any failure publishes a `capture_save` error (not on a cancel),
-        "not found" also resyncs, and a spool OSError becomes spool_error. On success: capture_remove (a
-        failure is logged, not raised, though a lost connection still marks the session lost), forgets `id` as
-        ours, the final `capture_save`, a log line, and a status resync while the same clients are
-        connected."""
+        TRex service's capture, a save of `id` already running) and endpoint_capture. capture_stop always, a
+        peek (pkt_limit 0) for start_ts, a new or resumed spool file, then destructive fetches of FETCH_LIMIT,
+        each batch written before the clients are re-checked (not_connected), progress published as
+        `capture_save` after the first fetch, then every SAVE_PROGRESS_JOBS jobs. TrexApiError when start_ts
+        changed between peek and first fetch (a file this save created is deleted) or SAVE_EMPTY_CUTOFF
+        fetches in a row bring nothing while packets are still pending. A failure once the file is open keeps
+        what was written as a partial file (that deleted new file aside); any failure publishes a
+        `capture_save` error (not on a cancel), "not found" also resyncs, and a spool OSError becomes
+        spool_error. On success: capture_remove (a failure is logged, not raised, though a lost connection
+        still marks the session lost), forgets `id` as ours, the final `capture_save`, a log line, and a
+        status resync while the same clients are connected."""
         c = self.require_control()
         r = self._reader
         spool = self.spool()
         self._refuse_monitor_id(id)
+        self._refuse_service(id)
         if id in self._saving:
             raise trexapi.CommandRefused("capture_busy", f"Capture {id} is already being saved.")
         self._refuse_endpoint(id)

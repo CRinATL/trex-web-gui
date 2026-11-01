@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react'
-import { recorderRemove, recorderSave, recorderStop, type CaptureRow } from '../../api'
+import { recorderRemove, recorderSave, recorderStop, type CaptureRow, type SpoolFile } from '../../api'
 import { errText } from '../../portGate'
 import { useAppState } from '../../state'
 import { Info } from '../../ui/Info'
@@ -24,6 +24,13 @@ export function Recorders({ spool }: { spool: SpoolSource }) {
   const [confirming, setConfirming] = useState<number | null>(null)
   const [pending, setPending] = useState<number[]>([])      // ids with a command in flight
   const [errors, setErrors] = useState<Record<number, string>>({})
+  // What each Save call itself returned: the file when it resolved, null when it rejected. A progress message can be the
+  // last one the page never received, so the call's own result is what ends the row's Save (p3c-capture-120).
+  const [results, setResults] = useState<Record<number, SpoolFile | null>>({})
+  // TRex capture ids restart at 1 on every server: a result or error never outlives its connection. Adjusting state
+  // during render, as StatusBar does with seenState.
+  const [seenSeq, setSeenSeq] = useState(session.connect_seq)
+  if (session.connect_seq !== seenSeq) { setSeenSeq(session.connect_seq); setResults({}); setErrors({}) }
   const inFlight = useRef(new Set<number>())
   const monitorId = capture.monitor?.id ?? null
   // SpoolFile.server is the `host:sync_port` the backend recorded (sessions/capture.py recorder_save).
@@ -36,6 +43,15 @@ export function Recorders({ spool }: { spool: SpoolSource }) {
     try { await fn() }
     catch (x) { setErrors((e) => ({ ...e, [id]: errText(x) })) }
     finally { inFlight.current.delete(id); setPending((p) => p.filter((x) => x !== id)) }
+  }
+
+  // A Save click forgets the last result of this capture, then records how the call ended.
+  function saveRow(id: number) {
+    setResults((m) => Object.fromEntries(Object.entries(m).filter(([k]) => Number(k) !== id)))
+    void run(id, async () => {
+      try { const res = await recorderSave(id); setResults((m) => ({ ...m, [id]: res.file })) }
+      catch (x) { setResults((m) => ({ ...m, [id]: null })); throw x }
+    })
   }
 
   function remove(r: CaptureRow, unsaved: boolean) {
@@ -58,12 +74,12 @@ export function Recorders({ spool }: { spool: SpoolSource }) {
             {capture.captures.map((r) => {
               const isMonitor = r.id === monitorId
               const msg = captureSave[r.id]
-              const saving = pending.includes(r.id) || (msg !== undefined && msg.file === null && msg.error === null)
-              const file = msg?.file ?? null
+              const saving = pending.includes(r.id) || (msg !== undefined && msg.file === null && msg.error === null && !(r.id in results))
+              const file = msg?.file ?? results[r.id] ?? null
               const saved = file !== null && !file.partial
               // A partial file of this capture on this server survives a reconnect and a reload, so it comes from the listing.
               const partial = (spool.listing?.files ?? []).some((f) => f.partial && f.capture_id === r.id && f.server === server)
-              const resumable = partial || (msg?.error ?? null) !== null
+              const resumable = partial || (msg?.error ?? null) !== null || results[r.id] === null   // null: the Save call itself failed, not a Stop or Remove
               const bufferRow = r.endpoint === null && !r.service && !isMonitor
               const error = errors[r.id] || msg?.error || ''
               return (
@@ -83,7 +99,7 @@ export function Recorders({ spool }: { spool: SpoolSource }) {
                       <RunButton kind="stop" disabled={!ctl || saving} onClick={() => void run(r.id, () => recorderStop(r.id))}>Stop</RunButton>
                     )}
                     {bufferRow && !saved && (
-                      <button type="button" disabled={!ctl || saving} onClick={() => void run(r.id, () => recorderSave(r.id))}>{resumable ? 'Resume' : 'Save'}</button>
+                      <button type="button" disabled={!ctl || saving} onClick={() => saveRow(r.id)}>{resumable ? 'Resume' : 'Save'}</button>
                     )}
                     {!isMonitor && (
                       <button type="button" disabled={!ctl || r.service || saving} onBlur={() => setConfirming(null)}
