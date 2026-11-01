@@ -439,7 +439,8 @@ fieldset.plain legend { padding: 0; font-weight: 600; font-size: 1.1em; margin-b
 .fe-import { display: flex; flex-direction: column; gap: .3rem; max-width: 40rem; }
 .fe-import textarea { box-sizing: border-box; width: 100%; font-family: monospace; resize: vertical; }
 .presets section { margin-bottom: 1.5rem; max-width: 46rem; }
-.presets h3 { margin: 0 0 .15rem; }
+.modal.presets .dialog-footer { position: sticky; bottom: -1rem; background: var(--bg); padding-bottom: 1rem; }   /* Close stays in view; -1rem cancels the modal's padding */
+.presets h3 { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }   /* the tab shows the name; the heading still names the form */
 .presets p { margin: 0 0 .5rem; }
 .presets .form-grid input[type="text"]:not(.narrow), .presets .form-grid select { min-width: 0; max-width: 100%; box-sizing: border-box; }
 .presets .form-grid input[type="text"]:not(.narrow) { width: 100%; }
@@ -448,7 +449,9 @@ fieldset.plain legend { padding: 0; font-weight: 600; font-size: 1.1em; margin-b
 /* P4b standalone page: its dialogs, the File menu's note, the template tree and the pcap rows */
 .modal.packet-dialog { z-index: 30; width: min(46rem, 95vw); max-height: 85vh; overflow: auto; box-sizing: border-box; }
 .modal.packet-dialog.pcap-picker { width: min(52rem, 95vw); }
+.modal.packet-dialog.presets { top: 7.5vh; transform: translateX(-50%); }   /* top-anchored: switching tabs changes the height, not the position */
 .packet-page .setups-menu-list > div { display: flex; flex-direction: column; }
+.packet-page > .setups-buttons { margin-bottom: .5rem; }   /* File/Templates/Presets clear the editor's toolbar */
 .packet-page .menu-note { max-width: 18rem; font-size: .85em; padding: 0 .5rem .25rem; }
 /* the lists scroll, the save row and Close stay in view */
 .template-lists { max-height: 50vh; overflow: auto; }

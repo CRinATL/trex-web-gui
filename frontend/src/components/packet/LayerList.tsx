@@ -23,7 +23,7 @@ export interface LayerListProps {
 }
 
 // The title says how the bytes decode when that is not the layer itself (B2.2).
-const titleOf = (l: CombinedLayer) => (l.realId !== l.id ? `${l.id} as ${l.realId}` : l.id)
+const titleOf = (l: CombinedLayer) => (l.realId === null ? `${l.id} (not decoded)` : l.realId !== l.id ? `${l.id} as ${l.realId}` : l.id)
 
 // One collapsible pane per layer. Which panes are open is the caller's, so a rebuild never changes it.
 export function LayerList({ layers, expanded, onToggle, onMove, onDelete, readOnly = false, onCommit, onReset, onGenerate, onFeTemplate, feTemplates, selected = null, onSelectRange }: LayerListProps) {

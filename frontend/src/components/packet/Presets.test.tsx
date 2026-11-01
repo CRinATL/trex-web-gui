@@ -18,7 +18,11 @@ const presets: PresetInfo[] = [
 const doc: PacketDoc = { fileType: 'trex-packet-editor', version: '1.0.0', metadata: { caption: '' }, fePrarameters: {}, feInstructions: [], packet: [{ id: 'Ether', fields: [] }] }
 const result = (flags: number | null): PresetResult => ({ doc, flags })
 
-const form = async (name: string) => within(await screen.findByRole('region', { name }))
+// Selects the preset's tab, then scopes queries to its form (only the selected tab's form is shown).
+const form = async (name: string) => {
+  await userEvent.click(await screen.findByRole('tab', { name }))
+  return within(screen.getByRole('region', { name }))
+}
 const sent = () => vi.mocked(api.buildPreset).mock.calls.at(-1)!
 
 beforeEach(() => {
@@ -28,6 +32,22 @@ beforeEach(() => {
 afterEach(() => { cleanup(); vi.clearAllMocks() })
 
 describe('Presets', () => {
+  it('one tab per preset; only the selected preset form shows, and a form keeps its edits across tabs', async () => {
+    render(<Presets onOpen={vi.fn()} />)
+    const tabs = await screen.findAllByRole('tab')
+    expect(tabs.map((t) => t.textContent)).toEqual(['Flood', 'IP sweep', 'Frame-size sweep', 'VLAN'])
+    expect(screen.getByRole('tab', { name: 'Flood' })).toHaveAttribute('aria-selected', 'true')
+    expect(screen.getAllByRole('region').map((r) => r.getAttribute('data-preset'))).toEqual(['flood'])
+
+    const flood = within(screen.getByRole('region', { name: 'Flood' }))
+    await userEvent.clear(flood.getByLabelText('Destination port'))
+    await userEvent.type(flood.getByLabelText('Destination port'), '8080')
+    await userEvent.click(screen.getByRole('tab', { name: 'VLAN' }))
+    expect(screen.getAllByRole('region').map((r) => r.getAttribute('data-preset'))).toEqual(['vlan'])
+    await userEvent.click(screen.getByRole('tab', { name: 'Flood' }))
+    expect(within(screen.getByRole('region', { name: 'Flood' })).getByLabelText('Destination port')).toHaveValue('8080')
+  })
+
   it('flood form sends its params', async () => {
     render(<Presets onOpen={vi.fn()} />)
     const f = await form('Flood')

@@ -234,7 +234,7 @@ export interface SpoolFile {
 export type SpoolListing = { dir: string; files: SpoolFile[]; total: number }
 // `ignored`: the field is not in the packet as built (a conditional field that is absent); the service sets it only when true.
 export interface PacketField { id: string; value: string | number | { vtype: string; expr?: string; base64?: string }; hvalue: string | number; offset: number; length: number; ignored?: boolean }
-export interface PacketLayer { id: string; offset: number; real_id: string; valid_structure: boolean; fields: PacketField[] }
+export interface PacketLayer { id: string; offset: number; real_id: string | null; valid_structure: boolean; fields: PacketField[] }
 export type PacketTree = { binary: string; data: PacketLayer[] }
 export interface CaptureBody { tx: number[]; rx: number[]; bpf: string; limit: number }
 export const getCapture = () => call<CaptureMsg>('GET', '/api/capture')

@@ -130,6 +130,7 @@ export function PacketPage({ active = true }: { active?: boolean }) {
           { label: 'Save as pcap', run: () => void savePcap() },
           { label: 'Add to profile as a new stream…', run: () => show('add') },
         ]} />
+        <button type="button" onClick={newPacket}>New</button>
         <button type="button" onClick={() => show('templates')}>Templates…</button>
         <button type="button" onClick={() => show('presets')}>Presets…</button>
         <input ref={fileInput} type="file" accept=".trp,.json,application/json" aria-label="Packet file" hidden

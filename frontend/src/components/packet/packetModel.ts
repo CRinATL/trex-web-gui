@@ -2,7 +2,7 @@
 // and the protocol definitions that the field rows show. The document is the user's intent (only what they set); the
 // build result is what the service made of it (every field, with its bytes).
 import type { BitDef, BuildResult, Definitions, FeInstruction, FeValue, FieldDef, FieldValue, PacketDoc, PacketLayer, PacketTree, ProtocolDef } from '../../api'
-import { layerEnds, rangeOfField, type Range } from './hexModel'
+import { fieldRange, layerEnds, type Range } from './hexModel'
 
 const same = (a: unknown, b: unknown) => JSON.stringify(a) === JSON.stringify(b)
 
@@ -98,7 +98,7 @@ export interface CombinedField {
 export interface CombinedLayer {
   index: number
   id: string
-  realId: string                 // what the bytes decode as (title "as <real_id>")
+  realId: string | null          // what the bytes decode as (title "as <real_id>"); null: no such layer in the bytes
   offset: number
   validStructure: boolean
   protocol: ProtocolDef | null   // null when the layer has no definition (an indirect subclass)
@@ -144,12 +144,11 @@ export function combine(doc: PacketDoc, result: BuildResult | null, defs: Defini
     const dl = cand && (cand.id === l.id || l.id === 'Raw') ? cand : undefined
     const protocol = protocols.get(dl?.id ?? l.id) ?? protocols.get(l.id) ?? null
     const end = ends[i]
-    const fields = l.fields.map((f): CombinedField => {
+    const fields = l.fields.map((f, k): CombinedField => {
       const def = protocol?.fields.find((d) => d.id === f.id) ?? { id: f.id, name: f.id }
       const docField = dl?.fields.find((d) => d.id === f.id)
       const bad = failure?.layer === i && failure.field === f.id
-      const r = rangeOfField(f, l.offset)
-      const range: Range | null = r === null || r[0] >= end ? null : [r[0], Math.min(r[1], end)]
+      const range: Range | null = fieldRange(f, l.offset, end, k === l.fields.length - 1)
       return {
         id: f.id, def, value: f.value, docValue: docField?.value, userSet: docField !== undefined, ignored: f.ignored === true, readOnly: false, range,
         shown: bad ? textOf(docField?.value) : String(f.hvalue ?? ''), bits: groupsOf(def, f.value), error: bad ? failure.message : null,
@@ -165,11 +164,10 @@ export function layersOfTree(tree: PacketTree): CombinedLayer[] {
   const ends = layerEnds(tree)
   return tree.data.map((l, i) => {
     const end = ends[i]
-    const fields = l.fields.map((f): CombinedField => {
-      const r = rangeOfField(f, l.offset)
+    const fields = l.fields.map((f, k): CombinedField => {
       return {
         id: f.id, def: { id: f.id, name: f.id }, value: f.value, shown: String(f.hvalue ?? ''), userSet: false, ignored: f.ignored === true,
-        readOnly: true, range: r === null || r[0] >= end ? null : [r[0], Math.min(r[1], end)], bits: null, error: null,
+        readOnly: true, range: fieldRange(f, l.offset, end, k === l.fields.length - 1), bits: null, error: null,
       }
     })
     return { index: i, id: l.id, realId: l.real_id, offset: l.offset, validStructure: l.valid_structure, protocol: null, fields, error: null }

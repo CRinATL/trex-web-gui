@@ -835,8 +835,8 @@ The heading `Packet editor — <name or Untitled>` with a `•` while there are 
 **New**; **Open .trp…** (a file from this computer; the note: `A .trp may contain expressions; they are
 evaluated on the backend host when the packet is built.`; at most 4 MiB); **Save** (the note
 `Downloads a .trp file.`; downloads `<name>.trp`); **Save as template…**; **Open pcap…**; **Save as pcap** (one packet, written by the browser
-from the bytes the backend builds); **Add to profile as a new stream…**. Then **Templates…** and
-**Presets…**. Replacing a packet that has unsaved changes asks `Discard changes?` (**Discard** / **Cancel**).
+from the bytes the backend builds); **Add to profile as a new stream…**. Then **New** (the same as File ▾ New:
+back to the starting packet, a bare `Ether`), **Templates…** and **Presets…**. Replacing a packet that has unsaved changes asks `Discard changes?` (**Discard** / **Cancel**).
 `The packet changed while the other one was being opened: the opened one was dropped.` when a pick lands on a
 packet you have since changed.
 
@@ -847,7 +847,8 @@ packet you have since changed.
 
 **Undo**, **Redo**, **Expand all**, **Collapse all**; the tabs **Packet** and **Field engine**. The Packet tab:
 a breadcrumb `Ether > IP > UDP · N bytes` (click a layer to open its pane); one collapsible pane per layer
-(`<id> as <real id>` when the bytes decode as something else; a `!` for an invalid structure); **Add layer…**
+(`<id> as <real id>` when the bytes decode as something else, `<id> (not decoded)` when the bytes hold no such
+layer; a `!` for an invalid structure); **Add layer…**
 (a text box that lists the protocols the last layer can carry first, then every protocol; `unknown protocol
 "x"`); the hex view. The packet is rebuilt on the backend after every edit; the hex view and byte ranges show
 the last good build, and a failed build marks the field and shows the message.
@@ -859,7 +860,9 @@ first layer is fixed). Ctrl+D deletes the layer you opened last.
 
 Each row: the field's name, a control for its type, a `•` when you set it (with a `×` to reset it to the
 default), a `!` and the message when the build refused it, and its byte range (a button that marks the bytes;
-`not in packet` for an ignored field, `bits` for a sub-byte one).
+`not in packet` for an ignored field, `bits` for a sub-byte one; a layer's last field, such as its options, runs
+to the layer's end, since the backend reports a variable-size field by its nominal size; a variable-size field
+that is not last, such as ARP's `hwsrc`, still shows that nominal size).
 
 - Numbers take decimal or `0x` hex; an ENUM takes a name from its list or a number; a value outside the
   definition's range is refused (`must be from 0 to 255`). Enter commits, Escape reverts the text.
@@ -886,7 +889,11 @@ ones (`not 0: the service reads 0 as <default>`). **Cancel**, **Save**.
 
 ### 10.5 Templates
 
-**Server templates** (the stock ones, as a tree by `/`; one that cannot be built is disabled with its reason)
+**Server templates** (the stock ones, as a tree by `/`; one that cannot be built is disabled with its reason;
+under `trex-web-gui/`, this project's own: **LLDP**, and **DHCP-DISCOVER**, a discover whose DHCP layer
+decodes, unlike TRex's `DHCP/DHCP-DISCOVER`, which has no DHCP options; its options are an expression, and the
+message type in it must be a number, such as `('message-type', 3)` for a request: the backend's packet service
+refuses a name like `'request'` in an expression with `required argument is not an integer`)
 and **Your templates** (yours, in the **Templates directory** setting, else `<data dir>/templates`; each with
 **Delete**, `Delete <name>?`); click a template to open it. From the standalone page the dialog also saves:
 `Save the packet as a template` with a name like `lab/syn-flood`, **Save**; an existing name asks `Replace
@@ -894,7 +901,8 @@ and **Your templates** (yours, in the **Templates directory** setting, else `<da
 
 ### 10.6 Presets
 
-[108](gui-inventory/screens/108-packet-presets.png). Four forms, each ending in **Open in editor**:
+[108](gui-inventory/screens/108-packet-presets.png). Four forms, one per tab (the dialog keeps its top edge when the tab changes, and **Close** stays in view),
+each ending in **Open in editor**:
 **Flood** (one UDP or TCP packet; protocol, source and destination MAC from the TRex configuration, from the
 packet, or stepped up/down with a count and step, IPs, ports, frame size fixed/stepped/random, payload text),
 **IP sweep** (source, destination or both IPv4 addresses stepped through a range by count or last address;
