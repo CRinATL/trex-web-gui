@@ -1301,6 +1301,7 @@ def test_install_script_pauses_and_installs_on_enter(tmp_path: Path) -> None:
     prompt = (tmp_path / "tty").read_text()
     assert PAGE_URL in prompt and "press Enter to install" in prompt
     assert "press Enter" not in done.stdout
+    assert list((tmp_path / "tmp").iterdir()) == []
 
 
 def test_install_script_stops_at_end_of_input_on_the_prompt(tmp_path: Path) -> None:
@@ -1318,6 +1319,7 @@ def test_install_script_without_a_terminal_installs_and_says_so(tmp_path: Path) 
     assert done.returncode == 0, done.stderr
     assert (tmp_path / "uv.log").exists()
     assert "no terminal to pause on" in done.stdout
+    assert list((tmp_path / "tmp").iterdir()) == []
 
 
 def test_install_script_yes_skips_the_pause(tmp_path: Path) -> None:
@@ -1366,6 +1368,17 @@ def test_a_draft_without_install_sh_gets_it_uploaded(tmp_path: Path) -> None:
     assert uploads == [["gh", "release", "upload", "v1.0.1", "dist/install.sh", "--clobber"]]
     assert not [c for c in gh.calls if c[:3] == ["gh", "release", "create"]]
     assert gh.release["assets"]["install.sh"] == patch_install_sh(repo)
+
+
+def test_a_draft_holding_both_files_gets_no_second_upload(tmp_path: Path) -> None:
+    """Once the draft holds the wheel and install.sh, publishing again makes no upload call."""
+    repo, _ = checked_patch_repo(tmp_path)
+    gh = FakeGitHub(repo)
+    gh.release = {"draft": True, "prerelease": False, "assets": {PATCH_WHEEL: b"wheel"}}
+    assert publish_patch(repo, gh) == 0
+    first = len(gh.calls)
+    assert publish_patch(repo, gh) == 0
+    assert not [c for c in gh.calls[first:] if c[:3] == ["gh", "release", "upload"]]
 
 
 def test_publish_refuses_a_released_install_sh_that_differs(tmp_path: Path,

@@ -51,15 +51,15 @@ not.
 ## Install
 
 trex-web-gui is not on PyPI. From 1.0.1 on, one command installs the latest release with
-[`uv`](https://docs.astral.sh/uv/) (until 1.0.1 is published the address answers 404, `curl` prints nothing and `sh`
+[`uv`](https://docs.astral.sh/uv/) (until 1.0.1 is published the address answers 404, `curl` reports the 404 and `sh`
 installs nothing):
 
 ```
 curl -fsSL https://github.com/CRinATL/trex-web-gui/releases/latest/download/install.sh | sh
 ```
 
-On a terminal the script downloads the wheel, checks it against the sha256 written into the script, then stops on a
-prompt that shows that sha256 and the release page. Compare the sha256 with the one the release page lists next to the
+On a terminal the script downloads the wheel, checks it against the sha256 written into the script, then prints that
+sha256 and the release page and stops on a prompt. Compare the sha256 with the one the release page lists next to the
 wheel, then press Enter to install. Without a terminal there is no pause: it installs at once and says so.
 `TREX_WEB_GUI_YES=1` skips the pause for an unattended install: put it before `sh`, as in `curl -fsSL … | TREX_WEB_GUI_YES=1 sh`.
 
@@ -69,8 +69,11 @@ wheel, then press Enter to install. Without a terminal there is no pause: it ins
 curl -fLO https://github.com/CRinATL/trex-web-gui/releases/latest/download/install.sh
 ```
 
-Read it, and compare its `sha256=` line with the sha256 the release page it names lists next to the wheel. Then run
-`sh install.sh`.
+Read it, and compare its `sha256=` line with the sha256 the release page it names lists next to the wheel. Then run:
+
+```
+sh install.sh
+```
 
 GitHub computes the release page's sha256 from the uploaded wheel, so a match shows that the script and the wheel
 belong to the same published release, and that neither was swapped or damaged on the way. It does not show that the
