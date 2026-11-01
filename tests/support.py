@@ -1,12 +1,17 @@
 """Plain helpers shared by tests. They live here, not in conftest.py, because tests/contract/conftest.py
 shares the module name `conftest`, so `from conftest import ...` is ambiguous."""
+import contextlib
+import fcntl
 import importlib.util
 import json
 import os
 import socket
 import subprocess
 import sys
+import tempfile
+import time
 import warnings
+from collections.abc import Iterator
 from pathlib import Path
 from typing import Any
 
@@ -79,7 +84,8 @@ FIXTURES = ROOT / "tests" / "fixtures"
 
 
 def free_port_pair() -> tuple[int, int]:
-    """Two free loopback ports (rpc, pub). Racy by nature; the fake fails loudly if one is taken."""
+    """Two free loopback ports (rpc, pub). Racy by nature: another process can take a port before the caller
+    binds it. The fake is started on port 0 instead, which it binds itself."""
     socks = [socket.socket() for _ in range(2)]
     for s in socks:
         s.bind(("127.0.0.1", 0))
@@ -94,6 +100,44 @@ def free_port() -> int:
     with socket.socket() as s:
         s.bind(("127.0.0.1", 0))
         return int(s.getsockname()[1])
+
+
+DEMO_PORTS_LOCK = Path(tempfile.gettempdir()) / f"trex-web-gui-demo-ports-{os.getuid()}.lock"
+DEMO_PORTS_WAIT_S = 45.0  # below pytest.ini's `timeout = 60`
+
+
+@contextlib.contextmanager
+def demo_ports_lock(path: Path = DEMO_PORTS_LOCK, wait_s: float = DEMO_PORTS_WAIT_S) -> Iterator[None]:
+    """Holds an exclusive flock on path for the with body, so tests that bind or probe the guest VM's
+    ports run one at a time across xdist workers and across pytest sessions of one uid.
+
+    Guards resolute's six ports (tests/unit/test_vm_build.py RESOLUTE_PORTS) and the GUI ports 8765, 8865
+    and 8965. A lock and not `xdist_group`: that needs `--dist loadgroup`, which `make test-py` does not
+    pass (its `--dist` is the Makefile's).
+
+    The acquire polls LOCK_NB every 0.05 s for at most wait_s, then raises TimeoutError naming path, so a
+    long or stopped holder is not an anonymous pytest-timeout. Never nest it: the lock is not re-entrant.
+    A holder that dies frees it, because closing the descriptor releases an flock.
+
+    The file is opened O_CREAT | O_RDWR | O_NOFOLLOW, mode 0o600, never O_TRUNC: a symlink there is
+    refused and nothing is truncated. A file pre-created by another uid makes every locked test error with
+    a PermissionError naming the path; that is the accepted risk, and the remedy is deleting the file."""
+    fd = os.open(path, os.O_CREAT | os.O_RDWR | os.O_NOFOLLOW, 0o600)
+    try:
+        deadline = time.monotonic() + wait_s
+        while True:
+            try:
+                fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+                break
+            except BlockingIOError:
+                if time.monotonic() >= deadline:
+                    raise TimeoutError(
+                        f"{path} held for over {wait_s} s by another test or session; never nest this lock"
+                    ) from None
+                time.sleep(0.05)
+        yield
+    finally:
+        os.close(fd)
 
 
 TEST_TOKEN = "trex-web-gui-test-token-0123456789ab"       # 36 characters; TREX_WEB_GUI_TOKEN needs 16

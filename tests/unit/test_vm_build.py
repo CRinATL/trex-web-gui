@@ -7,9 +7,11 @@ import socket
 import subprocess
 import sys
 import time
+from collections.abc import Iterator
 from pathlib import Path
 
 import pytest
+from support import demo_ports_lock
 
 ROOT = Path(__file__).resolve().parent.parent.parent
 JAMMY_OVERLAY = Path("/var/tmp/trex-vm/trex.qcow2")
@@ -26,11 +28,14 @@ def taken(port: int) -> bool:
 
 
 @pytest.fixture(autouse=True)
-def _ports_free() -> None:
-    """Skips every test here while any of resolute's six ports is in use (check 5 would refuse first)."""
-    for port in RESOLUTE_PORTS:
-        if taken(port):
-            pytest.skip(f"127.0.0.1:{port} is in use")
+def _ports_free() -> Iterator[None]:
+    """Skips every test here while any of resolute's six ports is in use (check 5 would refuse first).
+    Holds the demo-ports lock for the test, so no other test binds or probes those ports meanwhile."""
+    with demo_ports_lock():
+        for port in RESOLUTE_PORTS:
+            if taken(port):
+                pytest.skip(f"127.0.0.1:{port} is in use")
+        yield
 
 
 @pytest.fixture(autouse=True)

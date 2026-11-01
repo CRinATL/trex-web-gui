@@ -17,7 +17,8 @@ do not "fix" them.
 - `npm --prefix frontend install` once after cloning, and again when `frontend/package.json` changes.
 - `make check` is the gate: lint, the typecheck, the Python and frontend tests, the frontend build, the citation
   check and the docstring check. Its last line is `gate check rc=N in <time>`; a change is done when it reads
-  `rc=0`. Without a systemd user session, run `make check PYTEST="uv run --project backend --locked pytest"`.
+  `rc=0`. Without a systemd user session, run
+  `make check PYTEST="uv run --project backend --locked pytest" VITEST_CAP=`.
 - One frontend test file: `npm --prefix frontend test -- --run src/<file>.test.ts`. Run vitest this way, through
   the frontend's npm script; another way of starting it can skip the test environment.
 - One Python test file: `uv run --project backend pytest -q tests/unit/<file>.py`.
@@ -32,6 +33,10 @@ do not "fix" them.
 - `backend/trex_web_gui/_vendor/` is generated. Change the vendored TRex client with a patch in
   `backend/vendor/patches/` and a row in `backend/vendor/patches.md`, never by editing the copy.
 - A change in behaviour comes with a test that fails without it.
+- `make check` runs pytest on every core (`--dist worksteal`). A test that binds or probes a fixed port (the
+  guest VM's, 8765/8865/8965) holds `demo_ports_lock()` from `tests/support.py`, never nested. A test that starts
+  the fake TRex uses the `fake_trex` fixture (it binds port 0 itself); a test that needs its own port binds port 0
+  and reads the port back, rather than choosing one and binding it later.
 
 ## Authorship
 

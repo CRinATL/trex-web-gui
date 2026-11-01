@@ -15,5 +15,6 @@ export default defineConfig({
   // Served from the loopback backend, so chunk size costs nothing measurable; pages are mounted hidden by design
   // (Control, Studio), which a lazy split would complicate (ruling Task 7 M1). The default advisory is 500 kB.
   build: { chunkSizeWarningLimit: 1000 },
-  test: { environment: 'jsdom', setupFiles: ['./src/setupTests.ts'], globals: false },
+  // vmThreads keeps per-file isolation; setting the pool explicitly keeps vitest's environment hint off.
+  test: { environment: 'jsdom', setupFiles: ['./src/setupTests.ts'], globals: false, pool: 'vmThreads' },
 })

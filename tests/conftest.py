@@ -1,5 +1,6 @@
 import contextlib
 import json
+import re
 import signal
 import subprocess
 import sys
@@ -11,7 +12,7 @@ from pathlib import Path
 from typing import Any
 
 import pytest
-from support import FAKE, FAKE_DAEMON, FIXTURES, ROOT, SRC, free_port, free_port_pair, pinned_sha
+from support import FAKE, FAKE_DAEMON, FIXTURES, ROOT, SRC, free_port, pinned_sha
 
 
 def pytest_collection_modifyitems(items: list[pytest.Item]) -> None:
@@ -86,16 +87,18 @@ def fake_trex() -> Iterator[Callable[..., FakeTrex]]:
     started: list[FakeTrex] = []
 
     def start(*flags: str) -> FakeTrex:
-        """Spawn the fake on a free port pair with `flags` and wait for its ready line; RuntimeError (the fake
-        killed) when the first line is anything else."""
-        rpc, pub = free_port_pair()
-        proc = subprocess.Popen([sys.executable, "-I", "-B", str(FAKE), str(FIXTURES), str(rpc), str(pub),
-                                 *flags],
+        """Spawn the fake on ports it binds itself (0 0) with `flags`, wait for its ready line and read the
+        bound ports from it; RuntimeError (the fake killed, its output appended) when the first line is
+        anything else."""
+        proc = subprocess.Popen([sys.executable, "-I", "-B", str(FAKE), str(FIXTURES), "0", "0", *flags],
                                 stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
         ready = proc.stdout.readline() if proc.stdout else ""
-        if not ready.startswith("[fake] ready"):
+        m = re.match(r"\[fake\] ready rpc=(\d+) pub=(\d+) ", ready)
+        if not m:
             proc.kill()
-            raise RuntimeError(f"HARNESS ERROR: fake did not start: {ready!r}")
+            rest = proc.communicate(timeout=5)[0]
+            raise RuntimeError(f"HARNESS ERROR: fake did not start: {ready + rest!r}")
+        rpc, pub = int(m[1]), int(m[2])
         f = FakeTrex("127.0.0.1", rpc, pub, proc)
         started.append(f)
         return f
