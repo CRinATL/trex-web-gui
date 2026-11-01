@@ -18,15 +18,26 @@ describe('hexModel', () => {
     expect(rangeOfField({ offset: 6, length: 6 })).toEqual([6, 12])
     expect(rangeOfField({ offset: 0, length: 0 }, 14)).toBeNull()
   })
-  it('a layer\'s last field runs to the layer\'s end: the service reports a variable-size field by its nominal size', () => {
+  it('a field ends where the next one starts, the last at the layer\'s end: the service reports a variable-size field by its nominal size', () => {
+    const f = (offset: number, length: number) => ({ offset, length })
+    // measured (tests/golden/trp/ARP__ARP-REQUEST.json): ARP at 14, op 6, hwsrc 8, psrc 14, hwdst 18, pdst 24, each reported as 2 bytes
+    const arp = [f(6, 2), f(8, 2), f(14, 2), f(18, 2), f(24, 2)]
+    expect(arp.map((_, k) => fieldRange(arp, k, 14, 42))).toEqual([[20, 22], [22, 28], [28, 32], [32, 38], [38, 42]])
     // measured (tests/golden/trp/DHCP__DHCP-DISCOVER.json): BOOTP options at 236 reported 2 bytes, 4 in the frame
-    expect(fieldRange({ offset: 236, length: 2 }, 42, 282, true)).toEqual([278, 282])
-    expect(fieldRange({ offset: 0, length: 2 }, 282, 292, true)).toEqual([282, 292])        // DHCP options: 10 bytes
-    expect(fieldRange({ offset: 20, length: 2 }, 14, 34, true)).toBeNull()                  // empty IP options: no bytes
-    expect(fieldRange({ offset: 6, length: 2 }, 34, 42, true)).toEqual([40, 42])            // a fixed last field is unchanged
-    expect(fieldRange({ offset: 0, length: 0 }, 14, 34, true)).toBeNull()                   // a bit field still has none
-    expect(fieldRange({ offset: 2, length: 4 }, 0, 4, false)).toEqual([2, 4])               // others are only cut at the end
-    expect(fieldRange({ offset: 4, length: 2 }, 0, 4, false)).toBeNull()
+    expect(fieldRange([f(108, 128), f(236, 2)], 1, 42, 282)).toEqual([278, 282])
+    expect(fieldRange([f(0, 2)], 0, 282, 292)).toEqual([282, 292])                           // DHCP options: 10 bytes
+    expect(fieldRange([f(16, 4), f(20, 2)], 1, 14, 34)).toBeNull()                          // empty IP options: no bytes
+    // IP id, then flags and frag (bit fields, reported at 6 with length 0), then ttl, cut short here so ttl is last
+    const ip = [f(4, 2), f(6, 0), f(6, 0), f(8, 1)]
+    expect(ip.map((_, k) => fieldRange(ip, k, 14, 34))).toEqual([[18, 20], null, null, [22, 34]])
+    // measured through the service (fable review, 2026-11-01): IPv6 hop-by-hop at 54: nh 0, len 1, autopad 2 (adds no
+    // bytes, reported 1), options 2 (6 bytes, reported 2); DNS with qd and ar: an and ns empty, both reported at ar's 29
+    const hbh = [f(0, 1), f(1, 1), f(2, 1), f(2, 2)]
+    expect(hbh.map((_, k) => fieldRange(hbh, k, 54, 62))).toEqual([[54, 55], [55, 56], null, [56, 62]])
+    const dns = [f(12, 2), f(29, 2), f(29, 2), f(29, 2)]
+    expect(dns.map((_, k) => fieldRange(dns, k, 42, 82))).toEqual([[54, 71], null, null, [71, 82]])
+    expect(fieldRange([f(4, 2), f(2, 2)], 0, 0, 10)).toEqual([4, 6])                         // offsets going backwards: the reported size
+    expect(fieldRange([f(2, 4)], 0, 0, 4)).toEqual([2, 4])                                   // never past the layer
   })
   it('rangeText is %04x-%04x [%04d]', () => {
     expect(rangeText([14, 34])).toBe('000e-0021 [0020]')
