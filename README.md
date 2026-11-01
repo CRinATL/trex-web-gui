@@ -58,10 +58,10 @@ installs nothing):
 curl -fsSL https://github.com/CRinATL/trex-web-gui/releases/latest/download/install.sh | sh
 ```
 
-On a terminal the script downloads the wheel, checks it against the sha256 written into the script, then prints that
-sha256 and the release page and stops on a prompt. Compare the sha256 with the one the release page lists next to the
-wheel, then press Enter to install. Without a terminal there is no pause: it installs at once and says so.
-`TREX_WEB_GUI_YES=1` skips the pause for an unattended install: put it before `sh`, as in `curl -fsSL … | TREX_WEB_GUI_YES=1 sh`.
+On a terminal the script prints the wheel's sha256 and the release page, downloads the wheel, checks it against that
+sha256 and stops on a prompt. Compare the sha256 with the one the release page lists next to the wheel, then press Enter
+to install. Without a terminal there is no pause: it installs at once and says so. `TREX_WEB_GUI_YES=1` skips the pause
+for an unattended install: put it before `sh`, as in `curl -fsSL … | TREX_WEB_GUI_YES=1 sh`.
 
 **Read the script first.** To read the script before running any of it, or on a host with no terminal:
 
