@@ -20,6 +20,8 @@ VENDOR_TESTS ?= $(shell git diff --quiet $(VENDOR_BASE) -- $(VENDOR_PATHS) 2>/de
 # (2026-10-28), hence the 8G cap. PYTEST_WORKERS=0 runs one process, for chasing a test that only fails under
 # load. Targets that can rewrite files in the repo (golden snapshots, wire fixtures) stay in one process.
 PYTEST_WORKERS ?= auto
+# vmThreads keeps every vitest worker in one process, so test-js gets the same cap as pytest; CI empties it.
+VITEST_CAP ?= systemd-run --user --scope -q -p MemoryMax=8G -p MemorySwapMax=0 --
 PYTEST  := systemd-run --user --scope -q -p MemoryMax=8G -p MemorySwapMax=0 -- $(UV) pytest
 .PHONY: FORCE check check-golden lint typecheck test test-py test-js build check-py check-real check-real-all check-daemon-real record-p2 record-p3 record-p3a record-p3b record-p3b-v6 record-p3c record-p5 record-p5-stf record-netem vendor dev wire-fixtures citations deferred docstrings api-docs wheel install-smoke install-smoke-run release-rc release release-rc-publish release-build release-publish parity parity-sync
 
@@ -43,7 +45,7 @@ test-py:
 	$(PYTEST) -q -n $(PYTEST_WORKERS) $(if $(filter run,$(VENDOR_TESTS)),,-m "not real and not vendor_build and not golden")
 
 test-js:
-	@if [ -f frontend/package.json ]; then npm --prefix frontend test -- --run; fi
+	@if [ -f frontend/package.json ]; then $(VITEST_CAP) npm --prefix frontend test -- --run; fi
 
 build:
 	@if [ -f frontend/package.json ]; then npm --prefix frontend run build; fi
