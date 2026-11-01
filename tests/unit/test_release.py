@@ -369,6 +369,16 @@ class FakeGitHub:
         return subprocess.run(["git", "rev-parse", ref], cwd=self.repo, capture_output=True, text=True,
                               check=True).stdout.strip()
 
+    def read_files(self, argv: list[str]) -> dict[str, bytes]:
+        """The files a `gh release create|upload TAG FILE… --flag` names (argv[4:] up to the first flag),
+        by file name."""
+        paths = []
+        for a in argv[4:]:
+            if a.startswith("--"):
+                break
+            paths.append(self.repo / a)
+        return {p.name: p.read_bytes() for p in paths}
+
     def writes(self) -> list[list[str]]:
         """The calls that change the remote: pushes and gh create/upload/edit."""
         return [c for c in self.calls if c[:2] == ["git", "push"] or (c[0] == "gh" and c[2] != "view"
@@ -420,20 +430,19 @@ class FakeGitHub:
             if rel is not None:
                 return 1, f"a release with the same tag name already exists: {argv[3]}"
             partial = "create" in self.lands and self.fail.get("create") is not None
-            wheel = self.repo / argv[4]
             self.release = {"draft": partial or "--draft" in argv, "prerelease": "--prerelease" in argv,
-                            "assets": {} if partial else {wheel.name: wheel.read_bytes()}}
+                            "assets": {} if partial else self.read_files(argv)}
             return 0, f"https://github.com/o/r/releases/tag/{argv[3]}\n"
         assert rel is not None, argv
         if key == "upload":
-            wheel = self.repo / argv[4]
-            rel["assets"][wheel.name] = wheel.read_bytes()
+            rel["assets"].update(self.read_files(argv))
         elif key == "edit":
             rel["draft"] = argv[4] != "--draft=false"
         elif key == "download":
-            name, out = argv[argv.index("--pattern") + 1], Path(argv[argv.index("--dir") + 1])
+            out = Path(argv[argv.index("--dir") + 1])
             out.mkdir(parents=True, exist_ok=True)
-            (out / name).write_bytes(rel["assets"][name])
+            for name in [argv[i + 1] for i, a in enumerate(argv) if a == "--pattern"]:
+                (out / name).write_bytes(rel["assets"][name])
         return 0, ""
 
 
@@ -1212,3 +1221,219 @@ def test_publish_patch_accepts_a_tree_holding_the_records(tmp_path: Path,
     assert (repo / "PLAN.md").is_file() and (repo / "DEFERRED.md").is_file()
     assert publish_patch(repo, FakeGitHub(repo)) == 0
     assert "publish final runs in the public clone" not in capsys.readouterr().out
+
+
+WHEEL_BYTES = b"wheel"
+GOOD_SHA = hashlib.sha256(WHEEL_BYTES).hexdigest()
+PAGE_URL = "https://github.com/CRinATL/trex-web-gui/releases/tag/v1.0.1"
+
+
+def run_install_script(tmp_path: Path, tty: str | None, *, served: bytes = WHEEL_BYTES, sha: str = GOOD_SHA,
+                       yes: bool = False, with_uv: bool = True,
+                       rel_dir: str = "rel") -> subprocess.CompletedProcess[str]:
+    """Generate install.sh for patch 1 with `sha`, serve `served` as its wheel from a file:// base and run it
+    under /bin/sh with a stub uv that logs its arguments to tmp_path/uv.log. `tty` is the text of the
+    terminal file (None: the path does not exist); TMPDIR is tmp_path/tmp."""
+    target = release.patch_target(1)
+    script = tmp_path / "install.sh"
+    script.write_text(release.install_script(target, sha))
+    wheel = tmp_path / "rel" / target.tag / release.wheel_name(target.version)
+    wheel.parent.mkdir(parents=True)
+    wheel.write_bytes(served)
+    stub_dir = tmp_path / "bin"
+    stub_dir.mkdir()
+    (tmp_path / "tmp").mkdir()
+    if with_uv:
+        uv = stub_dir / "uv"
+        uv.write_text(f'#!/bin/sh\necho "$@" >> "{tmp_path}/uv.log"\n')
+        uv.chmod(0o755)
+    tty_path = tmp_path / "tty"
+    if tty is not None:
+        tty_path.write_text(tty)
+    env = {"PATH": f"{stub_dir}:/usr/bin:/bin" if with_uv else str(tmp_path / "empty"),
+           "TREX_WEB_GUI_RELEASES": f"file://{tmp_path}/{rel_dir}", "TREX_WEB_GUI_TTY": str(tty_path),
+           "TMPDIR": str(tmp_path / "tmp")}
+    if yes:
+        env["TREX_WEB_GUI_YES"] = "1"
+    if not with_uv:
+        (tmp_path / "empty").mkdir()
+    return subprocess.run(["/bin/sh", str(script)], env=env, capture_output=True, text=True, check=False)
+
+
+def test_install_script_names_this_release_and_its_page() -> None:
+    """The text carries the tag, wheel, sha256 and the release's own page, never the latest-release page."""
+    target = release.patch_target(1)
+    text = release.install_script(target, GOOD_SHA)
+    assert "tag='v1.0.1'" in text
+    assert "trex_web_gui-1.0.1-py3-none-any.whl" in text
+    assert GOOD_SHA in text
+    assert f"#   {PAGE_URL}\n" in text
+    assert f"page='{PAGE_URL}'" in text
+    assert "releases/latest" not in text
+    assert text == release.install_script(target, GOOD_SHA)
+
+
+def test_install_script_installs_a_good_wheel(tmp_path: Path) -> None:
+    """A wheel matching its sha256 is installed with the measured uv form; the temp directory is removed."""
+    done = run_install_script(tmp_path, "\n")
+    assert done.returncode == 0, done.stderr
+    args = (tmp_path / "uv.log").read_text().split()
+    assert args[:4] == ["tool", "install", "--python", "3.12"]
+    assert args[-1].endswith("/trex_web_gui-1.0.1-py3-none-any.whl")
+    assert len(args) == 5   # no extra flags: plain `uv tool install` replaces an older version (uv 0.12.5)
+    assert PAGE_URL in done.stdout
+    assert list((tmp_path / "tmp").iterdir()) == []
+
+
+def test_install_script_refuses_a_wheel_whose_sha256_differs(tmp_path: Path) -> None:
+    """A tampered download fails sha256sum -c: no uv call, no temp files left."""
+    done = run_install_script(tmp_path, "\n", served=b"tampered")
+    assert done.returncode != 0
+    assert not (tmp_path / "uv.log").exists()
+    assert list((tmp_path / "tmp").iterdir()) == []
+
+
+def test_install_script_pauses_and_installs_on_enter(tmp_path: Path) -> None:
+    """The prompt goes to the terminal file, not stdout, and Enter lets the install go on."""
+    done = run_install_script(tmp_path, "\n")
+    assert done.returncode == 0, done.stderr
+    assert (tmp_path / "uv.log").exists()
+    prompt = (tmp_path / "tty").read_text()
+    assert PAGE_URL in prompt and "press Enter to install" in prompt
+    assert "press Enter" not in done.stdout
+    assert list((tmp_path / "tmp").iterdir()) == []
+
+
+def test_install_script_stops_at_end_of_input_on_the_prompt(tmp_path: Path) -> None:
+    """End of input at the prompt stops with nothing installed and the temp directory removed."""
+    done = run_install_script(tmp_path, "")
+    assert done.returncode != 0
+    assert "stopped: nothing installed" in done.stderr
+    assert not (tmp_path / "uv.log").exists()
+    assert list((tmp_path / "tmp").iterdir()) == []
+
+
+def test_install_script_without_a_terminal_installs_and_says_so(tmp_path: Path) -> None:
+    """With no terminal the install goes ahead and the output records that there was no pause."""
+    done = run_install_script(tmp_path, None)
+    assert done.returncode == 0, done.stderr
+    assert (tmp_path / "uv.log").exists()
+    assert "no terminal to pause on" in done.stdout
+    assert list((tmp_path / "tmp").iterdir()) == []
+
+
+def test_install_script_yes_skips_the_pause(tmp_path: Path) -> None:
+    """TREX_WEB_GUI_YES=1 installs without writing a prompt to the terminal."""
+    done = run_install_script(tmp_path, "", yes=True)
+    assert done.returncode == 0, done.stderr
+    assert (tmp_path / "uv.log").exists()
+    assert (tmp_path / "tty").read_text() == ""
+
+
+def test_install_script_stops_without_uv(tmp_path: Path) -> None:
+    """Without uv the script stops before downloading anything, even with an unreachable download base."""
+    done = run_install_script(tmp_path, "\n", with_uv=False, rel_dir="missing")
+    assert done.returncode != 0
+    assert "uv is needed" in done.stderr
+    assert list((tmp_path / "tmp").iterdir()) == []
+
+
+# --- publish patch: install.sh -----------------------------------------------------------------------------
+
+def patch_install_sh(repo: Path) -> bytes:
+    """The install.sh text `publish patch` must upload for the repo's recorded wheel."""
+    record = json.loads((repo / "dist" / "release-patch-passed.json").read_text())
+    return release.install_script(release.patch_target(1), record["sha256"]).encode()
+
+
+def test_publish_uploads_install_sh_with_the_wheel(tmp_path: Path) -> None:
+    """A patch release is created with the wheel and then install.sh, and holds the generated bytes."""
+    repo, _ = checked_patch_repo(tmp_path)
+    gh = FakeGitHub(repo)
+    assert publish_patch(repo, gh) == 0
+    assert gh.release is not None
+    assert gh.release["assets"] == {PATCH_WHEEL: b"wheel", "install.sh": patch_install_sh(repo)}
+    create = [c for c in gh.calls if c[:3] == ["gh", "release", "create"]][0]
+    assert create[3:6] == ["v1.0.1", f"dist/{PATCH_WHEEL}", "dist/install.sh"]
+    assert (repo / "dist" / "install.sh").stat().st_mode & 0o777 == 0o644
+
+
+def test_a_draft_without_install_sh_gets_it_uploaded(tmp_path: Path) -> None:
+    """A draft holding only the wheel gets install.sh alone: one upload, no create."""
+    repo, _ = checked_patch_repo(tmp_path)
+    gh = FakeGitHub(repo)
+    gh.release = {"draft": True, "prerelease": False, "assets": {PATCH_WHEEL: b"wheel"}}
+    assert publish_patch(repo, gh) == 0
+    uploads = [c for c in gh.calls if c[:3] == ["gh", "release", "upload"]]
+    assert uploads == [["gh", "release", "upload", "v1.0.1", "dist/install.sh", "--clobber"]]
+    assert not [c for c in gh.calls if c[:3] == ["gh", "release", "create"]]
+    assert gh.release["assets"]["install.sh"] == patch_install_sh(repo)
+
+
+def test_a_draft_holding_both_files_gets_no_second_upload(tmp_path: Path) -> None:
+    """Once the draft holds the wheel and install.sh, publishing again makes no upload call."""
+    repo, _ = checked_patch_repo(tmp_path)
+    gh = FakeGitHub(repo)
+    gh.release = {"draft": True, "prerelease": False, "assets": {PATCH_WHEEL: b"wheel"}}
+    assert publish_patch(repo, gh) == 0
+    first = len(gh.calls)
+    assert publish_patch(repo, gh) == 0
+    assert not [c for c in gh.calls[first:] if c[:3] == ["gh", "release", "upload"]]
+
+
+def test_publish_refuses_a_released_install_sh_that_differs(tmp_path: Path,
+                                                            capsys: pytest.CaptureFixture[str]) -> None:
+    """A published release whose install.sh holds other bytes is refused after the download."""
+    repo, _ = checked_patch_repo(tmp_path)
+    gh = FakeGitHub(repo)
+    gh.release = {"draft": False, "prerelease": False,
+                  "assets": {PATCH_WHEEL: b"wheel", "install.sh": b"other\n"}}
+    capsys.readouterr()
+    assert publish_patch(repo, gh) == 1
+    assert "the released install.sh differs from the generated one" in capsys.readouterr().out
+    assert [c for c in gh.writes() if c[0] == "gh"] == []
+    assert not list((repo / "dist").glob("publish-check-*"))
+
+
+def test_publish_prints_the_latest_install_command(tmp_path: Path,
+                                                   capsys: pytest.CaptureFixture[str]) -> None:
+    """A released patch prints the one-line command first, then the pinned lines."""
+    repo, _ = checked_patch_repo(tmp_path)
+    gh = FakeGitHub(repo)
+    assert publish_patch(repo, gh) == 0
+    capsys.readouterr()
+    assert publish_patch(repo, gh, "--publish-draft") == 0
+    out = capsys.readouterr().out
+    latest = "curl -fsSL https://github.com/CRinATL/trex-web-gui/releases/latest/download/install.sh | sh"
+    pinned = f"curl -fLO https://github.com/CRinATL/trex-web-gui/releases/download/v1.0.1/{PATCH_WHEEL}"
+    assert latest in out and "or, pinned to this release:" in out
+    assert out.index(latest) < out.index("or, pinned to this release:") < out.index(pinned)
+
+
+def test_a_published_release_without_install_sh_is_refused(tmp_path: Path,
+                                                           capsys: pytest.CaptureFixture[str]) -> None:
+    """A published patch release cannot take install.sh, so publish refuses and writes nothing."""
+    repo, _ = checked_patch_repo(tmp_path)
+    gh = FakeGitHub(repo)
+    gh.release = {"draft": False, "prerelease": False, "assets": {PATCH_WHEEL: b"wheel"}}
+    capsys.readouterr()
+    assert publish_patch(repo, gh) == 1
+    assert ("the release v1.0.1 is published without install.sh; it cannot be added"
+            in capsys.readouterr().out)
+    assert [c for c in gh.writes() if c[0] == "gh"] == []
+
+
+def test_rc_and_final_publish_carry_no_install_sh(tmp_path: Path,
+                                                  capsys: pytest.CaptureFixture[str]) -> None:
+    """Only a patch carries install.sh: an rc publish creates with the wheel alone, no latest URL."""
+    assert not release.carries_install_sh(release.rc_target(1))
+    assert not release.carries_install_sh(release.FINAL)
+    assert release.carries_install_sh(release.patch_target(1))
+    repo = checked_repo(tmp_path)
+    gh = FakeGitHub(repo)
+    assert publish(repo, gh) == 0
+    create = [c for c in gh.calls if c[:3] == ["gh", "release", "create"]][0]
+    assert [a for a in create[4:] if not a.startswith("--") and "/" in a] == [
+        "dist/trex_web_gui-1.0.0rc1-py3-none-any.whl", "docs/releases/v1.0.0-rc1.md"]
+    assert "install.sh" not in " ".join(create)
+    assert "releases/latest" not in capsys.readouterr().out

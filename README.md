@@ -50,9 +50,38 @@ not.
 
 ## Install
 
-trex-web-gui is not on PyPI. Install the wheel from a [GitHub release](https://github.com/CRinATL/trex-web-gui/releases)
-with [`uv`](https://docs.astral.sh/uv/), where `<tag>` is the release's tag (for example `v1.0.0`) and `<version>` the
-same in PEP 440 form (`1.0.0`):
+trex-web-gui is not on PyPI. From 1.0.1 on, one command installs the latest release with
+[`uv`](https://docs.astral.sh/uv/) (until 1.0.1 is published the address answers 404, `curl` reports the 404 and `sh`
+installs nothing):
+
+```
+curl -fsSL https://github.com/CRinATL/trex-web-gui/releases/latest/download/install.sh | sh
+```
+
+On a terminal the script downloads the wheel, checks it against the sha256 written into the script, then prints that
+sha256 and the release page and stops on a prompt. Compare the sha256 with the one the release page lists next to the
+wheel, then press Enter to install. Without a terminal there is no pause: it installs at once and says so.
+`TREX_WEB_GUI_YES=1` skips the pause for an unattended install: put it before `sh`, as in `curl -fsSL … | TREX_WEB_GUI_YES=1 sh`.
+
+**Read the script first.** To read the script before running any of it, or on a host with no terminal:
+
+```
+curl -fLO https://github.com/CRinATL/trex-web-gui/releases/latest/download/install.sh
+```
+
+Read it, and compare its `sha256=` line with the sha256 the release page it names lists next to the wheel. Then run:
+
+```
+sh install.sh
+```
+
+GitHub computes the release page's sha256 from the uploaded wheel, so a match shows that the script and the wheel
+belong to the same published release, and that neither was swapped or damaged on the way. It does not show that the
+release itself is good: the signed tag (`git verify-tag`) and the release notes are the record of that.
+
+To install v1.0.0, or to pin a version, install the wheel of a
+[GitHub release](https://github.com/CRinATL/trex-web-gui/releases) by its address, where `<tag>` is the release's tag
+(for example `v1.0.0`) and `<version>` the same in PEP 440 form (`1.0.0`):
 
 ```
 uv tool install --python 3.12 https://github.com/CRinATL/trex-web-gui/releases/download/<tag>/trex_web_gui-<version>-py3-none-any.whl
