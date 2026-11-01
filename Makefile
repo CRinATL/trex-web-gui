@@ -16,10 +16,13 @@ VENDOR_PATHS := backend/vendor backend/scripts/vendor_trex.py backend/trex_web_g
 VENDOR_BASE  ?= $(shell git merge-base HEAD origin/main 2>/dev/null || git merge-base HEAD main 2>/dev/null || echo HEAD)
 VENDOR_TESTS ?= $(shell git diff --quiet $(VENDOR_BASE) -- $(VENDOR_PATHS) 2>/dev/null \
                   && [ -z "$$(git ls-files --others --exclude-standard -- $(VENDOR_PATHS))" ] && echo skip || echo run)
-# make test-py and check-py run pytest on every core (pytest-xdist): 7m42s on one, 61 s on 12, peak 5.5 GB on 12
-# (2026-10-28), hence the 8G cap. PYTEST_WORKERS=0 runs one process, for chasing a test that only fails under
+# make test-py and check-py run pytest on every core (pytest-xdist), hence the 8G cap; the usual times are in
+# `python3 -I scripts/gate.py times`. PYTEST_WORKERS=0 runs one process, for chasing a test that only fails under
 # load. Targets that can rewrite files in the repo (golden snapshots, wire fixtures) stay in one process.
 PYTEST_WORKERS ?= auto
+# make test-py schedules with worksteal: `load` sends consecutive tests to one worker in chunks, so a file of
+# slow tests becomes one serial chain. PYTEST_DIST=load restores the old scheduling.
+PYTEST_DIST ?= worksteal
 # vmThreads keeps every vitest worker in one process, so test-js gets the same cap as pytest; CI empties it.
 VITEST_CAP ?= systemd-run --user --scope -q -p MemoryMax=8G -p MemorySwapMax=0 --
 PYTEST  := systemd-run --user --scope -q -p MemoryMax=8G -p MemorySwapMax=0 -- $(UV) pytest
@@ -42,7 +45,7 @@ test: test-py test-js
 
 test-py:
 	@[ "$(VENDOR_TESTS)" = run ] || echo "vendor rebuild tests skipped: no change under the vendor paths since $(VENDOR_BASE) (VENDOR_TESTS=run forces them)"
-	$(PYTEST) -q -n $(PYTEST_WORKERS) $(if $(filter run,$(VENDOR_TESTS)),,-m "not real and not vendor_build and not golden")
+	$(PYTEST) -q -n $(PYTEST_WORKERS) --dist $(PYTEST_DIST) $(if $(filter run,$(VENDOR_TESTS)),,-m "not real and not vendor_build and not golden")
 
 test-js:
 	@if [ -f frontend/package.json ]; then $(VITEST_CAP) npm --prefix frontend test -- --run; fi
