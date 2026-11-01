@@ -333,6 +333,7 @@ fieldset.plain legend { padding: 0; font-weight: 600; font-size: 1.1em; margin-b
 /* Studio stream table: a selected row has an outline as well as a colour, so colour is never the only signal. */
 .profile-editor { display: flex; flex-direction: column; gap: .5rem; }
 .profile-info p { margin: 0; }
+.stream-table-block > .setups-buttons { margin: .5rem 0; }   /* the toolbar and the pager clear the table frame */
 .stream-table-scroll { overflow-x: auto; }
 .stream-table { border-collapse: collapse; width: 100%; }
 .stream-table th { text-align: left; }
