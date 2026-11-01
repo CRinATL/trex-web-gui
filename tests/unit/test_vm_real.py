@@ -7,9 +7,11 @@ import socket
 import subprocess
 import sys
 import time
+from collections.abc import Iterator
 from pathlib import Path
 
 import pytest
+from support import demo_ports_lock
 
 ROOT = Path(__file__).resolve().parent.parent.parent
 STUBBED = ("systemd-run", "qemu-img", "qemu-system-x86_64", "ssh", "ssh-keygen", "xorriso", "curl", "gpgv",
@@ -71,6 +73,13 @@ def _guest_ports_free() -> None:
         pytest.skip("127.0.0.1:2322 is in use")
 
 
+@pytest.fixture
+def demo_ports() -> Iterator[None]:
+    """Holds the demo-ports lock, so no other test binds or probes the guests' ports meanwhile."""
+    with demo_ports_lock():
+        yield
+
+
 def spawn(tail: list[str]) -> subprocess.Popen[bytes]:
     """Starts a sleeping python whose argv ends with tail; returns it once /proc shows the full argv."""
     p = subprocess.Popen([sys.executable, "-c", "import time; time.sleep(30)", *tail])
@@ -121,7 +130,8 @@ def test_real_ignores_a_pidfile_naming_another_process(tmp_path: Path, stubs: Pa
     assert "socat" not in calls(tmp_path)
 
 
-def test_demo_refuses_when_this_guests_gui_port_is_taken(tmp_path: Path, stubs: Path, row: Path) -> None:
+def test_demo_refuses_when_this_guests_gui_port_is_taken(
+        tmp_path: Path, stubs: Path, row: Path, demo_ports: None) -> None:
     """demo.sh up checks the selected guest's GUI port (8865), not 8765."""
     srv = socket.socket()
     try:
@@ -164,7 +174,7 @@ def test_demo_skips_the_build_while_another_guests_demo_serves(tmp_path: Path, s
     assert other_serving(tmp_path, stubs, dirs).returncode == 1
 
 
-def test_demo_status_all_names_every_row(tmp_path: Path, stubs: Path) -> None:
+def test_demo_status_all_names_every_row(tmp_path: Path, stubs: Path, demo_ports: None) -> None:
     """status --all prints one headed block per guest row, each from its own dir and ports."""
     for port in (2222, 2322, 2422, 8765, 8865, 8965):
         if taken(port):
@@ -185,16 +195,13 @@ def test_demo_usage_shows_the_whole_header(tmp_path: Path, stubs: Path) -> None:
         assert "status --all" in r.stdout and "DEMO_SH_LIB" in r.stdout
 
 
-def test_demo_status_all_flags_an_unresolved_row(tmp_path: Path, stubs: Path) -> None:
+def test_demo_status_all_flags_an_unresolved_row(tmp_path: Path, stubs: Path, demo_ports: None) -> None:
     """A row with no resolvable work dir (seam: an empty TREX_VM_DEMO_DIRS entry) reads unknown, rc 1."""
     for port in (2222, 2322, 2422, 8765, 8865, 8965):
         if taken(port):
             pytest.skip(f"127.0.0.1:{port} is in use")
     dirs = f"jammy= resolute={tmp_path}/r noble={tmp_path}/n"
     r = run("demo.sh", make_env(tmp_path, stubs, TREX_VM_DEMO_DIRS=dirs), "status", "--all")
-    # the check above races the other xdist workers: one binding a free port can get 8765/8865/8965 meanwhile
-    if "is served, not by demo.sh" in r.stdout:
-        pytest.skip("a demo GUI port was taken while the test ran")
     assert r.returncode == 1
     assert r.stdout == ("jammy:\nVM: unknown (could not resolve the work dir)\n"
                         "resolute:\nVM: stopped\nGUI: stopped\nnoble:\nVM: stopped\nGUI: stopped\n")
@@ -271,3 +278,44 @@ def test_demo_passes_the_daemon_port_for_non_jammy_rows(tmp_path: Path, stubs: P
     port = got["resolute"].split()[1]
     assert got["resolute"] == f"--daemon-port {port}\nport={port}\n" and int(port) > 8090
     assert "serve --port $PORT --server $server $daemon >" in (ROOT / "vm" / "demo.sh").read_text()
+
+
+def test_demo_ports_lock_excludes_another_process(tmp_path: Path) -> None:
+    """While the lock is held a second process cannot flock the file; once released it can."""
+    lock = tmp_path / "ports.lock"
+    probe = ("import fcntl, os, sys\n"
+             "fd = os.open(sys.argv[1], os.O_RDWR)\n"
+             "try:\n"
+             "    fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)\n"
+             "except BlockingIOError:\n"
+             "    sys.exit(1)\n")
+
+    def rc() -> int:
+        return subprocess.run([sys.executable, "-I", "-c", probe, str(lock)], timeout=30).returncode
+
+    with demo_ports_lock(lock):
+        assert rc() == 1
+    assert rc() == 0
+
+
+def test_demo_ports_lock_is_freed_when_its_holder_dies(tmp_path: Path) -> None:
+    """A held lock makes a waiter fail naming the path after wait_s; killing the holder frees it."""
+    lock = tmp_path / "ports.lock"
+    holder = ("import fcntl, os, sys, time\n"
+              "fd = os.open(sys.argv[1], os.O_CREAT | os.O_RDWR)\n"
+              "fcntl.flock(fd, fcntl.LOCK_EX)\n"
+              "print('held', flush=True)\n"
+              "time.sleep(60)\n")
+    p = subprocess.Popen([sys.executable, "-I", "-c", holder, str(lock)], stdout=subprocess.PIPE, text=True)
+    try:
+        assert p.stdout is not None and p.stdout.readline().strip() == "held"
+        with pytest.raises(TimeoutError, match=str(lock)):
+            with demo_ports_lock(lock, wait_s=0.3):
+                pytest.fail("entered while another process held the lock")
+    finally:
+        p.kill()
+        p.wait()
+        if p.stdout is not None:
+            p.stdout.close()
+    with demo_ports_lock(lock, wait_s=5):
+        pass
