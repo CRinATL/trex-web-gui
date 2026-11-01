@@ -148,7 +148,7 @@ export function combine(doc: PacketDoc, result: BuildResult | null, defs: Defini
       const def = protocol?.fields.find((d) => d.id === f.id) ?? { id: f.id, name: f.id }
       const docField = dl?.fields.find((d) => d.id === f.id)
       const bad = failure?.layer === i && failure.field === f.id
-      const range: Range | null = fieldRange(f, l.offset, end, k === l.fields.length - 1)
+      const range: Range | null = fieldRange(l.fields, k, l.offset, end)
       return {
         id: f.id, def, value: f.value, docValue: docField?.value, userSet: docField !== undefined, ignored: f.ignored === true, readOnly: false, range,
         shown: bad ? textOf(docField?.value) : String(f.hvalue ?? ''), bits: groupsOf(def, f.value), error: bad ? failure.message : null,
@@ -167,7 +167,7 @@ export function layersOfTree(tree: PacketTree): CombinedLayer[] {
     const fields = l.fields.map((f, k): CombinedField => {
       return {
         id: f.id, def: { id: f.id, name: f.id }, value: f.value, shown: String(f.hvalue ?? ''), userSet: false, ignored: f.ignored === true,
-        readOnly: true, range: fieldRange(f, l.offset, end, k === l.fields.length - 1), bits: null, error: null,
+        readOnly: true, range: fieldRange(l.fields, k, l.offset, end), bits: null, error: null,
       }
     })
     return { index: i, id: l.id, realId: l.real_id, offset: l.offset, validStructure: l.valid_structure, protocol: null, fields, error: null }

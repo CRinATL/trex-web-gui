@@ -860,9 +860,9 @@ first layer is fixed). Ctrl+D deletes the layer you opened last.
 
 Each row: the field's name, a control for its type, a `•` when you set it (with a `×` to reset it to the
 default), a `!` and the message when the build refused it, and its byte range (a button that marks the bytes;
-`not in packet` for an ignored field, `bits` for a sub-byte one; a layer's last field, such as its options, runs
-to the layer's end, since the backend reports a variable-size field by its nominal size; a variable-size field
-that is not last, such as ARP's `hwsrc`, still shows that nominal size).
+`not in packet` for an ignored field, `bits` for a sub-byte one; a field ends where the next field starts, and a
+layer's last field, such as its options, at the layer's end, since the backend reports a variable-size field such as
+ARP's `hwsrc` by its nominal size; a field that adds no bytes, such as a skipped optional one, has no range).
 
 - Numbers take decimal or `0x` hex; an ENUM takes a name from its list or a number; a value outside the
   definition's range is refused (`must be from 0 to 255`). Enter commits, Escape reverts the text.
@@ -908,7 +908,8 @@ packet, or stepped up/down with a count and step, IPs, ports, frame size fixed/s
 **IP sweep** (source, destination or both IPv4 addresses stepped through a range by count or last address;
 checksum in software or hardware), **Frame-size sweep** (UDP packets between two sizes, stepped or random),
 **VLAN** (a UDP packet behind one or two 802.1Q tags with VLAN and priority). A bad number says so beside the
-button (`Source port must be a whole number`). A preset's MAC mode is carried into the stream when the packet
+button (`Source port must be a whole number`); a refusal that arrives after you moved to another tab marks the
+preset's tab with `!` while another tab is showing, until its next **Open in editor**. A preset's MAC mode is carried into the stream when the packet
 is added to a profile.
 
 ### 10.7 Open a packet from a pcap

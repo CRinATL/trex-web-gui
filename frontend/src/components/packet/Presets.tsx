@@ -192,6 +192,9 @@ function VlanForm({ info, run, busy, status }: FormProps) {
 const FORMS: Record<string, (p: FormProps) => ReactNode> = { flood: FloodForm, ip_sweep: IpSweepForm, frame_size_sweep: FrameSweepForm, vlan: VlanForm }
 
 // The presets page. A preset's document goes to `onOpen` together with the stream's MAC-mode bits (null: leave them).
+// A tab whose preset was refused while another tab was showing: the form's error mark, and words for a screen reader.
+const refusedLabel = (name: string) => <>{name} <span className="mark-error" aria-hidden="true">!</span><span className="visually-hidden"> (refused)</span></>
+
 export function Presets({ onOpen }: { onOpen: (doc: PacketDoc, flags: number | null) => void }) {
   const [presets, setPresets] = useState<PresetInfo[] | null>(null)
   const [loadError, setLoadError] = useState<string | null>(null)
@@ -225,7 +228,7 @@ export function Presets({ onOpen }: { onOpen: (doc: PacketDoc, flags: number | n
   const current = shown.some((info) => info.id === selected) ? selected : (shown[0]?.id ?? '')
   return (
     <div className="presets">
-      <Tabs label="Presets" idPrefix="presets" tabs={shown.map((info) => ({ id: info.id, label: info.name }))} selected={current} onSelect={setSelected} />
+      <Tabs label="Presets" idPrefix="presets" tabs={shown.map((info) => ({ id: info.id, label: failure?.id === info.id && info.id !== current ? refusedLabel(info.name) : info.name }))} selected={current} onSelect={setSelected} />
       {shown.map((info) => {
         const Form = FORMS[info.id]
         return <div key={info.id} {...tabPanel('presets', info.id, current)}><Form info={info} run={run} busy={busy} status={failure?.id === info.id ? failure.text : null} /></div>

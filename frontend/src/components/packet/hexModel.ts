@@ -27,14 +27,19 @@ export function rangeOfField(field: Pick<PacketField, 'offset' | 'length'>, laye
   return [start, start + field.length]
 }
 
-// A field's bytes within its layer, which ends at `end`: none past the end. The layer's `last` field runs to the end,
-// because the service reports a variable-size field (IP, TCP, BOOTP and DHCP options; ARP's addresses) by its nominal
-// size, not its built one (vendored scapy_service.py:701-706); a fixed-size last field ends there anyway. Only the last
-// field is corrected: ARP's hwsrc, psrc and hwdst keep the nominal 2 bytes.
-export function fieldRange(field: Pick<PacketField, 'offset' | 'length'>, layerOffset: number, end: number, last: boolean): Range | null {
-  const r = rangeOfField(field, layerOffset)
+// The bytes of field `k` of a layer whose fields are `fields`, which starts at `layerOffset` and ends at `end`. The service
+// reports a variable-size field (IP, TCP, BOOTP and DHCP options; ARP's addresses) by its nominal size, not its built one
+// (vendored scapy_service.py:701-706), but each field's offset is where the build put it. So a field ends where the field
+// after it starts, and the last one at the layer's end; one followed by a field at its own offset added no bytes (a skipped
+// conditional field, IPv6's autopad, an empty DNS section) and has none. Offsets that go backwards keep the reported size.
+// Bit fields have no range.
+export function fieldRange(fields: Pick<PacketField, 'offset' | 'length'>[], k: number, layerOffset: number, end: number): Range | null {
+  const r = rangeOfField(fields[k], layerOffset)
   if (r === null || r[0] >= end) return null
-  return [r[0], last ? end : Math.min(r[1], end)]
+  const next = fields[k + 1]
+  if (next === undefined) return [r[0], end]
+  if (next.offset === fields[k].offset) return null
+  return [r[0], Math.min(next.offset > fields[k].offset ? layerOffset + next.offset : r[1], end)]
 }
 
 // The text of a range as the tree shows it: first and last byte in hex, then the length (B2.9).

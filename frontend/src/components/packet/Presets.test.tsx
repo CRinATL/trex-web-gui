@@ -161,6 +161,21 @@ describe('Presets', () => {
     expect(f.getByRole('button', { name: 'Open in editor' })).toBeEnabled()
   })
 
+  it('a refusal that arrives on another tab marks that tab while another tab shows', async () => {
+    let refuse: (e: unknown) => void = () => {}
+    vi.mocked(api.buildPreset).mockReturnValue(new Promise((_, reject) => { refuse = reject }))
+    render(<Presets onOpen={vi.fn()} />)
+    const f = await form('Flood')
+    await userEvent.click(f.getByRole('button', { name: 'Open in editor' }))
+    await userEvent.click(screen.getByRole('tab', { name: 'VLAN' }))      // the user moves on while the build runs
+    refuse(new ApiError(422, 'invalid_params', 'src_ip: not an IPv4 address'))
+    const flood = await screen.findByRole('tab', { name: 'Flood (refused)' })
+    expect(flood).toHaveTextContent('!')
+    expect(screen.getByRole('tab', { name: 'VLAN' })).toHaveAttribute('aria-selected', 'true')   // the user's tab stays
+    await userEvent.click(flood)
+    expect(within(screen.getByRole('region', { name: 'Flood' })).getByRole('alert')).toHaveTextContent('src_ip: not an IPv4 address')
+    expect(screen.getByRole('tab', { name: 'Flood' })).not.toHaveTextContent('!')                // shown where it belongs now
+  })
   it('one request at a time, and nothing opens after the page is gone', async () => {
     const onOpen = vi.fn()
     let finish: (r: PresetResult) => void = () => {}

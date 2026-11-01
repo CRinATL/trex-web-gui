@@ -117,6 +117,7 @@ button.th-sort:focus-visible { outline: 2px solid var(--accent); }
 .context-menu button.danger { color: var(--bad); }
 .check { display: flex; align-items: center; gap: .4rem; }
 .muted { color: var(--muted); }
+.visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }   /* read by a screen reader, not shown */
 .tabs-row { display: flex; align-items: flex-end; gap: .5rem; margin: .5rem 0 .75rem; }
 .tabs-end { margin-left: auto; display: flex; gap: .5rem; align-items: center; }
 .tabs { display: flex; gap: .25rem; }
@@ -441,7 +442,7 @@ fieldset.plain legend { padding: 0; font-weight: 600; font-size: 1.1em; margin-b
 .fe-import textarea { box-sizing: border-box; width: 100%; font-family: monospace; resize: vertical; }
 .presets section { margin-bottom: 1.5rem; max-width: 46rem; }
 .modal.presets .dialog-footer { position: sticky; bottom: -1rem; background: var(--bg); padding-bottom: 1rem; }   /* Close stays in view; -1rem cancels the modal's padding */
-.presets h3 { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }   /* the tab shows the name; the heading still names the form */
+.presets h3 { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }   /* its tab shows the name; the heading still names the form */
 .presets p { margin: 0 0 .5rem; }
 .presets .form-grid input[type="text"]:not(.narrow), .presets .form-grid select { min-width: 0; max-width: 100%; box-sizing: border-box; }
 .presets .form-grid input[type="text"]:not(.narrow) { width: 100%; }
