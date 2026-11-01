@@ -1212,3 +1212,116 @@ def test_publish_patch_accepts_a_tree_holding_the_records(tmp_path: Path,
     assert (repo / "PLAN.md").is_file() and (repo / "DEFERRED.md").is_file()
     assert publish_patch(repo, FakeGitHub(repo)) == 0
     assert "publish final runs in the public clone" not in capsys.readouterr().out
+
+
+WHEEL_BYTES = b"wheel"
+GOOD_SHA = hashlib.sha256(WHEEL_BYTES).hexdigest()
+PAGE_URL = "https://github.com/CRinATL/trex-web-gui/releases/tag/v1.0.1"
+
+
+def run_install_script(tmp_path: Path, tty: str | None, *, served: bytes = WHEEL_BYTES, sha: str = GOOD_SHA,
+                       yes: bool = False, with_uv: bool = True,
+                       rel_dir: str = "rel") -> subprocess.CompletedProcess[str]:
+    """Generate install.sh for patch 1 with `sha`, serve `served` as its wheel from a file:// base and run it
+    under /bin/sh with a stub uv that logs its arguments to tmp_path/uv.log. `tty` is the text of the
+    terminal file (None: the path does not exist); TMPDIR is tmp_path/tmp."""
+    target = release.patch_target(1)
+    script = tmp_path / "install.sh"
+    script.write_text(release.install_script(target, sha))
+    wheel = tmp_path / "rel" / target.tag / release.wheel_name(target.version)
+    wheel.parent.mkdir(parents=True)
+    wheel.write_bytes(served)
+    stub_dir = tmp_path / "bin"
+    stub_dir.mkdir()
+    (tmp_path / "tmp").mkdir()
+    if with_uv:
+        uv = stub_dir / "uv"
+        uv.write_text(f'#!/bin/sh\necho "$@" >> "{tmp_path}/uv.log"\n')
+        uv.chmod(0o755)
+    tty_path = tmp_path / "tty"
+    if tty is not None:
+        tty_path.write_text(tty)
+    env = {"PATH": f"{stub_dir}:/usr/bin:/bin" if with_uv else str(tmp_path / "empty"),
+           "TREX_WEB_GUI_RELEASES": f"file://{tmp_path}/{rel_dir}", "TREX_WEB_GUI_TTY": str(tty_path),
+           "TMPDIR": str(tmp_path / "tmp")}
+    if yes:
+        env["TREX_WEB_GUI_YES"] = "1"
+    if not with_uv:
+        (tmp_path / "empty").mkdir()
+    return subprocess.run(["/bin/sh", str(script)], env=env, capture_output=True, text=True, check=False)
+
+
+def test_install_script_names_this_release_and_its_page() -> None:
+    """The text carries the tag, wheel, sha256 and the release's own page, never the latest-release page."""
+    target = release.patch_target(1)
+    text = release.install_script(target, GOOD_SHA)
+    assert "tag='v1.0.1'" in text
+    assert "trex_web_gui-1.0.1-py3-none-any.whl" in text
+    assert GOOD_SHA in text
+    assert f"#   {PAGE_URL}\n" in text
+    assert f"page='{PAGE_URL}'" in text
+    assert "releases/latest" not in text
+    assert text == release.install_script(target, GOOD_SHA)
+
+
+def test_install_script_installs_a_good_wheel(tmp_path: Path) -> None:
+    """A wheel matching its sha256 is installed with the measured uv form; the temp directory is removed."""
+    done = run_install_script(tmp_path, "\n")
+    assert done.returncode == 0, done.stderr
+    args = (tmp_path / "uv.log").read_text().split()
+    assert args[:4] == ["tool", "install", "--python", "3.12"]
+    assert args[-1].endswith("/trex_web_gui-1.0.1-py3-none-any.whl")
+    assert len(args) == 5   # no extra flags: plain `uv tool install` replaces an older version (uv 0.12.5)
+    assert PAGE_URL in done.stdout
+    assert list((tmp_path / "tmp").iterdir()) == []
+
+
+def test_install_script_refuses_a_wheel_whose_sha256_differs(tmp_path: Path) -> None:
+    """A tampered download fails sha256sum -c: no uv call, no temp files left."""
+    done = run_install_script(tmp_path, "\n", served=b"tampered")
+    assert done.returncode != 0
+    assert not (tmp_path / "uv.log").exists()
+    assert list((tmp_path / "tmp").iterdir()) == []
+
+
+def test_install_script_pauses_and_installs_on_enter(tmp_path: Path) -> None:
+    """The prompt goes to the terminal file, not stdout, and Enter lets the install go on."""
+    done = run_install_script(tmp_path, "\n")
+    assert done.returncode == 0, done.stderr
+    assert (tmp_path / "uv.log").exists()
+    prompt = (tmp_path / "tty").read_text()
+    assert PAGE_URL in prompt and "press Enter to install" in prompt
+    assert "press Enter" not in done.stdout
+
+
+def test_install_script_stops_at_end_of_input_on_the_prompt(tmp_path: Path) -> None:
+    """End of input at the prompt stops with nothing installed and the temp directory removed."""
+    done = run_install_script(tmp_path, "")
+    assert done.returncode != 0
+    assert "stopped: nothing installed" in done.stderr
+    assert not (tmp_path / "uv.log").exists()
+    assert list((tmp_path / "tmp").iterdir()) == []
+
+
+def test_install_script_without_a_terminal_installs_and_says_so(tmp_path: Path) -> None:
+    """With no terminal the install goes ahead and the output records that there was no pause."""
+    done = run_install_script(tmp_path, None)
+    assert done.returncode == 0, done.stderr
+    assert (tmp_path / "uv.log").exists()
+    assert "no terminal to pause on" in done.stdout
+
+
+def test_install_script_yes_skips_the_pause(tmp_path: Path) -> None:
+    """TREX_WEB_GUI_YES=1 installs without writing a prompt to the terminal."""
+    done = run_install_script(tmp_path, "", yes=True)
+    assert done.returncode == 0, done.stderr
+    assert (tmp_path / "uv.log").exists()
+    assert (tmp_path / "tty").read_text() == ""
+
+
+def test_install_script_stops_without_uv(tmp_path: Path) -> None:
+    """Without uv the script stops before downloading anything, even with an unreachable download base."""
+    done = run_install_script(tmp_path, "\n", with_uv=False, rel_dir="missing")
+    assert done.returncode != 0
+    assert "uv is needed" in done.stderr
+    assert list((tmp_path / "tmp").iterdir()) == []
