@@ -1,6 +1,10 @@
 """Shared by the contract tests."""
 import asyncio
 import time
+from typing import Any
+
+import zmq
+from trex_web_gui.trexapi.ports import fail_fast
 
 
 class Recorder:
@@ -29,3 +33,13 @@ async def wait_for(pred, timeout: float) -> None:
         if time.monotonic() > end:
             raise AssertionError("condition not met in time")
         await asyncio.sleep(0.05)
+
+
+def short_transport_wait(c: Any, timeout_ms: int = 500) -> None:
+    """Make the next RPCs of client `c` give up after one attempt of `timeout_ms`. For a request a fake
+    refuses by dying on purpose, so it never answers: the vendored client otherwise waits 1 + ZMQ_RETRY_BASE
+    attempts (trex_conn.py:198, trex_req_resp_client.py:66) of RCVTIMEO = sync_timeout each, set once at
+    connect (trex_req_resp_client.py:413).
+    `fail_fast` drops the retries; RCVTIMEO shortens the one attempt."""
+    fail_fast(c)
+    c.conn.rpc.socket.setsockopt(zmq.RCVTIMEO, timeout_ms)

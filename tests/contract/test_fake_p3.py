@@ -6,6 +6,7 @@ import json
 import time
 
 import pytest
+from helpers import short_transport_wait
 from support import FIXTURES
 
 SUMMARY = json.loads((FIXTURES / "p3" / "summary.json").read_text())
@@ -105,13 +106,17 @@ def test_x_multiplier_uses_the_stream_rate(fake_trex, foreign_client):
 
 
 def test_a_multiplier_the_fake_does_not_model_fails_loudly_when_stats_are_asked(fake_trex, foreign_client):
+    """Stats for a port running a multiplier the fake does not model are refused: the fake dies with a
+    traceback and the transport gives up after one short attempt, with its no-answer error."""
     f, c = client_with_stream(fake_trex, foreign_client)
     c.start(ports=[0], mult="1kbps")                                # start is accepted exactly as before
     c.update(ports=[0], mult="50%")                                 # so is every unit on update
     from trex.common.trex_exceptions import TRexError
     # the stats request kills the fake; the client times out
-    with pytest.raises(TRexError):
+    short_transport_wait(c)
+    with pytest.raises(TRexError) as err:
         c.get_stats(ports=[0])
+    assert "Failed to get server response" in str(err.value)
     out = f.proc.communicate(timeout=5)[0]                          # the traceback, read after the death
     assert f.proc.returncode != 0
     assert "multiplier type 'percentage' is not modelled" in out

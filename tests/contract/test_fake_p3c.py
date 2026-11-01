@@ -6,6 +6,7 @@ service mode on, as the af_packet guest measured."""
 import json
 
 import pytest
+from helpers import short_transport_wait
 from support import FIXTURES
 
 SUMMARY = json.loads((FIXTURES / "p3c" / "summary.json").read_text())
@@ -226,16 +227,24 @@ def test_reset_removes_every_capture(rig):
 def _fake_refuses(rig, command, **params):
     """Send capture `command` raw, assert the fake never answers it, wait for the fake to exit non-zero and
     return its output. The fake dies with its HarnessError message on purpose instead of answering (a made-up
-    success would hide a typo)."""
-    assert not rig.cap(command, **params)       # the transport gives up on a server that never answers
+    success would hide a typo). The transport gives up after one short attempt, with its no-answer error."""
+    short_transport_wait(rig.c)
+    rc = rig.cap(command, **params)
+    assert not rc                               # the transport gives up on a server that never answers
+    assert "Failed to get server response" in rc.err()
     assert rig.fake.proc.wait(timeout=30) != 0
     return rig.fake.proc.communicate()[0]
 
 
 @pytest.mark.parametrize("params", [{"command": "bogus"}, {}])
 def test_unknown_or_missing_capture_command_is_never_answered(fake_trex, foreign_client, params):
+    """An unknown capture command, or none, is refused: the fake dies with its HarnessError text and the
+    transport gives up after one short attempt, with its no-answer error."""
     rig = Rig(fake_trex, foreign_client)
-    assert not rig.c._transmit("capture", params=params)
+    short_transport_wait(rig.c)
+    rc = rig.c._transmit("capture", params=params)
+    assert not rc
+    assert "Failed to get server response" in rc.err()
     assert rig.fake.proc.wait(timeout=30) != 0
     assert "HARNESS ERROR: capture command" in rig.fake.proc.communicate()[0]
 
@@ -246,6 +255,8 @@ def test_unknown_or_missing_capture_command_is_never_answered(fake_trex, foreign
     ("start", {"mode": "fixed", "tx": [0], "rx": [], "filter": ""}, "limit"),
 ])
 def test_missing_required_capture_parameter_is_refused(fake_trex, foreign_client, command, params, missing):
+    """A capture `start` without mode or limit, or a `fetch` without pkt_limit, is refused: the fake dies
+    naming the parameter and the transport gives up after one short attempt."""
     rig = Rig(fake_trex, foreign_client)
     cid = rig.start("fixed", 10, tx=[0])
     if command == "fetch":
