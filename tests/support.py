@@ -84,7 +84,8 @@ FIXTURES = ROOT / "tests" / "fixtures"
 
 
 def free_port_pair() -> tuple[int, int]:
-    """Two free loopback ports (rpc, pub). Racy by nature; the fake fails loudly if one is taken."""
+    """Two free loopback ports (rpc, pub). Racy by nature: another process can take a port before the caller
+    binds it. The fake is started on port 0 instead, which it binds itself."""
     socks = [socket.socket() for _ in range(2)]
     for s in socks:
         s.bind(("127.0.0.1", 0))

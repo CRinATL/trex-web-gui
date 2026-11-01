@@ -10,9 +10,9 @@ seq scheme from summary.json (per_session_seq: each reader counts from 0).
 Network delay (P3b follow-up 4): --delay-ms D and --jitter-ms J (ints, default 0) hold every reply and every
 PUB message D + U(-J, J) ms (floored at 0) after it was produced, one FIFO per peer (the RPC socket is a
 ROUTER, one queue per identity; PUB is one queue), so jitter never reorders a peer's stream and two clients'
-delays overlap instead of adding up. U comes from random.Random(--seed), which defaults to rpc_port; the ready
-line prints delay_ms, jitter_ms and seed. With D = J = 0 a reply goes out in the same loop iteration, as
-before.
+delays overlap instead of adding up. U comes from random.Random(--seed), which defaults to the bound
+rpc port; the ready line prints delay_ms, jitter_ms and seed. With D = J = 0 a reply goes out in the same
+loop iteration, as before.
 
 Known divergences from the real server:
 - link, LED and flow-control changes are accepted; the measured net_af_packet port reports them
@@ -115,6 +115,10 @@ Known divergences from the real server:
   own, rx_good_*/rx_q0_* the peer's, pid ^ 1); the recorded values count 60 bytes per 64-byte-counted packet,
   so bytes are obytes minus the fake's 4 per packet. The other names stay as recorded.
 
+Ports: a port of 0 means "bind any free port"; the fake binds it itself and the ready line reports the bound
+ports (rpc=<port> pub=<port>), so a caller never chooses a port and loses it to another process before the
+fake binds. A non-zero port is bound exactly as given.
+
 Usage: python fake_trex.py <fixtures_dir> <rpc_port> <pub_port> [--reject-api] [--seq-gap-at-start]
     [--server-version V] [--stack S] [--drop METHOD]... [--delay-ms D] [--jitter-ms J] [--seed S]"""
 import argparse
@@ -150,8 +154,8 @@ def zipb(b):
 
 ap = argparse.ArgumentParser()
 ap.add_argument("fixtures")
-ap.add_argument("rpc_port", type=int)
-ap.add_argument("pub_port", type=int)
+ap.add_argument("rpc_port", type=int, help="0 binds any free port; the ready line reports the bound one")
+ap.add_argument("pub_port", type=int, help="0 binds any free port; the ready line reports the bound one")
 ap.add_argument("--reject-api", action="store_true",
                 help="answer api_sync_v2 with the recorded 'too new' error")
 ap.add_argument("--seq-gap-at-start", action="store_true",
@@ -168,7 +172,7 @@ ap.add_argument("--delay-ms", type=int, default=0,
                 help="hold every reply and PUB message this long (a remote backend)")
 ap.add_argument("--jitter-ms", type=int, default=0,
                 help="uniform +/- jitter on --delay-ms, order kept per peer")
-ap.add_argument("--seed", type=int, help="seed for the jitter draws (default: rpc_port)")
+ap.add_argument("--seed", type=int, help="seed for the jitter draws (default: the bound rpc port)")
 ap.add_argument("--pub-replay", help="JSONL of recorded PUB frames ({t, frame, phase}): replay the raw "
                 "frames at their recorded pace, looping, instead of the synthetic trex-global")
 ap.add_argument("--pub-garbage", action="store_true",
@@ -179,8 +183,6 @@ ap.add_argument("--pub-big", type=int, default=0,
                 help="every 2 s send one raw (uncompressed) frame named big, BYTES long on the wire")
 ap.add_argument("--drop", action="append", default=[], help="answer METHOD as unknown (negative control)")
 a = ap.parse_args()
-if a.seed is None:
-    a.seed = a.rpc_port
 
 def _due(now, last_due, d, j, rng):
     """When a message produced at `now` goes out: now + D + U(-J, J) ms (floored at 0), never before the
@@ -1222,9 +1224,19 @@ else:
 
 ctx = zmq.Context()
 rep = ctx.socket(zmq.ROUTER)
-rep.bind(f"tcp://127.0.0.1:{a.rpc_port}")
 pub = ctx.socket(zmq.PUB)
-pub.bind(f"tcp://127.0.0.1:{a.pub_port}")
+
+
+def bind_port(sock, port):
+    """Bind `sock` on loopback port `port` (0: any free port) and return the port it is bound to."""
+    sock.bind(f"tcp://127.0.0.1:{port or '*'}")
+    return int(sock.getsockopt_string(zmq.LAST_ENDPOINT).rsplit(":", 1)[1])
+
+
+a.rpc_port = bind_port(rep, a.rpc_port)
+a.pub_port = bind_port(pub, a.pub_port)
+if a.seed is None:
+    a.seed = a.rpc_port
 
 def replay_schedule(path):
     """[(offset_s, raw_frame)] from a --pub-replay JSONL, plus the loop length in seconds. Each phase's `t`
