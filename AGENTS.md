@@ -34,8 +34,9 @@ do not "fix" them.
   `backend/vendor/patches/` and a row in `backend/vendor/patches.md`, never by editing the copy.
 - A change in behaviour comes with a test that fails without it.
 - `make check` runs pytest on every core (`--dist worksteal`). A test that binds or probes a fixed port (the
-  guest VM's, 8765/8865/8965) holds `demo_ports_lock()` from `tests/support.py`, never nested; any other test
-  takes a port from `free_port()`.
+  guest VM's, 8765/8865/8965) holds `demo_ports_lock()` from `tests/support.py`, never nested. A test that starts
+  the fake TRex uses the `fake_trex` fixture (it binds port 0 itself); a test that needs its own port binds port 0
+  and reads the port back, rather than choosing one and binding it later.
 
 ## Authorship
 

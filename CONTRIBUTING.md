@@ -8,10 +8,10 @@ response-time promise. Questions about TRex itself belong upstream, at
 ## Prerequisites
 
 - **Linux with a systemd user session.** The Makefile runs the Python and frontend tests under `systemd-run --user`
-  with a memory cap, so a test that allocates without bound is killed on its own instead of exhausting the machine. Without a user
-  session (a container, some CI runners), run the tests with the cap removed:
-  `make test PYTEST="uv run --project backend pytest" VITEST_CAP=`. `make check-py`, which runs the unit tests on Python 3.12,
-  3.13 and 3.14, has no such override and needs the session.
+  with a memory cap, so a test that allocates without bound is killed on its own instead of exhausting the machine.
+  Without a user session (a container, some CI runners), run the tests with the cap removed:
+  `make test PYTEST="uv run --project backend pytest" VITEST_CAP=`. `make check-py`, which runs the unit tests on
+  Python 3.12, 3.13 and 3.14, has no such override and needs the session.
 - **[uv](https://docs.astral.sh/uv/).** It provides Python 3.12 or later and the backend's dependencies; nothing is
   installed system-wide.
 - **Node.js with npm**, a version `frontend/package.json` accepts (`engines`: `^22.22.2 || ^24.15.0 || >=26.0.0`,

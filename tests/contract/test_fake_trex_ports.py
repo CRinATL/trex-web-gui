@@ -24,6 +24,7 @@ def start(rpc: int, pub: int) -> tuple[subprocess.Popen, re.Match]:
 
 
 def test_the_fake_binds_its_own_ports_when_given_zero() -> None:
+    """Port 0: the fake binds and reports ephemeral ports, and answers on them."""
     proc, m = start(0, 0)
     ctx = zmq.Context()
     try:
@@ -40,6 +41,7 @@ def test_the_fake_binds_its_own_ports_when_given_zero() -> None:
 
 
 def test_the_fake_binds_explicit_ports_as_given() -> None:
+    """Explicit ports: the fake binds exactly the ports given."""
     rpc, pub = free_port_pair()
     proc, m = start(rpc, pub)
     try:

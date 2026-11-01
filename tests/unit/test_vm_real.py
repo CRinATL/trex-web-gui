@@ -291,6 +291,7 @@ def test_demo_ports_lock_excludes_another_process(tmp_path: Path) -> None:
              "    sys.exit(1)\n")
 
     def rc() -> int:
+        """Exit status of a second process trying a non-blocking flock on the lock file."""
         return subprocess.run([sys.executable, "-I", "-c", probe, str(lock)], timeout=30).returncode
 
     with demo_ports_lock(lock):
