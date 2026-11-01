@@ -30,7 +30,11 @@ PR).
 
 Run it as `uv run --project backend python -I -B scripts/release.py ...` (make release-rc, make release). Exit
 codes: 0 releasable (published, for publish), 1 a precondition or a step failed, 3 the real tier was skipped
-(RELEASE_REAL=skip)."""
+(RELEASE_REAL=skip).
+
+`publish patch` also writes dist/install.sh (install_script, a pure function of the target and the wheel's
+sha256), uploads it to the draft with the wheel and checks the released copy byte for byte; a published patch
+release without it is refused, since a published release cannot take another file."""
 import argparse
 import datetime
 import hashlib
@@ -80,11 +84,18 @@ def rc_target(n: int) -> Target:
 
 
 PATCH_VERSION = re.compile(r"1\.0\.([1-9]\d*)")
+INSTALL_SH = "install.sh"
 
 
 def patch_target(n: int) -> Target:
     """Patch n of 1.0: version 1.0.<n>, tag v1.0.<n>, its own public notes file; a full release."""
     return Target("patch", f"1.0.{n}", f"v1.0.{n}", f"docs/releases/v1.0.{n}.md", False)
+
+
+def carries_install_sh(target: Target) -> bool:
+    """Whether the release carries install.sh: only a patch does. v1.0.0 is published and immutable, and
+    `releases/latest` never resolves to a pre-release, so final and rc keep their one asset."""
+    return target.name == "patch"
 
 
 def resolve_target(name: str, pyproject_text: str) -> Target | str:
@@ -737,6 +748,10 @@ class Publisher:
             print(f"tag: pushed {t.tag}")
         else:
             print(f"tag: GitHub has {t.tag}")
+        if carries_install_sh(t):
+            script = self.root / "dist" / INSTALL_SH
+            script.write_bytes(install_script(t, rec["sha256"]).encode())
+            script.chmod(0o644)
         state = self.release(rec, wheel)
         self.verify(rec)
         return state
@@ -745,28 +760,34 @@ class Publisher:
         """Create the release, or finish one a failure left as a draft or without the wheel: each round reads
         the release and takes the one step it lacks, so a failed step is never repeated blindly."""
         t, fails = self.target, 0
+        files = {rec["wheel"]: wheel} | ({INSTALL_SH: f"dist/{INSTALL_SH}"} if carries_install_sh(t) else {})
         for _ in range(3 * ATTEMPTS):
             rel = self.view()
             if rel is not None and rel["isPrerelease"] != t.prerelease:
                 kind = "a pre-release" if rel["isPrerelease"] else "not a pre-release"
                 raise PublishError(f"the release {t.tag} is {kind}; fix it on GitHub, it is never changed "
                                    "here")
-            has = rel is not None and any(a["name"] == rec["wheel"] for a in rel["assets"])
+            have = {a["name"] for a in rel["assets"]} if rel is not None else set()
+            missing = [path for name, path in files.items() if name not in have]
+            if rel is not None and not rel["isDraft"] and INSTALL_SH in files and INSTALL_SH not in have:
+                raise PublishError(f"the release {t.tag} is published without {INSTALL_SH}; it cannot be "
+                                   "added")
             if rel is None:
-                argv = ["gh", "release", "create", t.tag, wheel, "--title", f"trex-web-gui {t.version}",
-                        "--notes-file", t.notes]
+                argv = ["gh", "release", "create", t.tag, *files.values(), "--title",
+                        f"trex-web-gui {t.version}", "--notes-file", t.notes]
                 argv += (["--prerelease"] if t.prerelease else []) + ["--verify-tag"]
                 argv += ["--draft"] if self.public else []
                 what = "creating the release"
-            elif not has:
-                argv, what = ["gh", "release", "upload", t.tag, wheel, "--clobber"], "uploading the wheel"
+            elif missing:
+                argv = ["gh", "release", "upload", t.tag, *missing, "--clobber"]
+                what = "uploading " + " and ".join("the wheel" if m == wheel else INSTALL_SH for m in missing)
             elif rel["isDraft"] and self.public and not self.publish_draft:
-                print(f"release: {t.tag} is a draft with {rec['wheel']}")
+                print(f"release: {t.tag} is a draft with {' and '.join(files)}")
                 return "draft"
             elif rel["isDraft"]:
                 argv, what = ["gh", "release", "edit", t.tag, "--draft=false"], "publishing the draft release"
             else:
-                print(f"release: {t.tag} is published with {rec['wheel']}")
+                print(f"release: {t.tag} is published with {' and '.join(files)}")
                 return "released"
             print(f"release: {what}")
             rc, out = self.sh(argv)
@@ -776,14 +797,19 @@ class Publisher:
         raise PublishError(f"the release {t.tag} is still not complete after {3 * ATTEMPTS} rounds")
 
     def verify(self, rec: dict) -> None:
-        """Download the released wheel and compare its sha256 with the one the check built."""
+        """Download the released wheel and compare its sha256 with the one the check built; for a patch also
+        download install.sh and compare its bytes with the generated text."""
         stamp = datetime.datetime.now(datetime.UTC).strftime("%Y-%m-%d-%H%M%SZ")
         where = self.root / "dist" / f"publish-check-{stamp}"
+        names = [rec["wheel"]] + ([INSTALL_SH] if carries_install_sh(self.target) else [])
+        script = None
         try:
+            patterns = [x for n in names for x in ("--pattern", n)]
             self.must("downloading the released wheel", ["gh", "release", "download", self.target.tag,
-                                                         "--pattern", rec["wheel"], "--dir", str(where),
-                                                         "--clobber"])
+                                                         *patterns, "--dir", str(where), "--clobber"])
             got = hashlib.sha256((where / rec["wheel"]).read_bytes()).hexdigest()
+            if INSTALL_SH in names:
+                script = (where / INSTALL_SH).read_bytes()
         finally:
             for f in where.glob("*"):
                 f.unlink()
@@ -791,7 +817,11 @@ class Publisher:
                 where.rmdir()
         if got != rec["sha256"]:
             raise PublishError(f"the released wheel's sha256 is {got}, not the built {rec['sha256']}")
+        if script is not None and script != install_script(self.target, rec["sha256"]).encode():
+            raise PublishError("the released install.sh differs from the generated one")
         print(f"verify: the released wheel's sha256 is {got}, as built")
+        if script is not None:
+            print(f"verify: the released {INSTALL_SH} is the generated one")
 
 
 def _publish(target: Target, root: Path, sh: Sh, sleep: Callable[[float], None], env: Mapping[str, str],
@@ -809,10 +839,13 @@ def _publish(target: Target, root: Path, sh: Sh, sleep: Callable[[float], None],
               f"`{_publish_make(target)} {flag}` to publish it.")
         return 0
     wheel, digest = wheel_name(target.version), json.loads(_read(_passed(root, target)) or "{}").get("sha256")
-    print(f"publish {target.name}: {target.tag} is released. On the host:\n"
-          f"curl -fLO {RELEASES}/{target.tag}/{wheel}\n"
-          f"echo '{digest}  {wheel}' | sha256sum -c -\n"
-          f"uv tool install --python 3.12 ./{wheel}")
+    pinned = (f"curl -fLO {RELEASES}/{target.tag}/{wheel}\n"
+              f"echo '{digest}  {wheel}' | sha256sum -c -\n"
+              f"uv tool install --python 3.12 ./{wheel}")
+    if carries_install_sh(target):
+        latest = f"curl -fsSL {RELEASES.removesuffix('/download')}/latest/download/{INSTALL_SH} | sh"
+        pinned = f"{latest}\nor, pinned to this release:\n{pinned}"
+    print(f"publish {target.name}: {target.tag} is released. On the host:\n{pinned}")
     return 0
 
 
