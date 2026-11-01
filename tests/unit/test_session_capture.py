@@ -732,8 +732,9 @@ def test_service_rows_are_capture_busy_for_stop_save_and_remove(rig: Rig) -> Non
         await s.capture_sync()
         s._busy = {1: "ping"}
         for call in (s.recorder_stop, s.recorder_save, s.recorder_remove):
-            with refused("capture_busy"):
+            with refused("capture_busy") as e:
                 await call(5)
+            assert "on port(s) 1" in str(e.value)       # the message names the held port
         assert rig.server.n("remove") == 0 and rig.server.n("stop") == 0
     rig.run(body)
 

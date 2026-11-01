@@ -79,7 +79,7 @@ export function Recorders({ spool }: { spool: SpoolSource }) {
               const saved = file !== null && !file.partial
               // A partial file of this capture on this server survives a reconnect and a reload, so it comes from the listing.
               const partial = (spool.listing?.files ?? []).some((f) => f.partial && f.capture_id === r.id && f.server === server)
-              const resumable = partial || (msg?.error ?? null) !== null || Boolean(errors[r.id])
+              const resumable = partial || (msg?.error ?? null) !== null || results[r.id] === null   // null: the Save call itself failed, not a Stop or Remove
               const bufferRow = r.endpoint === null && !r.service && !isMonitor
               const error = errors[r.id] || msg?.error || ''
               return (

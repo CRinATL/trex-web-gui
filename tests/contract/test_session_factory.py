@@ -19,9 +19,10 @@ class _Closer:
 
 
 def test_run_closes_every_session_when_one_close_raises(new_session) -> None:
-    """A close() that raises does not skip the sessions made before it: all are closed, then it propagates."""
-    first, second = _Closer(fail_first=True), _Closer(fail_first=False)
+    """A close() that raises does not skip the sessions made before it: all are closed, then it propagates.
+    Sessions close last-made first, so the second-made one raises and the first-made must still be closed."""
+    first, second = _Closer(fail_first=False), _Closer(fail_first=True)
     new_session.made.extend([first, second])
     with pytest.raises(RuntimeError):
         new_session.run(asyncio.sleep(0))
-    assert second.closes == 1
+    assert first.closes == 1 and second.closes == 1

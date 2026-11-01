@@ -90,9 +90,9 @@ class WiresharkPipe:
 
     @property
     def process_alive(self) -> bool:
-        """Wireshark still runs, whether or not the pipe does (a stopped pipe leaves the
-        window). Does not reap a running leader; once it has exited, SIGTERMs the group's surviving members,
-        reaps it and returns False."""
+        """Wireshark still runs, whether or not the pipe does (a stopped pipe leaves the window).
+        Does not reap a running leader; once it has exited, SIGTERMs the group's surviving members, reaps it
+        and returns False."""
         if self._proc is None:
             return False
         if not self._leader_exited():

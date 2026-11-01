@@ -188,7 +188,8 @@ def test_full_queue_drops_and_counts(tmp_path: Path, pipes: Any) -> None:
 def _gone(pid: int) -> bool:
     """The process is gone or a zombie (a reaped one has no /proc entry; it may vanish mid-read)."""
     try:
-        return open(f"/proc/{pid}/stat").read().split()[2] == "Z"
+        with open(f"/proc/{pid}/stat") as f:
+            return f.read().split()[2] == "Z"
     except FileNotFoundError:
         return True
 
@@ -204,6 +205,19 @@ def test_a_group_member_that_outlives_the_leader_is_signalled(
     cpid = int(child.read_text())
     wait_until(loop, lambda: not p.process_alive)       # sees the exit and signals the group
     wait_until(loop, lambda: _gone(cpid))
+
+
+def test_kill_reaches_a_member_that_ignores_sigterm(tmp_path: Path, pipes: Any, loop: Any) -> None:
+    """kill() ends a group member that ignores SIGTERM once the leader exited: the last SIGKILL reaches it."""
+    member = tmp_path / "member.pid"
+    make, _ = pipes
+    p = make()
+    p.start(stub(tmp_path, f"sh -c 'trap \"\" TERM; echo $$ > \"{member}\"; exec sleep 30' &\nexit 0"))
+    wait_until(loop, lambda: member.exists() and member.read_text().strip() != "" and p._leader_exited())
+    mpid = int(member.read_text())
+    assert not _gone(mpid)
+    p.kill()
+    wait_until(loop, lambda: _gone(mpid))
 
 
 def test_stop_while_opening_with_nothing_queued_delivers_an_empty_capture(

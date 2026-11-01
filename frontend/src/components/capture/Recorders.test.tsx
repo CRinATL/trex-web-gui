@@ -164,6 +164,18 @@ describe('Recorders', () => {
     expect(within(rowOf(1)).getByRole('alert')).toHaveTextContent('TRex went away')
     expect(within(rowOf(1)).getByRole('button', { name: 'Resume' })).toBeEnabled()
   })
+  it('a failed Stop does not relabel Save as Resume', async () => {
+    // A never-saved row whose Stop fails: the error shows, and Save stays Save (only a failed Save call offers Resume).
+    mockState([row({ id: 1, state: 'ACTIVE', count: 10 })])
+    vi.spyOn(api, 'recorderStop').mockRejectedValue(new api.ApiError(502, 'x', 'stop went wrong'))
+    const { rerender } = render(<Recorders spool={spool()} />)
+    await userEvent.click(within(rowOf(1)).getByRole('button', { name: 'Stop' }))
+    mockState([row({ id: 1, state: 'STOPPED', count: 10 })])
+    rerender(<Recorders spool={spool()} />)
+    expect(within(rowOf(1)).getByRole('alert')).toHaveTextContent('stop went wrong')
+    expect(within(rowOf(1)).getByRole('button', { name: 'Save' })).toBeEnabled()
+    expect(within(rowOf(1)).queryByRole('button', { name: 'Resume' })).toBeNull()
+  })
   it('a Save result does not carry over to a new connection', async () => {
     const r = [row({ id: 1, count: 10 })]
     mockState(r, { session: session({ connect_seq: 'u:1' }) })

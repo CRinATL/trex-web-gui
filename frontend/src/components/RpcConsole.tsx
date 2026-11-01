@@ -15,6 +15,7 @@ export function RpcConsole({ entries, on, includePolling = false }: { entries: R
   const rows = useMemo(() => entries.map((m) => ({ m, json: m.truncated !== undefined ? (m.body as string) : JSON.stringify(m.body) })), [entries])
   const shown = rows.filter(({ json }) => !filter || json.includes(filter))
   const line = (m: RpcMsg, body: string) => `${m.direction === 'request' ? '→' : '←'} ${body}`
+  // the "64 KB" below is RPC_BODY_MAX in backend/trex_web_gui/sessions/trex_session.py: change them together
   // a body the backend cut (`truncated` is its full length) is already a string; its note goes last
   const note = (m: RpcMsg) => (m.truncated === undefined ? '' : `… (cut by the backend at 64 KB of ${m.truncated} characters)`)
   const text = shown.map(({ m, json }) => line(m, json.length > MAX_BODY

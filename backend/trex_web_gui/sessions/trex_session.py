@@ -30,7 +30,7 @@ from .port_config import PortConfigCommands
 
 log = logging.getLogger(__name__)
 _T = TypeVar("_T")
-RPC_BODY_MAX = 64 * 1024               # most characters of a body's JSON text the RPC console publishes
+RPC_BODY_MAX = 64 * 1024               # most body JSON characters published; RpcConsole.tsx says "64 KB"
 _PROCESS_START_NS = time.time_ns()     # prefix of connect_seq: a GUI restart never repeats a value
 Publish = Callable[[dict[str, object]], None]
 
