@@ -24,7 +24,8 @@ def smoke() -> ModuleType:
     return mod
 
 
-TRACKED = ["trex_web_gui/__init__.py", "trex_web_gui/studio/templates/LLDP.trp"]
+TRACKED = ["trex_web_gui/__init__.py", "trex_web_gui/studio/templates/LLDP.trp",
+           "trex_web_gui/studio/templates/DHCP-DISCOVER.trp"]
 Member = tuple[str, int, bytes]
 
 
@@ -33,6 +34,7 @@ def good_members() -> list[Member]:
     return [
         ("trex_web_gui/__init__.py", 0o644, b""),
         ("trex_web_gui/studio/templates/LLDP.trp", 0o644, b"{}"),
+        ("trex_web_gui/studio/templates/DHCP-DISCOVER.trp", 0o644, b"{}"),
         ("trex_web_gui/static/index.html", 0o644, b"<script>trex-web-gui.theme</script>"),
         ("trex_web_gui/static/assets/app.js", 0o644, b""),
         ("trex_web_gui-1.0.0.dist-info/licenses/LICENSE", 0o644, b""),
@@ -198,3 +200,11 @@ def test_run_reaps_a_serve_that_never_gets_going(smoke: ModuleType, tmp_path: Pa
     pid = int(pidfile.read_text())
     with pytest.raises(ProcessLookupError):
         os.kill(pid, 0)
+
+
+def test_a_wheel_without_a_bundled_template_is_refused(smoke: ModuleType, tmp_path: Path) -> None:
+    """Each shipped packet template must be in the wheel: LLDP and DHCP-DISCOVER are checked by name."""
+    for name in ("LLDP", "DHCP-DISCOVER"):
+        member = f"trex_web_gui/studio/templates/{name}.trp"
+        members = [m for m in good_members() if m[0] != member]
+        assert f"no {member}" in problems(smoke, tmp_path, members, [t for t in TRACKED if t != member])

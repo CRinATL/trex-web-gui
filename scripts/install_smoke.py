@@ -88,8 +88,9 @@ def check_wheel(wheel: Path, tracked: list[str]) -> list[str]:
         versioned_so = ".so." in n.rsplit("/", 1)[-1]
         if n.endswith((".so", ".pyc")) or versioned_so or any(p in "/" + n for p in BAD_PARTS[2:]):
             found.append(f"forbidden member: {n}")
-    if "trex_web_gui/studio/templates/LLDP.trp" not in names:
-        found.append("no trex_web_gui/studio/templates/LLDP.trp")
+    for bundled in ("LLDP", "DHCP-DISCOVER"):
+        if f"trex_web_gui/studio/templates/{bundled}.trp" not in names:
+            found.append(f"no trex_web_gui/studio/templates/{bundled}.trp")
     for i in infos:
         mode = (i.external_attr >> 16) & 0o777
         if mode not in MODES:
@@ -383,7 +384,8 @@ def smoke_python(py: str, root: Path, wheel: Path, version: str, say: Callable[[
         r, _ = timed_get("/api/studio/packet/templates")
         need(r.status_code == 200, f"gave {r.status_code}")
         ids = [t["id"] for t in r.json()["server"]]
-        need("trex-web-gui/LLDP" in ids, "trex-web-gui/LLDP not listed")
+        for bundled in ("trex-web-gui/LLDP", "trex-web-gui/DHCP-DISCOVER"):
+            need(bundled in ids, f"{bundled} not listed")
         return f"{len(ids)} server templates"
 
     def c_hello() -> str:

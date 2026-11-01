@@ -64,6 +64,11 @@ describe('LayerList', () => {
     expect(screen.getByRole('img', { name: 'invalid structure' })).toHaveTextContent('!')
   })
 
+  it('title says not decoded when the bytes hold no such layer (real_id null), never as null', () => {
+    render(<LayerList layers={[layer(0, 'Ether'), layer(1, 'DHCP', { realId: null })]} expanded={new Set()} {...props()} />)
+    expect(screen.getByRole('button', { name: /DHCP \(not decoded\)/ })).toBeInTheDocument()
+    expect(screen.queryByText(/as null/)).toBeNull()
+  })
   it('read-only has no menu and no inputs', async () => {
     const { container } = render(<LayerList layers={stack()} expanded={new Set([0, 1, 2])} readOnly {...props()} />)
     await userEvent.pointer({ keys: '[MouseRight]', target: screen.getByRole('button', { name: /^IP/ }) })

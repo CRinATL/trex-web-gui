@@ -1,5 +1,6 @@
 import { Fragment, useEffect, useId, useRef, useState, type ReactNode } from 'react'
 import { buildPreset, listPresets, type PacketDoc, type PresetInfo } from '../../api'
+import { Tabs, tabPanel } from '../../ui/Tabs'
 
 // The four presets (B2.8, replacing Simple Mode): one form each. A form turns its text boxes into the parameters the backend
 // reads (strict: whole numbers as numbers, everything else as text) and Presets asks the backend for the document.
@@ -196,6 +197,7 @@ export function Presets({ onOpen }: { onOpen: (doc: PacketDoc, flags: number | n
   const [loadError, setLoadError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
   const [failure, setFailure] = useState<{ id: string; text: string } | null>(null)
+  const [selected, setSelected] = useState('')
   const latest = useRef(0)
 
   useEffect(() => {
@@ -218,11 +220,15 @@ export function Presets({ onOpen }: { onOpen: (doc: PacketDoc, flags: number | n
 
   if (loadError !== null) return <p className="field-error" role="alert"><span className="mark-error" aria-hidden="true">!</span> The presets could not be loaded: {loadError}</p>
   if (presets === null) return <p className="muted" role="status">Loading presets…</p>
+  // One tab per preset, so the dialog's Close stays in view; every form stays mounted (hidden) and keeps its edits.
+  const shown = presets.filter((info) => FORMS[info.id])
+  const current = shown.some((info) => info.id === selected) ? selected : (shown[0]?.id ?? '')
   return (
     <div className="presets">
-      {presets.map((info) => {
+      <Tabs label="Presets" idPrefix="presets" tabs={shown.map((info) => ({ id: info.id, label: info.name }))} selected={current} onSelect={setSelected} />
+      {shown.map((info) => {
         const Form = FORMS[info.id]
-        return Form ? <Form key={info.id} info={info} run={run} busy={busy} status={failure?.id === info.id ? failure.text : null} /> : null
+        return <div key={info.id} {...tabPanel('presets', info.id, current)}><Form info={info} run={run} busy={busy} status={failure?.id === info.id ? failure.text : null} /></div>
       })}
     </div>
   )

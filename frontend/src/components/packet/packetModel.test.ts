@@ -91,6 +91,17 @@ describe('combine', () => {
   })
 })
 
+describe('a layer\'s last field', () => {
+  it('runs to the layer\'s end in the editor and the viewer, whatever length the service reports for it', () => {
+    // UDP chksum (the last UDP field, bytes 40-41) reported as 1 byte, as the service reports a variable-size field
+    expect(field(combine(udpDoc(), patched([2, 'chksum', { length: 1 }]), defs), 2, 'chksum').range).toEqual([40, 42])
+    const tree = treeVlanJson.vlan as unknown as PacketTree
+    const short: PacketTree = { ...tree, data: tree.data.map((l, i) => (i !== 1 ? l : { ...l, fields: l.fields.map((f) => (f.id === 'type' ? { ...f, length: 1 } : f)) })) }
+    expect(field(layersOfTree(short), 1, 'type').range).toEqual([16, 18])       // Dot1Q type, bytes 16-17
+    expect(field(layersOfTree(tree), 2, 'options').range).toBeNull()             // empty IP options hold no bytes
+  })
+})
+
 describe('layersOfTree', () => {
   it('layersOfTree builds read-only layers from a tree', () => {
     const tree = treeVlanJson.vlan as unknown as PacketTree

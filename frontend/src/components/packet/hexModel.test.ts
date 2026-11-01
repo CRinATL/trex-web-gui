@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 import type { PacketTree } from '../../api'
-import { decodeBase64, encodeBase64, layerEnds, rowAt, rangeOfField, rangeText, rowsOf } from './hexModel'
+import { decodeBase64, encodeBase64, fieldRange, layerEnds, rowAt, rangeOfField, rangeText, rowsOf } from './hexModel'
 
 describe('hexModel', () => {
   it('decodeBase64 gives the bytes', () => {
@@ -17,6 +17,16 @@ describe('hexModel', () => {
     expect(rangeOfField({ offset: 1, length: 1 }, 14)).toEqual([15, 16])
     expect(rangeOfField({ offset: 6, length: 6 })).toEqual([6, 12])
     expect(rangeOfField({ offset: 0, length: 0 }, 14)).toBeNull()
+  })
+  it('a layer\'s last field runs to the layer\'s end: the service reports a variable-size field by its nominal size', () => {
+    // measured (tests/golden/trp/DHCP__DHCP-DISCOVER.json): BOOTP options at 236 reported 2 bytes, 4 in the frame
+    expect(fieldRange({ offset: 236, length: 2 }, 42, 282, true)).toEqual([278, 282])
+    expect(fieldRange({ offset: 0, length: 2 }, 282, 292, true)).toEqual([282, 292])        // DHCP options: 10 bytes
+    expect(fieldRange({ offset: 20, length: 2 }, 14, 34, true)).toBeNull()                  // empty IP options: no bytes
+    expect(fieldRange({ offset: 6, length: 2 }, 34, 42, true)).toEqual([40, 42])            // a fixed last field is unchanged
+    expect(fieldRange({ offset: 0, length: 0 }, 14, 34, true)).toBeNull()                   // a bit field still has none
+    expect(fieldRange({ offset: 2, length: 4 }, 0, 4, false)).toEqual([2, 4])               // others are only cut at the end
+    expect(fieldRange({ offset: 4, length: 2 }, 0, 4, false)).toBeNull()
   })
   it('rangeText is %04x-%04x [%04d]', () => {
     expect(rangeText([14, 34])).toBe('000e-0021 [0020]')

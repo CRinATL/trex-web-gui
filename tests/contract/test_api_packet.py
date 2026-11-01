@@ -691,3 +691,25 @@ def test_lldp_caption_carries_the_caveat(packet_client: TestClient) -> None:
     caption = lldp_doc(packet_client)["metadata"]["caption"]
     assert caption == CAVEAT
     assert all(word in NOTE and word in caption for word in ("firmware", "Intel X710/XL710", "i40e"))
+
+
+def test_dhcp_discover_template_builds_a_decodable_discover(packet_client: TestClient) -> None:
+    """`trex-web-gui/DHCP-DISCOVER` builds with every layer decoded, DHCP included: TRex's own
+    DHCP/DHCP-DISCOVER has a DHCP layer with no options, so its bytes decode without one."""
+    c = packet_client
+    rows = {t["id"]: t for t in c.get(f"{URL}/templates").json()["server"]}
+    assert rows["trex-web-gui/DHCP-DISCOVER"]["buildable"] is True
+    r = c.get(f"{URL}/templates/server/trex-web-gui/DHCP-DISCOVER")
+    assert r.status_code == 200, r.text
+    built = c.post(f"{URL}/build", json={"doc": r.json()["doc"]}).json()
+    assert built["error"] is None
+    assert [(layer["id"], layer["real_id"], layer["valid_structure"]) for layer in built["data"]] == [
+        (name, name, True) for name in ("Ether", "IP", "UDP", "BOOTP", "DHCP")]
+    raw = base64.b64decode(built["binary"])
+    assert raw[:6] == b"\xff" * 6 and raw[30:34] == b"\xff" * 4                     # broadcast MAC and IP
+    assert struct.unpack("!HH", raw[34:38]) == (68, 67)                               # client to server port
+    bootp = raw[42:]
+    assert bootp[0] == 1                                       # BOOTREQUEST
+    assert bootp[28:34] == raw[6:12]                           # chaddr is the source MAC
+    assert bootp[236:240] == bytes.fromhex("63825363")         # the DHCP magic cookie
+    assert bootp[240:243] == bytes([53, 1, 1])                 # option 53, message type 1: DHCPDISCOVER

@@ -100,6 +100,16 @@ describe('PacketPage', () => {
     expect(title()).not.toHaveTextContent('•')
     expect(window.confirm).not.toHaveBeenCalled()
   })
+  it('the New button beside Templates does what File ▾ New does, asking first over unsaved changes', async () => {
+    renderPage()
+    await openTrp()
+    await editTtl('9')
+    await userEvent.click(screen.getByRole('button', { name: 'New' }))
+    const ask = await discardDialog()
+    await userEvent.click(within(ask).getByRole('button', { name: 'Discard' }))
+    await waitFor(() => expect(lastBuilt().packet.map((l) => l.id)).toEqual(['Ether']))
+    expect(title()).toHaveTextContent('Packet editor — Untitled')
+  })
   it('New on a clean document asks nothing', async () => {
     renderPage()
     await openTrp()

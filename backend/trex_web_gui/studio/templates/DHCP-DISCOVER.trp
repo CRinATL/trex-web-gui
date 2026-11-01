@@ -1,0 +1,84 @@
+{
+  "fileType": "trex-packet-editor",
+  "version": "1.0.0",
+  "metadata": {
+    "caption": "DHCP-DISCOVER (TRex's DHCP/DHCP-DISCOVER has no DHCP options, so its DHCP layer does not decode)"
+  },
+  "packet": [
+    {
+      "id": "Ether",
+      "fields": [
+        {
+          "id": "dst",
+          "value": "ff:ff:ff:ff:ff:ff"
+        },
+        {
+          "id": "src",
+          "value": "cc:b0:da:00:a3:99"
+        }
+      ]
+    },
+    {
+      "id": "IP",
+      "fields": [
+        {
+          "id": "src",
+          "value": "0.0.0.0"
+        },
+        {
+          "id": "dst",
+          "value": "255.255.255.255"
+        }
+      ]
+    },
+    {
+      "id": "UDP",
+      "fields": [
+        {
+          "id": "sport",
+          "value": 68
+        },
+        {
+          "id": "dport",
+          "value": 67
+        }
+      ]
+    },
+    {
+      "id": "BOOTP",
+      "fields": [
+        {
+          "id": "op",
+          "value": "BOOTREQUEST"
+        },
+        {
+          "id": "xid",
+          "value": 3317261851
+        },
+        {
+          "id": "flags",
+          "value": 32768
+        },
+        {
+          "id": "chaddr",
+          "value": {
+            "vtype": "BYTES",
+            "base64": "zLDaAKOZAAAAAAAAAAAAAA=="
+          }
+        }
+      ]
+    },
+    {
+      "id": "DHCP",
+      "fields": [
+        {
+          "id": "options",
+          "value": {
+            "vtype": "EXPRESSION",
+            "expr": "[('message-type', 1), ('param_req_list', [1, 3, 6, 15]), 'end']"
+          }
+        }
+      ]
+    }
+  ]
+}
