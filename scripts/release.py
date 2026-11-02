@@ -22,10 +22,10 @@ its release is made as a draft: publish verifies the draft's wheel and stops for
 draft; `--publish-draft` publishes it and verifies the wheel again. That is `release.py publish final
 [--publish-draft]`; make release-publish and PUBLISH_DRAFT=1 now run `publish patch`.
 
-`check patch` and `publish patch` release 1.0.N, the N that backend/pyproject.toml names (a 1.0.N release
-commit sets that version AND commits the backend/uv.lock that uv rewrites for it: CI runs `uv sync --locked`,
-and `check patch` refuses the dirty tree otherwise), as a full (not
-pre-) release: signed tag, a draft first, and main is never pushed (it reaches GitHub through a
+`check patch` and `publish patch` release a 1.x release after 1.0.0, the version that
+backend/pyproject.toml names (such a release commit sets that version AND commits the backend/uv.lock that
+uv rewrites for it: CI runs `uv sync --locked`, and `check patch` refuses the dirty tree otherwise), as a
+full (not pre-) release: signed tag, a draft first, and main is never pushed (it reaches GitHub through a
 PR).
 
 Run it as `uv run --project backend python -I -B scripts/release.py ...` (make release-rc, make release). Exit
@@ -83,13 +83,14 @@ def rc_target(n: int) -> Target:
     return Target(f"rc{n}", f"1.0.0rc{n}", f"v1.0.0-rc{n}", f"docs/releases/v1.0.0-rc{n}.md", True)
 
 
-PATCH_VERSION = re.compile(r"1\.0\.([1-9]\d*)")
+PATCH_VERSION = re.compile(r"1\.(0|[1-9]\d*)\.(0|[1-9]\d*)")
 INSTALL_SH = "install.sh"
 
 
-def patch_target(n: int) -> Target:
-    """Patch n of 1.0: version 1.0.<n>, tag v1.0.<n>, its own public notes file; a full release."""
-    return Target("patch", f"1.0.{n}", f"v1.0.{n}", f"docs/releases/v1.0.{n}.md", False)
+def patch_target(n: int, minor: int = 0) -> Target:
+    """Release 1.<minor>.<n>: tag v1.<minor>.<n>, its own public notes file; a full release."""
+    v = f"1.{minor}.{n}"
+    return Target("patch", v, f"v{v}", f"docs/releases/v{v}.md", False)
 
 
 def carries_install_sh(target: Target) -> bool:
@@ -113,9 +114,9 @@ def resolve_target(name: str, pyproject_text: str) -> Target | str:
         return f"backend/pyproject.toml is not valid TOML: {e}"
     if name == "patch":
         m = PATCH_VERSION.fullmatch(version) if isinstance(version, str) else None
-        if m is None:
-            return f"backend/pyproject.toml version is {version!r}, not a 1.0.x patch (1.0.1 or later)"
-        return patch_target(int(m.group(1)))
+        if m is None or version == "1.0.0":
+            return f"backend/pyproject.toml version is {version!r}, not a 1.x release after 1.0.0"
+        return patch_target(int(m.group(2)), int(m.group(1)))
     m = re.fullmatch(r"1\.0\.0rc([1-9]\d*)", version) if isinstance(version, str) else None
     if m is None:
         return f"backend/pyproject.toml version is {version!r}, not a 1.0.0 release candidate"
@@ -273,8 +274,8 @@ def use_log_problems(text: str | None, path: str = USE_LOG) -> list[str]:
     return []
 
 
-HOST_USE_LOG = "docs/releases/host-use-1.0.x.md"
-HOST_SECTION = "## Host use (1.0.x)"
+HOST_USE_LOG = "docs/releases/host-use-1.x.md"
+HOST_SECTION = "## Host use (1.x)"
 CONF = ".sdd.conf"
 
 
@@ -413,9 +414,9 @@ def _guard_inputs(root: Path, gd: Path | None = None) -> tuple[dict[str, str], s
 
 
 def records_gate_problems(root: Path, home: str) -> list[str]:
-    """What the records must show before a patch: configured and usable, pushed, every host row closed, every
-    RC1 row closed, a dated use log, and the use log not tracked by the public repo. The publish step runs it
-    again."""
+    """What the records must show before a 1.x release after 1.0.0: configured and usable, pushed, every host
+    row closed, every RC1 row closed, a dated use log, and the use log not tracked by the public repo. The
+    publish step runs it again."""
     gd = records_git_dir(root, home)
     if not isinstance(gd, Path):
         reason = gd or f"no LEDGER_GIT_DIR in {CONF}"

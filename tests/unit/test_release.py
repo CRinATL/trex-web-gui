@@ -302,17 +302,19 @@ def test_targets_resolve_rc_n_and_rc_from_the_pyproject_version() -> None:
     assert got == ["docs/releases/v1.0.0-rc2.md lacks the section '## What to record during the week'"]
 
 
-def test_patch_resolves_from_the_pyproject_version() -> None:
-    t = release.resolve_target("patch", '[project]\nversion = "1.0.12"\n')
+@pytest.mark.parametrize("version", ["1.0.12", "1.1.0", "1.2.3"])
+def test_patch_resolves_any_1x_release_after_1_0_0(version: str) -> None:
+    t = release.resolve_target("patch", f'[project]\nversion = "{version}"\n')
     assert (t.name, t.version, t.tag, t.notes, t.prerelease) == (
-        "patch", "1.0.12", "v1.0.12", "docs/releases/v1.0.12.md", False)
-    assert release.wheel_name(t.version) == "trex_web_gui-1.0.12-py3-none-any.whl"
+        "patch", version, f"v{version}", f"docs/releases/v{version}.md", False)
+    assert release.wheel_name(t.version) == f"trex_web_gui-{version}-py3-none-any.whl"
+    assert release.carries_install_sh(t)
 
 
-@pytest.mark.parametrize("version", ["1.0.0", "1.0.0rc5", "1.1.0", "1.0.01", "2.0.1"])
-def test_patch_refuses_a_version_that_is_not_a_patch(version: str) -> None:
+@pytest.mark.parametrize("version", ["1.0.0", "1.0.0rc5", "1.1.0rc1", "1.1", "1.01.0", "1.0.01", "2.0.0"])
+def test_patch_refuses_a_version_that_is_not_a_1x_release(version: str) -> None:
     why = release.resolve_target("patch", f'[project]\nversion = "{version}"\n')
-    assert isinstance(why, str) and repr(version) in why and "1.0.x patch" in why
+    assert isinstance(why, str) and repr(version) in why and "not a 1.x release after 1.0.0" in why
 
 
 def test_check_rc_takes_the_candidate_from_pyproject(tmp_path: Path) -> None:
@@ -764,7 +766,7 @@ def test_gate_2_hands_over_to_f1_instead_of_printing_private_release_commands(
 
 # --- the records helpers: the private records repo is read through its git dir ---------------------------
 
-HOST = "## Host use (1.0.x)\n\n| ID | Origin | Text | Status |\n|---|---|---|---|\n"
+HOST = release.HOST_SECTION + "\n\n| ID | Origin | Text | Status |\n|---|---|---|---|\n"
 
 
 def rec(repo: Path, gd: Path, *args: str) -> str:
@@ -929,9 +931,16 @@ def test_a_host_row_without_a_closing_pipe_is_malformed_not_a_pass() -> None:
     assert release.host_rows_problems(text) == ["malformed host row H-1: no closing |"]
 
 
+def test_records_gate_names_a_missing_host_use_log(tmp_path: Path) -> None:
+    repo, _ = records_repo(tmp_path)
+    (repo / release.HOST_USE_LOG).unlink()
+    problems = release.records_gate_problems(repo, str(tmp_path))
+    assert "docs/releases/host-use-1.x.md is missing" in problems
+
+
 def test_a_missing_host_section_is_a_problem() -> None:
     assert release.host_rows_problems("# register\n") == [
-        "DEFERRED.md lacks the section '## Host use (1.0.x)'"]
+        f"DEFERRED.md lacks the section '{release.HOST_SECTION}'"]
 
 
 def test_use_log_problems_names_the_path_it_is_given() -> None:

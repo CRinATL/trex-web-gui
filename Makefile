@@ -70,7 +70,7 @@ install-smoke-run:
 release-rc:      # historical (the private candidates / v1.0.0's F1): P6 gate 1, for the candidate backend/pyproject.toml names (1.0.0rcN): preconditions, the gate chain, then the tag/push/gh commands PRINTED (DRY_RUN=1 allows a branch other than main)
 	$(UV) python -I -B scripts/release.py check rc $(if $(DRY_RUN),--dry-run,)
 
-release:         # a 1.0.x patch (version from backend/pyproject.toml): the gate chain incl. check-real, every host finding closed, the records pushed; prints the publish step
+release:         # a 1.x release after 1.0.0 (version from backend/pyproject.toml): the gate chain incl. check-real, every host finding closed, the records pushed; prints the publish step
 	$(UV) python -I -B scripts/release.py check patch $(if $(DRY_RUN),--dry-run,)
 
 release-rc-publish:  # historical (the private candidates / v1.0.0's F1): after a passing release-rc: push main if needed, tag, push the tag, create the GitHub release, check the uploaded wheel's sha256; resumes after a failure (run by the person, canon:WRK-3)
