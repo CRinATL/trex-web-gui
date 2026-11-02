@@ -1093,3 +1093,44 @@ def test_building_an_opened_jumbo_record_stays_in_time(tmp_path: Path) -> None:
         assert base64.b64decode(with_vm["binary"]) == raw
         assert e.starts == 1
     with_engine(body)
+
+
+# --- the capture viewer's tree runs here, not in the backend (gemini-security-review 2026-11-01 SEC-03) ---
+
+def test_tree_op_matches_the_backend_tree() -> None:
+    from trex_web_gui.trexapi import decode
+    raw = udp_record(200)
+    res = engine_worker().tree({"binary": b64(raw)})
+    assert res.pop("ok") is True
+    assert res == decode.tree(raw)
+
+
+def test_tree_op_dissects_at_most_the_cap_and_keeps_every_byte(monkeypatch: pytest.MonkeyPatch) -> None:
+    from trex_web_gui.trexapi import packet_worker
+    eng = engine_worker()
+    import scapy.layers.l2 as l2
+    given: list[int] = []
+    real_ether = l2.Ether
+
+    def recording_ether(data: bytes) -> Any:
+        """Record how many bytes are dissected, then dissect them."""
+        given.append(len(data))
+        return real_ether(data)
+    monkeypatch.setattr(l2, "Ether", recording_ether)
+
+    def whole(*args: Any) -> Any:
+        raise AssertionError("reconstruct_pkt dissects the whole frame")
+    monkeypatch.setattr(eng.svc, "reconstruct_pkt", whole)
+    raw = IPV4_ETHER.ljust(30_000, b"\x00")
+    res = eng.tree({"binary": b64(raw)})
+    assert given and all(n <= packet_worker.EDITOR_DECODE_BYTES for n in given)
+    assert base64.b64decode(res["binary"]) == raw
+    assert res["data"][-1]["id"] == "Raw"
+
+
+def test_tree_op_refuses_a_frame_shorter_than_ethernet() -> None:
+    async def body(e: PacketEngine) -> None:
+        with pytest.raises(PacketError) as info:
+            await e.tree(b64(bytes(5)))
+        assert not info.value.restarted and "error" in str(info.value)
+    with_engine(body)

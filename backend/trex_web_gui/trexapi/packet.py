@@ -196,6 +196,12 @@ class PacketEngine:
         res.pop("ok", None)
         return res                                          # type: ignore[return-value]
 
+    async def tree(self, binary: str) -> dict[str, Any]:
+        """`{data, binary}`: the capture viewer's layer tree for the base64 frame `binary`."""
+        res = await self.call("tree", {"binary": binary})
+        res.pop("ok", None)
+        return res
+
     async def payload_classes(self, packet: list[dict[str, Any]]) -> list[str]:
         """The protocols the last layer of `packet` may carry."""
         res = await self.call("payload_classes", {"packet": packet})

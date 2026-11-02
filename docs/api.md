@@ -255,8 +255,9 @@ or read-only.
 
 ### POST /api/capture/packet/tree
 
-Dissects one base64 frame with Scapy on the scapy executor and returns the tree. 400 bad_packet
-when dissection raises.
+Dissects one base64 frame in the packet worker (its call timeout and address-space limit bound a
+frame whose dissection cost runs away) and returns the tree. 400 bad_packet when dissection raises,
+times out or runs out of memory; 503 engine_busy or engine_closed when the engine cannot take it.
 
 **Request body** (`application/json`, schema `PacketBody`)
 
@@ -269,6 +270,8 @@ when dissection raises.
 - `200`: the body is described above
 - `400` `bad_packet`: the packet could not be dissected
 - `422` `bad_request`: the body or query failed validation (`{"error": "bad_request", "message": <text>}`)
+- `503` `engine_busy`: the packet worker is busy
+- `503` `engine_closed`: the packet worker is closed
 
 ### POST /api/capture/recorders
 

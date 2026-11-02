@@ -1,6 +1,5 @@
 """HTTP + WebSocket API (plan §4). Single user, loopback only (Revision 2)."""
 import asyncio
-import base64
 import contextlib
 import dataclasses
 import logging
@@ -45,8 +44,8 @@ from trex_web_gui.store.spool import SpoolBusy
 from trex_web_gui.store.test_setups import TestSetupStore
 from trex_web_gui.studio.library import ProfileLibrary, library_dir
 from trex_web_gui.studio.templates import TemplateStore, templates_dir
-from trex_web_gui.trexapi import decode, lldp, scapy_exec
-from trex_web_gui.trexapi.packet import PacketEngine
+from trex_web_gui.trexapi import lldp, scapy_exec
+from trex_web_gui.trexapi.packet import PacketBusy, PacketEngine, PacketError
 from trex_web_gui.trexapi.profiles import MAX_RESULT
 from trex_web_gui.validation import MULT, check_duration, check_ports
 
@@ -771,15 +770,21 @@ def create_app(data_dir: Path, server_hint: str | None = None, static_dir: Path 
         return {"neighbours": session().lldp_neighbours(), "note": lldp.NOTE}
 
     @app.post("/api/capture/packet/tree", response_model=None,
-              responses=answers((400, "bad_packet", "the packet could not be dissected")))
+              responses=answers((400, "bad_packet", "the packet could not be dissected"),
+                                (503, "engine_busy", "the packet worker is busy"),
+                                (503, "engine_closed", "the packet worker is closed")))
     async def packet_tree(b: PacketBody) -> dict[str, Any] | JSONResponse:
-        """Dissects one base64 frame with Scapy on the scapy executor and returns the tree. 400 bad_packet
-        when dissection raises."""
-        try:      # tree() can raise on odd bytes (Scapy_service)
-            tree: dict[str, Any] = await scapy_exec.arun(decode.tree, base64.b64decode(b.binary))
-        except Exception as e:
-            return err(400, "bad_packet", f"The packet could not be dissected: {type(e).__name__}: {e}")
-        return tree
+        """Dissects one base64 frame in the packet worker (its call timeout and address-space limit bound a
+        frame whose dissection cost runs away) and returns the tree. 400 bad_packet when dissection raises,
+        times out or runs out of memory; 503 engine_busy or engine_closed when the engine cannot take it."""
+        try:
+            return await packet_engine.tree(b.binary)
+        except PacketBusy as e:
+            return err(503, "engine_busy", str(e))
+        except PacketError as e:
+            if packet_engine.closed:
+                return err(503, "engine_closed", str(e))
+            return err(400, "bad_packet", f"The packet could not be dissected: {e}")
 
     # The Wireshark path is the saved preference, read here; never a request's (a body is ignored).
     @app.get("/api/capture/wireshark/preflight")

@@ -39,6 +39,12 @@ encryption and the authentication of the remote end.
 - **Anyone who can read the login URL can drive the GUI.** The token is in the start-up banner, and in the journal
   when trex-web-gui runs as a service. Any process running as the same user can read it, from the terminal, the journal
   or, when `TREX_WEB_GUI_TOKEN` supplied the token, the backend's start-up environment (`/proc/<pid>/environ`).
+  Logging out (`POST /api/auth/logout`) deletes only that browser's cookie (`backend/trex_web_gui/api/app.py:396`):
+  the token stays valid until the backend exits, so restart it to revoke a login URL someone else has seen.
+- **The Wireshark path is a program the backend runs**, as the user who runs trex-web-gui
+  (`backend/trex_web_gui/sessions/wireshark.py:133`). Whoever can change the settings chooses it: anyone with the
+  token, or a settings bundle applied with Preferences set to replace, whose preview names the change
+  (`backend/trex_web_gui/store/bundle.py:186`). That is no more than loading a profile already allows.
 
 ## Known open items
 

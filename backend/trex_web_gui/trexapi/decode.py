@@ -15,6 +15,10 @@ from .loader import load
 
 _service: Any = None
 _SKIP_PROTO = ("Raw", "Padding", "ICMPv6NDOpt")      # layers that are payload or options, not the protocol
+# A row names the headers at the frame's start, so only these bytes are dissected: whole, a zero-filled jumbo
+# IPv4 frame took 0.45 s against 0.10 s for its first 2048, and frames arrive from the test network unasked.
+# The packet worker's list rows use the same number (packet_worker.SUMMARY_BYTES).
+SUMMARY_BYTES = 2048
 
 
 class Summary(NamedTuple):
@@ -56,12 +60,12 @@ def _addresses(pkt: Any) -> tuple[str, str]:
 
 
 def summary(raw: bytes) -> Summary:
-    """The frame's src, dst, protocol and info; a decode failure gives proto "?" and the error text.
-    Scapy executor only."""
+    """The frame's src, dst, protocol and info, from its first SUMMARY_BYTES (the LLDP check reads them all);
+    a decode failure gives proto "?" and the error text. Scapy executor only."""
     try:
         load()
         from scapy.all import Dot1Q, Ether
-        pkt = Ether(raw)
+        pkt = Ether(raw[:SUMMARY_BYTES])
         names = [type(layer).__name__ for layer in pkt.iterpayloads()]
         proto = "LLDP" if lldp.is_lldp(raw) else next(
             (n for n in reversed(names) if not n.startswith(_SKIP_PROTO)), names[0])
@@ -77,7 +81,9 @@ def summary(raw: bytes) -> Summary:
 
 def tree(raw: bytes) -> dict[str, Any]:
     """The Studio layer tree, the singleton's own reconstruct_pkt with an empty model (Scapy executor only).
-    Unlike summary(), a frame Scapy cannot dissect raises (5 bytes: struct.error); the caller catches it."""
+    Unlike summary(), a frame Scapy cannot dissect raises (5 bytes: struct.error); the caller catches it.
+    The recorded fixtures are made with it; the capture route runs the packet worker's `tree` op instead,
+    which has a timeout and a memory limit (an unbounded frame here would stall or exhaust the backend)."""
     b64 = base64.b64encode(raw).decode("ascii")
     result: dict[str, Any] = service().reconstruct_pkt(None, b64, [])
     return result

@@ -92,7 +92,7 @@ class Engine:
         from trex.scapy_server.scapy_service import Scapy_service
         self.packet_class = Packet
         self.svc = Scapy_service()
-        for name in ("_fully_define", "_packet_model_to_scapy_packet"):
+        for name in ("_fully_define", "_packet_model_to_scapy_packet", "_pkt_data"):
             if not callable(getattr(self.svc, name, None)):
                 raise RuntimeError(f"the vendored Scapy_service has no method {name}; the packet editor's "
                                    "decode cap relies on it")
@@ -106,7 +106,8 @@ class Engine:
             "param_values": self.param_values, "doc_from_binary": self.doc_from_binary,
             "reconstruct_edit": self.reconstruct_edit, "decompile": self.decompile,
             "templates": self.templates, "template": self.template, "pcap_list": self.pcap_list,
-            "pcap_packet": self.pcap_packet, "to_stream": self.to_stream, "to_code": self.to_code}
+            "pcap_packet": self.pcap_packet, "to_stream": self.to_stream, "to_code": self.to_code,
+            "tree": self.tree}
 
     def definitions(self, args: dict[str, Any]) -> dict[str, Any]:
         """`get_definitions(h, None)` plus `etag` (the first 16 hex digits of the sha256 of the canonical
@@ -140,6 +141,22 @@ class Engine:
         return {"ok": True, "binary": res["binary"], "data": res["data"], "error": None,
                 "field_engine": {"instructions": instructions if isinstance(instructions, dict) else {},
                                  "error": engine["error"]}}
+
+    def tree(self, args: dict[str, Any]) -> dict[str, Any]:
+        """`{data, binary}` for the captured frame `args["binary"]` (base64), the capture viewer's layer tree:
+        the service's `reconstruct_pkt` with an empty model. A frame over EDITOR_DECODE_BYTES is dissected
+        only that far and its rest attached as one Raw layer, as `_dissect` does; `binary` is the whole frame.
+        Here rather than in the backend because dissection cost has no bound of its own (a zero-filled IPv4
+        frame's memory grows faster than its length; an IPv6 hop-by-hop chain takes seconds), and this
+        process has the call timeout and the address-space limit."""
+        raw = base64.b64decode(args["binary"])
+        if len(raw) <= EDITOR_DECODE_BYTES:
+            return {"ok": True, **self.svc.reconstruct_pkt(None, args["binary"], [])}
+        from scapy.layers.l2 import Ether
+        from scapy.packet import Raw
+        pkt = Ether(raw[:EDITOR_DECODE_BYTES])
+        _chain(pkt)[-1].add_payload(Raw(raw[EDITOR_DECODE_BYTES:]))
+        return {"ok": True, **self.svc._pkt_data(pkt)}
 
     def payload_classes(self, args: dict[str, Any]) -> dict[str, Any]:
         """`{classes}`: the protocols the last layer of `args["packet"]` may carry."""
