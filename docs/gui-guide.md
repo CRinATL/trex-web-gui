@@ -129,21 +129,28 @@ on ([03](gui-inventory/screens/03-connect-dialog.png)).
 - **Read-only (observer)**: connect without the right to change anything. It is a per-connect choice and is not
   saved with a connection. In a read-only session every port action, the Config, Traffic, Tools and capture
   controls are disabled with the tooltip `read-only session`, and the status bar says `read-only`.
-- **Advanced** (a fold): **Command port** (4501), **Event port** (4500), **Timeout (s)** (3). While it is shut
-  its summary line shows the values, `Advanced · ports 4501 / 4500, timeout 3 s`. It opens by itself when the
-  prefilled or picked values are not the defaults, or when a validation message is about one of its fields
-  ([04](gui-inventory/screens/04-connect-advanced.png)). The ⓘ beside Command port: the ports are set on the
-  TRex server by `zmq_rpc_port` and `zmq_pub_port` in its `trex_cfg.yaml`; 4501 and 4500 when not set.
+- **Advanced** (a fold): **Command port** (4501), **Event port** (4500), **Timeout (s)** (3).
+  - While it is shut its summary line shows the values, `Advanced · ports 4501 / 4500, timeout 3 s`.
+  - It opens by itself when the prefilled or picked values are not the defaults, or when a validation message is
+    about one of its fields ([04](gui-inventory/screens/04-connect-advanced.png)).
+  - The ⓘ beside Command port: the ports are set on the TRex server by `zmq_rpc_port` and `zmq_pub_port` in its
+    `trex_cfg.yaml`; 4501 and 4500 when not set.
 - Footer: **Save as…** at the left; **Cancel** and **Connect** at the right.
 
 **Validation** (before anything is sent): `Host is required`; `Command port must be 1–65535`;
 `Event port must be 1–65535`; `Timeout must be 0.5–60 s`.
 
-**Connecting**: Connect reads **Connecting…**, Cancel is disabled, and the dialog stays open until the result
-arrives ([05](gui-inventory/screens/05-connect-connecting.png)). It closes on success; on failure the backend's
-message stays in the dialog ([06](gui-inventory/screens/06-connect-error.png)): the server is unreachable, it speaks
-another API (`The server speaks STL API <v>; trex-web-gui supports only STL API 5.1 (TRex v3.08).`), or a session already
-exists (`Already connected; disconnect first.`). Disconnect first if you want another server.
+**Connecting**:
+
+- Connect reads **Connecting…**, Cancel is disabled, and the dialog stays open until the result arrives
+  ([05](gui-inventory/screens/05-connect-connecting.png)).
+- It closes on success.
+- On failure the backend's message stays in the dialog ([06](gui-inventory/screens/06-connect-error.png)):
+  - the server is unreachable;
+  - it speaks another API (`The server speaks STL API <v>; trex-web-gui supports only STL API 5.1 (TRex v3.08).`);
+  - or a session already exists (`Already connected; disconnect first.`).
+
+Disconnect first if you want another server.
 
 **A host that runs a stateful (-f) TRex**: a stateful run has no command port, so a connect to it fails. When
 the GUI can tell (the daemon lists a `-f` process there, the Monitor is attached to it, or this GUI started the
@@ -178,23 +185,29 @@ the server reports a port error; a command that succeeds clears it.
 
 ### 3.1 The devices tree
 
-One row for the server, `TRex-<hostname>`; one row per port, `Port N` or `Port N — <name>` with its state
-badge (IDLE, STREAMS, TX, PAUSE, PCAP_TX, …), its owner at the right (`you`, another user's name, or `—`) and
-an orange **SVC** badge when service mode is on or filtered; under a port, one row per profile,
-`Profile <id> (<state>)`. A port with no saved name shows its confirmed kernel interface name in grey, as
-`Port 0 ens1f0np0`, with the tooltip `Interface name found on the TRex host; Save it in the port's Name to keep
-it`; the port's heading and the Dashboard's port columns read `Port 0 — ens1f0np0`. Only the default profile `_` can be controlled: another profile's row (one a
-`trex-console` script added) selects the port's panel with every action greyed and labelled
-`(read-only (multi-profile, P8))`, and the row itself says `read-only`.
+- One row for the server, `TRex-<hostname>`.
+- One row per port, `Port N` or `Port N — <name>` with its state badge (IDLE, STREAMS, TX, PAUSE, PCAP_TX, …), its
+  owner at the right (`you`, another user's name, or `—`) and an orange **SVC** badge when service mode is on or
+  filtered.
+- Under a port, one row per profile, `Profile <id> (<state>)`.
+
+A port with no saved name shows its confirmed kernel interface name in grey, as `Port 0 ens1f0np0`, with the
+tooltip `Interface name found on the TRex host; Save it in the port's Name to keep it`. The port's heading and the
+Dashboard's port columns read `Port 0 — ens1f0np0`.
+
+Only the default profile `_` can be controlled: another profile's row (one a `trex-console` script added) selects
+the port's panel with every action greyed and labelled `(read-only (multi-profile, P8))`, and the row itself says
+`read-only`.
 
 Click selects. Right-click, Shift+F10 or the ContextMenu key selects and opens the context menu. Up, Down,
 Home and End move; Enter selects. The root row is selected after a connect and after Start all
-([08](gui-inventory/screens/08-control-root-connected.png), [12](gui-inventory/screens/12-control-profile-selected.png)).
+([08](gui-inventory/screens/08-control-root-connected.png),
+[12](gui-inventory/screens/12-control-profile-selected.png)).
 
 **The root panel** (the server): a table **Version** (with mode and build date), **Host**, **CPU**, **Ports**;
 then a ports table **Port**, **Driver**, **Description**, **MAC**, **NUMA**, **PCI**, **Interface**, **State**.
 Interface is the kernel interface name when the backend could confirm it, or the `trex_cfg.yaml` entry marked
-`(unconfirmed)` in grey; a note above the table says what the lookup could not do.
+`(unconfirmed)` in grey. A note above the table says what the lookup could not do.
 
 ### 3.2 The toolbar
 
@@ -220,39 +233,62 @@ Pause and Stop also cancel a pending live rate update ([4.3](#43-traffic-tab)). 
 buttons are disabled while one is in flight.
 
 Start, Stop and Pause buttons, here and on every page, are coloured by what they do: green starts or resumes,
-red stops, amber pauses. A button filled with its colour can be used; grey means it cannot. Connect (the
-status bar's and the dialog's) and Turn service mode on/off are green the same way. While the thing a
-Start began is running, that Start is lit and names the state instead of the action: **● Transmitting** or
-**❚❚ Paused** here (tooltip `Port N is transmitting` / `Port N is paused`), **● Running** for a capture
-monitor, **● LLDP monitor running**, **● Wireshark open**, **● TRex running**. A lit button is disabled and keeps
-its width, so the buttons beside it do not move. Buttons that do one thing once (Clear, Download pcap, Acquire,
-Release, Clear stats) stay uncoloured.
+red stops, amber pauses. A button filled with its colour can be used. Grey means it cannot. Connect (the
+status bar's and the dialog's) and Turn service mode on/off are green the same way.
+
+While the thing a Start began is running, that Start is lit and names the state instead of the action:
+
+- **● Transmitting** or **❚❚ Paused** here (tooltip `Port N is transmitting` / `Port N is paused`);
+- **● Running** for a capture monitor;
+- **● LLDP monitor running**;
+- **● Wireshark open**;
+- **● TRex running**.
+
+A lit button is disabled and keeps its width, so the buttons beside it do not move. Buttons that do one thing once
+(Clear, Download pcap, Acquire, Release, Clear stats) stay uncoloured.
 
 ### 3.3 The context menus
 
 Right-click a tree row. Disabled items stay listed, greyed ([09](gui-inventory/screens/09-context-menu-root.png),
 [10](gui-inventory/screens/10-context-menu-port.png)).
 
-- **Root**: **Acquire all**, **Force acquire all** (takes the ports from other owners), **Release all**,
-  **Re-acquire my ports** (force-acquires the ports the server lists as this OS user's that no handler of
-  this session holds, as after a backend restart; enabled only while there is one), **Start all**, **Stop all**.
-- **Port**: **Acquire**, **Force acquire**, **Release**, **Enable service mode** / **Disable service mode**
-  (a filtered port can be switched off here, never set to filtered: that is the Control tab),
-  **Assign profile…** (opens the Traffic tab with the profile field focused), **Start…** (the Traffic tab with
-  the multiplier focused; it reads `Start (assign a profile first)` while the port is IDLE), **Stop**,
-  **Pause**, **Resume**, **Update…** (the Traffic tab's multiplier, while the port transmits), **Reset** (red:
-  the first click turns the item into `Click again to confirm`, and when captures exist on the server,
-  `Capture <ids> will be removed from the server (<n> unsaved packets). Click again to confirm`; the
-  confirmation lapses after 5 s), **Name…** (the Control tab with the Name field focused; this one works in a
-  read-only session and on a port you do not own, because a name is the GUI's own file).
-  After an acquire (also Force acquire, Re-acquire and Reset), another session's "port acquired" notice that the
-  server sent before ours is shown in the log as `Port N was taken by '<who>' before our acquire; ignored` and
-  does not change the port's owner.
+- **Root**:
+  - **Acquire all**;
+  - **Force acquire all** (takes the ports from other owners);
+  - **Release all**;
+  - **Re-acquire my ports** (force-acquires the ports the server lists as this OS user's that no handler of this
+    session holds, as after a backend restart; enabled only while there is one);
+  - **Start all**, **Stop all**.
+- **Port**:
+  - **Acquire**, **Force acquire**, **Release**;
+  - **Enable service mode** / **Disable service mode** (a filtered port can be switched off here, never set to
+    filtered: that is the Control tab);
+  - **Assign profile…** (opens the Traffic tab with the profile field focused);
+  - **Start…** (the Traffic tab with the multiplier focused; it reads `Start (assign a profile first)` while the
+    port is IDLE);
+  - **Stop**, **Pause**, **Resume**;
+  - **Update…** (the Traffic tab's multiplier, while the port transmits);
+  - **Reset** (red: the first click turns the item into `Click again to confirm`, and when captures exist on the
+    server, `Capture <ids> will be removed from the server (<n> unsaved packets). Click again to confirm`; the
+    confirmation lapses after 5 s);
+  - **Name…** (the Control tab with the Name field focused; this one works in a read-only session and on a port you
+    do not own, because a name is the GUI's own file).
 
-Reset force-acquires the port, stops its traffic, removes its streams, clears its stats, turns promiscuous mode, RX
-queueing and service mode off, and **removes every capture on the server**: the live monitor, unsaved recorders and
-other clients' captures, whichever port you reset. The confirmation names the captures that will go. The port stays
-yours afterwards.
+After an acquire (also Force acquire, Re-acquire and Reset), another session's "port acquired" notice that the
+server sent before ours is shown in the log as `Port N was taken by '<who>' before our acquire; ignored` and
+does not change the port's owner.
+
+Reset:
+
+- force-acquires the port;
+- stops its traffic;
+- removes its streams;
+- clears its stats;
+- turns promiscuous mode, RX queueing and service mode off;
+- and **removes every capture on the server**: the live monitor, unsaved recorders and other clients' captures,
+  whichever port you reset.
+
+The confirmation names the captures that will go. The port stays yours afterwards.
 
 ### 3.4 Start all
 
