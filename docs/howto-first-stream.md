@@ -17,8 +17,8 @@ machine.
 
 ## Part 0: connect and get both ports
 
-1. **Start the GUI on the server and open it from the other machine.** On the server run `trex-web-gui serve`. It prints
-   three lines; the third is the tunnel and the login URL:
+1. **Start the GUI on the server and open it from the other machine.** On the server run `trex-web-gui`
+   (1.1.0 and earlier: `trex-web-gui serve`). It prints three lines; the third is the tunnel and the login URL:
 
    ```
    From another machine: ssh -N -L 8765:127.0.0.1:8765 <you>@<server>, then open http://localhost:8765/api/auth/login?token=<token>

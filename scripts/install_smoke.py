@@ -235,12 +235,15 @@ def start_fake(procs: list[Proc], rpc: int, pub: int, *extra: str) -> Proc:
     return fake
 
 
-def start_serve(procs: list[Proc], root: Path, exe: Path, token: str, port: int, *args: str) -> Proc:
-    """Starts the installed `trex-web-gui serve` with the scratch environment and waits for its Open line. The
-    process is added to `procs` before the wait, so teardown reaps it even when the wait fails."""
+def start_serve(procs: list[Proc], root: Path, exe: Path, token: str, port: int, *args: str,
+                bare: bool = False) -> Proc:
+    """Starts the installed `trex-web-gui serve` (`bare`: `trex-web-gui` with no command, which serves
+    too) with the scratch environment and waits for its Open line. The process is added to `procs` before
+    the wait, so teardown reaps it even when the wait fails."""
     for d in ("home", "data", "config"):
         (root / d).mkdir(exist_ok=True)
-    argv = [str(exe), "serve", "--port", str(port), "--data-dir", str(root / "data" / "trex-web-gui"), *args]
+    argv = [str(exe), *([] if bare else ["serve"]), "--port", str(port),
+            "--data-dir", str(root / "data" / "trex-web-gui"), *args]
     serve = Proc(argv, serve_env(root, os.environ["PATH"], token), root, graceful=True)
     procs.append(serve)
     line = serve.wait_line("Open: ", WAIT)
@@ -411,7 +414,7 @@ def smoke_python(py: str, root: Path, wheel: Path, version: str, say: Callable[[
         token2 = new_token()
         start_fake(procs, rpc2, pub2, "--pub-replay", "tests/fixtures/p5/pub-stl.jsonl")
         serve2 = start_serve(procs, root, exe, token2, port2, "--monitor-only", "--monitor",
-                             f"127.0.0.1:{pub2}", "--daemon-port", str(daemon2))
+                             f"127.0.0.1:{pub2}", "--daemon-port", str(daemon2), bare=True)
         with httpx.Client(base_url=f"http://127.0.0.1:{port2}", timeout=30) as c:
             r = c.get("/api/auth/login", params={"token": token2})
             c.headers["Cookie"] = cookie_header(r)
