@@ -76,6 +76,29 @@ def test_daemon_port_reaches_hello(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(app_mod, "create_app", lambda *a, **kw: made.append({"args": a, **kw}))
     monkeypatch.setattr(uvicorn, "run", lambda *a, **kw: None)
     cli.main(["serve", "--daemon-port", "8190", "--server", "lab1:4601"])
-    cli.main(["serve"])
+    cli.main([])                                    # bare: serve is the default
     assert made[0]["daemon_port"] == 8190 and made[0]["args"][1] == "lab1"
     assert made[1]["daemon_port"] == 8090 and made[1]["args"][1] is None
+
+
+# -- serve is the default: a bare `trex-web-gui` serves, and the 1.x `serve` form still parses ----------
+@pytest.mark.parametrize("argv", [
+    [], ["serve"], ["--port", "9000"], ["serve", "--port", "9000"], ["--port", "9000", "serve"],
+])
+def test_serve_is_optional(argv: list[str]) -> None:
+    a = cli.build_parser().parse_args(argv)
+    assert a.cmd == "serve"
+    assert a.port == (9000 if "--port" in argv else 8765)
+
+
+def test_unknown_command_exits_2(capsys: pytest.CaptureFixture[str]) -> None:
+    with pytest.raises(SystemExit) as e:
+        cli.build_parser().parse_args(["servr"])
+    assert e.value.code == 2
+    assert "invalid choice: 'servr'" in capsys.readouterr().err
+
+
+def test_top_level_help_lists_the_serve_options() -> None:
+    text = cli.build_parser().format_help()
+    for opt in ("--port", "--data-dir", "--server", "--monitor", "--monitor-only", "--daemon-port", "--dev"):
+        assert opt in text

@@ -1235,12 +1235,12 @@ Each panel appears once its message has arrived and can be collapsed from its he
 
 ### 11.3 Starting the Monitor from the command line
 
-`trex-web-gui serve --monitor HOST[:PORT]` attaches the Monitor at startup. A stateful run started from the daemon
+`trex-web-gui --monitor HOST[:PORT]` attaches the Monitor at startup. A stateful run started from the daemon
 dialog attaches it by itself ([12.3](#123-run-tab)).
 
 ### 11.4 Monitor-only backends
 
-`trex-web-gui serve --monitor-only` serves the Monitor for a wall display:
+`trex-web-gui --monitor-only` serves the Monitor for a wall display:
 
 - The top bar has **Monitor** and **Settings** only.
 - Any other address goes to `/monitor`.

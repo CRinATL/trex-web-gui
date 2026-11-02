@@ -36,7 +36,7 @@ page by page: [`docs/gui-guide.md`](docs/gui-guide.md).**
 ## Start using it
 
 1. Install trex-web-gui on the machine that can reach the TRex server ([Install](#install)).
-2. Start the backend: `trex-web-gui serve`.
+2. Start the backend: `trex-web-gui` (1.1.0 and earlier: `trex-web-gui serve`).
 3. Open the login URL it prints. For a browser on another machine, the backend also prints the SSH tunnel command
    and the URL to open at the other end.
 4. In the GUI, press **Connect…**, enter the TRex server, and connect. TRex must be running in stateless mode
@@ -91,7 +91,7 @@ Compare the sha256 with the one the release page lists next to the wheel, then p
 terminal there is no pause: it installs at once and says so. `TREX_WEB_GUI_YES=1` skips the pause for an unattended
 install: put it before `sh`, as in `curl -fsSL … | TREX_WEB_GUI_YES=1 sh`.
 
-From the release after 1.1.0, the script ends by printing how to start the backend: `trex-web-gui serve`. When
+From the release after 1.1.0, the script ends by printing how to start the backend: `trex-web-gui`. When
 `~/.local/bin` is not on your `PATH`, it does two more things:
 
 - It gives the command's full path instead.
@@ -106,9 +106,11 @@ The terminal you installed from keeps its old `PATH`
 After the install, start the backend on the same host:
 
 ```
-trex-web-gui serve
+trex-web-gui
 ```
 
+- **1.1.0 and earlier need the `serve`**: `trex-web-gui serve`. Without it they stop with `the following arguments
+  are required: cmd`. Later releases serve by default and still accept `serve`.
 - **It prints a login URL**, `Open: http://127.0.0.1:8765/api/auth/login?token=...`. Open it in a browser on that
   host. Each start makes a new URL.
 - **From another machine**, use an SSH tunnel. The backend also prints the tunnel command,
@@ -116,13 +118,13 @@ trex-web-gui serve
   ([Access: single user, localhost only](#access-single-user-localhost-only)). A wall display uses the same tunnel
   ([Monitor and wall displays](#monitor-and-wall-displays)).
 - **Then connect to TRex.** Press **Connect…** in the GUI and enter the TRex server, which must be running in
-  stateless mode ([Starting the TRex server](#starting-the-trex-server)). `trex-web-gui serve --server HOST`
+  stateless mode ([Starting the TRex server](#starting-the-trex-server)). `trex-web-gui --server HOST`
   prefills the dialog. [Running it](#running-it) lists every option.
 - **Ctrl+C stops it.**
 - **`command not found`** means `~/.local/bin` is not on your `PATH`. The 1.1.0 installer does not add it. Run
-  `~/.local/bin/trex-web-gui serve` for now, and see
+  `~/.local/bin/trex-web-gui serve` for now (it works on every release), and see
   [The `trex-web-gui` command and `PATH`](#the-trex-web-gui-command-and-path).
-- **Don't use `uv run --project backend trex-web-gui serve` here.** That form is for a source checkout only. On an
+- **Don't use `uv run --project backend trex-web-gui` here.** That form is for a source checkout only. On an
   installed host it fails with ``Project directory `backend` does not exist``.
 
 **As a service.** Copy [`docs/trex-web-gui.service`](docs/trex-web-gui.service) to `~/.config/systemd/user/`, then
@@ -153,7 +155,7 @@ To install v1.0.0, or to pin a version, install the wheel of a
 
 ```
 uv tool install --python 3.12 https://github.com/CRinATL/trex-web-gui/releases/download/<tag>/trex_web_gui-<version>-py3-none-any.whl
-trex-web-gui serve [--server HOST[:SYNC[:ASYNC]]] [--monitor-only] [--monitor HOST[:PORT]] [--daemon-port PORT]
+trex-web-gui [--server HOST[:SYNC[:ASYNC]]] [--monitor-only] [--monitor HOST[:PORT]] [--daemon-port PORT]
 ```
 
 With the [GitHub CLI](https://cli.github.com/), `gh release download <tag> -R CRinATL/trex-web-gui --pattern '*.whl'`
@@ -251,7 +253,7 @@ the serving port.
   - It is read once and removed from the environment, so no child process inherits it.
   - The kernel's copy of the start-up environment keeps it: `/proc/<pid>/environ` of the backend, and of the `uv`
     process that launched it, is readable by your own user (same uid) only.
-  - Do not pass it inline (`TREX_WEB_GUI_TOKEN=... trex-web-gui serve`): the value lands in your shell history.
+  - Do not pass it inline (`TREX_WEB_GUI_TOKEN=... trex-web-gui`): the value lands in your shell history.
 - The banner carries the token. Run as a service, it lands in the journal, readable by members of
   `systemd-journal` and `adm`. Treat the journal like the terminal. The uvicorn access log redacts the login
   query.
@@ -282,7 +284,7 @@ To build it from a checkout:
 - [`uv`](https://docs.astral.sh/uv/), and Node.js with npm at a version `frontend/package.json` accepts
   ([`CONTRIBUTING.md`](CONTRIBUTING.md)). Only building needs Node.js: the release wheel already holds the built
   UI, so installing and running a release needs neither Node.js nor npm.
-- `npm --prefix frontend install`, then `make build` builds the UI that `trex-web-gui serve` serves.
+- `npm --prefix frontend install`, then `make build` builds the UI that `trex-web-gui` serves.
 
 ### Starting the TRex server
 
@@ -323,14 +325,17 @@ It starts it in stateless mode, adding `-i` itself ([Daemon exposure](#daemon-ex
 Installed with `install.sh` or `uv tool install`:
 
 ```
-trex-web-gui serve [options]
+trex-web-gui [options]
 ```
 
 From a source checkout, after `make build`:
 
 ```
-uv run --project backend trex-web-gui serve [options]
+uv run --project backend trex-web-gui [options]
 ```
+
+Serving is the default and only command. `trex-web-gui serve [options]` does the same, and is what 1.1.0 and earlier
+require.
 
 | Option | What it does |
 |---|---|
@@ -357,7 +362,7 @@ names and test setups between backends as one JSON file.
 
 ## Monitor and wall displays
 
-`trex-web-gui serve --monitor-only [--monitor HOST[:PORT]]` serves the Monitor alone: the top bar offers only
+`trex-web-gui --monitor-only [--monitor HOST[:PORT]]` serves the Monitor alone: the top bar offers only
 **Monitor** and **Settings** (the theme), and the backend answers 409 to every request that changes state and to the
 capture, Studio, daemon, profile and file-browser routes. `--monitor` connects it to a TRex PUB socket at start-up. A
 `--monitor-only` backend is still bound to `127.0.0.1`, so a wall screen on another machine reaches it through the same
@@ -420,7 +425,7 @@ backend/
     monitor/           the Monitor's subscriber to a TRex PUB socket
     daemon/            the TRex daemon client and config model
     install.py         where the running backend finds its UI (the wheel's copy, else the checkout's)
-    cli.py             `trex-web-gui serve`
+    cli.py             the `trex-web-gui` command
   hatch_build.py       the wheel build hook that puts the built UI into the wheel
   vendor/
     TREX_PIN           the trex-core commit the vendored client is built from

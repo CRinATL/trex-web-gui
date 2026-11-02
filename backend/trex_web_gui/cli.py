@@ -1,4 +1,5 @@
-"""`trex-web-gui serve` (A2.12). Loopback only: there is deliberately no --listen (Revision 2)."""
+"""`trex-web-gui` (A2.12): serving is its default and only command, and `serve` is optional. Loopback only:
+there is deliberately no --listen (Revision 2)."""
 import argparse
 import contextlib
 import copy
@@ -114,26 +115,28 @@ def parse_monitor(text: str) -> tuple[str, int]:
 
 
 def build_parser() -> argparse.ArgumentParser:
-    """The `trex-web-gui` parser: a required `serve` subcommand with --port (default 8765), --data-dir,
-    --server, --monitor, --monitor-only, --daemon-port and --dev."""
-    p = argparse.ArgumentParser(prog="trex-web-gui")
-    sub = p.add_subparsers(dest="cmd", required=True)
-    s = sub.add_parser("serve", help="run the backend on 127.0.0.1")
-    s.add_argument("--port", type=_port, default=8765)
-    s.add_argument("--data-dir", type=Path, default=None)
-    s.add_argument("--server", type=parse_server, default=None, metavar="HOST[:SYNC[:ASYNC]]",
+    """The `trex-web-gui` parser: runs the backend, with --port (default 8765), --data-dir, --server,
+    --monitor, --monitor-only, --daemon-port and --dev. `serve` is the default and only command, so a bare
+    `trex-web-gui` serves; `trex-web-gui serve ...` (the 1.x form, in the service unit and older docs) still
+    works, at any position among the options."""
+    p = argparse.ArgumentParser(prog="trex-web-gui", description="Run the trex-web-gui backend on 127.0.0.1.")
+    p.add_argument("cmd", nargs="?", choices=["serve"], default="serve",
+                   help="optional; serving is the default and only command")
+    p.add_argument("--port", type=_port, default=8765)
+    p.add_argument("--data-dir", type=Path, default=None)
+    p.add_argument("--server", type=parse_server, default=None, metavar="HOST[:SYNC[:ASYNC]]",
                    help="TRex host, and optionally its command and event ports, to prefill in the dialog "
                         "(an omitted ASYNC is SYNC-1; an IPv6 host with ports is written [::1]:4601:4600)")
-    s.add_argument("--monitor", type=parse_monitor, default=None, metavar="HOST[:PORT]",
+    p.add_argument("--monitor", type=parse_monitor, default=None, metavar="HOST[:PORT]",
                    help="connect the Monitor to this TRex PUB socket at startup (default port 4500; an IPv6 "
                         "host with a port is written [::1]:4500). Independent of --monitor-only; --server "
                         "does not apply to it")
-    s.add_argument("--monitor-only", action="store_true",
+    p.add_argument("--monitor-only", action="store_true",
                    help="serve the Monitor only: every route that changes state answers 409")
-    s.add_argument("--daemon-port", type=_port, default=DAEMON_PORT, metavar="PORT",
+    p.add_argument("--daemon-port", type=_port, default=DAEMON_PORT, metavar="PORT",
                    help="the TRex daemon port the Daemon dialog prefills, on the --server host "
                         "(default 8090)")
-    s.add_argument("--dev", action="store_true", help="API only; run the frontend dev server for the UI")
+    p.add_argument("--dev", action="store_true", help="API only; run the frontend dev server for the UI")
     return p
 
 

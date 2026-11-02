@@ -34,7 +34,7 @@ npm --prefix frontend run dev        # the UI on :5173, reloading on every edit
 ```
 
 Then open the `:5173` login URL that `make dev` prints. To run the GUI as a user would, `make build` once, then
-`uv run --project backend trex-web-gui serve`.
+`uv run --project backend trex-web-gui`.
 
 ## Commands
 
@@ -49,7 +49,7 @@ Then open the `:5173` login URL that `make dev` prints. To run the GUI as a user
 | `make check-py` | Runs the unit tests on Python 3.12, 3.13 and 3.14, one step each |
 | `python3 -I scripts/gate.py status` | Where a running `make check`, `check-py` or `install-smoke` is: the step, how long it has run against its usual time, and when it should end. `gate.py times` lists each step's usual time |
 | `make check-golden` | Checks every stock stateless profile against the snapshots in `tests/golden/stl` (`WRITE_GOLDEN=1` rewrites them) |
-| `make dev` | Starts the backend on `127.0.0.1:8765` without the UI (`trex-web-gui serve --dev`). Run `npm --prefix frontend run dev` to serve the UI on `:5173`, then open the `:5173` login URL the backend prints |
+| `make dev` | Starts the backend on `127.0.0.1:8765` without the UI (`trex-web-gui --dev`). Run `npm --prefix frontend run dev` to serve the UI on `:5173`, then open the `:5173` login URL the backend prints |
 | `make citations` | Checks every `file:line` citation in code, tests and docs |
 | `python3 -I scripts/check_reflow.py --rev REV [--allow FILE] PATH…` | Checks that a layout-only edit of a Markdown file kept its facts: words, code spans, numbers, links, fenced blocks, headings and table rows |
 | `make docstrings` | Checks that every project function has a docstring or a real comment |

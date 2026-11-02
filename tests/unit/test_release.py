@@ -1383,7 +1383,7 @@ def test_install_script_says_how_to_start_the_backend(tmp_path: Path) -> None:
     """After the install, the output names the command that starts the backend and what it prints."""
     done = run_install_script(tmp_path, "\n", bin_on_path=True)
     assert done.returncode == 0, done.stderr
-    assert "Start the backend with:\n  trex-web-gui serve\n" in done.stdout
+    assert "Start the backend with:\n  trex-web-gui\n" in done.stdout
     assert "login URL" in done.stdout
     assert "update-shell" not in done.stdout
 
@@ -1396,7 +1396,7 @@ def test_install_script_adds_a_missing_bin_dir_to_the_shell_profile(tmp_path: Pa
     toolbin = f"{tmp_path}/toolbin"
     calls = (tmp_path / "uv.log").read_text().splitlines()
     assert calls[0].startswith("tool install ") and calls[1:] == ["tool update-shell"]
-    assert f"Start the backend with:\n  {toolbin}/trex-web-gui serve\n" in done.stdout
+    assert f"Start the backend with:\n  {toolbin}/trex-web-gui\n" in done.stdout
     assert f"Your shell profile now adds {toolbin} to PATH" in done.stdout
     assert "open a new terminal" in done.stdout
 
