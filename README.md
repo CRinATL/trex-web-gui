@@ -22,8 +22,10 @@ page by page: [`docs/gui-guide.md`](docs/gui-guide.md).**
   - read extended counters;
   - save and re-run multi-port test setups.
 - **Dashboard**: global, per-port, per-stream (PG ID) and latency statistics with charts; CPU and mbuf utilization.
-- **Capture**: a live capture monitor with a packet viewer, whose packets can also go to Wireshark on the backend
-  host; server-side recorders saved as pcap on the backend host; LLDP neighbours.
+- **Capture**:
+  - a live capture monitor with a packet viewer, whose packets can also go to Wireshark on the backend host;
+  - server-side recorders saved as pcap on the backend host;
+  - LLDP neighbours.
 - **Studio**: a library of stream profiles edited offline (import `.py`, YAML, JSON or pcap; edit streams; simulate;
   export) and a packet editor (layers, fields, payloads, Field Engine, presets, templates).
 - **Monitor**: a passive view of what a TRex server publishes on its event port, independent of the control
@@ -71,9 +73,9 @@ On a terminal the script:
 - checks it against that sha256;
 - stops on a prompt.
 
-Compare the sha256 with the one the release page lists next to the wheel, then press Enter
-to install. Without a terminal there is no pause: it installs at once and says so. `TREX_WEB_GUI_YES=1` skips the pause
-for an unattended install: put it before `sh`, as in `curl -fsSL … | TREX_WEB_GUI_YES=1 sh`.
+Compare the sha256 with the one the release page lists next to the wheel, then press Enter to install. Without a
+terminal there is no pause: it installs at once and says so. `TREX_WEB_GUI_YES=1` skips the pause for an unattended
+install: put it before `sh`, as in `curl -fsSL … | TREX_WEB_GUI_YES=1 sh`.
 
 **Read the script first.** To read the script before running any of it, or on a host with no terminal:
 
@@ -183,7 +185,7 @@ the serving port.
     process that launched it, is readable by your own user (same uid) only.
   - Do not pass it inline (`TREX_WEB_GUI_TOKEN=... trex-web-gui serve`): the value lands in your shell history.
 - The banner carries the token. Run as a service, it lands in the journal, readable by members of
-  `systemd-journal` and `adm`; treat the journal like the terminal. The uvicorn access log redacts the login
+  `systemd-journal` and `adm`. Treat the journal like the terminal. The uvicorn access log redacts the login
   query.
 - The cookie is the token, and a browser sends a cookie to every server on the same host, whatever the port.
   Any HTTP server your browser reaches under the host name you opened the GUI with can read it, so open other
@@ -251,11 +253,10 @@ names and test setups between backends as one JSON file.
 - The top bar offers only **Monitor** and **Settings** (the theme).
 - The backend answers 409 to every request that changes state and to the capture, Studio, daemon, profile and
   file-browser routes.
-- `--monitor` connects it to a TRex PUB socket at start-up.
-- A `--monitor-only` backend is still bound to `127.0.0.1`, so a wall screen on another machine reaches it through
-  the same SSH tunnel as above.
-- The Monitor opens no RPC connection and changes nothing on the server, so it also works beside a stateful (`-f`)
-  run, which has no command port.
+
+`--monitor` connects it to a TRex PUB socket at start-up. A `--monitor-only` backend is still bound to `127.0.0.1`, so
+a wall screen on another machine reaches it through the same SSH tunnel as above. The Monitor opens no RPC connection
+and changes nothing on the server, so it also works beside a stateful (`-f`) run, which has no command port.
 
 ## Daemon exposure
 
@@ -265,15 +266,13 @@ is not part of trex-web-gui, and it has no authentication: it runs as root and b
 `push_file` and `prepare_astf_profile` (`trex_server.py:113-135`) let anyone who can reach port 8090 write a file into
 the daemon's files directory and have a Python profile loaded, which is code run as root, whatever trex-web-gui does.
 
-trex-web-gui's own checks are not a boundary against that:
-
-- The rule on `trex_args` (at most 20 tokens of letters, digits and `_ . , : = / + -`, with the flags that change what
-  TRex reads refused: `--cfg`, `-i`, `--astf`, `-f`, `-d`, `-m`, `-l`, `--rx-check`, `--client_cfg`, also abbreviated)
-  is defence in depth on trex-web-gui's own route. Flags that take a path, such as `--rpc-logfile`, still pass it, and
-  port 8090 accepts such arguments from anyone directly.
-- Restrict port 8090 before you use daemon control outside the test VM: firewall it to the GUI host, or start the
-  daemon with `--trex-host 127.0.0.1` and reach it through an SSH tunnel.
-- The test VM is already safe: QEMU forwards its daemon port on `127.0.0.1` only (`vm/launch.sh`).
+trex-web-gui's own checks are not a boundary against that. The rule on `trex_args` (at most 20 tokens of letters, digits
+and `_ . , : = / + -`, with the flags that change what TRex reads refused: `--cfg`, `-i`, `--astf`, `-f`, `-d`, `-m`,
+`-l`, `--rx-check`, `--client_cfg`, also abbreviated) is defence in depth on trex-web-gui's own route. Flags that take
+a path, such as `--rpc-logfile`, still pass it, and port 8090 accepts such arguments from anyone directly. Restrict
+port 8090 before you use daemon control outside the test VM: firewall it to the GUI host, or start the daemon with
+`--trex-host 127.0.0.1` and reach it through an SSH tunnel. The test VM is already safe: QEMU forwards its daemon port
+on `127.0.0.1` only (`vm/launch.sh`).
 
 ## Development
 
