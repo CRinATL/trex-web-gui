@@ -1,5 +1,5 @@
-"""Subprocess entry point for the packet editor (P4b plan D1): one persistent worker holds the only
-`Scapy_service` the editor uses and answers one JSON request line at a time.
+"""Subprocess entry point for the packet editor (P4b plan D1), and for the capture viewer's layer tree: one
+persistent worker holds the only `Scapy_service` either uses and answers one JSON request line at a time.
 Run by packet.py as: python -I -B -c <bootstrap: an address-space limit, then this module as __main__>.
 Never imported by the backend process: a packet field's EXPRESSION value is arbitrary Python that the
 service `eval`s (`scapy_service.py:563-580`), so every build runs here, under the limit.
@@ -153,9 +153,16 @@ class Engine:
         if len(raw) <= EDITOR_DECODE_BYTES:
             return {"ok": True, **self.svc.reconstruct_pkt(None, args["binary"], [])}
         from scapy.layers.l2 import Ether
-        from scapy.packet import Raw
+        from scapy.packet import Padding, Raw
         pkt = Ether(raw[:EDITOR_DECODE_BYTES])
-        _chain(pkt)[-1].add_payload(Raw(raw[EDITOR_DECODE_BYTES:]))
+        # Scapy builds a Padding's bytes after the whole packet, so a tail nested under one would come out
+        # before them: from the first Padding on, the frame is one Raw tail instead.
+        pad = next((x for x in _chain(pkt) if isinstance(x, Padding)), None)
+        if pad is not None and pad.underlayer is not None:
+            pad.underlayer.remove_payload()
+        _chain(pkt)[-1].add_payload(Raw(raw[len(bytes(pkt)):]))
+        if bytes(pkt) != raw:            # any other layout that does not rebuild in order: Ether plus Raw
+            pkt = Ether(raw[:ETHER_LEN]) / Raw(raw[ETHER_LEN:])
         return {"ok": True, **self.svc._pkt_data(pkt)}
 
     def payload_classes(self, args: dict[str, Any]) -> dict[str, Any]:

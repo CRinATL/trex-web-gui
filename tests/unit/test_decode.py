@@ -124,5 +124,8 @@ def test_summary_dissects_at_most_summary_bytes(monkeypatch: pytest.MonkeyPatch)
     raw = bytes.fromhex("020000000002" "020000000001" "0800").ljust(9238, b"\x00")
     decode.summary(raw)
     assert given == [decode.SUMMARY_BYTES]
-    udp = _raw("udp")
-    assert decode.summary(udp) == decode.summary(udp[:decode.SUMMARY_BYTES])
+    monkeypatch.setattr(scapy.all, "Ether", real_ether)
+    from scapy.all import IP, UDP, Ether
+    long_udp = bytes(Ether() / IP() / UDP(sport=1234, dport=4321) / (bytes(range(256)) * 36))
+    assert len(long_udp) > decode.SUMMARY_BYTES
+    assert decode.summary(long_udp).proto == "UDP" and "1234" in decode.summary(long_udp).info

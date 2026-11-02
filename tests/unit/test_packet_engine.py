@@ -1121,16 +1121,36 @@ def test_tree_op_dissects_at_most_the_cap_and_keeps_every_byte(monkeypatch: pyte
     def whole(*args: Any) -> Any:
         raise AssertionError("reconstruct_pkt dissects the whole frame")
     monkeypatch.setattr(eng.svc, "reconstruct_pkt", whole)
-    raw = IPV4_ETHER.ljust(30_000, b"\x00")
+    cap = packet_worker.EDITOR_DECODE_BYTES
+    tail = bytes(range(256)) * 81                      # not uniform: a reordered frame cannot compare equal
+    raw = IPV4_ETHER.ljust(cap, b"\x00") + tail
     res = eng.tree({"binary": b64(raw)})
-    assert given and all(n <= packet_worker.EDITOR_DECODE_BYTES for n in given)
+    assert given and all(n <= cap for n in given)
     assert base64.b64decode(res["binary"]) == raw
     assert res["data"][-1]["id"] == "Raw"
+
+
+def test_tree_op_keeps_a_padded_heads_bytes_in_order() -> None:
+    # IP.len 100 leaves the rest of the head as Padding, which Scapy builds after the whole packet: the tail
+    # must not be nested under it (PR 14 review, I-1).
+    from scapy.all import IP, UDP, Ether
+    head = bytes(Ether() / IP(len=100) / UDP())
+    raw = head.ljust(packet_worker_cap(), b"\x00") + bytes(range(256)) * 11
+    res = engine_worker().tree({"binary": b64(raw)})
+    assert base64.b64decode(res["binary"]) == raw
+    layers = [(d["id"], d["offset"]) for d in res["data"]]
+    assert layers == [("Ether", 0), ("IP", 14), ("UDP", 34), ("Raw", 42)]
+
+
+def packet_worker_cap() -> int:
+    """The editor's decode cap, EDITOR_DECODE_BYTES."""
+    from trex_web_gui.trexapi import packet_worker
+    return packet_worker.EDITOR_DECODE_BYTES
 
 
 def test_tree_op_refuses_a_frame_shorter_than_ethernet() -> None:
     async def body(e: PacketEngine) -> None:
         with pytest.raises(PacketError) as info:
             await e.tree(b64(bytes(5)))
-        assert not info.value.restarted and "error" in str(info.value)
+        assert not info.value.restarted and "unpack requires a buffer" in str(info.value)
     with_engine(body)

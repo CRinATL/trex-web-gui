@@ -18,6 +18,8 @@ _SKIP_PROTO = ("Raw", "Padding", "ICMPv6NDOpt")      # layers that are payload o
 # A row names the headers at the frame's start, so only these bytes are dissected: whole, a zero-filled jumbo
 # IPv4 frame took 0.45 s against 0.10 s for its first 2048, and frames arrive from the test network unasked.
 # The packet worker's list rows use the same number (packet_worker.SUMMARY_BYTES).
+# A message the cap cuts short no longer dissects as its protocol: a DNS response over 2048 bytes
+# is a UDP/Raw row.
 SUMMARY_BYTES = 2048
 
 
