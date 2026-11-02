@@ -14,11 +14,12 @@ caps), and `uv`.
 ## Working directory
 
 The guest is picked by `TREX_VM_GUEST` (default `jammy`; the Makefile exports it). `vm/guests.sh` turns that
-into the working directory `$TREX_VM_DIR` and the ports, and `launch.sh`, `ssh.sh`, `real.sh`, `demo.sh`, `stack.sh` (and `download.sh`, `build.sh`) source it; `netem.sh` reaches the guest through `ssh.sh`. Precedence: `TREX_VM_GUEST`
-selects the row; a `TREX_VM_DIR` set by hand overrides the row's directory (with the guest named, a warning says
-so once; with no guest, jammy's behaviour is exactly as before). The directory holds the images, the SSH key, the
-monitor socket and the console log, and is not in git. Keep it on a disk that survives a reboot (`/var/tmp`, not a
-tmpfs `/tmp`).
+into the working directory `$TREX_VM_DIR` and the ports, and `launch.sh`, `ssh.sh`, `real.sh`, `demo.sh`,
+`stack.sh` (and `download.sh`, `build.sh`) source it. `netem.sh` reaches the guest through `ssh.sh`. Precedence:
+`TREX_VM_GUEST` selects the row; a `TREX_VM_DIR` set by hand overrides the row's directory (with the guest named, a
+warning says so once; with no guest, jammy's behaviour is exactly as before). The directory holds the images, the
+SSH key, the monitor socket and the console log, and is not in git. Keep it on a disk that survives a reboot
+(`/var/tmp`, not a tmpfs `/tmp`).
 
 | Guest | Directory | ssh | TRex async / sync (RPC) | EMU | daemon | demo GUI |
 |---|---|---|---|---|---|---|
@@ -62,14 +63,21 @@ Ports are forwarded on 127.0.0.1 only: for jammy 2222→22 (ssh), 4500 (TRex PUB
 
 `vm/build.sh <guest> [--rebuild]` builds any guest except jammy from scratch in its own work dir, then prints four
 figures (cold boot to ssh, TRex start to RPC ready, `savevm`, `loadvm` to RPC ready). `jammy` is built by hand, with
-the steps below, and `build.sh jammy` always refuses. The script refuses (exit 2, before touching anything) an
-unknown guest, a `TREX_VM_DIR`, `TREX_VM_DL` or `TREX_VM_SHARED` set by hand (`TREX_VM_BASE` is the only redirect),
-a dir that is, or lies under, a protected dir (`/var/tmp/trex-vm`, plus each entry of `TREX_VM_PROTECT_ALSO`,
-compared by `realpath -m`), a guest whose QEMU or ports are in use, and an existing `trex.qcow2` unless `--rebuild`
-is given. `--rebuild` removes only `trex.qcow2`, `seed.iso`, `seed/user-data`, `seed/meta-data`, `qemu.pid`,
-`console.log` and `known_hosts`, and keeps the SSH key pair. Other guests keep the image in
-`/var/tmp/trex-vm-dl/<guest>/` and share one `v3.08.tar.gz` and `tls/bundle.pem` in `/var/tmp/trex-vm-dl/`; the
-bundle is copied from jammy's `tls/` when absent. Run one VM user at a time.
+the steps below, and `build.sh jammy` always refuses.
+
+The script refuses (exit 2, before touching anything):
+
+- an unknown guest;
+- a `TREX_VM_DIR`, `TREX_VM_DL` or `TREX_VM_SHARED` set by hand (`TREX_VM_BASE` is the only redirect);
+- a dir that is, or lies under, a protected dir (`/var/tmp/trex-vm`, plus each entry of `TREX_VM_PROTECT_ALSO`,
+  compared by `realpath -m`);
+- a guest whose QEMU or ports are in use;
+- an existing `trex.qcow2` unless `--rebuild` is given.
+
+`--rebuild` removes only `trex.qcow2`, `seed.iso`, `seed/user-data`, `seed/meta-data`, `qemu.pid`, `console.log` and
+`known_hosts`, and keeps the SSH key pair. Other guests keep the image in `/var/tmp/trex-vm-dl/<guest>/` and share
+one `v3.08.tar.gz` and `tls/bundle.pem` in `/var/tmp/trex-vm-dl/`. The bundle is copied from jammy's `tls/` when
+absent. Run one VM user at a time.
 
 What it does, and what jammy's by-hand build was:
 
