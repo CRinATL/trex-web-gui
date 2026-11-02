@@ -1267,7 +1267,7 @@ README's "Daemon exposure" before using it outside the test VM. While the dialog
 
 - **Host** (the last daemon's host, else the Control session's host, else the `--server` host, else `127.0.0.1`).
 - **Port** (`--daemon-port`, 8090 by default).
-- **Connect**, **Disconnect** (`Host is required`, `Port must be 1–65535`).
+- **Connect** (`Host is required`, `Port must be 1–65535`), **Disconnect**.
 
 Opening the dialog again reconnects to the last daemon. Under it the exposure warning, then
 `State: <not connected | connected | error: …> · <version> · running since <time>`. Tabs **Config**, **YAML**, **Run**
@@ -1368,13 +1368,12 @@ daemon cannot delete them; they stay until the host clears <files directory>.` W
 
 ## 13. Settings
 
-Route `/settings`, also Ctrl+Shift+P. A side list of sections; each saveable section has its own **Save** and
-**Revert** (enabled once it has an edit) and is marked `· unsaved` in the list while it does
-([53](gui-inventory/screens/53-settings-appearance.png) to [57](gui-inventory/screens/57-settings-about.png)). Saving
-one never sends another's edits. `Settings changed on the server — Reload` appears above the sections when another
-browser or an import saved different settings while you hold unsaved edits
-([58](gui-inventory/screens/58-settings-changed-on-server.png)). With no edit the page takes the new values by itself.
-When the settings could not be loaded, the error shows in red under the heading.
+Route `/settings`, also Ctrl+Shift+P. A side list of sections ([53](gui-inventory/screens/53-settings-appearance.png) to
+[57](gui-inventory/screens/57-settings-about.png)). Each saveable section has its own **Save** and **Revert** (enabled
+once it has an edit) and is marked `· unsaved` in the list while it does. Saving one never sends another's edits.
+`Settings changed on the server — Reload` appears above the sections when another browser or an import saved different
+settings while you hold unsaved edits ([58](gui-inventory/screens/58-settings-changed-on-server.png)). With no edit the
+page takes the new values by itself. When the settings could not be loaded, the error shows in red under the heading.
 
 The settings live in `settings.toml` in the backend's data directory (`$XDG_DATA_HOME/trex-web-gui`, else
 `~/.local/share/trex-web-gui`, or `--data-dir`).
