@@ -796,7 +796,7 @@ def records_repo(tmp_path: Path) -> tuple[Path, Path]:
     (repo / ".superpowers" / "sdd" / "a").mkdir(parents=True)
     (repo / "PLAN.md").write_text("plan\n")
     (repo / "DEFERRED.md").write_text(HOST)
-    (repo / release.HOST_USE_LOG).write_text("2026-10-31 installed 1.0.0\n")
+    (repo / release.HOST_USE_LOG).write_text("2026-10-31 host use before 1.0.1\n")
     (repo / ".superpowers" / "sdd" / "a" / "progress.md").write_text("ledger\n")
     (repo / ".sdd.conf").write_text(f"LEDGER_GIT_DIR={gd}\n")
     rec(repo, gd, "add", "-f", "PLAN.md", "DEFERRED.md", release.HOST_USE_LOG,
@@ -934,7 +934,7 @@ def test_a_host_row_without_a_closing_pipe_is_malformed_not_a_pass() -> None:
 def test_records_gate_names_a_missing_host_use_log(tmp_path: Path) -> None:
     repo, _ = records_repo(tmp_path)
     (repo / release.HOST_USE_LOG).unlink()
-    problems = release.records_gate_problems(repo, str(tmp_path))
+    problems = release.records_gate_problems(repo, str(tmp_path), "1.1.0")
     assert "docs/releases/host-use-1.x.md is missing" in problems
 
 
@@ -1100,6 +1100,40 @@ def test_check_patch_refuses_an_undated_use_log(tmp_path: Path, capsys: pytest.C
     rec(repo, gd, "push", "-q", "origin", "main")
     code, run = check_patch(repo)
     assert code == 1 and f"{release.HOST_USE_LOG} has no line starting with a date" in capsys.readouterr().out
+    assert run.calls == []
+
+
+NAMING = "x.md has no dated line naming {} (log a host session, or a waiver, for this release)"
+
+
+@pytest.mark.parametrize(("text", "version", "expected"), [
+    ("2026-11-01 \u2014 waiver \u2014 1.1.0 released without a host session\n", "1.1.0", []),
+    ("2026-11-01 \u2014 waiver \u2014 1.1.0 released without a host session\n", "1.1.1",
+     [NAMING.format("1.1.1")]),
+    ("2026-11-01 tried v1.1.0\n", "1.1.0", []),
+    ("2026-11-01 ends 1.1.0.\n", "1.1.0", []),
+    ("2026-11-01 (1.1.0)\n", "1.1.0", []),
+    ("2026-11-01 11.1.0\n", "1.1.0", [NAMING.format("1.1.0")]),
+    ("2026-11-01 1.1.01\n", "1.1.0", [NAMING.format("1.1.0")]),
+    ("2026-11-01 1.1.0rc1\n", "1.1.0", [NAMING.format("1.1.0")]),
+    ("2026-11-01 1.1.0.post1\n", "1.1.0", [NAMING.format("1.1.0")]),
+    ("2026-11-01 1.1.0-rc1\n", "1.1.0", [NAMING.format("1.1.0")]),
+    ("notes 1.1.0\n2026-11-01 other\n", "1.1.0", [NAMING.format("1.1.0")]),
+    ("no date 1.1.0\n", "1.1.0", ["x.md has no line starting with a date (YYYY-MM-DD)"]),
+])
+def test_use_log_problems_needs_a_dated_line_naming_the_release(text: str, version: str,
+                                                                expected: list[str]) -> None:
+    assert release.use_log_problems(text, "x.md", version) == expected
+
+
+def test_check_patch_refuses_a_log_that_names_another_release(tmp_path: Path,
+                                                               capsys: pytest.CaptureFixture[str]) -> None:
+    repo, gd = patch_repo(tmp_path)
+    (repo / release.HOST_USE_LOG).write_text("2026-10-31 installed 1.0.0\n")
+    rec(repo, gd, "commit", "-qam", "names 1.0.0 only")
+    rec(repo, gd, "push", "-q", "origin", "main")
+    code, run = check_patch(repo)
+    assert code == 1 and "has no dated line naming 1.0.1" in capsys.readouterr().out
     assert run.calls == []
 
 

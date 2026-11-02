@@ -265,12 +265,19 @@ def rc1_open_rows(deferred_text: str) -> list[str]:
     return open_rows
 
 
-def use_log_problems(text: str | None, path: str = USE_LOG) -> list[str]:
-    """A week's use log must exist and hold at least one line starting with a date."""
+def use_log_problems(text: str | None, path: str = USE_LOG, version: str | None = None) -> list[str]:
+    """A use log must exist and hold at least one line starting with a date. With `version`, one such line
+    must also name that version as a whole token (a per-line test: a dated line and a separate line naming
+    the version do not count)."""
     if text is None:
         return [f"{path} is missing"]
     if not re.search(r"^\d{4}-\d{2}-\d{2}", text, re.M):
         return [f"{path} has no line starting with a date (YYYY-MM-DD)"]
+    if version is not None:
+        named = re.compile(rf"(?<![0-9.]){re.escape(version)}(?![0-9A-Za-z]|[.-][0-9A-Za-z])")
+        if not any(re.match(r"\d{4}-\d{2}-\d{2}", ln) and named.search(ln) for ln in text.splitlines()):
+            return [f"{path} has no dated line naming {version} "
+                    "(log a host session, or a waiver, for this release)"]
     return []
 
 
@@ -413,10 +420,10 @@ def _guard_inputs(root: Path, gd: Path | None = None) -> tuple[dict[str, str], s
     return {n: (root / n).read_text() for n in names if (root / n).is_file()}, tracked
 
 
-def records_gate_problems(root: Path, home: str) -> list[str]:
+def records_gate_problems(root: Path, home: str, version: str) -> list[str]:
     """What the records must show before a 1.x release after 1.0.0: configured and usable, pushed, every host
-    row closed, every RC1 row closed, a dated use log, and the use log not tracked by the public repo. The
-    publish step runs it again."""
+    row closed, every RC1 row closed, a use log with a dated line naming `version`, and the use log not
+    tracked by the public repo. The publish step runs it again."""
     gd = records_git_dir(root, home)
     if not isinstance(gd, Path):
         reason = gd or f"no LEDGER_GIT_DIR in {CONF}"
@@ -427,7 +434,7 @@ def records_gate_problems(root: Path, home: str) -> list[str]:
         problems.append(f"{DEFERRED} not found")
     problems += host_rows_problems(register or "")
     problems += [f"open rc1 row {r}" for r in rc1_open_rows(register or "")]
-    problems += use_log_problems(_read(root / HOST_USE_LOG), HOST_USE_LOG)
+    problems += use_log_problems(_read(root / HOST_USE_LOG), HOST_USE_LOG, version)
     if _git(root, "ls-files", "--", HOST_USE_LOG).strip():
         problems.append(f"{HOST_USE_LOG} is tracked by the public repo: host details stay private")
     return problems
@@ -447,7 +454,7 @@ def _check(target: Target, dry_run: bool, run: Callable[[list[str], Path], int],
     texts, tracked = _guard_inputs(root, gd if isinstance(gd, Path) else None)
     problems += guard_problems(texts, tracked)
     if target.name == "patch":
-        problems += records_gate_problems(root, home)
+        problems += records_gate_problems(root, home, target.version)
         head = _git(root, "rev-parse", "HEAD").strip()
         if not dry_run:
             main_ref = _git(root, "ls-remote", "origin", "refs/heads/main").split()
@@ -700,7 +707,7 @@ class Publisher:
         sha, wheel = rec["sha"], f"dist/{rec['wheel']}"
         main_ref = "refs/heads/main"
         if self.patch:   # the records may have changed since the check; nothing is written until they hold
-            found = records_gate_problems(self.root, self.env.get("HOME", ""))
+            found = records_gate_problems(self.root, self.env.get("HOME", ""), self.target.version)
             if found:
                 raise PublishError("\n".join(found) + "\nnothing was tagged or released")
         there_main = self.remote(main_ref)
