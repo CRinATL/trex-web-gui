@@ -303,7 +303,7 @@ in STREAMS, at ×1, with no duration ([11](gui-inventory/screens/11-start-all-di
 
 Select a port or profile row. The heading is `Port N` or `Port N — <name>`; under it a tab strip **Control**,
 **Config**, **Traffic**, **Counters**, **Tools**. Control is the first tab. The tabs stay loaded while another
-is shown, so an inspected profile, typed values and a ping in progress survive a tab switch; the one exception
+is shown, so an inspected profile, typed values and a ping in progress survive a tab switch. The one exception
 is the Traffic tab's live-update countdown, which is cancelled when the tab is hidden.
 
 A request from the context menu or from Studio moves the panel to the right tab and focuses the field.
@@ -318,24 +318,29 @@ Shown in [13](gui-inventory/screens/13-port-control-top.png), [14](gui-inventory
   [86](gui-inventory/screens/86-chips-tx.png), [87](gui-inventory/screens/87-chips-pause.png)).
 - **Port details (13)**, a fold: Driver, Description, MAC, PCI, Interface, Card, Bound driver, NUMA, RX filter
   mode, VLAN tags, Capture port, Grat ARP, RX queueing.
-- **Name**: `Shown in the port lists. Saved by this GUI for <host>:<port>; clear both fields to remove the
-  name.` **Name** (40 characters) and **Description** (500) with live counts, **Save** and **Revert**. A port
-  with no saved name starts from its confirmed kernel interface name. The name is keyed by the port's MAC (by
-  its number when the MAC is unusable or repeated), per server, and is stored in the backend's data
-  directory, so every browser sees it. Over the limit: `The name is limited to 40 characters and the
-  description to 500.` Disconnected: `Connect to name ports.` Unreadable file: `The port names file could not
-  be read (<error>); it is kept as it is.`
+- **Name**:
+  - `Shown in the port lists. Saved by this GUI for <host>:<port>; clear both fields to remove the name.`
+  - **Name** (40 characters) and **Description** (500) with live counts, **Save** and **Revert**.
+  - A port with no saved name starts from its confirmed kernel interface name.
+  - The name is keyed by the port's MAC (by its number when the MAC is unusable or repeated), per server, and is
+    stored in the backend's data directory, so every browser sees it.
+  - Over the limit: `The name is limited to 40 characters and the description to 500.`
+  - Disconnected: `Connect to name ports.`
+  - Unreadable file: `The port names file could not be read (<error>); it is kept as it is.`
 - **Attributes**: **Promiscuous**, **Multicast**, **Link up**, **LED** checkboxes and a **Flow control** select
-  (NONE, TX, RX, FULL). Each applies at once. A control is disabled with the reason as its tooltip:
-  `not connected`, `read-only session`, `select the default profile`, `acquire the port first`, or
-  `not supported by <driver>` when the driver reports no support (the test guest's af_packet supports none of
-  Link up, LED and Flow control). Unticking Link up on a transmitting port first shows `Link down while
-  transmitting can hang the TRex v3.08 server (upstream issue #1207). Stop traffic first, or click again to
-  proceed.`; the second click within 5 s proceeds.
-- **Service mode**: radios **Off**, **On**, **Filtered**. Off and On apply at once (a failure puts the radio
-  back). Filtered shows the mask checkboxes **No TCP/UDP**, **BGP**, **DHCP**, **Transport**, **mDNS**, **All**
-  and **Apply filter** (`choose at least one packet class` while none is ticked). The note says
-  `Filtered mode needs the TRex server started with --software.`
+  (NONE, TX, RX, FULL).
+  - Each applies at once.
+  - A control is disabled with the reason as its tooltip: `not connected`, `read-only session`,
+    `select the default profile`, `acquire the port first`, or `not supported by <driver>` when the driver
+    reports no support (the test guest's af_packet supports none of Link up, LED and Flow control).
+  - Unticking Link up on a transmitting port first shows `Link down while transmitting can hang the TRex v3.08
+    server (upstream issue #1207). Stop traffic first, or click again to proceed.` The second click within 5 s
+    proceeds.
+- **Service mode**: radios **Off**, **On**, **Filtered**.
+  - Off and On apply at once (a failure puts the radio back).
+  - Filtered shows the mask checkboxes **No TCP/UDP**, **BGP**, **DHCP**, **Transport**, **mDNS**, **All** and
+    **Apply filter** (`choose at least one packet class` while none is ticked).
+  - The note says `Filtered mode needs the TRex server started with --software.`
 - **Reset**: `Reset takes the port from any owner, stops traffic and removes all streams.` The red **Reset…**
   reads `Click again to confirm reset` after the first click (5 s), and lists the captures that would go. It
   is not gated by ownership, only by `not connected`, `read-only session` and `select the default profile`.
@@ -344,24 +349,36 @@ Shown in [13](gui-inventory/screens/13-port-control-top.png), [14](gui-inventory
 
 The port's L2/L3 layer, VLANs and IPv6 ([16](gui-inventory/screens/16-port-config-top.png),
 [17](gui-inventory/screens/17-port-config-l2.png)). Everything is disabled with one tooltip when the port
-cannot take a configuration command, in this order: `not connected`, `read-only session`,
-`select the default profile`, `acquire the port first`, `transmitting: stop traffic first` (the server allows
-configuration only in IDLE, STREAMS or ASTF_LOADED), `busy: pinging` / `busy: scanning` / `busy: applying`,
-`filtered service mode: set it on or off in the Control tab`. The reason also shows as a line beside Apply
-(`Acquire the port first.`).
+cannot take a configuration command, in this order:
 
-- **Mode and VLAN**: **Mode** radios **L2** / **L3**; **Outer VLAN**, **Inner VLAN** (1–4095); **Source MAC**
-  (read-only, `set in the server config`); **Destination MAC**: an input in L2, and in L3 the ARP result,
-  `resolved after Apply`, `unresolved`, or `unresolved: <reason>`.
+- `not connected`;
+- `read-only session`;
+- `select the default profile`;
+- `acquire the port first`;
+- `transmitting: stop traffic first` (the server allows configuration only in IDLE, STREAMS or ASTF_LOADED);
+- `busy: pinging` / `busy: scanning` / `busy: applying`;
+- `filtered service mode: set it on or off in the Control tab`.
+
+The reason also shows as a line beside Apply (`Acquire the port first.`).
+
+- **Mode and VLAN**:
+  - **Mode** radios **L2** / **L3**;
+  - **Outer VLAN**, **Inner VLAN** (1–4095);
+  - **Source MAC** (read-only, `set in the server config`);
+  - **Destination MAC**: an input in L2, and in L3 the ARP result, `resolved after Apply`, `unresolved`, or
+    `unresolved: <reason>`.
 - **Addresses**: in L3, **Source IPv4** and **Destination IPv4** with the ARP state beside it; **IPv6** radios
   **Off** / **Auto** / **Address** and **IPv6 source**. On a server with the legacy stack these are disabled
   and the note reads `IPv6 configuration needs the linux_based stack; this server runs legacy`.
 - **Apply**, **Revert**, and `Unapplied changes` while the form differs from the server. Messages:
-  `The outer VLAN must be a number from 1 to 4095.`, `Enter the outer VLAN before the inner one.`,
-  `The destination MAC must look like 00:11:22:33:44:55.`, `Source and destination must both be IPv4.`,
-  `The IPv6 source must be an IPv6 address.`; then the backend's answer, `Applied`, or
-  `L3 set, ARP unresolved: <reason>`, or `Service mode could not be restored: <error>` (Apply puts the port in
-  service mode for the ARP and puts it back afterwards).
+  - `The outer VLAN must be a number from 1 to 4095.`;
+  - `Enter the outer VLAN before the inner one.`;
+  - `The destination MAC must look like 00:11:22:33:44:55.`;
+  - `Source and destination must both be IPv4.`;
+  - `The IPv6 source must be an IPv6 address.`;
+  - then the backend's answer, `Applied`, or `L3 set, ARP unresolved: <reason>`, or
+    `Service mode could not be restored: <error>` (Apply puts the port in service mode for the ARP and puts it
+    back afterwards).
 - If the server's configuration changes while you are editing: `Changed on the server — Reload`. An untouched
   form follows the server by itself.
 
@@ -379,35 +396,42 @@ Each port's form is kept while you switch ports, tabs and pages, and is emptied 
   Nothing is uploaded.` and `.py profiles run as code on <host>.` Until the host name is known it reads `Paths
   are on the computer running trex-web-gui serve, …` and `.py profiles run as code there.`
 - **Browse…**: the backend host's file browser ([4.3.1](#431-browse-dialog)). Picking a `.yaml`, `.yml` or
-  `.json` file inspects it at once; a `.py` only fills the path, and you press Inspect.
+  `.json` file inspects it at once. A `.py` only fills the path, and you press Inspect.
 - **Library…**: pick a profile from the Studio library ([4.3.2](#432-pick-from-the-library-dialog)).
 - **Inspect**: loads the profile on the backend (a `.py` runs) and shows its tunables and its streams. A failed
-  inspect keeps the form and shows the backend's message; a `.py`'s own error comes back as a block of text.
+  inspect keeps the form and shows the backend's message. A `.py`'s own error comes back as a block of text.
 - After Inspect, a **tunables form** built from the profile's arguments (checkbox, choice, number or text per
   argument, with its help as tooltip) and **Extra arguments**. Re-inspecting the same path keeps your values.
 - **New in Studio…** (an inline **Name** field, **Cancel**, **Create**) makes an empty library profile and
-  opens it in Studio; **Copy to Studio** imports the inspected profile (with its tunables for a `.py`) into the
+  opens it in Studio. **Copy to Studio** imports the inspected profile (with its tunables for a `.py`) into the
   library and opens it in Studio.
 
 **What it holds**: a table **#**, **Name**, **Enabled**, **Mode**, **Rate**, **Packet**, **Length**, **VM** of
-the inspected (or, after Assign, the assigned) streams, `Showing the first N of M streams` when cut;
+the inspected (or, after Assign, the assigned) streams, `Showing the first N of M streams` when cut.
 **Show rate at ×1** (an owned port with streams) asks the server what ×1 means: `At ×1: max 1.1 kpps, L2 1.2
 Mbps, 0.012% line utilisation`, and a fold **Full validate response** with the raw answer.
 
-**Rate**: **Multiplier**, one box that reads the unit you type with the number. A bare number is a factor of
-the profile's rates (`×` or `x` before or after it says the same); `%` is a share of the line rate, and a
-slider shows beside the box; `pps`, `bps` (L2) and `bps L1` (or `bpsl1`) take an optional `k`, `M` or `G`.
-Fractions are fine, a space before the unit is optional, and case does not matter (`m` is mega): `2`, `×0.5`,
-`25%`, `10 kpps`, `2.5 Gbps`, `1gbps l1`. **A `k`, `M` or `G` needs a unit after it: type `200kpps`, not
-`200k`**, which is refused (a bare `10 M` would otherwise be a factor of ten million). Beside the box, a reading
-updated as you type: `= ×0.5 the profile's rates`, `= 25 % of line rate`, `= 10,000 pps`, `= 2.5 Gbit/s (L2)`;
-an entry it cannot read shows `Can't read "<text>": a number, optionally with k/M/G and pps, bps or %, or × for
-a factor.` instead (`Enter a rate above 0.`, `A percentage is at most 100.`). A multiplier loaded from a setup
-or put back by Cancel is shown in its shortest form (`10000pps` reads `10 kpps`). The box is marked `edited`
-while it differs from the multiplier last applied to the port.
-**Duration (s)**, empty for no limit;
-**Force** (start even if the server objects). The multiplier is disabled with the tooltip
-`not connected`, `read-only session`, `acquire the port first` or `select the default profile`.
+**Rate**:
+
+- **Multiplier**, one box that reads the unit you type with the number.
+  - A bare number is a factor of the profile's rates (`×` or `x` before or after it says the same).
+  - `%` is a share of the line rate, and a slider shows beside the box.
+  - `pps`, `bps` (L2) and `bps L1` (or `bpsl1`) take an optional `k`, `M` or `G`.
+  - Fractions are fine, a space before the unit is optional, and case does not matter (`m` is mega): `2`, `×0.5`,
+    `25%`, `10 kpps`, `2.5 Gbps`, `1gbps l1`.
+  - **A `k`, `M` or `G` needs a unit after it: type `200kpps`, not `200k`**, which is refused (a bare `10 M` would
+    otherwise be a factor of ten million).
+  - Beside the box, a reading updated as you type: `= ×0.5 the profile's rates`, `= 25 % of line rate`,
+    `= 10,000 pps`, `= 2.5 Gbit/s (L2)`.
+  - An entry it cannot read shows `Can't read "<text>": a number, optionally with k/M/G and pps, bps or %, or × for
+    a factor.` instead (`Enter a rate above 0.`, `A percentage is at most 100.`).
+  - A multiplier loaded from a setup or put back by Cancel is shown in its shortest form (`10000pps` reads
+    `10 kpps`).
+  - The box is marked `edited` while it differs from the multiplier last applied to the port.
+- **Duration (s)**, empty for no limit.
+- **Force** (start even if the server objects).
+- The multiplier is disabled with the tooltip `not connected`, `read-only session`, `acquire the port first` or
+  `select the default profile`.
 
 **Actions**
 
@@ -419,31 +443,41 @@ while it differs from the multiplier last applied to the port.
   says), else `Inspect a profile first.`, else what Start will send, `Start at 5 kpps, 30 s.` (the toolbar
   Start's tooltip, from the same form).
 - **Live update**: while the default profile transmits and you may act, **a typed multiplier is applied on
-  Enter or a click elsewhere in the page, never by switching to another app**. Typing alone sends nothing, so a
-  half-typed `10` on the way to `10 Mpps` never reaches the port; if you switch apps mid-entry, come back and
-  press Enter. Tab to another control and moving the slider count as a click elsewhere. Each of these starts a
-  10 s countdown, `Applying <mult> in N s · Apply now · Cancel`; at zero the new rate is sent. An entry the box
-  cannot read starts nothing. Cancel puts the last applied value back. Hiding the tab, pausing or stopping the
-  port cancels it.
+  Enter or a click elsewhere in the page, never by switching to another app**.
+  - Typing alone sends nothing, so a half-typed `10` on the way to `10 Mpps` never reaches the port.
+  - If you switch apps mid-entry, come back and press Enter.
+  - Tab to another control and moving the slider count as a click elsewhere.
+  - Each of these starts a 10 s countdown, `Applying <mult> in N s · Apply now · Cancel`. At zero the new rate is
+    sent.
+  - An entry the box cannot read starts nothing.
+  - Cancel puts the last applied value back.
+  - Hiding the tab, pausing or stopping the port cancels it.
 - A `.py` picked from the library carries the note `Assigns the .py source with these tunables; editor
   changes to this entry are not sent.`
 
 #### 4.3.1 Browse dialog
 
 Title **Browse for a profile** (or **Browse for a file to import**, **Browse for a capture**, **Pick a
-stateful YAML** where other pages use it), over a dimmed page and above the dialog that opened it: **Up** and
-the current directory, **Filter** (narrows the list by name as you type, with `N of M`), then a scrolling list
-with one row per entry, directories first in bold with a trailing `/`, files with their size (`12.3 KiB`);
-`Nothing here matches the filter.`, `The list was truncated; type the path instead.` and `No profiles or
-directories here.` when they apply; **Cancel**. The frame stays put and only the list scrolls. A directory
-enters it (and clears the filter); a file picks its full path and closes. The dialog opens at the last directory shown (kept in this browser), else at
-the **Workspace directory** setting, else at the backend user's home ([22](gui-inventory/screens/22-browse-dialog.png)).
+stateful YAML** where other pages use it), over a dimmed page and above the dialog that opened it:
+
+- **Up** and the current directory;
+- **Filter** (narrows the list by name as you type, with `N of M`);
+- then a scrolling list with one row per entry, directories first in bold with a trailing `/`, files with their
+  size (`12.3 KiB`);
+- `Nothing here matches the filter.`, `The list was truncated; type the path instead.` and `No profiles or
+  directories here.` when they apply;
+- **Cancel**.
+
+The frame stays put and only the list scrolls. A directory enters it (and clears the filter). A file picks its
+full path and closes. The dialog opens at the last directory shown (kept in this browser), else at the
+**Workspace directory** setting, else at the backend user's home
+([22](gui-inventory/screens/22-browse-dialog.png)).
 
 #### 4.3.2 Pick from the library dialog
 
 One button per library profile with `<n> streams`. An entry with a load error, or a `.py` whose source file
-is gone (`· source missing`), is disabled. A `.py` entry shows its source path and the note quoted above;
-picking it fills the path and the entry's stored tunables without inspecting. Any other entry fills the path
+is gone (`· source missing`), is disabled. A `.py` entry shows its source path and the note quoted above.
+Picking it fills the path and the entry's stored tunables without inspecting. Any other entry fills the path
 with the library's JSON file and inspects it at once. `The library is empty. Add profiles in Studio.` when
 there is none ([94](gui-inventory/screens/94-control-library-pick.png)).
 
@@ -453,32 +487,40 @@ The port's extended counters (xstats), polled every 0.5 s while this tab is show
 session is connected ([26](gui-inventory/screens/26-port-counters.png),
 [27](gui-inventory/screens/27-port-counters-filtered.png)).
 
-**Not empty** (on by default) hides zero counters; **Filter** matches a substring of the name;
-**Reset counters** moves this browser's baseline (`Browser-only: moves this browser's baseline; the server's
-counters are not touched`). `Counters are not updating` appears when a poll fails. The table: **Pin**, **Counter**,
-**Value (since Reset counters)**; pinned counters stay at the top whatever the filter. The help line:
-`Values are the server's absolute counters minus the baseline set by Reset counters in this browser. Counters
-above 2^53 lose precision in the browser. A counter that goes backwards without a reconnect shows a negative
-value until Reset counters.`
+- **Not empty** (on by default) hides zero counters.
+- **Filter** matches a substring of the name.
+- **Reset counters** moves this browser's baseline (`Browser-only: moves this browser's baseline; the server's
+  counters are not touched`).
+- `Counters are not updating` appears when a poll fails.
+- The table: **Pin**, **Counter**, **Value (since Reset counters)**. Pinned counters stay at the top whatever the
+  filter.
+- The help line: `Values are the server's absolute counters minus the baseline set by Reset counters in this
+  browser. Counters above 2^53 lose precision in the browser. A counter that goes backwards without a reconnect
+  shows a negative value until Reset counters.`
 
 ### 4.5 Tools tab
 
 A side list, **Ping** and **IPv6 neighbours**, one tool shown. Both are disabled with the same reasons as the
-Config tab ([4.2](#42-config-tab)). Both put the port in service mode while they run and put it back; a
+Config tab ([4.2](#42-config-tab)). Both put the port in service mode while they run and put it back. A
 failure to put it back reads `Service mode could not be restored: <error>`
 ([18](gui-inventory/screens/18-port-tools-ping-empty.png), [19](gui-inventory/screens/19-port-tools-ping.png),
 [20](gui-inventory/screens/20-port-tools-neighbours.png)).
 
-- **Ping**: **Destination** (IPv4 or IPv6), **Count** (default 5, 1–10), **Size** (default 64, 64–9216),
-  **Ping**. Checks: `The destination must be an IPv4 or IPv6 address.`, `ARP resolution required: configure L3
-  IPv4 first.` (an IPv4 ping needs the Config tab's L3 ARP resolved), `The count must be a number from 1 to
-  10.`, `The size must be a number from 64 to 9216.` The replies of the newest run are listed as they
-  arrive (they also go to the Events page under the kind **Ping**), then `N sent, N received`.
-- **IPv6 neighbours**: **Scan** (reads `Scanning…`), **Clear**; a table **Type**, **MAC**, **IPv6** with
-  **Set as L2 destination** (applies an L2 layer with that MAC and the port's VLANs; `L2 destination set to
-  <mac>`), **Copy MAC**, **Copy IPv6** (`Copy failed: …` when the browser refuses the clipboard, which it
-  does on a plain http origin other than localhost). `No IPv6 neighbours found.` after an empty scan. On the
-  legacy stack: `TRex ports on the legacy stack do not answer IPv6; only other devices are listed.`
+- **Ping**: **Destination** (IPv4 or IPv6), **Count** (default 5, 1–10), **Size** (default 64, 64–9216), **Ping**.
+  - Checks:
+    - `The destination must be an IPv4 or IPv6 address.`;
+    - `ARP resolution required: configure L3 IPv4 first.` (an IPv4 ping needs the Config tab's L3 ARP resolved);
+    - `The count must be a number from 1 to 10.`;
+    - `The size must be a number from 64 to 9216.`.
+  - The replies of the newest run are listed as they arrive (they also go to the Events page under the kind
+    **Ping**), then `N sent, N received`.
+- **IPv6 neighbours**:
+  - **Scan** (reads `Scanning…`), **Clear**.
+  - A table **Type**, **MAC**, **IPv6** with **Set as L2 destination** (applies an L2 layer with that MAC and the
+    port's VLANs; `L2 destination set to <mac>`), **Copy MAC**, **Copy IPv6** (`Copy failed: …` when the browser
+    refuses the clipboard, which it does on a plain http origin other than localhost).
+  - `No IPv6 neighbours found.` after an empty scan.
+  - On the legacy stack: `TRex ports on the legacy stack do not answer IPv6; only other devices are listed.`
 
 ---
 
@@ -493,46 +535,59 @@ directory. Setups are part of the settings export ([13.4](#134-back-up-and-resto
 
 ### 5.1 Save current setup
 
-**Name** (at least one letter or digit; up to 60 characters: `The name needs at least one letter or digit
-(a-z, 0-9)`, `The name is limited to 60 characters`); **Server**, prefilled `host:port` (empty makes the setup
-valid for any server); a **Ports** fieldset with a checkbox per port whose Traffic form has a profile
-(`No port has a profile in its Traffic tab yet.` with none; a port whose multiplier or duration the server
-would refuse is listed in red with the reason and `not saved`); **include port configuration
-(L2/L3/VLAN/IPv6)** (a port without a complete layer shows `Port N: layer not included: no destination MAC` or
-`no addresses`), **stop a transmitting port before assigning**, **include dashboard layout**; **Cancel**,
-**Save**. A name whose slug is taken asks `A setup with this name already exists (<slug>). Replace it?` and
-the button becomes **Overwrite** ([67](gui-inventory/screens/67-save-setup-no-profile.png) to
+- **Name** (at least one letter or digit; up to 60 characters: `The name needs at least one letter or digit
+  (a-z, 0-9)`, `The name is limited to 60 characters`).
+- **Server**, prefilled `host:port` (empty makes the setup valid for any server).
+- A **Ports** fieldset with a checkbox per port whose Traffic form has a profile.
+  - `No port has a profile in its Traffic tab yet.` with none.
+  - A port whose multiplier or duration the server would refuse is listed in red with the reason and `not saved`.
+- **include port configuration (L2/L3/VLAN/IPv6)** (a port without a complete layer shows
+  `Port N: layer not included: no destination MAC` or `no addresses`), **stop a transmitting port before
+  assigning**, **include dashboard layout**.
+- **Cancel**, **Save**.
+
+A name whose slug is taken asks `A setup with this name already exists (<slug>). Replace it?` and the button
+becomes **Overwrite** ([67](gui-inventory/screens/67-save-setup-no-profile.png) to
 [70](gui-inventory/screens/70-save-setup-overwrite.png)).
 
 ### 5.2 Test setups dialog
 
-**Manage setups…** works disconnected too. Left, the list: name, `<server or any server> · N ports`, and
-`· loaded` (`, N edits` with edits since Load) for the loaded one; a file that could not be read is a disabled
-red entry. Right, the chosen setup: **Rename**, **Duplicate**, **Delete** (`Delete setup <name>?` with
-**Confirm delete** / **Cancel**; rename and duplicate open a **New name** row), `Saved for <server> · updated
-<time>`, the ports table **Port**, **Profile**, **Rate**, **On Run** (`force-acquire`, `stops a transmitting
-port first`, `applies a port configuration`, or `—`), **Status**; then **Load**, **Run** and the result, and
-**Close** ([66](gui-inventory/screens/66-manage-setups-empty.png),
-[71](gui-inventory/screens/71-manage-setups-list.png) to [82](gui-inventory/screens/82-manage-setups-540px.png)).
+**Manage setups…** works disconnected too.
+
+- Left, the list: name, `<server or any server> · N ports`, and `· loaded` (`, N edits` with edits since Load) for
+  the loaded one. A file that could not be read is a disabled red entry.
+- Right, the chosen setup:
+  - **Rename**, **Duplicate**, **Delete** (`Delete setup <name>?` with **Confirm delete** / **Cancel**). Rename and
+    duplicate open a **New name** row.
+  - `Saved for <server> · updated <time>`.
+  - The ports table **Port**, **Profile**, **Rate**, **On Run** (`force-acquire`, `stops a transmitting port first`,
+    `applies a port configuration`, or `—`), **Status**.
+  - Then **Load**, **Run** and the result, and **Close** ([66](gui-inventory/screens/66-manage-setups-empty.png),
+    [71](gui-inventory/screens/71-manage-setups-list.png) to [82](gui-inventory/screens/82-manage-setups-540px.png)).
 
 - **Load** (needs a session) inspects every port's profile (a `.py` runs on the backend host) and fills the
-  Traffic forms. Each port's status becomes `ready` or its error. A setup saved for another server loads with
-  a red mismatch line. The empty state: `No saved setups. Use Setups ▾ → Save current… on the Control page.`;
-  disconnected, Load and Run are greyed with `Connect first`.
-- **Run** applies the loaded setup in phases, acquire, stop (the ports marked to stop first), layer, assign,
-  start, and stops at the first failure without rolling back. The status column moves through `acquired`,
-  `stopped`, `layer applied`, `profile assigned`, `started`, or `failed at <step>` (the reason is its tooltip); the result line
-  reads `Run finished: started ports 0, 1.` or `Run stopped at port N: failed at <step>: <message>.`
-  Afterwards **Stop started ports** stops what did start. A port owned by someone else offers
-  **Force-acquire port N and continue**, then `Take port N from its current owner?` with **Force-acquire**.
-  Run is unavailable with `read-only session`, `Connect first`, `a Run is in progress`, `busy`, and until a
-  Load of this setup succeeded (`Load first: Run uses the profiles a Load inspected.`); a setup edited since
-  its Load says so.
+  Traffic forms.
+  - Each port's status becomes `ready` or its error.
+  - A setup saved for another server loads with a red mismatch line.
+  - The empty state: `No saved setups. Use Setups ▾ → Save current… on the Control page.`
+  - Disconnected, Load and Run are greyed with `Connect first`.
+- **Run** applies the loaded setup in phases, acquire, stop (the ports marked to stop first), layer, assign, start,
+  and stops at the first failure without rolling back.
+  - The status column moves through `acquired`, `stopped`, `layer applied`, `profile assigned`, `started`, or
+    `failed at <step>` (the reason is its tooltip).
+  - The result line reads `Run finished: started ports 0, 1.` or
+    `Run stopped at port N: failed at <step>: <message>.`
+  - Afterwards **Stop started ports** stops what did start.
+  - A port owned by someone else offers **Force-acquire port N and continue**, then
+    `Take port N from its current owner?` with **Force-acquire**.
+  - Run is unavailable with `read-only session`, `Connect first`, `a Run is in progress`, `busy`, and until a
+    Load of this setup succeeded (`Load first: Run uses the profiles a Load inspected.`). A setup edited since
+    its Load says so.
 - Edits made in the Traffic tabs after a Load are listed (`Edited in the Traffic tab since Load. Run uses the
-  setup as saved; Save and Run saves these edits first.`); Run reads **Run as saved** and **Save and Run**
+  setup as saved; Save and Run saves these edits first.`). Run reads **Run as saved** and **Save and Run**
   saves the forms into the setup, loads it again and runs it (`Save and Run is unavailable: fix the form
   first: Port N: <problem>` when a form cannot be saved).
-- A Run carries on if the dialog is closed; reopening it shows the progress and the result.
+- A Run carries on if the dialog is closed. Reopening it shows the progress and the result.
 
 ---
 
