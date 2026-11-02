@@ -1186,46 +1186,54 @@ A value the engine refuses is taken back and shown beside its box with the engin
 
 ## 11. Monitor
 
-Route `/monitor`. A passive subscriber to a TRex publisher: it listens on the server's async (PUB) port,
-opens no RPC connection and changes nothing, so it works beside any other client and beside a stateful (-f)
-run, which has no command port. It is independent of the Control session ([52](gui-inventory/screens/52-monitor-disconnected.png),
-[95](gui-inventory/screens/95-monitor-guest-global.png) to [99](gui-inventory/screens/99-monitor-inspector.png)).
+Route `/monitor`. A passive subscriber to a TRex publisher: it listens on the server's async (PUB) port, opens no RPC
+connection and changes nothing, so it works beside any other client and beside a stateful (-f) run, which has no
+command port. It is independent of the Control session
+([52](gui-inventory/screens/52-monitor-disconnected.png), [95](gui-inventory/screens/95-monitor-guest-global.png) to
+[99](gui-inventory/screens/99-monitor-inspector.png)).
 
 ### 11.1 Connecting
 
 **Host** (with the last ten hosts used, as `host:port`, in a drop-down), **Port** (4500), **Connect**,
-**Disconnect**. The host starts as the Monitor's current target, the `--monitor` target, the `--server` host,
-or `127.0.0.1`. **Connect** is off while connected (or connecting) to the host and port in the fields (`Already
-connected to this publisher; change Host or Port to switch`); another host or port switches publisher, and a
+**Disconnect**. The host starts as the Monitor's current target, the `--monitor` target, the `--server` host, or
+`127.0.0.1`. **Connect** is off while connected (or connecting) to the host and port in the fields
+(`Already connected to this publisher; change Host or Port to switch`). Another host or port switches publisher, and a
 stale connection can be restarted. **Disconnect** is off with no target.
 
-The status line: `Monitor source <host>:<port>` (this page's own connection, not the Control session's in the
-status bar), an LED and `Connected`, `Connecting…`, `Stale since HH:MM:SS` or `Disconnected`, then
-`<n> frames · <n> bytes` and `dropped: <n> oversize, <n> undecodable, …` when the subscriber refused frames.
+The status line:
+
+- `Monitor source <host>:<port>` (this page's own connection, not the Control session's in the status bar);
+- an LED and `Connected`, `Connecting…`, `Stale since HH:MM:SS` or `Disconnected`;
+- then `<n> frames · <n> bytes`;
+- and `dropped: <n> oversize, <n> undecodable, …` when the subscriber refused frames.
+
 `Monitor data are not updating` tops the panels while the feed is stale.
 
 ### 11.2 Panels
 
 Each panel appears once its message has arrived and can be collapsed from its heading (kept per browser):
 
-- **Global**: tiles **Tx** (Tx bps, Tx pps, Tx cps, Packets sent, Bytes sent), **Rx** (Rx bps, Rx pps, Drop
-  rate (Tx − Rx), flagged `drops` above 1 bps, with the Dashboard tile's tooltip, Packets received, Bytes received), **Flows** (Active flows, Open flows,
-  and the NAT counters once they count), **System** (CPU and Rx CPU as meters, Alloc errors, Queue full,
-  Queue drop); the table **Expected against measured** (bit rate, packet rate, connection rate, with
-  `Measured / expected`); the charts **Monitor bits per second**, **Monitor packets per second**, **Monitor
-  CPU** over 150 s, with the Dashboard's legend ([6](#6-dashboard)) and no Y axis control.
+- **Global**:
+  - tiles:
+    - **Tx** (Tx bps, Tx pps, Tx cps, Packets sent, Bytes sent);
+    - **Rx** (Rx bps, Rx pps, Drop rate (Tx − Rx), flagged `drops` above 1 bps, with the Dashboard tile's tooltip,
+      Packets received, Bytes received);
+    - **Flows** (Active flows, Open flows, and the NAT counters once they count);
+    - **System** (CPU and Rx CPU as meters, Alloc errors, Queue full, Queue drop);
+  - the table **Expected against measured** (bit rate, packet rate, connection rate, with `Measured / expected`);
+  - the charts **Monitor bits per second**, **Monitor packets per second**, **Monitor CPU** over 150 s, with the
+    Dashboard's legend ([6](#6-dashboard)) and no Y axis control.
 - **Ports**: Tx/Rx bps and pps, packets and errors in and out per port; the byte counts under a **Bytes** fold.
-- **Templates** (a stateful run): each template's packets sent, and with rx-check its packets received,
-  errors and jitter; a row that looks wrong says `check`.
-- **Latency** (a stateful run with `-l`): per port and side, Avg, Max, Max (period), Errors, Jitter in µs; the
-  chart **Max latency, client vs server (16 s)**.
+- **Templates** (a stateful run): each template's packets sent, and with rx-check its packets received, errors and
+  jitter. A row that looks wrong says `check`.
+- **Latency** (a stateful run with `-l`): per port and side, Avg, Max, Max (period), Errors, Jitter in µs; the chart
+  **Max latency, client vs server (16 s)**.
 - **Rx-check**: the engine's counters, and its histogram with **Scale** (Linear / Log) and **Bars**.
 - **Latency v2**: the latency CPU, then per port a histogram, the summary counters and the port counters.
-- **Inspector**: every name the publisher sends, with how long ago it last arrived; the chosen one as a tree
-  (folded below two levels; the first 2000 nodes, `N more not shown`), a **Filter** on keys and **Copy**. A
-  fraction below 0.0001 reads `≈ 0`, its exact value in the tooltip and in Copy. In `trex-global`, `ts` is the
-  server's tick counter (`value`) and its ticks per second (`freq`), so `value` climbs with every message; its
-  tooltip says so.
+- **Inspector**: every name the publisher sends, with how long ago it last arrived; the chosen one as a tree (folded
+  below two levels; the first 2000 nodes, `N more not shown`), a **Filter** on keys and **Copy**. A fraction below
+  0.0001 reads `≈ 0`, its exact value in the tooltip and in Copy. In `trex-global`, `ts` is the server's tick counter
+  (`value`) and its ticks per second (`freq`), so `value` climbs with every message. Its tooltip says so.
 
 ### 11.3 Starting the Monitor from the command line
 
@@ -1234,80 +1242,114 @@ dialog attaches it by itself ([12.3](#123-run-tab)).
 
 ### 11.4 Monitor-only backends
 
-`trex-web-gui serve --monitor-only` serves the Monitor for a wall display: the top bar has **Monitor** and
-**Settings** only, any other address goes to `/monitor`, the status line sits in the footer, Settings offers the
-theme alone, and Ctrl+Shift+C is not bound. The backend answers 409 `This backend runs with --monitor-only` to every
-request that changes state and to the capture, Studio, daemon, profile and file-browser routes.
+`trex-web-gui serve --monitor-only` serves the Monitor for a wall display:
+
+- The top bar has **Monitor** and **Settings** only.
+- Any other address goes to `/monitor`.
+- The status line sits in the footer.
+- Settings offers the theme alone.
+- Ctrl+Shift+C is not bound.
+
+The backend answers 409 `This backend runs with --monitor-only` to every request that changes state and to the
+capture, Studio, daemon, profile and file-browser routes.
 
 ---
 
 ## 12. TRex daemon dialog
 
 **TRex daemon…** in the Control toolbar, available while disconnected too, because the daemon is how a TRex is
-started before anyone can connect. The daemon (`trex_daemon_server`, port 8090) is not part of trex-web-gui; read
-the README's "Daemon exposure" before using it outside the test VM. While the dialog is open the backend polls
-the daemon; **Close** disconnects from it ([100](gui-inventory/screens/100-daemon-config.png) to
-[105](gui-inventory/screens/105-daemon-stf-running.png)).
+started before anyone can connect. The daemon (`trex_daemon_server`, port 8090) is not part of trex-web-gui. Read the
+README's "Daemon exposure" before using it outside the test VM. While the dialog is open the backend polls the daemon
+([100](gui-inventory/screens/100-daemon-config.png) to [105](gui-inventory/screens/105-daemon-stf-running.png)).
+**Close** disconnects from it.
 
-**Connect bar**: **Host** (the last daemon's host, else the Control session's host, else the `--server` host, else
-`127.0.0.1`), **Port** (`--daemon-port`, 8090 by default), **Connect**, **Disconnect** (`Host is required`,
-`Port must be 1–65535`). Opening the dialog
-again reconnects to the last daemon. Under it the exposure warning, then `State: <not connected | connected |
-error: …> · <version> · running since <time>`. Tabs **Config**, **YAML**, **Run** (the first shown), **Logs**.
+**Connect bar**:
+
+- **Host** (the last daemon's host, else the Control session's host, else the `--server` host, else `127.0.0.1`).
+- **Port** (`--daemon-port`, 8090 by default).
+- **Connect**, **Disconnect** (`Host is required`, `Port must be 1–65535`).
+
+Opening the dialog again reconnects to the last daemon. Under it the exposure warning, then
+`State: <not connected | connected | error: …> · <version> · running since <time>`. Tabs **Config**, **YAML**, **Run**
+(the first shown), **Logs**.
 
 ### 12.1 Config tab
 
-A form built from the daemon's own description of `trex_cfg.yaml` (`Connect to a daemon to edit its config;
-the fields come from the daemon.`): the usual fields in a grid, the rest under **Advanced**; lists (the
-interfaces, with the daemon's devices offered) have **Add …** and **Remove**; a problem opens the fold it is
-in and is shown beside the field. **Load default** (the metadata's defaults, except the optional `platform`,
-`memory` and `tw` sections and the `c` thread count, which it leaves to TRex's own defaults: a `platform` with only
-the master thread, or `c: 4` on a small host, would stop TRex from starting) and **Load from server** (the
-daemon's current file). The form opens on the same defaults. The YAML tab shows what the form describes.
+A form built from the daemon's own description of `trex_cfg.yaml`
+(`Connect to a daemon to edit its config; the fields come from the daemon.`):
+
+- The usual fields in a grid, the rest under **Advanced**.
+- Lists (the interfaces, with the daemon's devices offered) have **Add …** and **Remove**.
+- A problem opens the fold it is in and is shown beside the field.
+
+**Load default** (the metadata's defaults, except the optional `platform`, `memory` and `tw` sections and the `c`
+thread count, which it leaves to TRex's own defaults: a `platform` with only the master thread, or `c: 4` on a small
+host, would stop TRex from starting) and **Load from server** (the daemon's current file). The form opens on the same
+defaults. The YAML tab shows what the form describes.
 
 ### 12.2 YAML tab
 
-The rendered config, read-only, with its problems listed; **Edit YAML** switches to a text box (back to the
-form only once the text parses and passes); **Filename** (`trex-web-gui-<user>.yaml` by default; `The name must be
-letters, digits, _ . -, end in .yaml or .yml, and not start with tg-`); **Push…** asks `Write <name> to <files
-directory> on <host:port>?` with the YAML, then writes it to the daemon's files directory. A pushed file
-becomes the Run tab's config path.
+The rendered config, read-only, with its problems listed.
+
+- **Edit YAML** switches to a text box (back to the form only once the text parses and passes).
+- **Filename** (`trex-web-gui-<user>.yaml` by default;
+  `The name must be letters, digits, _ . -, end in .yaml or .yml, and not start with tg-`).
+- **Push…** asks `Write <name> to <files directory> on <host:port>?` with the YAML, then writes it to the daemon's
+  files directory.
+
+A pushed file becomes the Run tab's config path.
 
 ### 12.3 Run tab
 
-**Configuration**: **Config path** (`/etc/trex_cfg.yaml`, or the file last pushed; `Config path must be
-absolute, with no .., using only letters, digits and _ . / -`), **Cores (-c)** (1–64), **Start timeout (s)**
-(5–300), **Mode**: **Stateless (interactive, -i)** or **Stateful run (-f)**.
+**Configuration**:
 
-- Stateless: **Extra arguments** (the ⓘ: up to 20 space-separated tokens of letters, digits and `_ . , : = /
-  + -`; `--cfg`, `-i`, `--astf`, `-f`, `-d`, `-m`, `-l`, `--rx-check` and `--client_cfg` are refused, also
-  abbreviated), **TRex command port** (prefilled from the pushed config's `zmq_rpc_port`, else the Control
-  session's port, else 4501; the ⓘ: `the port <host> reaches the daemon's TRex on; Stop reads its port owners
-  first`, `<host>` being the trex-web-gui host, or `the computer running trex-web-gui serve` until it is known).
-- Stateful: **Source** (Stock, Uploaded) with **Upload…** ([12.5](#125-uploading-a-stateful-profile)),
-  **Profile** (the daemon's list), the profile's details as the daemon reads it (templates, YAML duration,
-  warnings, errors), **Duration -d (s)** (10–3600, prefilled from the YAML), **Multiplier -m** (0–1000),
-  **Latency -l (pps, 0 = off)**, **Rx-check --rx-check (0 = off)**, **Monitor port** (the publisher port the
-  Monitor attaches to; the ⓘ: `the PUB port <host> reaches the run's publisher on`).
+- **Config path** (`/etc/trex_cfg.yaml`, or the file last pushed;
+  `Config path must be absolute, with no .., using only letters, digits and _ . / -`).
+- **Cores (-c)** (1–64).
+- **Start timeout (s)** (5–300).
+- **Mode**: **Stateless (interactive, -i)** or **Stateful run (-f)**.
+  - Stateless: **Extra arguments** (the ⓘ: up to 20 space-separated tokens of letters, digits and `_ . , : = / + -`;
+    `--cfg`, `-i`, `--astf`, `-f`, `-d`, `-m`, `-l`, `--rx-check` and `--client_cfg` are refused, also abbreviated),
+    **TRex command port** (prefilled from the pushed config's `zmq_rpc_port`, else the Control session's port, else
+    4501; the ⓘ: `the port <host> reaches the daemon's TRex on; Stop reads its port owners first`, `<host>` being the
+    trex-web-gui host, or `the computer running trex-web-gui serve` until it is known).
+  - Stateful:
+    - **Source** (Stock, Uploaded) with **Upload…** ([12.5](#125-uploading-a-stateful-profile)).
+    - **Profile** (the daemon's list), the profile's details as the daemon reads it (templates, YAML duration,
+      warnings, errors).
+    - **Duration -d (s)** (10–3600, prefilled from the YAML).
+    - **Multiplier -m** (0–1000).
+    - **Latency -l (pps, 0 = off)**.
+    - **Rx-check --rx-check (0 = off)**.
+    - **Monitor port** (the publisher port the Monitor attaches to; the ⓘ:
+      `the PUB port <host> reaches the run's publisher on`).
 
 **Command preview**: the exact command the daemon would run, refreshed as you type. **Status**: `is_running`,
 `running_seq`, the TRex processes on the host, and `A TRex the daemon did not start blocks Start.`
 
-**Start** (enabled when connected, nothing runs and the form previews; lit as **● TRex running** while a TRex
-runs) asks `Start TRex on <host> (daemon
-port N) with this command?` with the command; for a stateful run also `It runs as root on <host> for N s. A
-stateful run has no command port, so Control cannot connect to it; watch it on the Monitor.`
-([104](gui-inventory/screens/104-daemon-start-confirm.png)). A started stateful run shows the **Stateful run**
-block: profile and duration, `ends in about MM:SS`, **Open Monitor**, and afterwards `Ended: <outcome>` or
-`Stopped` with the **Final log** (the last 30 lines of TRex's log); the Monitor is attached to its publisher
-by itself (`The run started, but the Monitor could not attach: …` otherwise).
+**Start** (enabled when connected, nothing runs and the form previews; lit as **● TRex running** while a TRex runs)
+asks `Start TRex on <host> (daemon port N) with this command?` with the command; for a stateful run also `It runs as
+root on <host> for N s. A stateful run has no command port, so Control cannot connect to it; watch it on the Monitor.`
+([104](gui-inventory/screens/104-daemon-start-confirm.png)).
 
-**Stop** (a TRex this GUI started) asks `Stop the TRex this GUI started on <host>? Every client connected to
-it, including this GUI's session, loses its connection.` **Force stop** (a TRex the daemon did not start)
-asks `This TRex was not started by this GUI. Force stop kills the daemon's TRex on <host> whoever started it;
-it is still refused while another user owns a port.`; when the owners cannot be read it asks once more,
-`Force stop anyway?` (`TRex's command port did not answer, so the GUI cannot see who owns its ports…`, or for
-a `-f` run `A stateful (-f) run has no command port, so the GUI cannot see who is using it…`).
+A started stateful run shows the **Stateful run** block:
+
+- profile and duration;
+- `ends in about MM:SS`;
+- **Open Monitor**;
+- and afterwards `Ended: <outcome>` or `Stopped` with the **Final log** (the last 30 lines of TRex's log).
+
+The Monitor is attached to its publisher by itself (`The run started, but the Monitor could not attach: …` otherwise).
+
+**Stop** (a TRex this GUI started) asks `Stop the TRex this GUI started on <host>? Every client connected to it,
+including this GUI's session, loses its connection.`
+
+**Force stop** (a TRex the daemon did not start) asks `This TRex was not started by this GUI. Force stop kills the
+daemon's TRex on <host> whoever started it; it is still refused while another user owns a port.` When the owners cannot
+be read it asks once more, `Force stop anyway?`
+(`TRex's command port did not answer, so the GUI cannot see who owns its ports…`, or for a `-f` run
+`A stateful (-f) run has no command port, so the GUI cannot see who is using it…`).
+
 `TRex is still running after the stop.` when the daemon reports so.
 
 ### 12.4 Logs tab
@@ -1316,28 +1358,35 @@ a `-f` run `A stateful (-f) run has no command port, so the GUI cannot see who i
 
 ### 12.5 Uploading a stateful profile
 
-**Upload…** browses the backend host for a stateful YAML; the dialog **Upload a stateful profile** reads the
-profile and its pcaps on the backend host and lists **Template**, **Local file**, **Size**, **Remote name**,
-**Already on the server**, the total and any warnings. **Push…** asks `Write N files (<size>) to <files
-directory> on <daemon>? The daemon cannot delete them; they stay until the host clears <files directory>.`;
-when everything is there already, **Use it**. The uploaded profile is then selected.
+**Upload…** browses the backend host for a stateful YAML. The dialog **Upload a stateful profile** reads the profile
+and its pcaps on the backend host and lists **Template**, **Local file**, **Size**, **Remote name**, **Already on the
+server**, the total and any warnings. **Push…** asks `Write N files (<size>) to <files directory> on <daemon>? The
+daemon cannot delete them; they stay until the host clears <files directory>.` When everything is there already,
+**Use it**. The uploaded profile is then selected.
 
 ---
 
 ## 13. Settings
 
 Route `/settings`, also Ctrl+Shift+P. A side list of sections; each saveable section has its own **Save** and
-**Revert** (enabled once it has an edit) and is marked `· unsaved` in the list while it does; saving one never
-sends another's edits ([53](gui-inventory/screens/53-settings-appearance.png) to
-[57](gui-inventory/screens/57-settings-about.png)). `Settings changed on the server — Reload` appears above
-the sections when another browser or an import saved different settings while you hold unsaved edits
-([58](gui-inventory/screens/58-settings-changed-on-server.png)); with no edit the page takes the new values
-by itself. When the settings could not be loaded, the error shows in red under the heading.
+**Revert** (enabled once it has an edit) and is marked `· unsaved` in the list while it does
+([53](gui-inventory/screens/53-settings-appearance.png) to [57](gui-inventory/screens/57-settings-about.png)). Saving
+one never sends another's edits. `Settings changed on the server — Reload` appears above the sections when another
+browser or an import saved different settings while you hold unsaved edits
+([58](gui-inventory/screens/58-settings-changed-on-server.png)). With no edit the page takes the new values by itself.
+When the settings could not be loaded, the error shows in red under the heading.
 
 The settings live in `settings.toml` in the backend's data directory (`$XDG_DATA_HOME/trex-web-gui`, else
-`~/.local/share/trex-web-gui`, or `--data-dir`); the data directory also holds the port names
-(`port_labels.toml`), the test setups (`test_setups/`), the profile library (`profiles/`), the templates
-(`templates/`), the capture spool (`captures/`) and the uploads (`uploads/`).
+`~/.local/share/trex-web-gui`, or `--data-dir`).
+
+The data directory also holds:
+
+- the port names (`port_labels.toml`);
+- the test setups (`test_setups/`);
+- the profile library (`profiles/`);
+- the templates (`templates/`);
+- the capture spool (`captures/`);
+- and the uploads (`uploads/`).
 
 ### 13.1 Appearance
 
@@ -1345,13 +1394,16 @@ The settings live in `settings.toml` in the backend's data directory (`$XDG_DATA
 
 ### 13.2 Files on the backend host
 
-**Templates directory** (your packet templates; empty means `<data dir>/templates`), **Workspace directory**
-(where Browse starts), **Profile library directory** (ⓘ: `Empty: <data dir>/profiles (here: <data dir>/profiles).
-Must be an absolute path on the backend host.`), **TRex config file (on the backend host)** (ⓘ: `Read at the
-next connect.`; it is how the interface names are confirmed), **Wireshark path** (ⓘ: `Runs on the backend
-host; needs a display there. A pcap download works anywhere.`), **Largest capture the packet editor opens
-(MiB)** (ⓘ: `The pcap picker refuses a larger file before reading it. 1 to 1024; the default is 64. Uploads
-from this computer are also limited to 64 MiB.`); **Save**, **Revert**, then `Saved` or the backend's message.
+- **Templates directory** (your packet templates; empty means `<data dir>/templates`).
+- **Workspace directory** (where Browse starts).
+- **Profile library directory** (ⓘ: `Empty: <data dir>/profiles (here: <data dir>/profiles). Must be an absolute path on
+  the backend host.`).
+- **TRex config file (on the backend host)** (ⓘ: `Read at the next connect.`; it is how the interface names are
+  confirmed).
+- **Wireshark path** (ⓘ: `Runs on the backend host; needs a display there. A pcap download works anywhere.`).
+- **Largest capture the packet editor opens (MiB)** (ⓘ: `The pcap picker refuses a larger file before reading it. 1 to
+  1024; the default is 64. Uploads from this computer are also limited to 64 MiB.`).
+- **Save**, **Revert**, then `Saved` or the backend's message.
 
 ### 13.3 Session
 
@@ -1360,38 +1412,44 @@ from this computer are also limited to 64 MiB.`); **Save**, **Revert**, then `Sa
 
 ### 13.4 Back up and restore
 
-**Include theme**; **Export settings…** downloads `trex-web-gui-settings-<UTC stamp>.json` with the preferences,
-saved connections, port labels and test setups (and the theme when ticked); **Import settings…** opens a file
-chooser (at most 4 MiB; `<file> is not a settings file: …`), then the preview dialog
-([61](gui-inventory/screens/61-import-preview.png) to [63](gui-inventory/screens/63-import-result.png),
-[84](gui-inventory/screens/84-import-preview-540px.png)):
-
-- **Import settings**: `Exported <time> by trex-web-gui <version>. Nothing is written until you press Apply, and
-  an import runs nothing by itself.` A table **Section**, **Mode**, **What happens** for **Preferences**
-  (replace or skip; skip by default, because preferences hold paths that run later), **Connections**, **Port
-  labels**, **Test setups** (replace, merge or skip; merge by default). Every item that differs is named with
-  what the mode does to it: `added`, `overwritten`, `kept (on this GUI, not in the file; replace would delete
-  it)`, `deleted`, `not added`; `same as here, nothing to do`. Test setups add a fold **Before you Load these
-  (N profiles, N re-pointed)**: the profile files a Load would run and the setups that would point at another
-  file. **Also apply theme** when the file carries one. `Set <sections> to skip, or fix the file: a section
-  with errors cannot be applied.`; `Switching to replace deletes what is kept`. **Cancel**, **Apply**.
-- The result line: `Imported: <sections>` (` (theme applied)`), or `Import failed: <message> Written: …
-  Failed: …` for a write that stopped half-way.
+- **Include theme**.
+- **Export settings…** downloads `trex-web-gui-settings-<UTC stamp>.json` with the preferences, saved connections, port
+  labels and test setups (and the theme when ticked).
+- **Import settings…** opens a file chooser (at most 4 MiB; `<file> is not a settings file: …`), then the preview
+  dialog ([61](gui-inventory/screens/61-import-preview.png) to [63](gui-inventory/screens/63-import-result.png),
+  [84](gui-inventory/screens/84-import-preview-540px.png)):
+  - **Import settings**:
+    - `Exported <time> by trex-web-gui <version>. Nothing is written until you press Apply, and an import runs nothing
+      by itself.`
+    - A table **Section**, **Mode**, **What happens** for **Preferences** (replace or skip; skip by default, because
+      preferences hold paths that run later), **Connections**, **Port labels**, **Test setups** (replace, merge or
+      skip; merge by default).
+    - Every item that differs is named with what the mode does to it: `added`, `overwritten`, `kept (on this GUI, not
+      in the file; replace would delete it)`, `deleted`, `not added`; `same as here, nothing to do`.
+    - Test setups add a fold **Before you Load these (N profiles, N re-pointed)**: the profile files a Load would run
+      and the setups that would point at another file.
+    - **Also apply theme** when the file carries one.
+    - `Set <sections> to skip, or fix the file: a section with errors cannot be applied.`;
+      `Switching to replace deletes what is kept`.
+    - **Cancel**, **Apply**.
+  - The result line: `Imported: <sections>` (` (theme applied)`), or `Import failed: <message> Written: …
+    Failed: …` for a write that stopped half-way.
 
 ### 13.5 About
 
 **Version**, **TRex client pin** (the vendored client's upstream SHA and the number of vendor patches),
 **Supported server** (`STL API 5.1 (TRex v3.08)`), **Data directory (on the backend host)**.
 
-Below them the page states two limits: "This backend accepts a browser only through the login URL it printed at start; anything that can read that terminal or journal can use it." and "It listens on 127.0.0.1 only: from another machine, use an SSH tunnel whose local port equals the serving port."
+Below them the page states two limits: "This backend accepts a browser only through the login URL it printed at start;
+anything that can read that terminal or journal can use it." and "It listens on 127.0.0.1 only: from another machine,
+use an SSH tunnel whose local port equals the serving port."
 
 ---
 
 ## 14. Why is this disabled? The common reasons
 
 Disabled controls carry their reason as a tooltip, and on the Capture page and the Traffic and Config tabs as
-visible text too. The checks run in this
-order, so the first one you see is the first one to fix:
+visible text too. The checks run in this order, so the first one you see is the first one to fix:
 
 | Reason | Meaning | Fix |
 |---|---|---|
