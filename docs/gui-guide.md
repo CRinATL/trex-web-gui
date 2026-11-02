@@ -1020,27 +1020,46 @@ elsewhere ([107](gui-inventory/screens/107-packet-standalone-template.png)).
 
 ### 10.1 The page
 
-The heading `Packet editor — <name or Untitled>` with a `•` while there are unsaved changes. **File ▾**:
-**New**; **Open .trp…** (a file from this computer; the note: `A .trp may contain expressions; they are
-evaluated on the backend host when the packet is built.`; at most 4 MiB); **Save** (the note
-`Downloads a .trp file.`; downloads `<name>.trp`); **Save as template…**; **Open pcap…**; **Save as pcap** (one packet, written by the browser
-from the bytes the backend builds); **Add to profile as a new stream…**. Then **New** (the same as File ▾ New:
-back to the starting packet, a bare `Ether`), **Templates…** and **Presets…**. Replacing a packet that has unsaved changes asks `Discard changes?` (**Discard** / **Cancel**).
+The heading `Packet editor — <name or Untitled>` with a `•` while there are unsaved changes.
+
+**File ▾**:
+
+- **New**.
+- **Open .trp…**:
+  - A file from this computer.
+  - The note: `A .trp may contain expressions; they are evaluated on the backend host when the packet is built.`
+  - At most 4 MiB.
+- **Save** (the note `Downloads a .trp file.`; downloads `<name>.trp`).
+- **Save as template…**.
+- **Open pcap…**.
+- **Save as pcap** (one packet, written by the browser from the bytes the backend builds).
+- **Add to profile as a new stream…**.
+
+Then **New** (the same as File ▾ New: back to the starting packet, a bare `Ether`), **Templates…** and
+**Presets…**.
+
+Replacing a packet that has unsaved changes asks `Discard changes?` (**Discard** / **Cancel**).
 `The packet changed while the other one was being opened: the opened one was dropped.` when a pick lands on a
 packet you have since changed.
 
-- **Templates** ([10.5](#105-templates)); **Presets** ([10.6](#106-presets)); **Open pcap** ([10.7](#107-open-a-packet-from-a-pcap));
-  **Add to profile** ([10.8](#108-add-to-profile)).
+- **Templates** ([10.5](#105-templates)); **Presets** ([10.6](#106-presets));
+  **Open pcap** ([10.7](#107-open-a-packet-from-a-pcap)); **Add to profile** ([10.8](#108-add-to-profile)).
 
 ### 10.2 The editor
 
 **Undo**, **Redo**, **Expand all**, **Collapse all**; the tabs **Packet** and **Field engine**. The Packet tab:
-a breadcrumb `Ether > IP > UDP · N bytes` (click a layer to open its pane); one collapsible pane per layer
-(`<id> as <real id>` when the bytes decode as something else, `<id> (not decoded)` when the bytes hold no such
-layer; a `!` for an invalid structure); **Add layer…**
-(a text box that lists the protocols the last layer can carry first, then every protocol; `unknown protocol
-"x"`); the hex view. The packet is rebuilt on the backend after every edit; the hex view and byte ranges show
-the last good build, and a failed build marks the field and shows the message.
+
+- a breadcrumb `Ether > IP > UDP · N bytes` (click a layer to open its pane);
+- one collapsible pane per layer:
+  - `<id> as <real id>` when the bytes decode as something else;
+  - `<id> (not decoded)` when the bytes hold no such layer;
+  - a `!` for an invalid structure;
+- **Add layer…** (a text box that lists the protocols the last layer can carry first, then every protocol;
+  `unknown protocol "x"`);
+- the hex view.
+
+The packet is rebuilt on the backend after every edit. The hex view and byte ranges show the last good build, and a
+failed build marks the field and shows the message.
 
 **A layer's menu** (the ⋮ button or a right-click on its title): **Move up**, **Move down**, **Delete** (the
 first layer is fixed). Ctrl+D deletes the layer you opened last.
@@ -1050,85 +1069,118 @@ first layer is fixed). Ctrl+D deletes the layer you opened last.
 Each row: the field's name, a control for its type, a `•` when you set it (with a `×` to reset it to the
 default), a `!` and the message when the build refused it, and its byte range (a button that marks the bytes;
 `not in packet` for an ignored field, `bits` for a sub-byte one; a field ends where the next field starts, and a
-layer's last field, such as its options, at the layer's end, since the backend reports a variable-size field such as
-ARP's `hwsrc` by its nominal size; a field that adds no bytes, such as a skipped optional one, has no range).
+layer's last field, such as its options, at the layer's end, since the backend reports a variable-size field such
+as ARP's `hwsrc` by its nominal size; a field that adds no bytes, such as a skipped optional one, has no range).
 
-- Numbers take decimal or `0x` hex; an ENUM takes a name from its list or a number; a value outside the
+- Numbers take decimal or `0x` hex. An ENUM takes a name from its list or a number. A value outside the
   definition's range is refused (`must be from 0 to 255`). Enter commits, Escape reverts the text.
-- **Right-click a field**: **Generate** (a random value), **Set to default**, **Edit as expression** / **Edit
-  as text** (a Python expression, `evaluated as Python on the backend`), and **Field engine: <template>** for
-  each field-engine template the backend offers (adds its instructions on this field and opens the Field
-  engine tab).
-- A BITMASK field shows its flags as checkboxes and choices; IP and TCP options are read-only.
+- **Right-click a field**:
+  - **Generate** (a random value).
+  - **Set to default**.
+  - **Edit as expression** / **Edit as text** (a Python expression, `evaluated as Python on the backend`).
+  - **Field engine: <template>** for each field-engine template the backend offers (adds its instructions on this
+    field and opens the Field engine tab).
+- A BITMASK field shows its flags as checkboxes and choices. IP and TCP options are read-only.
 - A BYTES field (a payload) shows its bytes cut at 48 characters and a **Payload…** button
   ([10.4](#104-payload-dialog)).
 
-**The hex view**: 16 bytes a row, offset, hex, ASCII. Arrow keys, Home and End move between bytes; Enter or
-Space, or a click, selects the field holding the byte. Typing two hex digits on a byte replaces it (the
-backend reconstructs the field; `The packet is not built yet: try the byte edit again when it is.`); Escape
-drops a half-typed byte.
+**The hex view**: 16 bytes a row, offset, hex, ASCII.
+
+- Arrow keys, Home and End move between bytes.
+- Enter or Space, or a click, selects the field holding the byte.
+- Typing two hex digits on a byte replaces it (the backend reconstructs the field;
+  `The packet is not built yet: try the byte edit again when it is.`).
+- Escape drops a half-typed byte.
 
 ### 10.4 Payload dialog
 
 [110](gui-inventory/screens/110-packet-payload-editor.png). **Source** chooses how the bytes are given: text,
 text repeated to a size, a file, a file repeated to a size, hex bytes repeated, random printable characters,
-random bytes. Then its fields: **Text** or **Hex bytes**; **File** (at most 1 MiB); **Size is** `payload
-length` or `packet size (with FCS)` with **Size** (1 to 1 MiB) for the sized sources; **Seed** for the random
-ones (`not 0: the service reads 0 as <default>`). **Cancel**, **Save**.
+random bytes. Then its fields:
+
+- **Text** or **Hex bytes**.
+- **File** (at most 1 MiB).
+- **Size is** `payload length` or `packet size (with FCS)` with **Size** (1 to 1 MiB) for the sized sources.
+- **Seed** for the random ones (`not 0: the service reads 0 as <default>`).
+
+**Cancel**, **Save**.
 
 ### 10.5 Templates
 
-**Server templates** (the stock ones, as a tree by `/`; one that cannot be built is disabled with its reason;
-under `trex-web-gui/`, this project's own: **LLDP**, and **DHCP-DISCOVER**, a discover whose DHCP layer
-decodes, unlike TRex's `DHCP/DHCP-DISCOVER`, which has no DHCP options; its options are an expression, and the
-message type in it must be a number, such as `('message-type', 3)` for a request: the backend's packet service
-refuses a name like `'request'` in an expression with `required argument is not an integer`)
-and **Your templates** (yours, in the **Templates directory** setting, else `<data dir>/templates`; each with
-**Delete**, `Delete <name>?`); click a template to open it. From the standalone page the dialog also saves:
-`Save the packet as a template` with a name like `lab/syn-flood`, **Save**; an existing name asks `Replace
-<name>?`. **Close**.
+- **Server templates**:
+  - The stock ones, as a tree by `/`.
+  - One that cannot be built is disabled with its reason.
+  - Under `trex-web-gui/`, this project's own: **LLDP**, and **DHCP-DISCOVER**, a discover whose DHCP layer
+    decodes, unlike TRex's `DHCP/DHCP-DISCOVER`, which has no DHCP options. Its options are an expression, and the
+    message type in it must be a number, such as `('message-type', 3)` for a request: the backend's packet service
+    refuses a name like `'request'` in an expression with `required argument is not an integer`.
+- **Your templates** (yours, in the **Templates directory** setting, else `<data dir>/templates`; each with
+  **Delete**, `Delete <name>?`).
+
+Click a template to open it. From the standalone page the dialog also saves: `Save the packet as a template` with a
+name like `lab/syn-flood`, **Save**. An existing name asks `Replace <name>?`. **Close**.
 
 ### 10.6 Presets
 
-[108](gui-inventory/screens/108-packet-presets.png). Four forms, one per tab (the dialog keeps its top edge when the tab changes, and **Close** stays in view),
-each ending in **Open in editor**:
-**Flood** (one UDP or TCP packet; protocol, source and destination MAC from the TRex configuration, from the
-packet, or stepped up/down with a count and step, IPs, ports, frame size fixed/stepped/random, payload text),
-**IP sweep** (source, destination or both IPv4 addresses stepped through a range by count or last address;
-checksum in software or hardware), **Frame-size sweep** (UDP packets between two sizes, stepped or random),
-**VLAN** (a UDP packet behind one or two 802.1Q tags with VLAN and priority). A bad number says so beside the
-button (`Source port must be a whole number`); a refusal that arrives after you moved to another tab marks the
-preset's tab with `!` while another tab is showing, until its next **Open in editor**. A preset's MAC mode is carried into the stream when the packet
-is added to a profile.
+[108](gui-inventory/screens/108-packet-presets.png). Four forms, one per tab (the dialog keeps its top edge when the
+tab changes, and **Close** stays in view), each ending in **Open in editor**:
+
+- **Flood** (one UDP or TCP packet; protocol, source and destination MAC from the TRex configuration, from the
+  packet, or stepped up/down with a count and step, IPs, ports, frame size fixed/stepped/random, payload text).
+- **IP sweep** (source, destination or both IPv4 addresses stepped through a range by count or last address;
+  checksum in software or hardware).
+- **Frame-size sweep** (UDP packets between two sizes, stepped or random).
+- **VLAN** (a UDP packet behind one or two 802.1Q tags with VLAN and priority).
+
+A bad number says so beside the button (`Source port must be a whole number`). A refusal that arrives after you moved
+to another tab marks the preset's tab with `!` while another tab is showing, until its next **Open in editor**. A
+preset's MAC mode is carried into the stream when the packet is added to a profile.
 
 ### 10.7 Open a packet from a pcap
 
-[111](gui-inventory/screens/111-packet-pcap-picker.png). **On the backend host** (a path with **Browse…**) or
-**From this computer** (a `.pcap`/`.cap` upload); **List packets**; the capture's warnings (cut or truncated
-records); `Packets 1–100 of N` with **Previous** / **Next**; a row per packet with its number (a button that
-opens it), bytes and summary. A capture over the **Largest capture the packet editor opens (MiB)** setting is
-refused before it is read: `<path> is N bytes; the pcap size cap is 64 MiB (Settings, pcap_size_cap_mib)`.
+[111](gui-inventory/screens/111-packet-pcap-picker.png).
+
+- **On the backend host** (a path with **Browse…**) or **From this computer** (a `.pcap`/`.cap` upload).
+- **List packets**.
+- The capture's warnings (cut or truncated records).
+- `Packets 1–100 of N` with **Previous** / **Next**.
+- A row per packet with its number (a button that opens it), bytes and summary.
+
+A capture over the **Largest capture the packet editor opens (MiB)** setting is refused before it is read:
+`<path> is N bytes; the pcap size cap is 64 MiB (Settings, pcap_size_cap_mib)`.
 
 ### 10.8 Add to profile
 
-[112](gui-inventory/screens/112-packet-add-to-profile.png). **Profile** (a select of the library; an entry
-with a load error reads `cannot be changed`; a `.py` entry carries the note that editor changes are not sent;
-its last choice, **New profile…**, shows a **New profile name** box), **Add** (**Create and add** for a new
-profile), **Cancel**. An empty library shows only the name box, after `The library has no profiles yet. Name one
-and the packet becomes its first stream.`, so the packet never has to be left to make a profile. A created
-profile joins the list and stays chosen, so a failed add is retried into it. The packet becomes a new last
-stream (continuous, 1 pps, unnamed) with its field engine
-and editor document; `Added as stream N of <name>.` with **Open <name> in Studio**. `The packet document is too
-large to store with the stream: it will reopen from its bytes.` above the sidecar's size limit.
+[112](gui-inventory/screens/112-packet-add-to-profile.png).
+
+- **Profile**:
+  - A select of the library.
+  - An entry with a load error reads `cannot be changed`.
+  - A `.py` entry carries the note that editor changes are not sent.
+  - Its last choice, **New profile…**, shows a **New profile name** box.
+- **Add** (**Create and add** for a new profile).
+- **Cancel**.
+
+An empty library shows only the name box, after `The library has no profiles yet. Name one and the packet becomes its
+first stream.`, so the packet never has to be left to make a profile. A created profile joins the list and stays
+chosen, so a failed add is retried into it. The packet becomes a new last stream (continuous, 1 pps, unnamed) with its
+field engine and editor document; `Added as stream N of <name>.` with **Open <name> in Studio**.
+`The packet document is too large to store with the stream: it will reopen from its bytes.` above the sidecar's size
+limit.
 
 ### 10.9 Field engine tab
 
-[109](gui-inventory/screens/109-packet-field-engine.png). **Add instruction** (a text box listing the
-instruction types; `"x" is not a Field Engine instruction`), **Import raw VM…** (paste or load a VM's JSON;
-`A VM is an object with an "instructions" list.`), **Copy instructions as Python**; **Structure** (the
-instructions in order); **Global parameters**; one block per instruction with a **Delete**, a **Help** fold
-and its parameters (text boxes that commit on Enter or blur; a parameter whose values the engine knows offers
-them as a list). A value the engine refuses is taken back and shown beside its box with the engine's message.
+[109](gui-inventory/screens/109-packet-field-engine.png).
+
+- **Add instruction** (a text box listing the instruction types; `"x" is not a Field Engine instruction`).
+- **Import raw VM…** (paste or load a VM's JSON; `A VM is an object with an "instructions" list.`).
+- **Copy instructions as Python**.
+- **Structure** (the instructions in order).
+- **Global parameters**.
+- One block per instruction with a **Delete**, a **Help** fold and its parameters (text boxes that commit on Enter or
+  blur; a parameter whose values the engine knows offers them as a list).
+
+A value the engine refuses is taken back and shown beside its box with the engine's message.
 
 ---
 
