@@ -199,3 +199,24 @@ def test_cli(repo: Path, capsys: pytest.CaptureFixture[str]) -> None:
     allow.write_text("bad line\n")
     assert run("--rev", "HEAD", "--allow", str(allow), "doc.md")[0] == 2
     assert run("--rev", "HEAD", "--to", "HEAD", "doc.md")[0] == 0
+
+
+def test_link_regex_does_not_backtrack_exponentially() -> None:
+    """A '[' followed by many '![]()' with no closing '](…)' must fail fast (CodeQL py/redos on LINK_RE)."""
+    probe = (
+        "import importlib.util, sys\n"
+        "spec = importlib.util.spec_from_file_location('cr', sys.argv[1])\n"
+        "m = importlib.util.module_from_spec(spec); spec.loader.exec_module(m)\n"
+        "m.LINK_RE.search('[' + '![]()' * 40)\n"
+    )
+    script = str(ROOT / "scripts" / "check_reflow.py")
+    try:
+        subprocess.run(["python3", "-I", "-c", probe, script], check=True, timeout=10)
+    except subprocess.TimeoutExpired:
+        pytest.fail("LINK_RE backtracks exponentially on '[' + '![]()' * 40")
+
+
+def test_link_regex_keeps_an_image_inside_link_text() -> None:
+    """The inner '![alt](src)' stays part of the outer link's text, as before the ReDoS fix."""
+    found = [m.groups() for m in cr.LINK_RE.finditer("[a ![i](x.png) b](y) and ![alt](p.png)")]
+    assert found == [("", "a ![i](x.png) b", "y"), ("!", "alt", "p.png")]

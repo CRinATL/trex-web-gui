@@ -55,8 +55,10 @@ SIGNS = ("-", "+", "~")
 
 WORD_RE = re.compile(r"[^\W_]+(?:['’][^\W_]+)*")
 NUMBER_RE = re.compile(r"\d+(?:[.,]\d+)*")
+# The inner image's '!' is taken by [^\[\]], never by an optional '!?', so the alternation
+# is unambiguous and the match is linear (CodeQL py/redos).
 LINK_RE = re.compile(
-    r"(!?)\[((?:[^\[\]]|!?\[[^\[\]]*\]\([^)]*\))*)\]\(\s*<?([^)\s>]*)>?(?:\s+(?:\"[^\"]*\"|'[^']*'))?\s*\)")
+    r"(!?)\[((?:[^\[\]]|\[[^\[\]]*\]\([^)]*\))*)\]\(\s*<?([^)\s>]*)>?(?:\s+(?:\"[^\"]*\"|'[^']*'))?\s*\)")
 BOLD_RE = re.compile(r"\*\*(.+?)\*\*", re.S)
 HEADING_RE = re.compile(r"^#{1,6} ")
 BACKTICKS_RE = re.compile(r"`+")
