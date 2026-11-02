@@ -1272,11 +1272,13 @@ PAGE_URL = "https://github.com/CRinATL/trex-web-gui/releases/tag/v1.0.1"
 
 
 def run_install_script(tmp_path: Path, tty: str | None, *, served: bytes = WHEEL_BYTES, sha: str = GOOD_SHA,
-                       yes: bool = False, with_uv: bool = True,
-                       rel_dir: str = "rel") -> subprocess.CompletedProcess[str]:
+                       yes: bool = False, with_uv: bool = True, rel_dir: str = "rel",
+                       bin_on_path: bool = False,
+                       env_extra: dict[str, str] | None = None) -> subprocess.CompletedProcess[str]:
     """Generate install.sh for patch 1 with `sha`, serve `served` as its wheel from a file:// base and run it
-    under /bin/sh with a stub uv that logs its arguments to tmp_path/uv.log. `tty` is the text of the
-    terminal file (None: the path does not exist); TMPDIR is tmp_path/tmp."""
+    under /bin/sh with a stub uv that logs its arguments to tmp_path/uv.log. The stub answers
+    `uv tool dir --bin` with tmp_path/toolbin (not logged), which is on PATH only with `bin_on_path`. `tty`
+    is the text of the terminal file (None: the path does not exist); TMPDIR is tmp_path/tmp."""
     target = release.patch_target(1)
     script = tmp_path / "install.sh"
     script.write_text(release.install_script(target, sha))
@@ -1288,16 +1290,20 @@ def run_install_script(tmp_path: Path, tty: str | None, *, served: bytes = WHEEL
     (tmp_path / "tmp").mkdir()
     if with_uv:
         uv = stub_dir / "uv"
-        uv.write_text(f'#!/bin/sh\necho "$@" >> "{tmp_path}/uv.log"\n')
+        uv.write_text(f'#!/bin/sh\n'
+                      f'if [ "$*" = "tool dir --bin" ]; then echo "{tmp_path}/toolbin"; exit 0; fi\n'
+                      f'echo "$@" >> "{tmp_path}/uv.log"\n')
         uv.chmod(0o755)
     tty_path = tmp_path / "tty"
     if tty is not None:
         tty_path.write_text(tty)
-    env = {"PATH": f"{stub_dir}:/usr/bin:/bin" if with_uv else str(tmp_path / "empty"),
+    path = f"{stub_dir}:/usr/bin:/bin" + (f":{tmp_path}/toolbin" if bin_on_path else "")
+    env = {"PATH": path if with_uv else str(tmp_path / "empty"),
            "TREX_WEB_GUI_RELEASES": f"file://{tmp_path}/{rel_dir}", "TREX_WEB_GUI_TTY": str(tty_path),
            "TMPDIR": str(tmp_path / "tmp")}
     if yes:
         env["TREX_WEB_GUI_YES"] = "1"
+    env.update(env_extra or {})
     if not with_uv:
         (tmp_path / "empty").mkdir()
     return subprocess.run(["/bin/sh", str(script)], env=env, capture_output=True, text=True, check=False)
@@ -1320,7 +1326,7 @@ def test_install_script_installs_a_good_wheel(tmp_path: Path) -> None:
     """A wheel matching its sha256 is installed with the measured uv form; the temp directory is removed."""
     done = run_install_script(tmp_path, "\n")
     assert done.returncode == 0, done.stderr
-    args = (tmp_path / "uv.log").read_text().split()
+    args = (tmp_path / "uv.log").read_text().splitlines()[0].split()
     assert args[:4] == ["tool", "install", "--python", "3.12"]
     assert args[-1].endswith("/trex_web_gui-1.0.1-py3-none-any.whl")
     assert len(args) == 5   # no extra flags: plain `uv tool install` replaces an older version (uv 0.12.5)
@@ -1371,6 +1377,48 @@ def test_install_script_yes_skips_the_pause(tmp_path: Path) -> None:
     assert done.returncode == 0, done.stderr
     assert (tmp_path / "uv.log").exists()
     assert (tmp_path / "tty").read_text() == ""
+
+
+def test_install_script_says_how_to_start_the_backend(tmp_path: Path) -> None:
+    """After the install, the output names the command that starts the backend and what it prints."""
+    done = run_install_script(tmp_path, "\n", bin_on_path=True)
+    assert done.returncode == 0, done.stderr
+    assert "Start the backend with:\n  trex-web-gui serve\n" in done.stdout
+    assert "login URL" in done.stdout
+    assert "update-shell" not in done.stdout
+
+
+def test_install_script_adds_a_missing_bin_dir_to_the_shell_profile(tmp_path: Path) -> None:
+    """With uv's tool bin directory off PATH, the script runs `uv tool update-shell` itself, gives the full
+    command path for this terminal, and says a new terminal picks the change up."""
+    done = run_install_script(tmp_path, "\n")
+    assert done.returncode == 0, done.stderr
+    toolbin = f"{tmp_path}/toolbin"
+    calls = (tmp_path / "uv.log").read_text().splitlines()
+    assert calls[0].startswith("tool install ") and calls[1:] == ["tool update-shell"]
+    assert f"Start the backend with:\n  {toolbin}/trex-web-gui serve\n" in done.stdout
+    assert f"Your shell profile now adds {toolbin} to PATH" in done.stdout
+    assert "open a new terminal" in done.stdout
+
+
+def test_install_script_leaves_the_profile_alone_when_asked(tmp_path: Path) -> None:
+    """TREX_WEB_GUI_NO_MODIFY_PATH=1 skips `uv tool update-shell` and prints both ways to add the directory
+    by hand instead."""
+    done = run_install_script(tmp_path, "\n", env_extra={"TREX_WEB_GUI_NO_MODIFY_PATH": "1"})
+    assert done.returncode == 0, done.stderr
+    toolbin = f"{tmp_path}/toolbin"
+    assert "tool update-shell" not in (tmp_path / "uv.log").read_text()
+    assert f"{toolbin} is not on your PATH" in done.stdout
+    assert "  uv tool update-shell\n" in done.stdout
+    assert f'  export PATH="{toolbin}:$PATH"\n' in done.stdout
+    assert "~/.bashrc" in done.stdout and "~/.zshrc" in done.stdout
+
+
+def test_install_script_leaves_the_profile_alone_when_bin_is_on_path(tmp_path: Path) -> None:
+    """A tool bin directory already on PATH needs no profile change."""
+    done = run_install_script(tmp_path, "\n", bin_on_path=True)
+    assert done.returncode == 0, done.stderr
+    assert "tool update-shell" not in (tmp_path / "uv.log").read_text()
 
 
 def test_install_script_stops_without_uv(tmp_path: Path) -> None:

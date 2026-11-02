@@ -39,7 +39,8 @@ page by page: [`docs/gui-guide.md`](docs/gui-guide.md).**
 2. Start the backend: `trex-web-gui serve`.
 3. Open the login URL it prints. For a browser on another machine, the backend also prints the SSH tunnel command
    and the URL to open at the other end.
-4. In the GUI, press **Connect…**, enter the TRex server, and connect.
+4. In the GUI, press **Connect…**, enter the TRex server, and connect. TRex must be running in stateless mode
+   ([Starting the TRex server](#starting-the-trex-server)).
 5. Acquire the ports you will use, assign a traffic profile, and start traffic. Watch it on the **Dashboard**. Stop
    the traffic and release the ports when you are done.
 
@@ -60,7 +61,20 @@ not.
 ## Install
 
 trex-web-gui is not on PyPI. From 1.1.0 on, one command installs the latest release with
-[`uv`](https://docs.astral.sh/uv/):
+[`uv`](https://docs.astral.sh/uv/).
+
+**Install uv first** if `uv --version` finds none. uv's standalone installer needs no `sudo`:
+
+```
+curl -LsSf https://astral.sh/uv/install.sh | sh
+```
+
+- It puts `uv` in `~/.local/bin` and adds that directory to your shell profile.
+- Open a new terminal afterwards, so the new `PATH` takes effect.
+- [uv's installation page](https://docs.astral.sh/uv/getting-started/installation/) lists the other ways to install
+  it, such as a package manager or `pipx install uv`.
+
+Then install trex-web-gui:
 
 ```
 curl -fsSL https://github.com/CRinATL/trex-web-gui/releases/latest/download/install.sh | sh
@@ -76,6 +90,16 @@ On a terminal the script:
 Compare the sha256 with the one the release page lists next to the wheel, then press Enter to install. Without a
 terminal there is no pause: it installs at once and says so. `TREX_WEB_GUI_YES=1` skips the pause for an unattended
 install: put it before `sh`, as in `curl -fsSL … | TREX_WEB_GUI_YES=1 sh`.
+
+From the release after 1.1.0, the script ends by printing how to start the backend: `trex-web-gui serve`. When
+`~/.local/bin` is not on your `PATH`, it does two more things:
+
+- It gives the command's full path instead.
+- It adds the directory to your shell profile with `uv tool update-shell`. To have it print the steps instead and
+  leave your profile alone, put `TREX_WEB_GUI_NO_MODIFY_PATH=1` before `sh`.
+
+The terminal you installed from keeps its old `PATH`
+([The `trex-web-gui` command and `PATH`](#the-trex-web-gui-command-and-path)).
 
 **Read the script first.** To read the script before running any of it, or on a host with no terminal:
 
@@ -163,6 +187,28 @@ A host that cannot reach PyPI installs from a wheelhouse, a directory of the whe
 
 `uv tool uninstall trex-web-gui` removes the environment and the command.
 
+### The `trex-web-gui` command and `PATH`
+
+The command is in `~/.local/bin` (`uv tool dir --bin` prints the directory). If `trex-web-gui serve` answers
+`command not found`, that directory is not on your `PATH`.
+
+The installer adds it to your shell profile, but a script run as `curl … | sh` cannot change the `PATH` of the
+terminal that started it. If the installer said it updated your profile, open a new terminal, or run `. ~/.profile`
+in the current one.
+
+Otherwise, add the directory to your shell profile yourself, in one of two ways:
+
+- Run `uv tool update-shell`. It adds the directory to your shell's startup files.
+- Or add this line yourself, to `~/.profile` for a login shell, `~/.bashrc` for bash, or `~/.zshrc` for zsh:
+
+  ```
+  export PATH="$HOME/.local/bin:$PATH"
+  ```
+
+Then open a new terminal, or run `. ~/.profile` (or the file you edited) in the current one. `command -v
+trex-web-gui` prints the command's path once it is found. Until then, `~/.local/bin/trex-web-gui serve` runs it by
+its full path.
+
 More: the REST and WebSocket reference is [`docs/api.md`](docs/api.md); what changed in each release is in its
 [release notes](https://github.com/CRinATL/trex-web-gui/releases).
 
@@ -212,8 +258,43 @@ trex-web-gui as root would run them as root.
 To build it from a checkout:
 
 - [`uv`](https://docs.astral.sh/uv/), and Node.js with npm at a version `frontend/package.json` accepts
-  ([`CONTRIBUTING.md`](CONTRIBUTING.md)).
+  ([`CONTRIBUTING.md`](CONTRIBUTING.md)). Only building needs Node.js: the release wheel already holds the built
+  UI, so installing and running a release needs neither Node.js nor npm.
 - `npm --prefix frontend install`, then `make build` builds the UI that `trex-web-gui serve` serves.
+
+### Starting the TRex server
+
+On the TRex host, start TRex in interactive stateless mode (`-i`) from its install directory (here
+`/opt/trex/v3.08`), as root:
+
+```
+cd /opt/trex/v3.08
+sudo ./t-rex-64 -i --cfg /etc/trex_cfg.yaml
+```
+
+- **`-i` is the mode trex-web-gui controls.** TRex v3.08's `--help` describes it as "Run TRex in 'stateless'
+  mode". Do not add `--astf`: ASTF is a different mode, and trex-web-gui does not control it. Do not start TRex
+  with `-f <profile>` either: that is a stateful run, which has no command port, so only the Monitor works beside it
+  ([Monitor and wall displays](#monitor-and-wall-displays)).
+- **`--cfg`** names the platform configuration: the ports, cores and addresses. TRex reads `/etc/trex_cfg.yaml`
+  when the option is left out. To create one, run `sudo ./dpdk_setup_ports.py -i` in the same directory: it asks
+  about each interface.
+- **Ports.** TRex takes commands on port 4501 and publishes events on 4500 unless its configuration sets
+  `zmq_rpc_port` / `zmq_pub_port`. Those are the ports trex-web-gui uses when you give only a host. Otherwise give
+  both, as `--server HOST:SYNC:ASYNC` or in the Connect dialog. The backend host must be able to reach both ports.
+- **`--no-scapy-server`** is optional. It stops TRex starting its own Scapy server, which trex-web-gui never uses: the
+  packet editor builds packets with the backend's own copy of the TRex client.
+- **The command stays in the foreground** and shows TRex's own console. To leave it running after you log out, run
+  it detached instead:
+
+  ```
+  sudo sh -c 'cd /opt/trex/v3.08 && setsid nohup ./t-rex-64 -i --cfg /etc/trex_cfg.yaml >/tmp/trex.log 2>&1 </dev/null &'
+  ```
+
+  Stop it with `sudo pkill -INT -x _t-rex-64`.
+
+If the TRex daemon (`trex_daemon_server`) runs on the TRex host, the **TRex daemon…** dialog can start TRex instead.
+It starts it in stateless mode, adding `-i` itself ([Daemon exposure](#daemon-exposure)).
 
 ## Running it
 
