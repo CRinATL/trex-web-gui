@@ -579,8 +579,10 @@ def test_vendored_not_connected_text_translates_to_unreachable(fake_trex, new_se
         await s.connect(params(f))
         c = s._client
         os.kill(f.proc.pid, signal.SIGSTOP)
-        with pytest.raises(Exception, match="Failed to get server response"):
-            await s._run(lambda: c.acquire(ports=[0]))             # the first RPC fails and drops the link
+        # the first RPC fails and drops the link: usually the recv times out (:335), but the vendored client's
+        # bare excepts (:323, :338) can report any other socket error as "...general exception" instead
+        with pytest.raises(Exception, match="Failed to (get server response|send message to server)"):
+            await s._run(lambda: c.acquire(ports=[0]))
         # the next one answers 'Not connected to server'
         rc = await s._run(lambda: c.ports[0].sync())
         os.kill(f.proc.pid, signal.SIGCONT)
