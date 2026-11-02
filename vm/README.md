@@ -16,7 +16,7 @@ caps), and `uv`.
 The guest is picked by `TREX_VM_GUEST` (default `jammy`; the Makefile exports it). `vm/guests.sh` turns that
 into the working directory `$TREX_VM_DIR` and the ports, and `launch.sh`, `ssh.sh`, `real.sh`, `demo.sh`,
 `stack.sh` (and `download.sh`, `build.sh`) source it. `netem.sh` reaches the guest through `ssh.sh`. Precedence:
-`TREX_VM_GUEST` selects the row. A `TREX_VM_DIR` set by hand overrides the row's directory (with the guest named, a
+`TREX_VM_GUEST` selects the row; a `TREX_VM_DIR` set by hand overrides the row's directory (with the guest named, a
 warning says so once; with no guest, jammy's behaviour is exactly as before). The directory holds the images, the
 SSH key, the monitor socket and the console log, and is not in git. Keep it on a disk that survives a reboot
 (`/var/tmp`, not a tmpfs `/tmp`).

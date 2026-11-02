@@ -5,8 +5,8 @@ traffic generator. It brings traffic control, statistics, packet capture, profil
 one application, replacing the separate `trex-stateless-gui`, `trex-packet-editor` and `trex-qt-gui` tools.
 
 The backend runs on Linux with Python 3.12 or newer. Traffic control targets TRex v3.08 in stateless mode (STL API
-5.1); the passive Monitor also shows what stateful (`-f`) runs publish. The backend is Python (FastAPI) and drives a
-vendored, patched copy of the TRex Python client; the frontend is React + TypeScript + Vite. **How to use the GUI,
+5.1). The passive Monitor also shows what stateful (`-f`) runs publish. The backend is Python (FastAPI) and drives a
+vendored, patched copy of the TRex Python client. The frontend is React + TypeScript + Vite. **How to use the GUI,
 page by page: [`docs/gui-guide.md`](docs/gui-guide.md).**
 
 ## What you can do
@@ -40,7 +40,7 @@ page by page: [`docs/gui-guide.md`](docs/gui-guide.md).**
 3. Open the login URL it prints. For a browser on another machine, the backend also prints the SSH tunnel command
    and the URL to open at the other end.
 4. In the GUI, press **Connect…**, enter the TRex server, and connect.
-5. Acquire the ports you will use, assign a traffic profile, and start traffic; watch it on the **Dashboard**. Stop
+5. Acquire the ports you will use, assign a traffic profile, and start traffic. Watch it on the **Dashboard**. Stop
    the traffic and release the ports when you are done.
 
 For a worked example, with the test topology and how to confirm the frames arrive, follow
@@ -197,14 +197,14 @@ the serving port.
 
 To run it:
 
-- Linux, with Python 3.12 or later (tested on 3.12–3.14); `uv` fetches one if the host has none.
+- Linux, with Python 3.12 or later (tested on 3.12–3.14). `uv` fetches one if the host has none.
 - A TRex server (v3.08) in stateless mode to connect to. The vendored client is in the wheel; no trex-core checkout
   is needed.
 - Optional, on the backend host: Wireshark (the Capture page's **Open in Wireshark**, which needs a display there), and
   the TRex daemon (`trex_daemon_server`) for the daemon dialog.
 
 trex-web-gui does not start TRex or `trex-console`. It takes `trex-console`'s place as a client of a TRex server that is
-already running in stateless mode, on its command and event ports (`--server`); only the **TRex daemon…** dialog
+already running in stateless mode, on its command and event ports (`--server`). Only the **TRex daemon…** dialog
 starts one, through `trex_daemon_server`. trex-web-gui needs no root: run it as an ordinary user. `.py` profiles run as
 code as that user ([Where things are on the backend host](#where-things-are-on-the-backend-host)), so running
 trex-web-gui as root would run them as root.
@@ -234,11 +234,11 @@ uv run --project backend trex-web-gui serve [options]
 | `--dev` | API only; the UI comes from the Vite dev server on `:5173` (see `make dev`). |
 
 Ctrl+C closes the TRex session before the backend exits, which can take several seconds against a server that does not
-answer; a second Ctrl+C is ignored and says so. Ctrl+\ quits at once, but the ports may stay acquired.
+answer. A second Ctrl+C is ignored and says so. Ctrl+\ quits at once, but the ports may stay acquired.
 
 ### Where things are on the backend host
 
-Profiles for the Control page's Traffic tab are paths on the backend host, browsed with **Browse…**; `.py` profiles run
+Profiles for the Control page's Traffic tab are paths on the backend host, browsed with **Browse…**. `.py` profiles run
 as code there when inspected or assigned. Everything the GUI writes goes under the data directory: `settings.toml`
 (preferences and saved connections), `port_labels.toml` (port names), `test_setups/`, the Studio library in `profiles/`
 (or the **Profile library directory** setting), your packet templates in `templates/` (or **Templates directory**),
@@ -297,7 +297,7 @@ How to set up a checkout, run the GUI from source, and run the checks: [`CONTRIB
 
 ## Layout
 
-A partial map of the repository; every path is relative to its root.
+A partial map of the repository. Every path is relative to its root.
 
 ```
 backend/

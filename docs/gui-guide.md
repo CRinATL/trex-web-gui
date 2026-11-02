@@ -553,18 +553,14 @@ becomes **Overwrite** ([67](gui-inventory/screens/67-save-setup-no-profile.png) 
 
 ### 5.2 Test setups dialog
 
-**Manage setups…** works disconnected too.
-
-- Left, the list: name, `<server or any server> · N ports`, and `· loaded` (`, N edits` with edits since Load) for
-  the loaded one. A file that could not be read is a disabled red entry.
-- Right, the chosen setup ([66](gui-inventory/screens/66-manage-setups-empty.png),
-  [71](gui-inventory/screens/71-manage-setups-list.png) to [82](gui-inventory/screens/82-manage-setups-540px.png)):
-  - **Rename**, **Duplicate**, **Delete** (`Delete setup <name>?` with **Confirm delete** / **Cancel**). Rename and
-    duplicate open a **New name** row.
-  - `Saved for <server> · updated <time>`.
-  - The ports table **Port**, **Profile**, **Rate**, **On Run** (`force-acquire`, `stops a transmitting port first`,
-    `applies a port configuration`, or `—`), **Status**.
-  - Then **Load**, **Run** and the result, and **Close**.
+**Manage setups…** works disconnected too. Left, the list: name, `<server or any server> · N ports`, and `· loaded`
+(`, N edits` with edits since Load) for the loaded one. A file that could not be read is a disabled red entry. Right,
+the chosen setup: **Rename**, **Duplicate**, **Delete** (`Delete setup <name>?` with **Confirm delete** / **Cancel**;
+rename and duplicate open a **New name** row), `Saved for <server> · updated <time>`, the ports table **Port**,
+**Profile**, **Rate**, **On Run** (`force-acquire`, `stops a transmitting port first`, `applies a port configuration`,
+or `—`), **Status**; then **Load**, **Run** and the result, and **Close**
+([66](gui-inventory/screens/66-manage-setups-empty.png),
+[71](gui-inventory/screens/71-manage-setups-list.png) to [82](gui-inventory/screens/82-manage-setups-540px.png)).
 
 - **Load** (needs a session) inspects every port's profile (a `.py` runs on the backend host) and fills the
   Traffic forms.
@@ -860,11 +856,13 @@ profiles are listed in red, not selectable. `No profiles yet. New… or Import�
   - **Use in Control…**: a dialog **Use in Control** with a **Port** select, `Fills the profile field of that
     port's Traffic tab; nothing is assigned until you press Assign there.`, and the rate that port's form keeps,
     `Port 0's rate stays 5 kpps: check it on the Traffic tab before you press Assign.` (the handoff does not
-    change it). **Open Traffic tab** goes to Control with the Traffic tab open
-    (`No ports: connect to a TRex server in Control first.` without a session).
+    change it).
 - While the embedded packet editor holds unsaved edits, Rename and Delete are off: `The packet has unsaved
   edits: save or cancel them first.`, and choosing another profile asks `Discard the packet edits?`
   (**Discard** / **Keep editing**).
+
+**Open Traffic tab** goes to Control with the Traffic tab open
+(`No ports: connect to a TRex server in Control first.` without a session).
 
 ### 9.2 Import dialog
 
@@ -940,19 +938,19 @@ selects several, for Copy, Duplicate and Delete.` (Ctrl-click off a Mac); with s
 [90](gui-inventory/screens/90-studio-properties.png).
 
 - **Mode** (Continuous; Single burst with **Packets**; Multi-burst with **Packets per burst**, **Bursts**,
-  **IBG (µs)**).
-- **Rate** (one box, below).
-- **Enabled**, **Self start**.
-- **Start paused** (ⓘ: experimental in TRex).
-- **Next** (Stop, or a named stream; disabled for a continuous stream).
-- **Action count**, **ISG (µs)**.
-- **Random seed** (`0 = none`).
-- **Core** (`-1 = any`).
-- **Source MAC from packet** (ⓘ on the `flags` bits).
-- **Destination MAC** (From config file, From packet, By ARP).
-- **Dummy stream**.
-- **RX stats** (None, Flow stats, Latency, with **PG ID**; a TPG rule is shown read-only).
-- **Extra stats** (VXLAN and IEEE 1588 as imported, read-only: the TRex client drops both).
+  **IBG (µs)**);
+- **Rate** (one box, below);
+- **Enabled**, **Self start**;
+- **Start paused** (ⓘ: experimental in TRex);
+- **Next** (Stop, or a named stream; disabled for a continuous stream);
+- **Action count**, **ISG (µs)**;
+- **Random seed** (`0 = none`);
+- **Core** (`-1 = any`);
+- **Source MAC from packet** (ⓘ on the `flags` bits);
+- **Destination MAC** (From config file, From packet, By ARP);
+- **Dummy stream**;
+- **RX stats** (None, Flow stats, Latency, with **PG ID**; a TPG rule is shown read-only);
+- **Extra stats** (VXLAN and IEEE 1588 as imported, read-only: the TRex client drops both);
 - **Cache** (Off or N packets, with **Cache packets**).
 
 A field's error is shown beside it.
@@ -977,9 +975,9 @@ there is a change and while a field is invalid. Each field it would send is mark
 
 [91](gui-inventory/screens/91-studio-packet.png).
 
-- The packet summary, `N bytes (N+4 with FCS)`, `Field engine: N instructions`.
-- **View packet…** (the packet viewer, [8.2](#82-packet-viewer)).
-- **Edit packet**.
+- The packet summary, `N bytes (N+4 with FCS)`, `Field engine: N instructions`;
+- **View packet…** (the packet viewer, [8.2](#82-packet-viewer));
+- **Edit packet**;
 - **Export ▾** (**pcap**, written by the browser from the stored bytes; **YAML**, from the backend).
 
 **Edit packet** opens the embedded packet editor ([10.2](#102-the-editor) onwards) with **Presets…**, **Cancel**
@@ -1024,15 +1022,15 @@ The heading `Packet editor — <name or Untitled>` with a `•` while there are 
 
 **File ▾**:
 
-- **New**.
+- **New**;
 - **Open .trp…**:
-  - A file from this computer.
-  - The note: `A .trp may contain expressions; they are evaluated on the backend host when the packet is built.`
+  - A file from this computer;
+  - The note: `A .trp may contain expressions; they are evaluated on the backend host when the packet is built.`;
   - At most 4 MiB.
-- **Save** (the note `Downloads a .trp file.`; downloads `<name>.trp`).
-- **Save as template…**.
-- **Open pcap…**.
-- **Save as pcap** (one packet, written by the browser from the bytes the backend builds).
+- **Save** (the note `Downloads a .trp file.`; downloads `<name>.trp`);
+- **Save as template…**;
+- **Open pcap…**;
+- **Save as pcap** (one packet, written by the browser from the bytes the backend builds);
 - **Add to profile as a new stream…**.
 
 Then **New** (the same as File ▾ New: back to the starting packet, a bare `Ether`), **Templates…** and
@@ -1098,9 +1096,9 @@ as ARP's `hwsrc` by its nominal size; a field that adds no bytes, such as a skip
 text repeated to a size, a file, a file repeated to a size, hex bytes repeated, random printable characters,
 random bytes. Then its fields:
 
-- **Text** or **Hex bytes**.
-- **File** (at most 1 MiB).
-- **Size is** `payload length` or `packet size (with FCS)` with **Size** (1 to 1 MiB) for the sized sources.
+- **Text** or **Hex bytes**;
+- **File** (at most 1 MiB);
+- **Size is** `payload length` or `packet size (with FCS)` with **Size** (1 to 1 MiB) for the sized sources;
 - **Seed** for the random ones (`not 0: the service reads 0 as <default>`).
 
 **Cancel**, **Save**.
@@ -1126,10 +1124,10 @@ name like `lab/syn-flood`, **Save**. An existing name asks `Replace <name>?`. **
 tab changes, and **Close** stays in view), each ending in **Open in editor**:
 
 - **Flood** (one UDP or TCP packet; protocol, source and destination MAC from the TRex configuration, from the
-  packet, or stepped up/down with a count and step, IPs, ports, frame size fixed/stepped/random, payload text).
+  packet, or stepped up/down with a count and step, IPs, ports, frame size fixed/stepped/random, payload text);
 - **IP sweep** (source, destination or both IPv4 addresses stepped through a range by count or last address;
-  checksum in software or hardware).
-- **Frame-size sweep** (UDP packets between two sizes, stepped or random).
+  checksum in software or hardware);
+- **Frame-size sweep** (UDP packets between two sizes, stepped or random);
 - **VLAN** (a UDP packet behind one or two 802.1Q tags with VLAN and priority).
 
 A bad number says so beside the button (`Source port must be a whole number`). A refusal that arrives after you moved
@@ -1141,9 +1139,9 @@ preset's MAC mode is carried into the stream when the packet is added to a profi
 [111](gui-inventory/screens/111-packet-pcap-picker.png).
 
 - **On the backend host** (a path with **Browse…**) or **From this computer** (a `.pcap`/`.cap` upload).
-- **List packets**.
-- The capture's warnings (cut or truncated records).
-- `Packets 1–100 of N` with **Previous** / **Next**.
+- **List packets**;
+- The capture's warnings (cut or truncated records);
+- `Packets 1–100 of N` with **Previous** / **Next**;
 - A row per packet with its number (a button that opens it), bytes and summary.
 
 A capture over the **Largest capture the packet editor opens (MiB)** setting is refused before it is read:
@@ -1172,11 +1170,11 @@ limit.
 
 [109](gui-inventory/screens/109-packet-field-engine.png).
 
-- **Add instruction** (a text box listing the instruction types; `"x" is not a Field Engine instruction`).
-- **Import raw VM…** (paste or load a VM's JSON; `A VM is an object with an "instructions" list.`).
-- **Copy instructions as Python**.
-- **Structure** (the instructions in order).
-- **Global parameters**.
+- **Add instruction** (a text box listing the instruction types; `"x" is not a Field Engine instruction`);
+- **Import raw VM…** (paste or load a VM's JSON; `A VM is an object with an "instructions" list.`);
+- **Copy instructions as Python**;
+- **Structure** (the instructions in order);
+- **Global parameters**;
 - One block per instruction with a **Delete**, a **Help** fold and its parameters (text boxes that commit on Enter or
   blur; a parameter whose values the engine knows offers them as a list).
 
@@ -1265,8 +1263,8 @@ README's "Daemon exposure" before using it outside the test VM. While the dialog
 
 **Connect bar**:
 
-- **Host** (the last daemon's host, else the Control session's host, else the `--server` host, else `127.0.0.1`).
-- **Port** (`--daemon-port`, 8090 by default).
+- **Host** (the last daemon's host, else the Control session's host, else the `--server` host, else `127.0.0.1`);
+- **Port** (`--daemon-port`, 8090 by default);
 - **Connect** (`Host is required`, `Port must be 1–65535`), **Disconnect**.
 
 Opening the dialog again reconnects to the last daemon. Under it the exposure warning, then
@@ -1304,23 +1302,23 @@ A pushed file becomes the Run tab's config path.
 **Configuration**:
 
 - **Config path** (`/etc/trex_cfg.yaml`, or the file last pushed;
-  `Config path must be absolute, with no .., using only letters, digits and _ . / -`).
-- **Cores (-c)** (1–64).
-- **Start timeout (s)** (5–300).
+  `Config path must be absolute, with no .., using only letters, digits and _ . / -`);
+- **Cores (-c)** (1–64);
+- **Start timeout (s)** (5–300);
 - **Mode**: **Stateless (interactive, -i)** or **Stateful run (-f)**.
   - Stateless: **Extra arguments** (the ⓘ: up to 20 space-separated tokens of letters, digits and `_ . , : = / + -`;
     `--cfg`, `-i`, `--astf`, `-f`, `-d`, `-m`, `-l`, `--rx-check` and `--client_cfg` are refused, also abbreviated),
     **TRex command port** (prefilled from the pushed config's `zmq_rpc_port`, else the Control session's port, else
     4501; the ⓘ: `the port <host> reaches the daemon's TRex on; Stop reads its port owners first`, `<host>` being the
-    trex-web-gui host, or `the computer running trex-web-gui serve` until it is known).
+    trex-web-gui host, or `the computer running trex-web-gui serve` until it is known);
   - Stateful:
-    - **Source** (Stock, Uploaded) with **Upload…** ([12.5](#125-uploading-a-stateful-profile)).
+    - **Source** (Stock, Uploaded) with **Upload…** ([12.5](#125-uploading-a-stateful-profile));
     - **Profile** (the daemon's list), the profile's details as the daemon reads it (templates, YAML duration,
-      warnings, errors).
-    - **Duration -d (s)** (10–3600, prefilled from the YAML).
-    - **Multiplier -m** (0–1000).
-    - **Latency -l (pps, 0 = off)**.
-    - **Rx-check --rx-check (0 = off)**.
+      warnings, errors);
+    - **Duration -d (s)** (10–3600, prefilled from the YAML);
+    - **Multiplier -m** (0–1000);
+    - **Latency -l (pps, 0 = off)**;
+    - **Rx-check --rx-check (0 = off)**;
     - **Monitor port** (the publisher port the Monitor attaches to; the ⓘ:
       `the PUB port <host> reaches the run's publisher on`).
 
@@ -1393,15 +1391,15 @@ The data directory also holds:
 
 ### 13.2 Files on the backend host
 
-- **Templates directory** (your packet templates; empty means `<data dir>/templates`).
-- **Workspace directory** (where Browse starts).
+- **Templates directory** (your packet templates; empty means `<data dir>/templates`);
+- **Workspace directory** (where Browse starts);
 - **Profile library directory** (ⓘ: `Empty: <data dir>/profiles (here: <data dir>/profiles). Must be an absolute path on
-  the backend host.`).
+  the backend host.`);
 - **TRex config file (on the backend host)** (ⓘ: `Read at the next connect.`; it is how the interface names are
-  confirmed).
-- **Wireshark path** (ⓘ: `Runs on the backend host; needs a display there. A pcap download works anywhere.`).
+  confirmed);
+- **Wireshark path** (ⓘ: `Runs on the backend host; needs a display there. A pcap download works anywhere.`);
 - **Largest capture the packet editor opens (MiB)** (ⓘ: `The pcap picker refuses a larger file before reading it. 1 to
-  1024; the default is 64. Uploads from this computer are also limited to 64 MiB.`).
+  1024; the default is 64. Uploads from this computer are also limited to 64 MiB.`);
 - **Save**, **Revert**, then `Saved` or the backend's message.
 
 ### 13.3 Session
