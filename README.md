@@ -51,8 +51,7 @@ not.
 ## Install
 
 trex-web-gui is not on PyPI. From 1.1.0 on, one command installs the latest release with
-[`uv`](https://docs.astral.sh/uv/) (until 1.0.1 is published the address answers 404, `curl` reports the 404 and `sh`
-installs nothing):
+[`uv`](https://docs.astral.sh/uv/):
 
 ```
 curl -fsSL https://github.com/CRinATL/trex-web-gui/releases/latest/download/install.sh | sh
