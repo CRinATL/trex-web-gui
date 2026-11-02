@@ -857,12 +857,12 @@ profiles are listed in red, not selectable. `No profiles yet. New… or Import�
     port's Traffic tab; nothing is assigned until you press Assign there.`, and the rate that port's form keeps,
     `Port 0's rate stays 5 kpps: check it on the Traffic tab before you press Assign.` (the handoff does not
     change it).
+
+    **Open Traffic tab** goes to Control with the Traffic tab open
+    (`No ports: connect to a TRex server in Control first.` without a session).
 - While the embedded packet editor holds unsaved edits, Rename and Delete are off: `The packet has unsaved
   edits: save or cancel them first.`, and choosing another profile asks `Discard the packet edits?`
   (**Discard** / **Keep editing**).
-
-**Open Traffic tab** goes to Control with the Traffic tab open
-(`No ports: connect to a TRex server in Control first.` without a session).
 
 ### 9.2 Import dialog
 
@@ -1138,7 +1138,7 @@ preset's MAC mode is carried into the stream when the packet is added to a profi
 
 [111](gui-inventory/screens/111-packet-pcap-picker.png).
 
-- **On the backend host** (a path with **Browse…**) or **From this computer** (a `.pcap`/`.cap` upload).
+- **On the backend host** (a path with **Browse…**) or **From this computer** (a `.pcap`/`.cap` upload);
 - **List packets**;
 - The capture's warnings (cut or truncated records);
 - `Packets 1–100 of N` with **Previous** / **Next**;
