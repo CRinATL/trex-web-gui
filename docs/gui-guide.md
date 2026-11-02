@@ -9,10 +9,10 @@ setups. Every control is named as it appears on screen, and every refusal text i
 
 Screenshots are the inventory's (`gui-inventory/screens/`, shot at 1400x900 in the Light theme against the
 test guest; the numbers below are theirs). The inventory itself (`gui-inventory/README.md`) is a screen-by-screen
-record of what each shot shows; this guide is about what the controls do. The shots were taken on 2026-10-30.
+record of what each shot shows. This guide is about what the controls do. The shots were taken on 2026-10-30.
 
 The backend holds one TRex session for the whole GUI. Every browser tab that is logged in sees the same
-session, the same ports and the same captures; the GUI is single-user by design.
+session, the same ports and the same captures. The GUI is single-user by design.
 
 How the backend is started, the login URL and the SSH tunnel are in the [README](../README.md). The HTTP API behind
 every button is in [`api.md`](api.md).
@@ -57,7 +57,7 @@ Between the cookie check and the first message from the backend the page shows o
 
 On every page: the name **trex-web-gui** at the left, then the links **Control**, **Dashboard**, **Capture**,
 **Studio**, **Monitor**, **Events**, **Settings**. The current page is underlined. **Events** carries a red
-badge with the number of errors and warnings that arrived while the Events page was not open; opening Events
+badge with the number of errors and warnings that arrived while the Events page was not open. Opening Events
 clears it.
 
 The Control, Capture, Studio and Packet editor pages stay loaded while you are on another page, so their
@@ -109,7 +109,7 @@ Reconnect shows its message in red in the bar until the next attempt or the next
 
 ### 1.5 Themes
 
-Settings → Appearance chooses **System**, **Light**, **Dark** or **High contrast**; the choice is kept in this
+Settings → Appearance chooses **System**, **Light**, **Dark** or **High contrast**. The choice is kept in this
 browser only and takes effect at once ([13.1](#131-appearance)). Dark and High contrast are shown on the
 Dashboard in [59](gui-inventory/screens/59-dashboard-dark.png) and
 [60](gui-inventory/screens/60-dashboard-high-contrast.png).
@@ -155,12 +155,12 @@ Disconnect first if you want another server.
 **A host that runs a stateful (-f) TRex**: a stateful run has no command port, so a connect to it fails. When
 the GUI can tell (the daemon lists a `-f` process there, the Monitor is attached to it, or this GUI started the
 run), the dialog says `<host> is running a stateful (-f) run. It has no command port; watch it on the Monitor.`
-with an **Open Monitor** link ([106](gui-inventory/screens/106-connect-stateful-run.png)); the Control page
+with an **Open Monitor** link ([106](gui-inventory/screens/106-connect-stateful-run.png)). The Control page
 shows the same banner while disconnected.
 
 **Save as…**: validates the form, then opens an inline **Name** row (the picked name or the host) with **Save**
 and **Cancel** (Enter saves, Escape cancels the row). It writes host, ports and timeout to the backend's
-settings file; a name already used (compared case-insensitively) is replaced
+settings file. A name already used (compared case-insensitively) is replaced
 ([07](gui-inventory/screens/07-connect-saved.png)).
 
 **Settings file problems**: `The settings file could not be read, so defaults are shown. Saving is allowed: the
@@ -181,7 +181,7 @@ session is lost, `Connection lost; Reconnect is in the status bar.` and the tree
 [31](gui-inventory/screens/31-control-connection-lost.png)).
 
 The alert line shows the result of the last failed command, and `Port N reported an error; see Events` when
-the server reports a port error; a command that succeeds clears it.
+the server reports a port error. A command that succeeds clears it.
 
 ### 3.1 The devices tree
 
@@ -200,7 +200,7 @@ the port's panel with every action greyed and labelled `(read-only (multi-profil
 `read-only`.
 
 Click selects. Right-click, Shift+F10 or the ContextMenu key selects and opens the context menu. Up, Down,
-Home and End move; Enter selects. The root row is selected after a connect and after Start all
+Home and End move. Enter selects. The root row is selected after a connect and after Start all
 ([08](gui-inventory/screens/08-control-root-connected.png),
 [12](gui-inventory/screens/12-control-profile-selected.png)).
 
