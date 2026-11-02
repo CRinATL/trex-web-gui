@@ -891,11 +891,9 @@ profiles are listed in red, not selectable. `No profiles yet. New… or Import�
 
 ### 9.3 The profile editor
 
-[89](gui-inventory/screens/89-studio-stream-selected.png). An information line:
-
-- `Source: <kind> <path> · saved <UTC time> · N streams`;
-- for a `.py`, `Control assigns the .py source with its tunables; edits here are not sent.`;
-- `Imported for port 0; port 1's streams differ.` for a profile whose ports differ.
+[89](gui-inventory/screens/89-studio-stream-selected.png). An information line, `Source: <kind> <path> · saved
+<UTC time> · N streams`; for a `.py`, `Control assigns the .py source with its tunables; edits here are not
+sent.`; `Imported for port 0; port 1's streams differ.` for a profile whose ports differ.
 
 **Profile actions**:
 
@@ -927,9 +925,9 @@ deleted elsewhere. Reload library`.
   - `Pasted N streams`;
   - `Nothing to paste: copy streams first.`;
   - `<names> now stop instead of going to the deleted stream.`;
-  - `Undid <action>.`;
-  - a warning under the bar when an enabled stream's Next is disabled: `<stream> goes to <next>, which is
-    disabled: TRex refuses this profile at assign until <stream>'s Next changes.`
+  - `Undid <action>.`
+- A warning under the bar when an enabled stream's Next is disabled: `<stream> goes to <next>, which is disabled:
+  TRex refuses this profile at assign until <stream>'s Next changes.`
 
 The table is framed. A row lights up under the pointer and ends in `›`, the open stream's row has an accent bar on
 its left, and the other selected rows keep their tint and outline. Until one stream is open, a dashed panel stands
@@ -942,19 +940,19 @@ selects several, for Copy, Duplicate and Delete.` (Ctrl-click off a Mac); with s
 [90](gui-inventory/screens/90-studio-properties.png).
 
 - **Mode** (Continuous; Single burst with **Packets**; Multi-burst with **Packets per burst**, **Bursts**,
-  **IBG (µs)**);
-- **Rate** (one box, below);
-- **Enabled**, **Self start**;
-- **Start paused** (ⓘ: experimental in TRex);
-- **Next** (Stop, or a named stream; disabled for a continuous stream);
-- **Action count**, **ISG (µs)**;
-- **Random seed** (`0 = none`);
-- **Core** (`-1 = any`);
-- **Source MAC from packet** (ⓘ on the `flags` bits);
-- **Destination MAC** (From config file, From packet, By ARP);
-- **Dummy stream**;
-- **RX stats** (None, Flow stats, Latency, with **PG ID**; a TPG rule is shown read-only);
-- **Extra stats** (VXLAN and IEEE 1588 as imported, read-only: the TRex client drops both);
+  **IBG (µs)**).
+- **Rate** (one box, below).
+- **Enabled**, **Self start**.
+- **Start paused** (ⓘ: experimental in TRex).
+- **Next** (Stop, or a named stream; disabled for a continuous stream).
+- **Action count**, **ISG (µs)**.
+- **Random seed** (`0 = none`).
+- **Core** (`-1 = any`).
+- **Source MAC from packet** (ⓘ on the `flags` bits).
+- **Destination MAC** (From config file, From packet, By ARP).
+- **Dummy stream**.
+- **RX stats** (None, Flow stats, Latency, with **PG ID**; a TPG rule is shown read-only).
+- **Extra stats** (VXLAN and IEEE 1588 as imported, read-only: the TRex client drops both).
 - **Cache** (Off or N packets, with **Cache packets**).
 
 A field's error is shown beside it.
@@ -970,22 +968,19 @@ an optional `k`, `M` or `G`, or `%` of the line rate.
 - An entry it cannot read shows `Can't read "<text>": a number, optionally with k/M/G and pps, bps or %.` instead.
 - A stored rate is shown in its shortest form (1500000 pps reads `1.5 Mpps`), and saving it untouched sends nothing.
 
-- **Previous** and **Next** move between streams (with unsaved edits: `Discard changes?`, **Discard** / **Keep
-  editing**).
-- **Cancel** puts the stored values back.
-- **Save** sends only the changed fields and is disabled until there is a change and while a field is invalid. Each
-  field it would send is marked `edited`, and `N unsaved changes` shows beside it ([1.4](#14-shortcuts-and-dialogs)).
-
-The name is not here: rename in the table.
+**Previous** and **Next** move between streams (with unsaved edits: `Discard changes?`, **Discard** / **Keep
+editing**). **Cancel** puts the stored values back. **Save** sends only the changed fields and is disabled until
+there is a change and while a field is invalid. Each field it would send is marked `edited`, and
+`N unsaved changes` shows beside it ([1.4](#14-shortcuts-and-dialogs)). The name is not here: rename in the table.
 
 ### 9.6 Packet tab
 
 [91](gui-inventory/screens/91-studio-packet.png).
 
-- The packet summary, `N bytes (N+4 with FCS)`, `Field engine: N instructions`;
-- **View packet…** (the packet viewer, [8.2](#82-packet-viewer));
-- **Edit packet**;
-- and **Export ▾** (**pcap**, written by the browser from the stored bytes; **YAML**, from the backend).
+- The packet summary, `N bytes (N+4 with FCS)`, `Field engine: N instructions`.
+- **View packet…** (the packet viewer, [8.2](#82-packet-viewer)).
+- **Edit packet**.
+- **Export ▾** (**pcap**, written by the browser from the stored bytes; **YAML**, from the backend).
 
 **Edit packet** opens the embedded packet editor ([10.2](#102-the-editor) onwards) with **Presets…**, **Cancel**
 and **Save** above it, and an `edited` tag beside Save while the packet differs from the one opened
