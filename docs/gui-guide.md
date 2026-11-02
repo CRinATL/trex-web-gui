@@ -594,72 +594,91 @@ becomes **Overwrite** ([67](gui-inventory/screens/67-save-setup-no-profile.png) 
 
 ## 6. Dashboard
 
-Route `/dashboard`. A tab strip **Overview**, **Streams**, **Latency**, **Utilization**, with **Clear stats**
-at its right end (the same action as the toolbar's). All four panels stay loaded, so charts keep their history.
-Each tab judges its own feed: when no message has arrived for three times the stats interval, an orange
+Route `/dashboard`. A tab strip **Overview**, **Streams**, **Latency**, **Utilization**, with **Clear stats** at its
+right end (the same action as the toolbar's). All four panels stay loaded, so charts keep their history.
+
+Each tab judges its own feed. When no message has arrived for three times the stats interval, an orange
 `<Statistics | Stream stats | Latency stats | Utilization stats> are not updating (last update HH:MM:SS)` banner
-(the time is left out before any message has arrived) tops the panel and
-the panel is greyed; while the session is lost, `Connection lost: values are the last received` shows under
-the heading ([34](gui-inventory/screens/34-dash-disconnected.png), [41](gui-inventory/screens/41-dash-stale.png),
+(the time is left out before any message has arrived) tops the panel and the panel is greyed. While the session is
+lost, `Connection lost: values are the last received` shows under the heading
+([34](gui-inventory/screens/34-dash-disconnected.png), [41](gui-inventory/screens/41-dash-stale.png),
 [42](gui-inventory/screens/42-dash-connection-lost.png)).
 
-Every chart's time axis is one line: `:15` between whole minutes, the time (`3:46pm`) at one, and no date. Every
-chart has its own legend under it, with no standing time entry (hovering adds the time). A chart of one series reads `latest <value>`;
-while the cursor is over the plot it reads the cursor's time and value instead. A chart of several series has
-one chip per series: ✓ or ✗, the series' colour, its label and its latest (or hovered) value; a click hides or
-shows that line, and the last chip still shown is disabled (`The last shown series cannot be hidden`). A
-**Y axis** control, **Fit** (the default: the range fits the lines) or **From 0** (the axis starts at 0), sits
-beside Layout on Overview and beside the charts on Streams, Latency and Utilization; it is one setting for
-every Dashboard chart, kept in the browser with the interval and layout (a saved setup keeps the
-interval and layout, not this).
+Every chart's time axis is one line: `:15` between whole minutes, the time (`3:46pm`) at one, and no date. Every chart
+has its own legend under it, with no standing time entry (hovering adds the time).
+
+- A chart of one series reads `latest <value>`. While the cursor is over the plot it reads the cursor's time and value
+  instead.
+- A chart of several series has one chip per series: ✓ or ✗, the series' colour, its label and its latest (or hovered)
+  value. A click hides or shows that line, and the last chip still shown is disabled
+  (`The last shown series cannot be hidden`).
+- A **Y axis** control, **Fit** (the default: the range fits the lines) or **From 0** (the axis starts at 0), sits
+  beside Layout on Overview and beside the charts on Streams, Latency and Utilization. It is one setting for every
+  Dashboard chart, kept in the browser with the interval and layout (a saved setup keeps the interval and layout, not
+  this).
 
 ### 6.1 Overview
 
 [35](gui-inventory/screens/35-dash-overview-top.png), [36](gui-inventory/screens/36-dash-overview-4charts.png).
 
 - **Tiles**: **Tx** (Tx L2, Tx L1, PPS, Queue full), **Rx** (Rx L2, Drop rate (Tx − Rx)), **System** (CPU, Rx CPU,
-  Active ports, Streams). Drop rate is TRex's: what all ports send minus what they receive (0 below 10 % of Tx), so
-  traffic that does not come back to a TRex port counts as dropped; its tooltip says so. A CPU tile turns red at 85 %. While any port is in service mode, an orange bar under the
-  page heading, on every Dashboard tab, reads `Service mode is on for port N.` (in bold). For the ports this
-  session owns it adds a green **Turn service mode off for port N** button; it never acquires a port, so for any
-  other port (or read-only) it reads `Turn it off on the Control page: acquire the port, then its Control tab,
-  Service mode Off.`
-  `Connection lost: values are the last received` uses the same bar.
-- **Ports table**: **Show** (All / My ports) and **▸ Show bytes** (it reads **▾ Hide bytes** while the bytes
-  rows show); a column per port and **Total**; rows Tx/Rx L1 bps, L2 bps, pps with ▲/▼ trend marks, then
-  `Counters: since connect, Reset or Clear`: packets, bytes (folded behind Show bytes), errors. A mark is the TUI's trend: the weighted change over the last 5 samples, one
-  arrow above 1 %, two above 2 %, three above 5 %, none below 1 % or while the rate is under 10; its tooltip says so.
-- **Charts**: **Interval** (60, 90, 120, 300 s) and **Layout** (1, 2 or 4 charts); each chart's caption is its
-  series select (Tx pps, Rx pps, Tx bps L2, Rx bps L2, Tx bps L1, Rx bps L1) over the Total. Defaults: 60 s,
-  2 charts, Tx pps and Rx pps.
+  Active ports, Streams).
+  - Drop rate is TRex's: what all ports send minus what they receive (0 below 10 % of Tx), so traffic that does not
+    come back to a TRex port counts as dropped. Its tooltip says so.
+  - A CPU tile turns red at 85 %.
+  - While any port is in service mode, an orange bar under the page heading, on every Dashboard tab, reads
+    `Service mode is on for port N.` (in bold). For the ports this session owns it adds a green
+    **Turn service mode off for port N** button. It never acquires a port, so for any other port (or read-only) it
+    reads `Turn it off on the Control page: acquire the port, then its Control tab, Service mode Off.`
+  - `Connection lost: values are the last received` uses the same bar.
+- **Ports table**:
+  - **Show** (All / My ports) and **▸ Show bytes** (it reads **▾ Hide bytes** while the bytes rows show).
+  - A column per port and **Total**.
+  - Rows Tx/Rx L1 bps, L2 bps, pps with ▲/▼ trend marks, then `Counters: since connect, Reset or Clear`: packets,
+    bytes (folded behind Show bytes), errors.
+  - A mark is the TUI's trend: the weighted change over the last 5 samples, one arrow above 1 %, two above 2 %, three
+    above 5 %, none below 1 % or while the rate is under 10. Its tooltip says so.
+- **Charts**:
+  - **Interval** (60, 90, 120, 300 s) and **Layout** (1, 2 or 4 charts).
+  - Each chart's caption is its series select (Tx pps, Rx pps, Tx bps L2, Rx bps L2, Tx bps L1, Rx bps L1) over the
+    Total.
+  - Defaults: 60 s, 2 charts, Tx pps and Rx pps.
 
 ### 6.2 Streams
 
-Per-stream (PG ID) flow statistics; needs streams with flow stats or latency ([37](gui-inventory/screens/37-dash-streams.png)).
-A table **Chart** (checkbox), **PG ID** (▸/▾ expands the per-port rows), **Type** (`flow` or `latency`), Tx/Rx
-pps, Tx/Rx bps L1 and L2, Tx/Rx pkts and bytes (`since the stream was added, or Clear`), **Loss**, **Loss/s**;
-a **Page** select above 100 ids; `Showing the first 1151 of N streams` when the backend caps the ids it reads;
-`rx_err` / `tx_err` per port below. The chart **Streams: <metric>** with **Metric** (Tx pps, Rx pps, Tx bps L1,
-Tx bps L2, Rx bps L2, Loss/s) and **Interval**; the first four ids are charted by themselves, and the checkbox
-is disabled with `At most 8 streams can be charted; untick one first` once every colour is used.
-`No streams with a PG ID are active.` when there are none, followed by how a stream gets one (Studio >
-Properties: RX stats Flow stats or Latency, with a PG ID; then assign and start) and what it adds.
+Per-stream (PG ID) flow statistics; needs streams with flow stats or latency
+([37](gui-inventory/screens/37-dash-streams.png)).
+
+- A table **Chart** (checkbox), **PG ID** (▸/▾ expands the per-port rows), **Type** (`flow` or `latency`), Tx/Rx pps,
+  Tx/Rx bps L1 and L2, Tx/Rx pkts and bytes (`since the stream was added, or Clear`), **Loss**, **Loss/s**.
+- A **Page** select above 100 ids.
+- `Showing the first 1151 of N streams` when the backend caps the ids it reads.
+- `rx_err` / `tx_err` per port below.
+- The chart **Streams: <metric>** with **Metric** (Tx pps, Rx pps, Tx bps L1, Tx bps L2, Rx bps L2, Loss/s) and
+  **Interval**. The first four ids are charted by themselves, and the checkbox is disabled with
+  `At most 8 streams can be charted; untick one first` once every colour is used.
+- `No streams with a PG ID are active.` when there are none, followed by how a stream gets one (Studio > Properties:
+  RX stats Flow stats or Latency, with a PG ID; then assign and start) and what it adds.
 
 ### 6.3 Latency
 
 [38](gui-inventory/screens/38-dash-latency-top.png), [39](gui-inventory/screens/39-dash-latency-bottom.png).
-A table **Chart**, **PG ID**, **Max (µs)** (the largest last-max seen since connect or Clear), **Server max
-(µs)** (the server's, which Clear does not reset), **Avg (µs)**, **Last (µs)** to **Last-9 (µs)**, **Jitter
-(µs)**, **Errors** (seq too low plus seq too high); a **Latency histogram** of one **PG ID** with **Bars** (11,
-17 or All) and the counters Dropped, Duplicates, Out of order, Seq too high, Seq too low; the chart
-**Latency: <metric> (µs)** (Average, Max, Last max, Jitter).
+
+- A table **Chart**, **PG ID**, **Max (µs)** (the largest last-max seen since connect or Clear), **Server max (µs)**
+  (the server's, which Clear does not reset), **Avg (µs)**, **Last (µs)** to **Last-9 (µs)**, **Jitter (µs)**,
+  **Errors** (seq too low plus seq too high).
+- A **Latency histogram** of one **PG ID** with **Bars** (11, 17 or All) and the counters Dropped, Duplicates, Out of
+  order, Seq too high, Seq too low.
+- The chart **Latency: <metric> (µs)** (Average, Max, Last max, Jitter).
 
 ### 6.4 Utilization
 
-[40](gui-inventory/screens/40-dash-utilization.png). A CPU table **Core**, **Ports**, **Avg (%)** (mean of the
-newest 5 samples), **Latest (%)**; **CPU utilization over time** over 300 s (the first 8 cores; `Charting the
-first 8 of N cores.`); an mbuf table with a column per buffer size and **RAM (MB)**: Total, then per socket
-used and percent. `No utilization data yet.` before the first sample.
+[40](gui-inventory/screens/40-dash-utilization.png).
+
+- A CPU table **Core**, **Ports**, **Avg (%)** (mean of the newest 5 samples), **Latest (%)**.
+- **CPU utilization over time** over 300 s (the first 8 cores; `Charting the first 8 of N cores.`).
+- An mbuf table with a column per buffer size and **RAM (MB)**: Total, then per socket used and percent.
+- `No utilization data yet.` before the first sample.
 
 ---
 
@@ -668,24 +687,36 @@ used and percent. `No utilization data yet.` before the first sample.
 Route `/events`. Two views, **Events** and **RPC** ([28](gui-inventory/screens/28-events-page.png) to
 [30](gui-inventory/screens/30-events-rpc.png), [33](gui-inventory/screens/33-events-marks.png)).
 
-**Events**: filter chips **All**, **Errors**, **Warnings**, **Server events**, **Info**, **Ping**, each with its
-count (several can be pressed); a **Filter text** field; **Copy** and **Save log…** (a `.txt` download named
-`trex-web-gui-events-<UTC stamp>.txt`) take what the filters show; **Pop out ↗** opens a second window that shows
-the same log, read-only (hidden in a browser without BroadcastChannel); **Clear** (red) empties the log. The
-status line: `N entries · kept across reconnects · Following new entries`, or **Jump to newest** once you
-scroll up. The table **Time** (headed with the browser's zone, `Time (EDT, UTC−04:00)`; each row the date in
-grey, then the time), **Kind**, **Message**; a row between dashed lines, kind `session`, marks each connect,
-disconnect and lost connection and is never filtered out. Copy and Save log… write one line per entry,
-`[INFO] 2026-10-27T16:48:26-04:00 <message>` (`--- <stamp> <message> ---` for a session row): the legacy
-`HH:mm:ss` with the date and UTC offset added. The log holds 2000 entries (older ones drop) and lives in this
-browser: a reload empties it.
+**Events**:
 
-**RPC**: the raw JSON-RPC between the backend and TRex. **Capture** (a session-wide switch, kept across page
-reloads; `Capture is off.` / `Waiting for RPC traffic…`), **Include polling** (off by default, so stats, port
-status and event polls do not push your own commands out of the 500-entry buffer), **Filter text**, **Copy**;
-one line per message, `→` a request, `←` a response; a body over 8 KB is cut on screen (`Copy copies the full
-body`). Bodies over 64 KB are cut by the backend (the line says so); Copy copies what arrived. The buffer
-holds at most about 500 × 64 KB.
+- Filter chips **All**, **Errors**, **Warnings**, **Server events**, **Info**, **Ping**, each with its count (several
+  can be pressed).
+- A **Filter text** field.
+- **Copy** and **Save log…** (a `.txt` download named `trex-web-gui-events-<UTC stamp>.txt`) take what the filters
+  show.
+- **Pop out ↗** opens a second window that shows the same log, read-only (hidden in a browser without
+  BroadcastChannel).
+- **Clear** (red) empties the log.
+- The status line: `N entries · kept across reconnects · Following new entries`, or **Jump to newest** once you scroll
+  up.
+- The table **Time** (headed with the browser's zone, `Time (EDT, UTC−04:00)`; each row the date in grey, then the
+  time), **Kind**, **Message**. A row between dashed lines, kind `session`, marks each connect, disconnect and lost
+  connection and is never filtered out.
+- Copy and Save log… write one line per entry, `[INFO] 2026-10-27T16:48:26-04:00 <message>`
+  (`--- <stamp> <message> ---` for a session row): the legacy `HH:mm:ss` with the date and UTC offset added.
+- The log holds 2000 entries (older ones drop) and lives in this browser: a reload empties it.
+
+**RPC**: the raw JSON-RPC between the backend and TRex.
+
+- **Capture** (a session-wide switch, kept across page reloads; `Capture is off.` / `Waiting for RPC traffic…`).
+- **Include polling** (off by default, so stats, port status and event polls do not push your own commands out of the
+  500-entry buffer).
+- **Filter text**, **Copy**.
+- One line per message, `→` a request, `←` a response.
+- A body over 8 KB is cut on screen (`Copy copies the full body`). Bodies over 64 KB are cut by the backend (the line
+  says so). Copy copies what arrived.
+
+The buffer holds at most about 500 × 64 KB.
 
 ---
 
@@ -694,9 +725,9 @@ holds at most about 500 × 64 KB.
 Route `/capture`. The heading's ⓘ: `The monitor records the packets of the ports you choose; a recorder keeps
 them on the server until saved. Other capture tools, such as tcpdump on the host, may not see a port TRex is
 driving.` A tab strip **Live**, **Recorders (n)**, **Saved files (n)**, **LLDP**. The page keeps its forms and
-rows while you are elsewhere; a hidden tab polls nothing ([43](gui-inventory/screens/43-capture-disconnected.png)).
+rows while you are elsewhere. A hidden tab polls nothing ([43](gui-inventory/screens/43-capture-disconnected.png)).
 
-Both the monitor and a recorder are TRex captures on the server. The server holds 10 captures in all; the GUI
+Both the monitor and a recorder are TRex captures on the server. The server holds 10 captures in all. The GUI
 starts none above 9, and keeps one for ping, ARP and scan. The Rx ports of a capture must be in service mode.
 
 ### 8.1 Live
@@ -707,20 +738,26 @@ starts none above 9, and keeps one for ping, ARP and scan. The Rx ports of a cap
   nothing unless that port was in service mode; other NICs are unverified.`), **BPF filter**, **Limit**
   (default 100, 1–100000; above 10000 an ⓘ says `Large captures use about 9 KB of server memory per
   packet`). The inputs are locked while a monitor runs.
-- **Start** is disabled with the reason as tooltip and as a line under the bar: `not connected`,
-  `read-only session`, `a monitor is already running`, `Rx port(s) N are not in service mode`,
-  `choose at least one port`, `the limit is 1 to 100000`. **Turn service mode on for ports N** appears when
-  that is the block.
+- **Start** is disabled with the reason as tooltip and as a line under the bar:
+  - `not connected`;
+  - `read-only session`;
+  - `a monitor is already running`;
+  - `Rx port(s) N are not in service mode`;
+  - `choose at least one port`;
+  - `the limit is 1 to 100000`.
+- **Turn service mode on for ports N** appears when that is the block.
 - **Stop**, **Clear** (empties the browser's rows), **Download pcap** (the rows, written by the browser as
   `monitor-<UTC stamp>.pcap`), **Open in Wireshark** and **Stop Wireshark** ([8.6](#86-wireshark)). While the
   monitor runs, Start is lit as **● Running**.
-- Counters: **Fetched**, **Matched**, **Server dropped**, **Browser dropped**; `N packets not shown` when the
-  browser holds fewer than were fetched. `Capture N was removed on the server (<how>).` when the server lost
-  it.
+- Counters: **Fetched**, **Matched**, **Server dropped**, **Browser dropped**.
+- `N packets not shown` when the browser holds fewer than were fetched.
+- `Capture N was removed on the server (<how>).` when the server lost it.
 - The packet table **No.**, **Time**, **Port**, **Mode**, **Src**, **Dst**, **Type**, **Len**, **Info**, 100
-  rows per page with a **Page** select (the newest page is followed until you pick another). Up and Down move
-  the selection; Enter or a double-click opens the packet viewer. Empty, it reads `No packets. Start the monitor
-  to capture.`, or `No packets yet: waiting for the first one that matches.` while the monitor runs.
+  rows per page with a **Page** select (the newest page is followed until you pick another).
+  - Up and Down move the selection.
+  - Enter or a double-click opens the packet viewer.
+  - Empty, it reads `No packets. Start the monitor to capture.`, or
+    `No packets yet: waiting for the first one that matches.` while the monitor runs.
 
 ### 8.2 Packet viewer
 
@@ -732,19 +769,27 @@ leaves the bytes shown ([46](gui-inventory/screens/46-packet-viewer.png)).
 ### 8.3 Recorders
 
 [47](gui-inventory/screens/47-add-recorder-dialog.png), [48](gui-inventory/screens/48-capture-recorders.png).
-**Add recorder** and an ⓘ with the slot limit and the NIC caveat (on some NICs stopping a capture turns the
-NIC's capture path off for port pairs no running capture still receives on; read from the server source, not
-measured). `No captures on the server.` or a table of every capture on the server, the monitor's own included:
-**ID**, **Origin** (`this GUI`, `TRex service`, `other`; `(monitor)`), **State**, **Mode**, **Tx**, **Rx**,
-**BPF**, **Packets** (`count/limit`), **Fetched**, **Bytes**, and the actions **Stop** (an active recorder),
-**Save** (fetches the packets into a pcap file in the backend's capture directory; progress `fetched N of M`,
-then `Saved as <name>`; **Resume** when a partial file exists or a save failed), **Remove** (`<n> packets will
-be lost. Remove? Click again to confirm` when unsaved packets would go). The monitor's row has no actions; a
-TRex service capture (ping, ARP, scan) shows a disabled Remove.
 
-**Add recorder**: **Tx ports**, **Rx ports**, **BPF filter**, **Limit** (default 1000), the same blocks as
-Live plus `9 of 10 server slots used; one is kept for ping, ARP and scan`; **Turn service mode on for ports
-N**; **Cancel**, **OK**.
+- **Add recorder** and an ⓘ with the slot limit and the NIC caveat (on some NICs stopping a capture turns the
+  NIC's capture path off for port pairs no running capture still receives on; read from the server source, not
+  measured).
+- `No captures on the server.` or a table of every capture on the server, the monitor's own included:
+  - **ID**, **Origin** (`this GUI`, `TRex service`, `other`; `(monitor)`), **State**, **Mode**, **Tx**, **Rx**,
+    **BPF**, **Packets** (`count/limit`), **Fetched**, **Bytes**;
+  - and the actions:
+    - **Stop** (an active recorder);
+    - **Save** (fetches the packets into a pcap file in the backend's capture directory; progress `fetched N of M`,
+      then `Saved as <name>`; **Resume** when a partial file exists or a save failed);
+    - **Remove** (`<n> packets will be lost. Remove? Click again to confirm` when unsaved packets would go).
+- The monitor's row has no actions.
+- A TRex service capture (ping, ARP, scan) shows a disabled Remove.
+
+**Add recorder**:
+
+- **Tx ports**, **Rx ports**, **BPF filter**, **Limit** (default 1000), the same blocks as Live plus
+  `9 of 10 server slots used; one is kept for ping, ARP and scan`;
+- **Turn service mode on for ports N**;
+- **Cancel**, **OK**.
 
 ### 8.4 Saved files
 
@@ -755,29 +800,38 @@ N**; **Cancel**, **OK**.
 ### 8.5 LLDP
 
 The LLDP view is the monitor with a preset filter, `ether proto 0x88cc or (vlan and ether proto 0x88cc)`:
-**LLDP Rx ports**, **Start LLDP monitor** (blocked by `Stop the current monitor first` while another monitor
-runs, and the Live tab's reasons; lit as **● LLDP monitor running** while this one runs), **Stop LLDP monitor**
-beside it (disabled with `the LLDP monitor is not running` until then), **Turn service mode on for ports N**
-when a chosen Rx port is off, and, while no monitor runs, a green **Turn service mode off for port N** for the
-chosen Rx ports in service mode that this session owns (it never acquires one). A line gives the Rx ports'
-service mode, `Service mode: on for port 0; off for port 1.`, and while the monitor runs adds `Stopping leaves
-service mode on; Turn service mode off appears here once stopped.` The
-note: `Some NICs consume LLDP in firmware (Intel X710/XL710 under i40e is the known case), so a neighbour that
+
+- **LLDP Rx ports**;
+- **Start LLDP monitor** (blocked by `Stop the current monitor first` while another monitor runs, and the Live tab's
+  reasons; lit as **● LLDP monitor running** while this one runs);
+- **Stop LLDP monitor** beside it (disabled with `the LLDP monitor is not running` until then);
+- **Turn service mode on for ports N** when a chosen Rx port is off;
+- and, while no monitor runs, a green **Turn service mode off for port N** for the chosen Rx ports in service mode
+  that this session owns (it never acquires one).
+
+A line gives the Rx ports' service mode, `Service mode: on for port 0; off for port 1.`, and while the monitor runs
+adds `Stopping leaves service mode on; Turn service mode off appears here once stopped.`
+
+The note: `Some NICs consume LLDP in firmware (Intel X710/XL710 under i40e is the known case), so a neighbour that
 sends LLDP may never appear here. Unverified on hardware: the test guest has no LLDP speaker.` Then `Start the
 LLDP monitor to see neighbours.`, `No LLDP neighbours seen by the current monitor.`, or a table **Port**,
 **VLAN**, **System name** (the system description in its tooltip), **Port ID**, **Port description**, **Chassis
 ID**, **Capabilities**, **Management** (one address per line), **TTL (s)**, polled every 2 s while the tab is
-shown; an entry drops when its TTL runs out ([50](gui-inventory/screens/50-capture-lldp.png)). An ID's LLDP subtype
-follows it, as in `et-0/0/2 (interface name)`, only when the value does not show it: a MAC or a network address
-has none. Every ID's subtype is in its tooltip (`Port ID subtype: MAC address`).
+shown ([50](gui-inventory/screens/50-capture-lldp.png)). An entry drops when its TTL runs out.
+
+An ID's LLDP subtype follows it, as in `et-0/0/2 (interface name)`, only when the value does not show it: a MAC or a
+network address has none. Every ID's subtype is in its tooltip (`Port ID subtype: MAC address`).
 
 ### 8.6 Wireshark
 
-**Open in Wireshark** starts Wireshark on the backend host (the **Wireshark path** setting) on the running
-monitor's packets and is lit as **● Wireshark open** while it runs; **Stop Wireshark**, beside it, ends it and
-is disabled until then. Open in Wireshark is disabled with `checking whether Wireshark can be
-launched`, the preflight's reason (`Wireshark: <reason>` under the bar, for a missing binary or display),
-`not connected` or `start the monitor first`. Nothing is shown in a screenshot.
+- **Open in Wireshark** starts Wireshark on the backend host (the **Wireshark path** setting) on the running monitor's
+  packets and is lit as **● Wireshark open** while it runs.
+- **Stop Wireshark**, beside it, ends it and is disabled until then.
+- Open in Wireshark is disabled with `checking whether Wireshark can be launched`, the preflight's reason
+  (`Wireshark: <reason>` under the bar, for a missing binary or display), `not connected` or
+  `start the monitor first`.
+
+Nothing is shown in a screenshot.
 
 ---
 
