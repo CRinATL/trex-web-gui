@@ -5,6 +5,7 @@ import * as api from '../api'
 import * as state from '../state'
 import { wireProfiles } from '../testWire'
 import { PortNameField } from './PortNameField'
+import { unsavedRows } from '../testUnsaved'
 
 afterEach(() => vi.restoreAllMocks())
 
@@ -46,7 +47,7 @@ describe('PortNameField', () => {
     expect(nameBox()).toHaveClass('edited')
     expect(desc).not.toHaveClass('edited')
     expect(nameBox()).toHaveAccessibleDescription('7/40 edited')
-    expect(screen.getByText('1 unsaved change')).toBeInTheDocument()
+    expect(await unsavedRows('1 unsaved change')).toEqual([['Name', 'uplink', 'uplink2']])
     await userEvent.click(screen.getByRole('button', { name: 'Revert' }))
     expect(nameBox()).not.toHaveClass('edited')
     expect(screen.queryByText('edited')).not.toBeInTheDocument()

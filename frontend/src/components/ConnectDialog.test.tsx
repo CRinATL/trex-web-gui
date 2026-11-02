@@ -8,6 +8,7 @@ import { AppStateProvider } from '../state'
 import daemonStf from '../__fixtures__/daemonMsgStf.json'
 import * as ws from '../ws'
 import { ConnectDialog } from './ConnectDialog'
+import { unsavedRows } from '../testUnsaved'
 
 beforeEach(() => {
   vi.restoreAllMocks()
@@ -37,7 +38,7 @@ describe('ConnectDialog', () => {
     expect(screen.getByLabelText('Host')).toHaveClass('edited')
     expect(screen.getByLabelText('Host')).toHaveAccessibleDescription('edited')
     expect(screen.getByLabelText('Command port')).not.toHaveClass('edited')
-    expect(screen.getByText('1 unsaved change')).toBeInTheDocument()
+    expect(await unsavedRows('1 unsaved change')).toEqual([['Host', '10.0.0.5', '192.0.2.7']])
   })
   it('validates host and ports before calling the API', async () => {
     const spy = vi.spyOn(api, 'connect')

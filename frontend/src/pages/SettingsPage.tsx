@@ -3,7 +3,7 @@ import { ApiError, applyBundle, exportBundle, getSettings, previewBundle, putSet
 import { BundleImportDialog } from '../components/settings/BundleImportDialog'
 import { AboutSection } from '../components/settings/AboutSection'
 import { downloadBlob } from '../download'
-import { EditedTag, unsavedText } from '../ui/Edited'
+import { EditedTag, UnsavedChanges } from '../ui/Edited'
 import { Info } from '../ui/Info'
 import { Tabs, tabPanel } from '../ui/Tabs'
 import { useAppState } from '../state'
@@ -20,6 +20,14 @@ type SectionId = 'appearance' | 'files' | 'session' | 'backup' | 'about'
 const SECTIONS: [SectionId, string][] = [['appearance', 'Appearance'], ['files', 'Files on the backend host'], ['session', 'Session'], ['backup', 'Back up and restore'], ['about', 'About']]
 // The preferences each saveable section owns.
 const SECTION_KEYS: Partial<Record<SectionId, PrefKey[]>> = { files: ['templates_dir', 'workspace_dir', 'library_dir', 'trex_cfg_path', 'wireshark_path', 'pcap_size_cap_mib'], session: ['release_on_exit'] }
+// Each saved preference's label, as its control and the unsaved-changes list name it.
+const PREF_LABEL: Record<FileKey | 'pcap_size_cap_mib' | 'release_on_exit', string> = {
+  templates_dir: 'Templates directory', workspace_dir: 'Workspace directory', library_dir: 'Profile library directory',
+  trex_cfg_path: 'TRex config file (on the backend host)', wireshark_path: 'Wireshark path',
+  pcap_size_cap_mib: 'Largest capture the packet editor opens (MiB)', release_on_exit: 'Release my ports when trex-web-gui exits',
+}
+// A preference's value as the unsaved-changes list prints it.
+const prefText = (v: unknown): string => (typeof v === 'boolean' ? (v ? 'on' : 'off') : v === null || v === undefined ? '' : String(v))
 // Every preference some section saves.
 const PREF_KEYS: PrefKey[] = Object.values(SECTION_KEYS).flat()
 
@@ -80,22 +88,28 @@ function FullSettingsPage() {
   const marks = (k: PrefKey) => (isEdited(k) ? { className: 'edited', 'aria-describedby': `pref-${k}-ed` } : {})
   const tag = (k: PrefKey) => isEdited(k) && <EditedTag id={`pref-${k}-ed`} />
   // A text field of the Files section: the label, the input and, when given, its help behind an Info.
-  const field = (cur: Settings, k: FileKey, label: string, help?: string) => (
+  const field = (cur: Settings, k: FileKey, help?: string) => {
+    const label = PREF_LABEL[k]
+    return (
     <div className="form-row">
       <label htmlFor={`pref-${k}`}>{label}</label>
       <span><input id={`pref-${k}`} {...marks(k)} value={cur.preferences[k] ?? ''} onChange={(e) => setS({ ...cur, preferences: { ...cur.preferences, [k]: e.target.value } })} />
         {tag(k)}{help && <Info label={label}>{help}</Info>}</span>
     </div>
-  )
+    )
+  }
   // A whole-number preference of the Files section (the pcap size cap): a number box, as typed until the backend judges it.
-  const numberField = (cur: Settings, k: 'pcap_size_cap_mib', label: string, help: string) => (
+  const numberField = (cur: Settings, k: 'pcap_size_cap_mib', help: string) => {
+    const label = PREF_LABEL[k]
+    return (
     <div className="form-row">
       <label htmlFor={`pref-${k}`}>{label}</label>
       <span><input id={`pref-${k}`} {...marks(k)} type="number" min={1} max={1024} step={1} value={cur.preferences[k] ?? ''}
         onChange={(e) => setS({ ...cur, preferences: { ...cur.preferences, [k]: e.target.value === '' ? 0 : Number(e.target.value) } })} />
         {tag(k)}<Info label={label}>{help}</Info></span>
     </div>
-  )
+    )
+  }
   // The preference keys of `keys` whose edit differs from the last settings adopted from the server.
   const dirtyKeys = (keys: PrefKey[]) => (s && loaded ? keys.filter((k) => s.preferences[k] !== loaded.preferences[k]) : [])
   // Saves one section: the PUT carries the saved settings plus only this section's edits, so an unsaved edit elsewhere is never sent and stays shown as unsaved.
@@ -120,13 +134,14 @@ function FullSettingsPage() {
   }
   // The Save and Revert buttons and the result line closing a section.
   const actions = (id: SectionId, keys: PrefKey[]) => {
-    const n = dirtyKeys(keys).length
-    const edited = n > 0   // nothing to save or revert until the section has an edit
+    const dirty = dirtyKeys(keys)
+    const edited = dirty.length > 0   // nothing to save or revert until the section has an edit
+    const changes = s && loaded ? dirty.map((k) => ({ field: (PREF_LABEL as Partial<Record<PrefKey, string>>)[k] ?? k, saved: prefText(loaded.preferences[k]), edited: prefText(s.preferences[k]) })) : []
     return (
     <div className="form-row full">
       <span className="dialog-footer"><button type="button" disabled={!edited} onClick={() => void saveSection(id, keys)}>Save</button>
         <button type="button" disabled={!edited} onClick={() => revertSection(keys)}>Revert</button>
-        {edited && <span className="unsaved-count">{unsavedText(n)}</span>}</span>
+        <UnsavedChanges changes={changes} /></span>
       {msg?.id === id && <p className="muted">{msg.text}</p>}
     </div>
     )
@@ -183,12 +198,12 @@ function FullSettingsPage() {
           <div {...tabPanel('settings', 'files', sel)}>
             {s && (
               <div className="form-grid">
-                {field(s, 'templates_dir', 'Templates directory')}
-                {field(s, 'workspace_dir', 'Workspace directory')}
-                {field(s, 'library_dir', 'Profile library directory', `Empty: <data dir>/profiles${dataDir ? ` (here: ${dataDir}/profiles)` : ''}. Must be an absolute path on the backend host.`)}
-                {field(s, 'trex_cfg_path', 'TRex config file (on the backend host)', 'Read at the next connect.')}
-                {field(s, 'wireshark_path', 'Wireshark path', 'Runs on the backend host; needs a display there. A pcap download works anywhere.')}
-                {numberField(s, 'pcap_size_cap_mib', 'Largest capture the packet editor opens (MiB)', 'The pcap picker refuses a larger file before reading it. 1 to 1024; the default is 64. Uploads from this computer are also limited to 64 MiB.')}
+                {field(s, 'templates_dir')}
+                {field(s, 'workspace_dir')}
+                {field(s, 'library_dir', `Empty: <data dir>/profiles${dataDir ? ` (here: ${dataDir}/profiles)` : ''}. Must be an absolute path on the backend host.`)}
+                {field(s, 'trex_cfg_path', 'Read at the next connect.')}
+                {field(s, 'wireshark_path', 'Runs on the backend host; needs a display there. A pcap download works anywhere.')}
+                {numberField(s, 'pcap_size_cap_mib', 'The pcap picker refuses a larger file before reading it. 1 to 1024; the default is 64. Uploads from this computer are also limited to 64 MiB.')}
                 {actions('files', SECTION_KEYS.files!)}
               </div>
             )}
@@ -198,9 +213,9 @@ function FullSettingsPage() {
               <div className="form-grid">
                 <div className="form-row full">
                   <span><label className="check"><input type="checkbox" {...marks('release_on_exit')} checked={s.preferences.release_on_exit}
-                    onChange={(e) => setS({ ...s, preferences: { ...s.preferences, release_on_exit: e.target.checked } })} /> Release my ports when trex-web-gui exits</label>
+                    onChange={(e) => setS({ ...s, preferences: { ...s.preferences, release_on_exit: e.target.checked } })} /> {PREF_LABEL.release_on_exit}</label>
                     {tag('release_on_exit')}
-                    <Info label="Release my ports when trex-web-gui exits">The Disconnect button always releases your ports.</Info></span>
+                    <Info label={PREF_LABEL.release_on_exit}>The Disconnect button always releases your ports.</Info></span>
                 </div>
                 {actions('session', SECTION_KEYS.session!)}
               </div>

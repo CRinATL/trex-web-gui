@@ -83,6 +83,21 @@ describe('edited marker contrast', () => {
   })
 })
 
+describe('run button box', () => {
+  // An enabled run button is boxed by a ring in its own hue outside a 1px gap (index.css). The ring is the button's boundary
+  // against what it sits on, so it must meet WCAG 1.4.11's 3:1 for a component boundary on --bg and on --panel (the status
+  // bar's), in every theme and for every run hue. The ring does not change on hover, so hover needs no separate check.
+  it('index.css boxes an enabled run button with a ring in its own hue', () => {
+    expect(css).toContain('box-shadow: 0 0 0 1px var(--bg), 0 0 0 2px var(--run);')
+  })
+  for (const [scheme, b] of Object.entries(BLOCKS)) it(`${scheme}: the ring is at least 3:1 on --bg and --panel`, () => {
+    for (const run of ['--ok', '--bad', '--warn']) for (const bg of ['--bg', '--panel']) {
+      const r = contrastRatio(b[run], b[bg])
+      expect(r, `${scheme} ${run} ring on ${bg} = ${r.toFixed(2)}`).toBeGreaterThanOrEqual(3)
+    }
+  })
+})
+
 // An edited check box keeps its focus ring: an author `outline` on the control replaces the browser's :focus-visible ring and
 // the contrast theme's 2px accent one, whatever the specificity, so the marker may set outline only while no ring shows.
 describe('edited marker and the focus ring', () => {

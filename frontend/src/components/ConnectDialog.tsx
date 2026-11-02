@@ -4,12 +4,14 @@ import { useHotkey } from '../keys'
 import { monitorStore } from '../monitorStore'
 import { useAppState } from '../state'
 import { stfRunOn, stfRunText } from '../stfDetect'
-import { EditedTag, unsavedText } from '../ui/Edited'
+import { EditedTag, UnsavedChanges } from '../ui/Edited'
 import { Info } from '../ui/Info'
 import { OpenMonitorLink } from './OpenMonitorLink'
 import { useDialogFocus } from './useDialogFocus'
 
 interface Form { host: string; sync_port: string; async_port: string; timeout_s: string }
+// Each field's label, as the form, its validation messages and its unsaved-changes list name it.
+const FIELD: Record<keyof Form, string> = { host: 'Host', sync_port: 'Command port', async_port: 'Event port', timeout_s: 'Timeout (s)' }
 // True for the ports and timeout a stock TRex server answers on; anything else opens the Advanced fold.
 const isDefault = (f: Form): boolean => f.sync_port === '4501' && f.async_port === '4500' && f.timeout_s === '3'
 const toForm = (c: { host: string; sync_port: number; async_port: number; timeout_s: number }): Form =>
@@ -17,13 +19,13 @@ const toForm = (c: { host: string; sync_port: number; async_port: number; timeou
 
 // Which advanced field a validation message is about, or null for the Host message.
 function advancedField(msg: string): 'sync_port' | 'async_port' | 'timeout_s' | null {
-  return msg.startsWith('Command port') ? 'sync_port' : msg.startsWith('Event port') ? 'async_port' : msg.startsWith('Timeout') ? 'timeout_s' : null
+  return msg.startsWith(FIELD.sync_port) ? 'sync_port' : msg.startsWith(FIELD.async_port) ? 'async_port' : msg.startsWith('Timeout') ? 'timeout_s' : null
 }
 
 // eslint-disable-next-line react-refresh/only-export-components
 export function validate(f: Form): string | null {
   if (!f.host.trim()) return 'Host is required'
-  for (const [label, v] of [['Command port', f.sync_port], ['Event port', f.async_port]] as const) {
+  for (const [label, v] of [[FIELD.sync_port, f.sync_port], [FIELD.async_port, f.async_port]] as const) {
     const n = Number(v)
     if (!/^\d+$/.test(v) || n < 1 || n > 65535) return `${label} must be 1–65535`
   }
@@ -94,7 +96,8 @@ export function ConnectDialog({ initialHost, initialParams, initialPorts, onConn
   const isEdited = (k: keyof Form) => savedConn !== undefined && (k === 'host' ? form.host.trim() !== savedConn.host : Number(form[k]) !== savedConn[k])
   const marks = (k: keyof Form) => (isEdited(k) ? { className: 'edited', 'aria-describedby': `connect-${k}-ed` } : {})
   const tag = (k: keyof Form) => isEdited(k) && <EditedTag id={`connect-${k}-ed`} />
-  const unsaved = unsavedText((['host', 'sync_port', 'async_port', 'timeout_s'] as const).filter(isEdited).length)
+  const changes = (['host', 'sync_port', 'async_port', 'timeout_s'] as const).filter(isEdited)
+    .map((k) => ({ field: FIELD[k], saved: String(savedConn![k]), edited: k === 'host' ? form.host.trim() : form[k] }))
   const set = (k: keyof Form) => (e: React.ChangeEvent<HTMLInputElement>) => setForm({ ...form, [k]: e.target.value })
   const params = () => ({ host: form.host.trim(), sync_port: Number(form.sync_port), async_port: Number(form.async_port), timeout_s: Number(form.timeout_s) })
 
@@ -168,18 +171,18 @@ export function ConnectDialog({ initialHost, initialParams, initialPorts, onConn
                 : <button type="button" disabled={!settings} onClick={() => setConfirmDelete(true)}>Delete</button>)}
             </span>
           </div>
-          <div className="form-row"><label htmlFor="connect-host">Host</label><span className="stretch-field"><input id="connect-host" {...marks('host')} value={form.host} onChange={set('host')} data-autofocus />{tag('host')}</span></div>
+          <div className="form-row"><label htmlFor="connect-host">{FIELD.host}</label><span className="stretch-field"><input id="connect-host" {...marks('host')} value={form.host} onChange={set('host')} data-autofocus />{tag('host')}</span></div>
           <div className="form-row"><label htmlFor="connect-observer">Read-only (observer)</label><input id="connect-observer" type="checkbox" checked={readOnly} onChange={(e) => setReadOnly(e.target.checked)} /></div>
           <details className="fold full" open={advanced} onToggle={(e) => setAdvanced(e.currentTarget.open)}>
             <summary>{advanced ? 'Advanced' : `Advanced · ports ${form.sync_port} / ${form.async_port}, timeout ${form.timeout_s} s`}</summary>
             <div className="form-grid">
               <div className="form-row">
-                <label htmlFor="connect-sync">Command port</label>
+                <label htmlFor="connect-sync">{FIELD.sync_port}</label>
                 <span><input id="connect-sync" {...marks('sync_port')} value={form.sync_port} onChange={set('sync_port')} inputMode="numeric" />{tag('sync_port')}
                   <Info label="the ports">Set on the TRex server by <code>zmq_rpc_port</code> and <code>zmq_pub_port</code> in its <code>trex_cfg.yaml</code>; 4501 and 4500 when not set. Change them only when the server's config does.</Info></span>
               </div>
-              <div className="form-row"><label htmlFor="connect-async">Event port</label><span className="stretch-field"><input id="connect-async" {...marks('async_port')} value={form.async_port} onChange={set('async_port')} inputMode="numeric" />{tag('async_port')}</span></div>
-              <div className="form-row"><label htmlFor="connect-timeout">Timeout (s)</label><span className="stretch-field"><input id="connect-timeout" {...marks('timeout_s')} value={form.timeout_s} onChange={set('timeout_s')} inputMode="decimal" />{tag('timeout_s')}</span></div>
+              <div className="form-row"><label htmlFor="connect-async">{FIELD.async_port}</label><span className="stretch-field"><input id="connect-async" {...marks('async_port')} value={form.async_port} onChange={set('async_port')} inputMode="numeric" />{tag('async_port')}</span></div>
+              <div className="form-row"><label htmlFor="connect-timeout">{FIELD.timeout_s}</label><span className="stretch-field"><input id="connect-timeout" {...marks('timeout_s')} value={form.timeout_s} onChange={set('timeout_s')} inputMode="decimal" />{tag('timeout_s')}</span></div>
             </div>
           </details>
         </div>
@@ -205,7 +208,7 @@ export function ConnectDialog({ initialHost, initialParams, initialPorts, onConn
         {stfHost && <p role="alert" className="error">{stfRunText(stfHost)} <OpenMonitorLink onNavigate={onClose} /></p>}
         <div className="dialog-footer">
           <button type="button" ref={saveAsRef} disabled={!settings} onClick={askName}>Save as…</button>
-          {unsaved && <span className="unsaved-count">{unsaved}</span>}
+          <UnsavedChanges changes={changes} />
           <div className="end">
             <button type="button" disabled={busy} onClick={close}>Cancel</button>
             <button type="submit" data-run="go" disabled={busy}>{busy ? 'Connecting…' : 'Connect'}</button>

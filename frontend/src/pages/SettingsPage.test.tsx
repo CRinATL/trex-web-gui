@@ -7,6 +7,7 @@ import { SettingsPage } from './SettingsPage'
 import { AppStateProvider } from '../state'
 import * as ws from '../ws'
 import preview from '../__fixtures__/bundlePreview.json'
+import { unsavedRows } from '../testUnsaved'
 
 beforeEach(() => { vi.spyOn(api, 'getAbout').mockResolvedValue({ app_version: '1', trex_pin: { upstream_sha: 'x', patches: [] }, supported: 's', host: 'trex-host' }) })
 afterEach(() => { vi.restoreAllMocks(); vi.unstubAllGlobals(); localStorage.clear(); delete document.documentElement.dataset.theme })
@@ -40,7 +41,7 @@ describe('SettingsPage', () => {
     expect(box).toHaveAccessibleDescription('edited')
     expect(screen.getByLabelText('Templates directory')).not.toHaveClass('edited')
     expect(screen.getAllByText('edited')).toHaveLength(2)
-    expect(screen.getByText('2 unsaved changes')).toBeInTheDocument()
+    expect(await unsavedRows('2 unsaved changes')).toEqual([['Workspace directory', '(empty)', '/w'], ['Wireshark path', 'wireshark', 'wireshark2']])
     await userEvent.click(screen.getByRole('button', { name: 'Revert' }))
     expect(box).not.toHaveClass('edited')
     expect(screen.queryByText('edited')).not.toBeInTheDocument()
@@ -53,7 +54,7 @@ describe('SettingsPage', () => {
     const box = await screen.findByLabelText('Release my ports when trex-web-gui exits')
     await userEvent.click(box)
     expect(box).toHaveClass('edited')
-    expect(screen.getByText('1 unsaved change')).toBeInTheDocument()
+    expect(await unsavedRows('1 unsaved change')).toEqual([['Release my ports when trex-web-gui exits', 'on', 'off']])
   })
   it('shows a load error and saves preferences', async () => {
     vi.spyOn(api, 'getSettings').mockResolvedValue({ settings: { preferences: { templates_dir: '', wireshark_path: 'wireshark', workspace_dir: '', release_on_exit: true, trex_cfg_path: '/etc/trex_cfg.yaml' }, connections: [] }, load_error: '/x/settings.toml: bad. Using defaults; the file is kept until you save.' })
