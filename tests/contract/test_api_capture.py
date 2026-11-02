@@ -177,19 +177,63 @@ def test_deleting_a_file_a_save_holds_is_409_capture_busy(tmp_path: Path) -> Non
         writer.abort()
 
 
-def test_a_packet_the_decoder_cannot_dissect_is_a_shaped_400(
+def test_a_packet_the_decoder_cannot_dissect_is_a_shaped_400(tmp_path: Path) -> None:
+    with client(tmp_path) as c:
+        r = c.post("/api/capture/packet/tree", json={"binary": base64.b64encode(bytes(5)).decode()})
+        assert r.status_code == 400 and r.json()["error"] == "bad_packet", r.text
+        assert "unpack requires a buffer" in r.json()["message"]
+
+
+# The viewer's tree runs in the packet worker, under its timeout and address-space limit, never on the
+# backend's scapy thread (gemini-security-review 2026-11-01 SEC-03).
+def test_packet_tree_never_runs_on_the_backend_scapy_thread(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     from trex_web_gui.trexapi import decode
 
     def boom(raw: bytes) -> Any:
-        raise ValueError("odd bytes")
+        raise AssertionError("decode.tree ran in the backend")
     monkeypatch.setattr(decode, "tree", boom)
     with client(tmp_path) as c:
         r = c.post("/api/capture/packet/tree", json={"binary": UDP})
-        assert (
-            r.status_code == 400 and r.json()["error"] == "bad_packet" and "odd bytes" in r.json()["message"]
-        )
+        assert r.status_code == 200, r.text
+
+
+def test_a_long_zero_filled_frame_answers_with_every_byte(tmp_path: Path) -> None:
+    # Whole, this frame took 7.3 s and 1.97 GiB in the backend; capped, it is one dissection of 9238 bytes.
+    raw = bytes.fromhex("020000000002" "020000000001" "0800").ljust(30_000, b"\x00")
+    with client(tmp_path) as c:
+        t0 = time.monotonic()
+        r = c.post("/api/capture/packet/tree", json={"binary": base64.b64encode(raw).decode()})
+        assert r.status_code == 200, r.text
+        assert time.monotonic() - t0 < 6
+        assert base64.b64decode(r.json()["binary"]) == raw and r.json()["data"][-1]["id"] == "Raw"
+
+
+def test_a_hop_by_hop_chain_is_bounded_by_the_worker_timeout(tmp_path: Path) -> None:
+    # 1500 bytes of IPv6 hop-by-hop options stalled the backend's scapy thread 5.4 s; in the worker it is a
+    # tree or a 400 within the call timeout, and the scapy thread is never involved.
+    from trex_web_gui.trexapi import scapy_exec
+    from trex_web_gui.trexapi.packet import PACKET_TIMEOUT_S
+    trexapi.load()
+    from scapy.all import Ether, IPv6
+    raw = bytes(Ether() / IPv6(nh=0, plen=1500 - 54)).ljust(1500, b"\x00")
+    with client(tmp_path) as c:
+        t0 = time.monotonic()
+        r = c.post("/api/capture/packet/tree", json={"binary": base64.b64encode(raw).decode()})
+        assert time.monotonic() - t0 < PACKET_TIMEOUT_S + 2
+        assert r.status_code == 200 or (r.status_code == 400 and r.json()["error"] == "bad_packet"), r.text
+        assert scapy_exec.run(lambda: 1).result(timeout=1) == 1
+
+
+def test_a_busy_packet_engine_is_503(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    from trex_web_gui.trexapi.packet import PacketBusy
+    with client(tmp_path) as c:
+        async def busy(*args: Any, **kwargs: Any) -> Any:
+            raise PacketBusy("the packet engine is busy")
+        monkeypatch.setattr(c.app.state.packet_engine, "call", busy)
+        r = c.post("/api/capture/packet/tree", json={"binary": UDP})
+        assert r.status_code == 503 and r.json()["error"] == "engine_busy", r.text
 
 
 def test_invalid_bpf_is_400_with_server_text(lab: Lab) -> None:

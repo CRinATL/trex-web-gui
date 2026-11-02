@@ -108,3 +108,21 @@ def test_warm_up_constructs_once(monkeypatch: pytest.MonkeyPatch, scapy_thread: 
     scapy_exec.shutdown()
     scapy_exec.warm_up()           # a new executor keeps the singleton
     assert len(built) == 1
+
+
+def test_summary_dissects_at_most_summary_bytes(monkeypatch: pytest.MonkeyPatch) -> None:
+    # A capture row names the headers at the frame's start; dissecting a jumbo zero-filled IPv4 frame whole
+    # cost 0.45 s against 0.10 s for its first 2048 bytes (gemini-security-review 2026-11-01).
+    import scapy.all
+    given: list[int] = []
+    real_ether = scapy.all.Ether
+
+    def recording_ether(data: bytes) -> Any:
+        given.append(len(data))
+        return real_ether(data)
+    monkeypatch.setattr(scapy.all, "Ether", recording_ether)
+    raw = bytes.fromhex("020000000002" "020000000001" "0800").ljust(9238, b"\x00")
+    decode.summary(raw)
+    assert given == [decode.SUMMARY_BYTES]
+    udp = _raw("udp")
+    assert decode.summary(udp) == decode.summary(udp[:decode.SUMMARY_BYTES])
