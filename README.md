@@ -101,6 +101,36 @@ From the release after 1.1.0, the script ends by printing how to start the backe
 The terminal you installed from keeps its old `PATH`
 ([The `trex-web-gui` command and `PATH`](#the-trex-web-gui-command-and-path)).
 
+### Start the web UI
+
+After the install, start the backend on the same host:
+
+```
+trex-web-gui serve
+```
+
+- **It prints a login URL**, `Open: http://127.0.0.1:8765/api/auth/login?token=...`. Open it in a browser on that
+  host. Each start makes a new URL.
+- **From another machine**, use an SSH tunnel. The backend also prints the tunnel command,
+  `ssh -N -L 8765:127.0.0.1:8765 <user>@<host>`, and the URL to open at the other end
+  ([Access: single user, localhost only](#access-single-user-localhost-only)). A wall display uses the same tunnel
+  ([Monitor and wall displays](#monitor-and-wall-displays)).
+- **Then connect to TRex.** Press **Connect…** in the GUI and enter the TRex server, which must be running in
+  stateless mode ([Starting the TRex server](#starting-the-trex-server)). `trex-web-gui serve --server HOST`
+  prefills the dialog. [Running it](#running-it) lists every option.
+- **Ctrl+C stops it.**
+- **`command not found`** means `~/.local/bin` is not on your `PATH`. The 1.1.0 installer does not add it. Run
+  `~/.local/bin/trex-web-gui serve` for now, and see
+  [The `trex-web-gui` command and `PATH`](#the-trex-web-gui-command-and-path).
+- **Don't use `uv run --project backend trex-web-gui serve` here.** That form is for a source checkout only. On an
+  installed host it fails with ``Project directory `backend` does not exist``.
+
+**As a service.** Copy [`docs/trex-web-gui.service`](docs/trex-web-gui.service) to `~/.config/systemd/user/`, then
+`systemctl --user enable --now trex-web-gui`. Read the login URL with `journalctl --user -u trex-web-gui`. A user unit
+has no display, and Wireshark needs one: see the comments in the unit.
+
+### Other ways to install
+
 **Read the script first.** To read the script before running any of it, or on a host with no terminal:
 
 ```
@@ -134,14 +164,6 @@ A host without Python 3.12 (Ubuntu 22.04 has 3.10) needs nothing more: uv downlo
 dependencies from PyPI. The install ends with `Installed 1 executable: trex-web-gui`. The options are described under
 [Running it](#running-it). First time? [`docs/howto-first-stream.md`](docs/howto-first-stream.md) sends a first
 stream, step by step.
-
-**As a service.** Copy [`docs/trex-web-gui.service`](docs/trex-web-gui.service) to `~/.config/systemd/user/`, then
-`systemctl --user enable --now trex-web-gui`. Read the login URL with `journalctl --user -u trex-web-gui`. A user unit
-has no display, and Wireshark needs one: see the comments in the unit.
-
-**From another machine** use an SSH tunnel, as in
-[Access: single user, localhost only](#access-single-user-localhost-only);
-a wall display uses the same tunnel ([Monitor and wall displays](#monitor-and-wall-displays)).
 
 ### Offline host
 
@@ -298,7 +320,13 @@ It starts it in stateless mode, adding `-i` itself ([Daemon exposure](#daemon-ex
 
 ## Running it
 
-From a checkout, after `make build`:
+Installed with `install.sh` or `uv tool install`:
+
+```
+trex-web-gui serve [options]
+```
+
+From a source checkout, after `make build`:
 
 ```
 uv run --project backend trex-web-gui serve [options]
