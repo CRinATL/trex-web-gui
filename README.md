@@ -11,9 +11,16 @@ page by page: [`docs/gui-guide.md`](docs/gui-guide.md).**
 
 ## What you can do
 
-- **Control**: connect to a TRex server, acquire and release ports, assign profiles (`.py`, YAML, JSON), start, pause,
-  update and stop traffic, configure ports (L2/L3, VLAN, IPv6, ARP, service mode, attributes), ping, scan IPv6
-  neighbours, read extended counters, and save and re-run multi-port test setups.
+- **Control**:
+  - connect to a TRex server;
+  - acquire and release ports;
+  - assign profiles (`.py`, YAML, JSON);
+  - start, pause, update and stop traffic;
+  - configure ports (L2/L3, VLAN, IPv6, ARP, service mode, attributes);
+  - ping;
+  - scan IPv6 neighbours;
+  - read extended counters;
+  - save and re-run multi-port test setups.
 - **Dashboard**: global, per-port, per-stream (PG ID) and latency statistics with charts; CPU and mbuf utilization.
 - **Capture**: a live capture monitor with a packet viewer, whose packets can also go to Wireshark on the backend
   host; server-side recorders saved as pcap on the backend host; LLDP neighbours.
@@ -57,8 +64,14 @@ trex-web-gui is not on PyPI. From 1.1.0 on, one command installs the latest rele
 curl -fsSL https://github.com/CRinATL/trex-web-gui/releases/latest/download/install.sh | sh
 ```
 
-On a terminal the script prints the wheel's sha256 and the release page, downloads the wheel, checks it against that
-sha256 and stops on a prompt. Compare the sha256 with the one the release page lists next to the wheel, then press Enter
+On a terminal the script:
+
+- prints the wheel's sha256 and the release page;
+- downloads the wheel;
+- checks it against that sha256;
+- stops on a prompt.
+
+Compare the sha256 with the one the release page lists next to the wheel, then press Enter
 to install. Without a terminal there is no pause: it installs at once and says so. `TREX_WEB_GUI_YES=1` skips the pause
 for an unattended install: put it before `sh`, as in `curl -fsSL … | TREX_WEB_GUI_YES=1 sh`.
 
@@ -97,10 +110,11 @@ dependencies from PyPI. The install ends with `Installed 1 executable: trex-web-
 stream, step by step.
 
 **As a service.** Copy [`docs/trex-web-gui.service`](docs/trex-web-gui.service) to `~/.config/systemd/user/`, then
-`systemctl --user enable --now trex-web-gui`. Read the login URL with `journalctl --user -u trex-web-gui`. A user unit has no
-display, and Wireshark needs one: see the comments in the unit.
+`systemctl --user enable --now trex-web-gui`. Read the login URL with `journalctl --user -u trex-web-gui`. A user unit
+has no display, and Wireshark needs one: see the comments in the unit.
 
-**From another machine** use an SSH tunnel, as in [Access: single user, localhost only](#access-single-user-localhost-only);
+**From another machine** use an SSH tunnel, as in
+[Access: single user, localhost only](#access-single-user-localhost-only);
 a wall display uses the same tunnel ([Monitor and wall displays](#monitor-and-wall-displays)).
 
 ### Offline host
@@ -120,7 +134,8 @@ A host that cannot reach PyPI installs from a wheelhouse, a directory of the whe
    - if it reaches GitHub: `uv python install 3.12` on the host, the only step that uses the network;
    - if it does not: on a connected machine, `uv python install 3.12`, then
      `cd "$(uv python dir)" && tar -czf ~/cpython-3.12.tar.gz cpython-3.12.*-linux-x86_64-gnu`; copy the tarball
-     to the host and unpack it there with `mkdir -p "$(uv python dir)" && tar -xzf cpython-3.12.tar.gz -C "$(uv python dir)"`
+     to the host and unpack it there with
+     `mkdir -p "$(uv python dir)" && tar -xzf cpython-3.12.tar.gz -C "$(uv python dir)"`
      (uv's Pythons can move, so the two machines' paths and user names may differ);
    - or the distribution's `python3.12` package, where it has one, from local media.
 
@@ -136,8 +151,8 @@ A host that cannot reach PyPI installs from a wheelhouse, a directory of the whe
 
 `uv tool install` installs for the user who runs it, with no `sudo`:
 
-- trex-web-gui and its dependencies go into their own environment, `~/.local/share/uv/tools/trex-web-gui/` (`uv tool dir`;
-  `UV_TOOL_DIR` moves it);
+- trex-web-gui and its dependencies go into their own environment,
+  `~/.local/share/uv/tools/trex-web-gui/` (`uv tool dir`; `UV_TOOL_DIR` moves it);
 - the `trex-web-gui` command is linked into `~/.local/bin` (`uv tool dir --bin`; `UV_TOOL_BIN_DIR` moves it), which must
   be on `PATH`: the install warns when it is not, and `uv tool update-shell` adds it;
 - the packages also land in uv's cache, `~/.cache/uv/` (`uv cache dir`);
@@ -158,14 +173,15 @@ it every `/api` route but `/api/auth/{login,status,logout}` answers 401 and the 
 
 To use the GUI from another machine, tunnel the port over SSH. The banner prints the exact command,
 `ssh -N -L 8765:127.0.0.1:8765 <user>@<host>`, and then the URL to open on that machine, `localhost` already in
-it. Keep the local port the same as the backend's (`--port`, 8765 by default), because the `Origin` check accepts only the
-serving port.
+it. Keep the local port the same as the backend's (`--port`, 8765 by default), because the `Origin` check accepts only
+the serving port.
 
 - `TREX_WEB_GUI_TOKEN` sets the token instead (16 or more characters from `A-Za-z0-9_-`; the backend exits with
-  status 2 otherwise). It is read once and removed from the environment, so no child process inherits it. The
-  kernel's copy of the start-up environment keeps it: `/proc/<pid>/environ` of the backend, and of the `uv`
-  process that launched it, is readable by your own user (same uid) only. Do not pass it inline
-  (`TREX_WEB_GUI_TOKEN=... trex-web-gui serve`): the value lands in your shell history.
+  status 2 otherwise):
+  - It is read once and removed from the environment, so no child process inherits it.
+  - The kernel's copy of the start-up environment keeps it: `/proc/<pid>/environ` of the backend, and of the `uv`
+    process that launched it, is readable by your own user (same uid) only.
+  - Do not pass it inline (`TREX_WEB_GUI_TOKEN=... trex-web-gui serve`): the value lands in your shell history.
 - The banner carries the token. Run as a service, it lands in the journal, readable by members of
   `systemd-journal` and `adm`; treat the journal like the terminal. The uvicorn access log redacts the login
   query.
@@ -230,28 +246,34 @@ names and test setups between backends as one JSON file.
 
 ## Monitor and wall displays
 
-`trex-web-gui serve --monitor-only [--monitor HOST[:PORT]]` serves the Monitor alone: the top bar offers only **Monitor**
-and **Settings** (the theme), and the backend answers 409 to every request that changes state and to the capture,
-Studio, daemon, profile and file-browser routes. `--monitor` connects it to a TRex PUB socket at start-up. A
-`--monitor-only` backend is still bound to `127.0.0.1`, so a wall screen on another machine reaches it through the same
-SSH tunnel as above. The Monitor opens no RPC connection and changes nothing on the server, so it also works beside a
-stateful (`-f`) run, which has no command port.
+`trex-web-gui serve --monitor-only [--monitor HOST[:PORT]]` serves the Monitor alone:
+
+- The top bar offers only **Monitor** and **Settings** (the theme).
+- The backend answers 409 to every request that changes state and to the capture, Studio, daemon, profile and
+  file-browser routes.
+- `--monitor` connects it to a TRex PUB socket at start-up.
+- A `--monitor-only` backend is still bound to `127.0.0.1`, so a wall screen on another machine reaches it through
+  the same SSH tunnel as above.
+- The Monitor opens no RPC connection and changes nothing on the server, so it also works beside a stateful (`-f`)
+  run, which has no command port.
 
 ## Daemon exposure
 
 The **TRex daemon…** dialog starts and stops TRex through the TRex daemon (`trex_daemon_server`, port 8090). That daemon
 is not part of trex-web-gui, and it has no authentication: it runs as root and binds `0.0.0.0` by default
 (`--trex-host`, trex-core's `scripts/automation/trex_control_plane/server/trex_server.py:740-741`). Its
-`push_file` and `prepare_astf_profile` (`trex_server.py:113-135`) let anyone who can reach port 8090 write a file into the
-daemon's files directory and have a Python profile loaded, which is code run as root, whatever trex-web-gui does.
+`push_file` and `prepare_astf_profile` (`trex_server.py:113-135`) let anyone who can reach port 8090 write a file into
+the daemon's files directory and have a Python profile loaded, which is code run as root, whatever trex-web-gui does.
 
-trex-web-gui's own checks are not a boundary against that. The rule on `trex_args` (at most 20 tokens of letters, digits
-and `_ . , : = / + -`, with the flags that change what TRex reads refused: `--cfg`, `-i`, `--astf`, `-f`, `-d`, `-m`,
-`-l`, `--rx-check`, `--client_cfg`, also abbreviated) is defence in depth on trex-web-gui's own route; flags that take a
-path, such as `--rpc-logfile`, still pass it, and port 8090 accepts such arguments from anyone directly. Restrict port
-8090 before you use daemon control outside the test VM: firewall it to the GUI host, or start the daemon with
-`--trex-host 127.0.0.1` and reach it through an SSH tunnel. The test VM is already safe: QEMU forwards its daemon port
-on `127.0.0.1` only (`vm/launch.sh`).
+trex-web-gui's own checks are not a boundary against that:
+
+- The rule on `trex_args` (at most 20 tokens of letters, digits and `_ . , : = / + -`, with the flags that change what
+  TRex reads refused: `--cfg`, `-i`, `--astf`, `-f`, `-d`, `-m`, `-l`, `--rx-check`, `--client_cfg`, also abbreviated)
+  is defence in depth on trex-web-gui's own route. Flags that take a path, such as `--rpc-logfile`, still pass it, and
+  port 8090 accepts such arguments from anyone directly.
+- Restrict port 8090 before you use daemon control outside the test VM: firewall it to the GUI host, or start the
+  daemon with `--trex-host 127.0.0.1` and reach it through an SSH tunnel.
+- The test VM is already safe: QEMU forwards its daemon port on `127.0.0.1` only (`vm/launch.sh`).
 
 ## Development
 
@@ -272,8 +294,8 @@ How to set up a checkout, run the GUI from source, and run the checks: [`CONTRIB
 - [`docs/gui-inventory/README.md`](docs/gui-inventory/README.md): every screen, with the screenshots in
   `docs/gui-inventory/screens/`.
 - [`docs/api.md`](docs/api.md): every HTTP route with its parameters, request body and response codes, and the
-  WebSocket's message types. trex-web-gui serves no OpenAPI page itself (the token boundary), so the file is generated by
-  `make api-docs`.
+  WebSocket's message types. trex-web-gui serves no OpenAPI page itself (the token boundary), so the file is
+  generated by `make api-docs`.
 - [`CONTRIBUTING.md`](CONTRIBUTING.md): building from a checkout, the checks, the conventions.
 - [`SECURITY.md`](SECURITY.md): the security model and how to report a problem.
 
