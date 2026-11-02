@@ -248,15 +248,12 @@ names and test setups between backends as one JSON file.
 
 ## Monitor and wall displays
 
-`trex-web-gui serve --monitor-only [--monitor HOST[:PORT]]` serves the Monitor alone:
-
-- The top bar offers only **Monitor** and **Settings** (the theme).
-- The backend answers 409 to every request that changes state and to the capture, Studio, daemon, profile and
-  file-browser routes.
-
-`--monitor` connects it to a TRex PUB socket at start-up. A `--monitor-only` backend is still bound to `127.0.0.1`, so
-a wall screen on another machine reaches it through the same SSH tunnel as above. The Monitor opens no RPC connection
-and changes nothing on the server, so it also works beside a stateful (`-f`) run, which has no command port.
+`trex-web-gui serve --monitor-only [--monitor HOST[:PORT]]` serves the Monitor alone: the top bar offers only
+**Monitor** and **Settings** (the theme), and the backend answers 409 to every request that changes state and to the
+capture, Studio, daemon, profile and file-browser routes. `--monitor` connects it to a TRex PUB socket at start-up. A
+`--monitor-only` backend is still bound to `127.0.0.1`, so a wall screen on another machine reaches it through the same
+SSH tunnel as above. The Monitor opens no RPC connection and changes nothing on the server, so it also works beside a
+stateful (`-f`) run, which has no command port.
 
 ## Daemon exposure
 
