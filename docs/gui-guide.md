@@ -430,8 +430,9 @@ Mbps, 0.012% line utilisation`, and a fold **Full validate response** with the r
   - The box is marked `edited` while it differs from the multiplier last applied to the port.
 - **Duration (s)**, empty for no limit.
 - **Force** (start even if the server objects).
-- The multiplier is disabled with the tooltip `not connected`, `read-only session`, `acquire the port first` or
-  `select the default profile`.
+
+The multiplier is disabled with the tooltip `not connected`, `read-only session`, `acquire the port first` or
+`select the default profile`.
 
 **Actions**
 
@@ -501,17 +502,17 @@ session is connected ([26](gui-inventory/screens/26-port-counters.png),
 ### 4.5 Tools tab
 
 A side list, **Ping** and **IPv6 neighbours**, one tool shown. Both are disabled with the same reasons as the
-Config tab ([4.2](#42-config-tab)). Both put the port in service mode while they run and put it back. A
-failure to put it back reads `Service mode could not be restored: <error>`
+Config tab ([4.2](#42-config-tab)). Both put the port in service mode while they run and put it back
 ([18](gui-inventory/screens/18-port-tools-ping-empty.png), [19](gui-inventory/screens/19-port-tools-ping.png),
-[20](gui-inventory/screens/20-port-tools-neighbours.png)).
+[20](gui-inventory/screens/20-port-tools-neighbours.png)). A failure to put it back reads
+`Service mode could not be restored: <error>`.
 
 - **Ping**: **Destination** (IPv4 or IPv6), **Count** (default 5, 1–10), **Size** (default 64, 64–9216), **Ping**.
   - Checks:
     - `The destination must be an IPv4 or IPv6 address.`;
     - `ARP resolution required: configure L3 IPv4 first.` (an IPv4 ping needs the Config tab's L3 ARP resolved);
     - `The count must be a number from 1 to 10.`;
-    - `The size must be a number from 64 to 9216.`.
+    - `The size must be a number from 64 to 9216.`
   - The replies of the newest run are listed as they arrive (they also go to the Events page under the kind
     **Ping**), then `N sent, N received`.
 - **IPv6 neighbours**:
@@ -556,14 +557,14 @@ becomes **Overwrite** ([67](gui-inventory/screens/67-save-setup-no-profile.png) 
 
 - Left, the list: name, `<server or any server> · N ports`, and `· loaded` (`, N edits` with edits since Load) for
   the loaded one. A file that could not be read is a disabled red entry.
-- Right, the chosen setup:
+- Right, the chosen setup ([66](gui-inventory/screens/66-manage-setups-empty.png),
+  [71](gui-inventory/screens/71-manage-setups-list.png) to [82](gui-inventory/screens/82-manage-setups-540px.png)):
   - **Rename**, **Duplicate**, **Delete** (`Delete setup <name>?` with **Confirm delete** / **Cancel**). Rename and
     duplicate open a **New name** row.
   - `Saved for <server> · updated <time>`.
   - The ports table **Port**, **Profile**, **Rate**, **On Run** (`force-acquire`, `stops a transmitting port first`,
     `applies a port configuration`, or `—`), **Status**.
-  - Then **Load**, **Run** and the result, and **Close** ([66](gui-inventory/screens/66-manage-setups-empty.png),
-    [71](gui-inventory/screens/71-manage-setups-list.png) to [82](gui-inventory/screens/82-manage-setups-540px.png)).
+  - Then **Load**, **Run** and the result, and **Close**.
 
 - **Load** (needs a session) inspects every port's profile (a `.py` runs on the backend host) and fills the
   Traffic forms.
