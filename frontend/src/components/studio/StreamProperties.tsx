@@ -1,14 +1,31 @@
 import { useId, useState, type ReactNode } from 'react'
 import type { StreamJson, StreamPatch } from '../../api'
-import { EditedTag, unsavedText } from '../../ui/Edited'
+import { EditedTag, UnsavedChanges } from '../../ui/Edited'
 import { Info } from '../../ui/Info'
 import { parseRate, readingOf } from '../../rateText'
 import { formErrors, nextChoices, patchFrom, sentFields, toForm, type ModeType, type RxKind, type StreamFormValues, type StreamName } from './streamForm'
 
 const MODES: [ModeType, string][] = [['continuous', 'Continuous'], ['single_burst', 'Single burst'], ['multi_burst', 'Multi-burst']]
 const RX: [RxKind, string][] = [['none', 'None'], ['stats', 'Flow stats'], ['latency', 'Latency']]
+const TPG: [RxKind, string] = ['tpg', 'TPG (edited in a later version)']   // shown only for a stream that has it
 const DST_MAC: [string, string][] = [['0', 'From config file'], ['1', 'From packet'], ['2', 'By ARP']]
 const yesNo = (b: boolean | undefined) => (b ? 'yes' : 'no')
+
+// Each field's label, as the grid below and the unsaved-changes list name it.
+const LABEL: Record<Exclude<keyof StreamFormValues, 'name'>, string> = {
+  mode: 'Mode', totalPkts: 'Packets', pktsPerBurst: 'Packets per burst', count: 'Bursts', ibg: 'IBG (µs)', rate: 'Rate',
+  enabled: 'Enabled', selfStart: 'Self start', startPaused: 'Start paused', next: 'Next', actionCount: 'Action count',
+  isg: 'ISG (µs)', randomSeed: 'Random seed', coreId: 'Core', srcMacFromPacket: 'Source MAC from packet',
+  dstMac: 'Destination MAC', dummy: 'Dummy stream', rx: 'RX stats', pgId: 'PG ID', cacheOn: 'Cache', cacheSize: 'Cache packets',
+}
+// A field's value as the unsaved-changes list prints it: the words its control shows, not the stored codes.
+function valueText(k: keyof StreamFormValues, v: StreamFormValues[keyof StreamFormValues]): string {
+  if (typeof v === 'boolean') return k === 'cacheOn' ? (v ? 'N packets' : 'Off') : yesNo(v)   // as the Cache select reads
+  const named = k === 'mode' ? MODES : k === 'rx' ? [...RX, TPG] : k === 'dstMac' ? DST_MAC : null
+  if (named) return named.find(([c]) => c === v)?.[1] ?? v
+  if (k === 'next') return v === '' ? 'Stop' : String(JSON.parse(v))
+  return v
+}
 
 // The fields the form shows for `f`, as the grid below lays them out.
 function shownFields(f: StreamFormValues): (keyof StreamFormValues)[] {
@@ -69,7 +86,8 @@ export function StreamProperties({ stream, index, names, onSave, onPrev, onNext,
   type Key = keyof StreamFormValues & string
   const toSend = sentFields(stream, f)
   const isEdited = (k: Key) => toSend.has(k) || (errors[k] !== undefined && f[k] !== storedForm[k])
-  const unsaved = unsavedText(shownFields(f).filter(isEdited).length)
+  const changes = shownFields(f).filter(isEdited)
+    .map((k) => ({ field: k === 'name' ? 'Name' : LABEL[k], saved: valueText(k, storedForm[k]), edited: valueText(k, f[k]) }))
   const cls = (k: Key, base?: string) => [base, isEdited(k) && 'edited'].filter(Boolean).join(' ') || undefined
   // a field's error and its edited tag are shown beside it and named by aria-describedby, the error first
   const describedBy = (k: Key) => [errors[k] && `${id}-${k}-err`, isEdited(k) && `${id}-${k}-ed`].filter(Boolean).join(' ') || undefined
@@ -108,31 +126,31 @@ export function StreamProperties({ stream, index, names, onSave, onPrev, onNext,
   return (
     <div className="stream-properties">
       <div className="form-grid">
-        {field('mode', 'Mode', <select {...bad('mode')} className={cls('mode')} value={f.mode} disabled={locked}
+        {field('mode', LABEL.mode, <select {...bad('mode')} className={cls('mode')} value={f.mode} disabled={locked}
           onChange={(e) => setF((cur) => ({ ...cur, mode: e.target.value as ModeType, next: e.target.value === 'continuous' ? '' : cur.next }))}>
           {MODES.map(([v, t]) => <option key={v} value={v}>{t}</option>)}</select>)}
-        {f.mode === 'single_burst' && text('totalPkts', 'Packets')}
-        {f.mode === 'multi_burst' && <>{text('pktsPerBurst', 'Packets per burst')}{text('count', 'Bursts')}{text('ibg', 'IBG (µs)')}</>}
-        {text('rate', 'Rate', rateReading && <span className="muted"> {rateReading}</span>)}
-        {check('enabled', 'Enabled')}
-        {check('selfStart', 'Self start')}
-        {check('startPaused', 'Start paused', <Info label="Start paused">Starts the stream in a paused state until it is resumed. Experimental in TRex.</Info>)}
-        {field('next', 'Next', <select {...bad('next')} className={cls('next')} value={f.next} disabled={locked || f.mode === 'continuous'} onChange={(e) => set('next', e.target.value)}>
+        {f.mode === 'single_burst' && text('totalPkts', LABEL.totalPkts)}
+        {f.mode === 'multi_burst' && <>{text('pktsPerBurst', LABEL.pktsPerBurst)}{text('count', LABEL.count)}{text('ibg', LABEL.ibg)}</>}
+        {text('rate', LABEL.rate, rateReading && <span className="muted"> {rateReading}</span>)}
+        {check('enabled', LABEL.enabled)}
+        {check('selfStart', LABEL.selfStart)}
+        {check('startPaused', LABEL.startPaused, <Info label={LABEL.startPaused}>Starts the stream in a paused state until it is resumed. Experimental in TRex.</Info>)}
+        {field('next', LABEL.next, <select {...bad('next')} className={cls('next')} value={f.next} disabled={locked || f.mode === 'continuous'} onChange={(e) => set('next', e.target.value)}>
           <option value="">Stop</option>
           {choices.map((n) => <option key={JSON.stringify(n)} value={JSON.stringify(n)}>{String(n)}</option>)}
           {f.next !== '' && !choices.some((n) => JSON.stringify(n) === f.next) && <option value={f.next}>{String(JSON.parse(f.next))}</option>}
         </select>)}
-        {text('actionCount', 'Action count')}
-        {text('isg', 'ISG (µs)')}
-        {text('randomSeed', 'Random seed', <span className="muted"> 0 = none</span>)}
-        {text('coreId', 'Core', <span className="muted"> -1 = any</span>)}
-        {check('srcMacFromPacket', 'Source MAC from packet', <Info label="the MAC flags">
+        {text('actionCount', LABEL.actionCount)}
+        {text('isg', LABEL.isg)}
+        {text('randomSeed', LABEL.randomSeed, <span className="muted"> 0 = none</span>)}
+        {text('coreId', LABEL.coreId, <span className="muted"> -1 = any</span>)}
+        {check('srcMacFromPacket', LABEL.srcMacFromPacket, <Info label="the MAC flags">
           The <code>flags</code> field: bit 0 takes the source MAC from the packet, bits 1-2 choose the destination MAC (0 config file, 1 packet, 2 ARP), bit 3 marks a dummy stream, which is not sent but keeps its place in the chain.
         </Info>)}
-        {pick('dstMac', 'Destination MAC', DST_MAC)}
-        {check('dummy', 'Dummy stream')}
-        {pick('rx', 'RX stats', tpg ? [...RX, ['tpg', 'TPG (edited in a later version)']] : RX, tpg)}
-        {!tpg && f.rx !== 'none' && text('pgId', 'PG ID')}
+        {pick('dstMac', LABEL.dstMac, DST_MAC)}
+        {check('dummy', LABEL.dummy)}
+        {pick('rx', LABEL.rx, tpg ? [...RX, TPG] : RX, tpg)}
+        {!tpg && f.rx !== 'none' && text('pgId', LABEL.pgId)}
         {tpg && fs.stream_id !== undefined && <div className="form-row"><span className="row-label">PG ID</span><span>{fs.stream_id}</span></div>}
         <div className="form-row">
           <span className="row-label">Extra stats</span>
@@ -141,9 +159,9 @@ export function StreamProperties({ stream, index, names, onSave, onPrev, onNext,
             <Info label="VXLAN and IEEE 1588">The TRex client drops both at import and at assign, so they never reach the server. They are shown as imported and cannot be edited here.</Info>
           </span>
         </div>
-        {field('cacheOn', 'Cache', <select {...bad('cacheOn')} className={cls('cacheOn')} value={f.cacheOn ? 'on' : 'off'} disabled={locked} onChange={(e) => set('cacheOn', e.target.value === 'on')}>
+        {field('cacheOn', LABEL.cacheOn, <select {...bad('cacheOn')} className={cls('cacheOn')} value={f.cacheOn ? 'on' : 'off'} disabled={locked} onChange={(e) => set('cacheOn', e.target.value === 'on')}>
           <option value="off">Off</option><option value="on">N packets</option></select>)}
-        {f.cacheOn && text('cacheSize', 'Cache packets')}
+        {f.cacheOn && text('cacheSize', LABEL.cacheSize)}
       </div>
       {leaving && (
         <p role="group" aria-label="Discard changes">Discard changes?{' '}
@@ -155,7 +173,7 @@ export function StreamProperties({ stream, index, names, onSave, onPrev, onNext,
         <button type="button" aria-label="Next stream" disabled={!onNext} onClick={() => go('next')}>Next</button>
         <button type="button" disabled={locked || empty} onClick={() => setF(toForm(stream))}>Cancel</button>
         <button type="button" disabled={locked || empty || awaiting || Object.keys(errors).length > 0} onClick={() => void submit()}>Save</button>
-        {unsaved && <span className="unsaved-count">{unsaved}</span>}
+        <UnsavedChanges changes={changes} />
       </div>
     </div>
   )

@@ -6,6 +6,7 @@ import type { ConnectParams, PortView, SetupPort, TestSetup } from '../../api'
 import { runInProgress, setupSession } from '../../setupSession'
 import { trafficStore } from '../../trafficStore'
 import { SetupDialog } from './SetupDialog'
+import { unsavedRows } from '../../testUnsaved'
 
 afterEach(() => { vi.restoreAllMocks(); trafficStore.reset() })
 
@@ -201,7 +202,8 @@ describe('SetupDialog', () => {
     await userEvent.type(box(), ' 2')
     expect(box()).toHaveClass('edited')
     expect(box()).toHaveAccessibleDescription('edited')
-    expect(screen.getByText('1 unsaved change')).toBeInTheDocument()
+    const was = (box() as HTMLInputElement).value.slice(0, -2)
+    expect(await unsavedRows('1 unsaved change')).toEqual([['New name', was, `${was} 2`]])
     await userEvent.click(within(detail().getByRole('group', { name: 'Rename setup' })).getByRole('button', { name: 'Cancel' }))
     await userEvent.click(btn('Duplicate'))
     await userEvent.type(box(), ' 2')

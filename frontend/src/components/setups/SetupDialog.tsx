@@ -6,7 +6,7 @@ import { CHANGED_SINCE_LOAD, buildSetup, fingerprint, formDrift, formProblem, lo
 import { DEFAULT_FORM, trafficStore } from '../../trafficStore'
 import { useDialogFocus } from '../useDialogFocus'
 import { RunButton } from '../RunButton'
-import { EditedTag, unsavedText } from '../../ui/Edited'
+import { EditedTag, UnsavedChanges } from '../../ui/Edited'
 
 const errText = (x: unknown) => (x instanceof ApiError || x instanceof Error ? x.message : String(x))
 // What Run will do to a port beyond assigning its profile and starting it, so nothing happens that the table did not say; '—' for nothing.
@@ -264,7 +264,7 @@ export function SetupDialog({ setups, loadErrors, params, ports, readOnly, onClo
                       onChange={(e) => setEdit({ ...edit, name: e.target.value })} /></label>{renamed && <EditedTag id="setup-rename-ed" />}{' '}
                     <button type="button" disabled={busy || !edit.name.trim()} onClick={() => void doEdit()}>{edit.kind === 'rename' ? 'Rename' : 'Duplicate'}</button>{' '}
                     <button type="button" onClick={() => setEdit(null)}>Cancel</button>
-                    {renamed && <>{' '}<span className="unsaved-count">{unsavedText(1)}</span></>}
+                    {renamed && <>{' '}<UnsavedChanges changes={[{ field: 'New name', saved: sel.name, edited: edit.name }]} /></>}
                   </p>
                 )}
                 <p className="muted">Saved for {sel.server ?? 'any server'} · updated {localTime(sel.updated)}</p>

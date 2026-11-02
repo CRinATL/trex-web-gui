@@ -3,7 +3,10 @@ import { ApiError, putPortLabel, type PortView } from '../api'
 import { useAppState } from '../state'
 import { cpLength, DESCRIPTION_MAX, NAME_MAX, oneLine, pasteInto, portKey, usePortLabelOf, type PortLabel } from '../portLabels'
 import { confirmedName } from './ifaceText'
-import { EditedTag, unsavedText } from '../ui/Edited'
+import { EditedTag, UnsavedChanges, type UnsavedChange } from '../ui/Edited'
+
+// Each field's label, as the form and its unsaved-changes list name it.
+const LABEL = { name: 'Name', description: 'Description' } as const
 
 interface FormProps {
   where: { server: string; key: string } | null   // null without a connection: nothing can be saved
@@ -47,7 +50,10 @@ function NameForm({ where, saved, suggestion, loadError, focus, onFocused }: For
   // a field differs from the saved label, as Save's `differs` judges it: marked edited (RC1-31) and counted, so the marks
   // agree with Save (R6); a suggested name with no saved label is unsaved and is marked
   const nameEdited = name !== savedName, descEdited = description !== savedDescription
-  const unsaved = unsavedText(Number(nameEdited) + Number(descEdited))
+  const changes: UnsavedChange[] = [
+    ...(nameEdited ? [{ field: LABEL.name, saved: savedName, edited: name }] : []),
+    ...(descEdited ? [{ field: LABEL.description, saved: savedDescription, edited: description }] : []),
+  ]
 
   // The saved label reaches every open browser (this one included) as a port_labels message, so nothing is updated here.
   async function save() {
@@ -66,13 +72,13 @@ function NameForm({ where, saved, suggestion, loadError, focus, onFocused }: For
       <p className="muted">{off ? 'Connect to name ports.' : `Shown in the port lists. Saved by this GUI for ${where.server}; clear both fields to remove the name.`}</p>
       <div className="form-grid">
         <div className="form-row">
-          <label htmlFor="port-name-input">Name</label>
+          <label htmlFor="port-name-input">{LABEL.name}</label>
           <span><input id="port-name-input" ref={nameRef} value={name} disabled={off} onChange={(e) => setName(oneLine(e.target.value))} onPaste={pasteInto(setName)}
             className={nameEdited ? 'edited' : undefined} aria-describedby={nameEdited ? 'port-name-count port-name-ed' : 'port-name-count'} />
             {nameEdited && <EditedTag id="port-name-ed" />}<span id="port-name-count" className="muted"> {nameLen}/{NAME_MAX}</span></span>
         </div>
         <div className="form-row">
-          <label htmlFor="port-desc-input">Description</label>
+          <label htmlFor="port-desc-input">{LABEL.description}</label>
           <span><input id="port-desc-input" value={description} disabled={off} onChange={(e) => setDescription(oneLine(e.target.value))} onPaste={pasteInto(setDescription)}
             className={descEdited ? 'edited' : undefined} aria-describedby={descEdited ? 'port-desc-count port-desc-ed' : 'port-desc-count'} />
             {descEdited && <EditedTag id="port-desc-ed" />}<span id="port-desc-count" className="muted"> {descLen}/{DESCRIPTION_MAX}</span></span>
@@ -83,7 +89,7 @@ function NameForm({ where, saved, suggestion, loadError, focus, onFocused }: For
       <div className="dialog-footer">
         <button type="button" disabled={off || busy || tooLong || !differs} onClick={() => void save()}>Save</button>
         <button type="button" disabled={off || !edited} onClick={revert}>Revert</button>
-        {unsaved && <span className="unsaved-count">{unsaved}</span>}
+        <UnsavedChanges changes={changes} />
       </div>
     </div>
   )

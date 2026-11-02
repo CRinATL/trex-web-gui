@@ -1,7 +1,8 @@
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { PayloadEditor } from './PayloadEditor'
+import { unsavedRows } from '../../testUnsaved'
 
 afterEach(cleanup)
 
@@ -31,11 +32,24 @@ describe('PayloadEditor', () => {
     expect(screen.getByLabelText('Seed')).toHaveClass('edited')
     expect(screen.getByLabelText('Seed')).toHaveAccessibleDescription('edited')
     expect(screen.getByLabelText('Size')).not.toHaveClass('edited')
-    expect(screen.getByText('1 unsaved change')).toBeInTheDocument()
+    expect(await unsavedRows('1 unsaved change')).toEqual([['Seed', '9', '10']])
+    await userEvent.click(screen.getByRole('button', { name: '1 unsaved change' }))   // closes the list
     await userEvent.clear(screen.getByLabelText('Seed'))
     await userEvent.type(screen.getByLabelText('Seed'), '9')
     expect(screen.queryByText('edited')).not.toBeInTheDocument()
     expect(screen.queryByText(/unsaved change/)).not.toBeInTheDocument()
+  })
+  it('Escape in the open change list closes the list, not the dialog', async () => {
+    const { onCancel } = setup({ vtype: 'BYTES', generate: 'random_bytes', seed: 9, size: 40 })
+    await userEvent.clear(screen.getByLabelText('Seed'))
+    await userEvent.type(screen.getByLabelText('Seed'), '10')
+    const count = screen.getByRole('button', { name: '1 unsaved change' })
+    await userEvent.click(count)
+    expect(count).toHaveAttribute('aria-expanded', 'true')
+    await userEvent.keyboard('{Escape}')
+    expect(count).toHaveAttribute('aria-expanded', 'false')
+    expect(onCancel).not.toHaveBeenCalled()
+    expect(screen.getByRole('dialog', { name: 'Payload' })).toBeInTheDocument()
   })
   it('should_build_payload', async () => {
     const { onSave } = setup()
@@ -83,7 +97,8 @@ describe('PayloadEditor', () => {
     const { onSave } = setup()
     await pick('File')
     await userEvent.upload(screen.getByLabelText('File'), new File([new Uint8Array([0, 1, 2, 255, 128])], 'x.bin'))
-    await waitFor(() => expect(screen.getByText(/x\.bin: 5 bytes/)).toBeInTheDocument())
+    // in the dialog: the closed unsaved-changes list (portalled, hidden) holds the same text
+    await waitFor(() => expect(within(screen.getByRole('dialog', { name: 'Payload' })).getByText(/x\.bin: 5 bytes/)).toBeInTheDocument())
     await userEvent.click(screen.getByRole('button', { name: 'Save' }))
     expect(onSave).toHaveBeenCalledWith({ vtype: 'BYTES', base64: 'AAEC/4A=' })
   })

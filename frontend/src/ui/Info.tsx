@@ -4,11 +4,19 @@ import { createPortal } from 'react-dom'
 const GAP = 6      // px between the button and the note
 const MARGIN = 8   // px kept clear of the viewport edge
 
-// A small ⓘ button that reveals a note. The note floats: it is portalled to document.body (so a scrolling dialog cannot clip it),
+// A small ⓘ button that reveals a note (a Popover with the ⓘ trigger).
+export function Info({ label, children }: { label: string; children: ReactNode }) {
+  return <Popover buttonClass="info" buttonLabel={`About ${label}`} trigger="ⓘ">{children}</Popover>
+}
+
+// A button that reveals a floating panel. The panel is portalled to document.body (so a scrolling dialog cannot clip it),
 // fixed under the button and clamped to the viewport, and it stays in the DOM while closed (hidden).
 // Escape closes it and is swallowed, so an enclosing dialog's window-level Escape handler does not also fire.
 // An outside pointerdown, a second click on the button, or the button being hidden closes it too.
-export function Info({ label, children }: { label: string; children: ReactNode }) {
+// `buttonLabel` is the button's accessible name when `trigger` is not text that names it; `panelClass` styles the panel.
+export function Popover({ trigger, buttonClass, buttonLabel, panelClass = 'info-text', children }: {
+  trigger: ReactNode; buttonClass: string; buttonLabel?: string; panelClass?: string; children: ReactNode
+}) {
   const [open, setOpen] = useState(false)
   const [pos, setPos] = useState<CSSProperties>({ top: 0, left: 0 })
   const btn = useRef<HTMLButtonElement>(null)
@@ -71,8 +79,8 @@ export function Info({ label, children }: { label: string; children: ReactNode }
 
   return (
     <span className="info-wrap" onKeyDown={onKeyDown}>
-      <button ref={btn} type="button" className="info" aria-label={`About ${label}`} aria-expanded={open} aria-controls={noteId} onClick={() => setOpen((o) => !o)}>ⓘ</button>
-      {createPortal(<div ref={note} id={noteId} className="info-text" role="note" hidden={!open} style={pos}>{children}</div>, document.body)}
+      <button ref={btn} type="button" className={buttonClass} aria-label={buttonLabel} aria-expanded={open} aria-controls={noteId} onClick={() => setOpen((o) => !o)}>{trigger}</button>
+      {createPortal(<div ref={note} id={noteId} className={panelClass} role="note" hidden={!open} style={pos}>{children}</div>, document.body)}
     </span>
   )
 }

@@ -4,6 +4,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { StreamJson, StreamPage } from '../../api'
 import streams from '../../__fixtures__/studioStreams.json'
 import { StreamProperties } from './StreamProperties'
+import { unsavedRows } from '../../testUnsaved'
 
 afterEach(cleanup)
 const stored = (streams.udp_for_benchmarks as unknown as StreamPage).rows[0].stream
@@ -242,7 +243,7 @@ describe('StreamProperties', () => {
       expect(screen.getByLabelText('Mode')).toHaveClass('edited')
       expect(screen.getByLabelText('Packets')).not.toHaveClass('edited')   // shown by the mode, still its stored value
       expect(screen.getAllByText('edited')).toHaveLength(2)
-      expect(screen.getByText('2 unsaved changes')).toBeInTheDocument()
+      expect(await unsavedRows('2 unsaved changes')).toEqual([['Mode', 'Continuous', 'Single burst'], ['Rate', '1 pps', '2 kpps']])
       expect(rate).toHaveAccessibleDescription('edited')
       await user.click(screen.getByRole('button', { name: 'Cancel' }))
       expect(view.container.querySelectorAll('.edited')).toHaveLength(0)
@@ -297,7 +298,7 @@ describe('StreamProperties', () => {
       const { user } = show()
       await user.click(screen.getByLabelText('Start paused'))
       expect(screen.getByLabelText('Start paused')).toHaveClass('edited')
-      expect(screen.getByText('1 unsaved change')).toBeInTheDocument()
+      expect(await unsavedRows('1 unsaved change')).toEqual([['Start paused', 'no', 'yes']])
     })
   })
 })

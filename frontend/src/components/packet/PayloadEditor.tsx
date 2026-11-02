@@ -1,11 +1,15 @@
 import { useId, useState, type KeyboardEvent } from 'react'
 import { createPortal } from 'react-dom'
 import type { FieldValue } from '../../api'
-import { EditedTag, unsavedText } from '../../ui/Edited'
+import { EditedTag, UnsavedChanges } from '../../ui/Edited'
 import { useDialogFocus } from '../useDialogFocus'
 import { DEFAULT_SEED, fromValue, MODES, PayloadError, SIZE_MAX, toValue, type PayloadInput, type PayloadMode, type SizeKind } from './payloadModes'
 
 const FILE_MODES: PayloadMode[] = ['file', 'file_pattern']
+// Each control's label, as the dialog and its unsaved-changes list name it.
+const LABEL = { mode: 'Source', text: 'Text', hex: 'Hex bytes', file: 'File', kind: 'Size is', size: 'Size', seed: 'Seed' } as const
+// The Size is choices, as the select and the unsaved-changes list word them.
+const KIND: Record<SizeKind, string> = { load: 'payload length', packet: 'packet size (with FCS)' }
 const SIZED_MODES: PayloadMode[] = ['text_pattern', 'file_pattern', 'code_pattern', 'random_ascii', 'random_bytes']
 const HINT: Partial<Record<PayloadMode, string>> = {
   text_pattern: 'The text is repeated, and cut, to the size.',
@@ -68,13 +72,24 @@ export function PayloadEditor({ value, onSave, onCancel }: { value: FieldValue |
   const marks = (k: Part) => (edited[k] ? { 'aria-describedby': `${id}-${k}-ed` } : {})
   const cls = (k: Part, base?: string) => [base, edited[k] && 'edited'].filter(Boolean).join(' ') || undefined
   const tag = (k: Part) => edited[k] && <EditedTag id={`${id}-${k}-ed`} />
-  const unsaved = unsavedText(Object.values(edited).filter(Boolean).length)
+  // The edited parts as the unsaved-changes list shows them: what the dialog opened on, and what Save would apply.
+  const modeLabel = (m: PayloadMode) => MODES.find((x) => x.id === m)?.label ?? m
+  const fileText = (b: Uint8Array | null, name: string | null) => (b === null ? '' : `${name ?? 'current content'}: ${b.length} bytes`)   // as the File row reads
+  const PART: Record<Part, [string, string, string]> = {
+    mode: [LABEL.mode, modeLabel(start.mode), modeLabel(mode)],
+    text: [mode === 'code_pattern' ? LABEL.hex : LABEL.text, start.input.text, input.text],
+    file: [LABEL.file, fileText(start.input.bytes, null), fileText(input.bytes, fileName)],
+    kind: [LABEL.kind, KIND[start.input.sizeKind], KIND[input.sizeKind]],
+    size: [LABEL.size, start.input.size === null ? '' : String(start.input.size), sizeText.trim()],
+    seed: [LABEL.seed, String(start.input.seed), seedText.trim()],
+  }
+  const changes = (Object.keys(edited) as Part[]).filter((k) => edited[k]).map((k) => ({ field: PART[k][0], saved: PART[k][1], edited: PART[k][2] }))
   const dialog = (
     <div role="dialog" aria-modal="true" aria-label="Payload" className="modal payload-dialog" ref={ref} onKeyDown={onKeyDown}
       onContextMenu={(e) => e.stopPropagation()}>   {/* a right-click is the browser's (Paste), not the field row's menu around the portal */}
       <h2>Payload</h2>
       <div className="payload-row">
-        <label htmlFor={`${id}-mode`}>Source</label>
+        <label htmlFor={`${id}-mode`}>{LABEL.mode}</label>
         <select id={`${id}-mode`} {...marks('mode')} className={cls('mode')} data-autofocus value={mode} onChange={(e) => { setMode(e.target.value as PayloadMode); setProblem(null) }}>
           {MODES.map((m) => <option key={m.id} value={m.id}>{m.label}</option>)}
         </select>
@@ -82,35 +97,35 @@ export function PayloadEditor({ value, onSave, onCancel }: { value: FieldValue |
       </div>
       {(mode === 'text' || mode === 'text_pattern') && (
         <div className="payload-row">
-          <label htmlFor={`${id}-text`}>Text</label>
+          <label htmlFor={`${id}-text`}>{LABEL.text}</label>
           <textarea id={`${id}-text`} {...marks('text')} className={cls('text', 'payload-text')} rows={5} spellCheck={false} value={input.text} onChange={(e) => set({ text: e.target.value })} />
           {tag('text')}
         </div>
       )}
       {mode === 'code_pattern' && (
         <div className="payload-row">
-          <label htmlFor={`${id}-hex`}>Hex bytes</label>
+          <label htmlFor={`${id}-hex`}>{LABEL.hex}</label>
           <textarea id={`${id}-hex`} {...marks('text')} className={cls('text', 'payload-text')} rows={3} spellCheck={false} placeholder="0a 1b 2c" value={input.text} onChange={(e) => set({ text: e.target.value })} />
           {tag('text')}
         </div>
       )}
       {FILE_MODES.includes(mode) && (
         <div className="payload-row">
-          <label htmlFor={`${id}-file`}>File</label>
+          <label htmlFor={`${id}-file`}>{LABEL.file}</label>
           <input id={`${id}-file`} {...marks('file')} className={cls('file')} type="file" onChange={(e) => { void pick(e.target.files?.[0]); e.target.value = '' }} />
-          <span className="muted mono">{input.bytes !== null ? `${fileName ?? 'current content'}: ${input.bytes.length} bytes` : 'no file chosen'}</span>
+          <span className="muted mono">{input.bytes !== null ? fileText(input.bytes, fileName) : 'no file chosen'}</span>
           {tag('file')}
         </div>
       )}
       {sized && (
         <div className="payload-row">
-          <label htmlFor={`${id}-kind`}>Size is</label>
+          <label htmlFor={`${id}-kind`}>{LABEL.kind}</label>
           <select id={`${id}-kind`} {...marks('kind')} className={cls('kind')} value={input.sizeKind} onChange={(e) => set({ sizeKind: e.target.value as SizeKind })}>
-            <option value="load">payload length</option>
-            <option value="packet">packet size (with FCS)</option>
+            <option value="load">{KIND.load}</option>
+            <option value="packet">{KIND.packet}</option>
           </select>
           {tag('kind')}
-          <label htmlFor={`${id}-size`}>Size</label>
+          <label htmlFor={`${id}-size`}>{LABEL.size}</label>
           <input id={`${id}-size`} {...marks('size')} type="text" inputMode="numeric" className={cls('size', 'mono')} value={sizeText} onChange={(e) => { setSizeText(e.target.value); setProblem(null) }} />
           {tag('size')}
           <span className="muted">bytes, 1 to {SIZE_MAX}</span>
@@ -118,7 +133,7 @@ export function PayloadEditor({ value, onSave, onCancel }: { value: FieldValue |
       )}
       {(mode === 'random_ascii' || mode === 'random_bytes') && (
         <div className="payload-row">
-          <label htmlFor={`${id}-seed`}>Seed</label>
+          <label htmlFor={`${id}-seed`}>{LABEL.seed}</label>
           <input id={`${id}-seed`} {...marks('seed')} type="text" inputMode="numeric" className={cls('seed', 'mono')} value={seedText} onChange={(e) => { setSeedText(e.target.value); setProblem(null) }} />
           {tag('seed')}
           <span className="muted">not 0: the service reads 0 as {DEFAULT_SEED}</span>
@@ -132,7 +147,7 @@ export function PayloadEditor({ value, onSave, onCancel }: { value: FieldValue |
         <div className="end">
           <button type="button" onClick={onCancel}>Cancel</button>
           <button type="button" className="primary" onClick={save}>Save</button>
-          {unsaved && <span className="unsaved-count">{unsaved}</span>}
+          <UnsavedChanges changes={changes} />
         </div>
       </div>
     </div>
