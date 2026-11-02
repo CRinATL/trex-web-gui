@@ -410,9 +410,11 @@ def test_ping_and_neighbours_wire_fixtures(fake_trex, new_session, monkeypatch: 
 # P3c (Task 5). `captureMsg.json`, `capturePkts.json`, `captureSave.json`, `packetTree.json` and
 # `captureFiles.json`: the `capture`, `capture_pkts` and `capture_save` messages the session publishes, the
 # POST /api/capture/packet/tree body and the GET /api/capture/files body, from the fake started --manual-clock
-# (counters and packets are real and repeatable: rate x seconds). Normalised: `ts` becomes 0 and a spool
-# file's `mtime` too; the Spool's directory becomes "<spool>", the server string in a sidecar "<server>" (the
-# fake's port is random), and the UTC stamp in a file name "<stamp>".
+# (counters and packets are real and repeatable: rate x seconds). The tree is built with decode.tree, which
+# the route's packet-worker op equals for a frame under EDITOR_DECODE_BYTES, as the recorded one is.
+# Normalised: `ts` becomes 0 and a spool file's `mtime` too; the Spool's directory becomes "<spool>", the
+# server string in a sidecar "<server>" (the fake's port is random), and the UTC stamp in a file name
+# "<stamp>".
 CAPTURE_FILE = FIXTURE_DIR / "captureMsg.json"
 CAPTURE_PKTS_FILE = FIXTURE_DIR / "capturePkts.json"
 CAPTURE_SAVE_FILE = FIXTURE_DIR / "captureSave.json"
