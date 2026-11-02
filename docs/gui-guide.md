@@ -847,18 +847,21 @@ profile's editor at the right ([88](gui-inventory/screens/88-studio-library.png)
 The directory is `<data dir>/profiles` or the **Profile library directory** setting. Each profile is
 `<slug>.json` (exactly what the TRex client writes) plus `<slug>.gui.json` (its name, source and per-stream
 editor documents). The list shows each profile's name and `<n> streams · <source kind>` (`py`, `yaml`, `json`,
-`pcap`, `new`, `no source`), then `source missing` or its load error; files in the directory that are not
+`pcap`, `new`, `no source`), then `source missing` or its load error. Files in the directory that are not
 profiles are listed in red, not selectable. `No profiles yet. New… or Import… to add one.`
 
 - **New…**: an inline **Name** with **Cancel** and **Create**; makes an empty profile and selects it.
 - **Import…**: the import dialog ([9.2](#92-import-dialog)).
-- For the selected profile: **Rename…** (the New name row says `N test setups point at this profile; they
-  will need the new path.` when saved setups use it), **Duplicate…**, **Delete** (`Delete profile <name>?`,
-  **Confirm delete**), **Use in Control…**: a dialog **Use in Control** with a **Port** select, `Fills the
-  profile field of that port's Traffic tab; nothing is assigned until you press Assign there.`, and the rate
-  that port's form keeps, `Port 0's rate stays 5 kpps: check it on the Traffic tab before you press Assign.`
-  (the handoff does not change it); **Open Traffic tab** goes to Control with the Traffic tab open
-  (`No ports: connect to a TRex server in Control first.` without a session).
+- For the selected profile:
+  - **Rename…** (the New name row says `N test setups point at this profile; they will need the new path.` when
+    saved setups use it);
+  - **Duplicate…**;
+  - **Delete** (`Delete profile <name>?`, **Confirm delete**);
+  - **Use in Control…**: a dialog **Use in Control** with a **Port** select, `Fills the profile field of that
+    port's Traffic tab; nothing is assigned until you press Assign there.`, and the rate that port's form keeps,
+    `Port 0's rate stays 5 kpps: check it on the Traffic tab before you press Assign.` (the handoff does not
+    change it). **Open Traffic tab** goes to Control with the Traffic tab open
+    (`No ports: connect to a TRex server in Control first.` without a session).
 - While the embedded packet editor holds unsaved edits, Rename and Delete are off: `The packet has unsaved
   edits: save or cancel them first.`, and choosing another profile asks `Discard the packet edits?`
   (**Discard** / **Keep editing**).
@@ -874,97 +877,142 @@ profiles are listed in red, not selectable. `No profiles yet. New… or Import�
   keeps a link to it.`), `.yaml`/`.yml`, `.json`, `.pcap`/`.cap`; otherwise `none: only .py .yaml .yml .json
   .pcap .cap files import`. Appending accepts pcaps only: `Only a .pcap or .cap file appends streams.`
 - A `.py` adds **Tunables** with **Inspect** (`Inspect runs the profile to read its tunables.`), then the
-  tunables form; the entry keeps the source path, and Control assigns that `.py` with those tunables.
-- A pcap adds **Pcap options**: **Name prefix**; **Timing**: `From the pcap, sped up ×` N or `Fixed gap`
-  (µs); **Loops**; **Rewrite source IPv4** and **Rewrite destination IPv4**, each a start address and
-  **Count**. The ⓘ: every packet becomes one stream, chained in file order, the last looping to the first;
-  the rewrite needs IPv4 packets and refuses an import that would rewrite one without IPv4.
+  tunables form. The entry keeps the source path, and Control assigns that `.py` with those tunables.
+- A pcap adds **Pcap options**:
+  - **Name prefix**;
+  - **Timing**: `From the pcap, sped up ×` N or `Fixed gap` (µs);
+  - **Loops**;
+  - **Rewrite source IPv4** and **Rewrite destination IPv4**, each a start address and **Count**.
+
+  The ⓘ: every packet becomes one stream, chained in file order, the last looping to the first. The rewrite needs
+  IPv4 packets and refuses an import that would rewrite one without IPv4.
 - **Name** (defaults to the file's stem); **Cancel**, **Import**. While the editor is saving a table change:
   `Waiting for the table's last change to be saved and read back.`
 
 ### 9.3 The profile editor
 
-[89](gui-inventory/screens/89-studio-stream-selected.png). An information line, `Source: <kind> <path> · saved
-<UTC time> · N streams`; for a `.py`, `Control assigns the .py source with its tunables; edits here are not
-sent.`; `Imported for port 0; port 1's streams differ.` for a profile whose ports differ.
+[89](gui-inventory/screens/89-studio-stream-selected.png). An information line:
 
-**Profile actions**: **Add stream** (a continuous 1 pps template stream at the end), **Import stream from
-pcap…**, **Export ▾** (**JSON**, **YAML**, **Python**; for a `.py` entry, `Python (from the frozen JSON, not the
-.py source)`), **Simulate** ([9.7](#97-simulate)), and for a `.py` entry **View source…** (the source path and
-the file's text, read-only; `The source file is missing: it was moved or deleted on the backend host.`)
-([114](gui-inventory/screens/114-studio-py-source.png)).
+- `Source: <kind> <path> · saved <UTC time> · N streams`;
+- for a `.py`, `Control assigns the .py source with its tunables; edits here are not sent.`;
+- `Imported for port 0; port 1's streams differ.` for a profile whose ports differ.
 
-Every change is saved at once; there is no Save or Revert for the profile. When another client changed the
+**Profile actions**:
+
+- **Add stream** (a continuous 1 pps template stream at the end);
+- **Import stream from pcap…**;
+- **Export ▾** (**JSON**, **YAML**, **Python**; for a `.py` entry, `Python (from the frozen JSON, not the .py
+  source)`);
+- **Simulate** ([9.7](#97-simulate));
+- and for a `.py` entry **View source…** (the source path and the file's text, read-only;
+  `The source file is missing: it was moved or deleted on the backend host.`)
+  ([114](gui-inventory/screens/114-studio-py-source.png)).
+
+Every change is saved at once. There is no Save or Revert for the profile. When another client changed the
 file: `This profile changed elsewhere. Reload`; when it was renamed or deleted: `This profile was renamed or
 deleted elsewhere. Reload library`.
 
 ### 9.4 The stream table
 
-**Undo**, **Redo**, **Up**, **Down**, **Duplicate**, **Copy**, **Paste**, **Delete** (`Delete N streams?` with
-**Confirm delete** / **Cancel**); the same from the keyboard while the table has focus: Ctrl+Z, Ctrl+Y or
-Ctrl+Shift+Z, Alt+↑/↓, Ctrl+C, Ctrl+V, Delete, F2 (rename). Columns **Enabled** (a checkbox, saved at once),
-**#**, **Name** (double-click or F2 renames inline; every `next` that named the stream follows), **Packet**,
-**Length (with FCS)**, **Mode**, **Rate**, **Next**. Click, Ctrl+click and Shift+click select. 100 rows per
-page: **Previous**, `rows a–b of N`, **Next**. A write that moves indices locks the table until the page has
-been read back. Notices: `Copied N streams.`, `Pasted N streams`, `Nothing to paste: copy streams first.`,
-`<names> now stop instead of going to the deleted stream.`, `Undid <action>.`; a warning under the bar when an
-enabled stream's Next is disabled: `<stream> goes to <next>, which is disabled: TRex refuses this profile at
-assign until <stream>'s Next changes.`
+- **Undo**, **Redo**, **Up**, **Down**, **Duplicate**, **Copy**, **Paste**, **Delete** (`Delete N streams?` with
+  **Confirm delete** / **Cancel**); the same from the keyboard while the table has focus: Ctrl+Z, Ctrl+Y or
+  Ctrl+Shift+Z, Alt+↑/↓, Ctrl+C, Ctrl+V, Delete, F2 (rename).
+- Columns **Enabled** (a checkbox, saved at once), **#**, **Name** (double-click or F2 renames inline; every `next`
+  that named the stream follows), **Packet**, **Length (with FCS)**, **Mode**, **Rate**, **Next**.
+- Click, Ctrl+click and Shift+click select.
+- 100 rows per page: **Previous**, `rows a–b of N`, **Next**.
+- A write that moves indices locks the table until the page has been read back.
+- Notices:
+  - `Copied N streams.`;
+  - `Pasted N streams`;
+  - `Nothing to paste: copy streams first.`;
+  - `<names> now stop instead of going to the deleted stream.`;
+  - `Undid <action>.`;
+  - a warning under the bar when an enabled stream's Next is disabled: `<stream> goes to <next>, which is
+    disabled: TRex refuses this profile at assign until <stream>'s Next changes.`
 
-The table is framed; a row lights up under the pointer and ends in `›`, the open stream's row has an accent bar
-on its left, and the other selected rows keep their tint and outline. Until one stream is open, a dashed panel
-stands where its properties will be: `Click a stream to edit its properties and packet.` and `⌘-click or
-Shift-click selects several, for Copy, Duplicate and Delete.` (Ctrl-click off a Mac); with several selected,
+The table is framed. A row lights up under the pointer and ends in `›`, the open stream's row has an accent bar on
+its left, and the other selected rows keep their tint and outline. Until one stream is open, a dashed panel stands
+where its properties will be: `Click a stream to edit its properties and packet.` and `⌘-click or Shift-click
+selects several, for Copy, Duplicate and Delete.` (Ctrl-click off a Mac); with several selected,
 `N streams selected. Click one to edit it.` With one, the tabs **Properties** and **Packet**.
 
 ### 9.5 Properties tab
 
-[90](gui-inventory/screens/90-studio-properties.png). **Mode** (Continuous; Single burst with **Packets**;
-Multi-burst with **Packets per burst**, **Bursts**, **IBG (µs)**), **Rate** (one box, below), **Enabled**, **Self
-start**, **Start paused** (ⓘ: experimental in TRex), **Next** (Stop, or a named stream; disabled for a continuous
-stream), **Action count**, **ISG (µs)**, **Random seed** (`0 = none`), **Core** (`-1 = any`), **Source MAC from
-packet** (ⓘ on the `flags` bits), **Destination MAC** (From config file, From packet, By ARP), **Dummy stream**,
-**RX stats** (None, Flow stats, Latency, with **PG ID**; a TPG rule is shown read-only), **Extra stats** (VXLAN
-and IEEE 1588 as imported, read-only: the TRex client drops both), **Cache** (Off or N packets, with **Cache
-packets**). A field's error is shown beside it.
+[90](gui-inventory/screens/90-studio-properties.png).
+
+- **Mode** (Continuous; Single burst with **Packets**; Multi-burst with **Packets per burst**, **Bursts**,
+  **IBG (µs)**);
+- **Rate** (one box, below);
+- **Enabled**, **Self start**;
+- **Start paused** (ⓘ: experimental in TRex);
+- **Next** (Stop, or a named stream; disabled for a continuous stream);
+- **Action count**, **ISG (µs)**;
+- **Random seed** (`0 = none`);
+- **Core** (`-1 = any`);
+- **Source MAC from packet** (ⓘ on the `flags` bits);
+- **Destination MAC** (From config file, From packet, By ARP);
+- **Dummy stream**;
+- **RX stats** (None, Flow stats, Latency, with **PG ID**; a TPG rule is shown read-only);
+- **Extra stats** (VXLAN and IEEE 1588 as imported, read-only: the TRex client drops both);
+- **Cache** (Off or N packets, with **Cache packets**).
+
+A field's error is shown beside it.
 
 **Rate** is one box that reads the unit you type with the number: `pps`, `bps` (L2), `bps L1` (or `bpsl1`) with
-an optional `k`, `M` or `G`, or `%` of the line rate. **A bare number is pps.** Fractions are fine, a space
-before the unit is optional, and case does not matter (`m` is mega): `1000`, `1.5 Mpps`, `10 Gbps L1`, `25%`.
-**A `k`, `M` or `G` needs a unit after it: type `200kpps`, not `200k`**, which is refused. Beside the box, a
-reading updated as you type: `= 1,500,000 pps`, `= 10 Gbit/s (L1)`, `= 25 % of line rate`; an entry it cannot
-read shows `Can't read "<text>": a number, optionally with k/M/G and pps, bps or %.` instead. A stored rate is
-shown in its shortest form (1500000 pps reads `1.5 Mpps`), and saving it untouched sends nothing.
+an optional `k`, `M` or `G`, or `%` of the line rate.
 
-**Previous** and **Next** move between streams (with unsaved edits: `Discard changes?`, **Discard** / **Keep
-editing**); **Cancel** puts the stored values back; **Save** sends only the changed fields and is disabled
-until there is a change and while a field is invalid; each field it would send is marked `edited`, and
-`N unsaved changes` shows beside it ([1.4](#14-shortcuts-and-dialogs)). The name is not here: rename in the
-table.
+- **A bare number is pps.**
+- Fractions are fine, a space before the unit is optional, and case does not matter (`m` is mega): `1000`,
+  `1.5 Mpps`, `10 Gbps L1`, `25%`.
+- **A `k`, `M` or `G` needs a unit after it: type `200kpps`, not `200k`**, which is refused.
+- Beside the box, a reading updated as you type: `= 1,500,000 pps`, `= 10 Gbit/s (L1)`, `= 25 % of line rate`.
+- An entry it cannot read shows `Can't read "<text>": a number, optionally with k/M/G and pps, bps or %.` instead.
+- A stored rate is shown in its shortest form (1500000 pps reads `1.5 Mpps`), and saving it untouched sends nothing.
+
+- **Previous** and **Next** move between streams (with unsaved edits: `Discard changes?`, **Discard** / **Keep
+  editing**).
+- **Cancel** puts the stored values back.
+- **Save** sends only the changed fields and is disabled until there is a change and while a field is invalid. Each
+  field it would send is marked `edited`, and `N unsaved changes` shows beside it ([1.4](#14-shortcuts-and-dialogs)).
+
+The name is not here: rename in the table.
 
 ### 9.6 Packet tab
 
-[91](gui-inventory/screens/91-studio-packet.png). The packet summary, `N bytes (N+4 with FCS)`, `Field
-engine: N instructions`; **View packet…** (the packet viewer, [8.2](#82-packet-viewer)), **Edit packet**, and
-**Export ▾** (**pcap**, written by the browser from the stored bytes; **YAML**, from the backend).
+[91](gui-inventory/screens/91-studio-packet.png).
+
+- The packet summary, `N bytes (N+4 with FCS)`, `Field engine: N instructions`;
+- **View packet…** (the packet viewer, [8.2](#82-packet-viewer));
+- **Edit packet**;
+- and **Export ▾** (**pcap**, written by the browser from the stored bytes; **YAML**, from the backend).
 
 **Edit packet** opens the embedded packet editor ([10.2](#102-the-editor) onwards) with **Presets…**, **Cancel**
 and **Save** above it, and an `edited` tag beside Save while the packet differs from the one opened
 ([113](gui-inventory/screens/113-studio-embedded-packet-editor.png)).
-Save builds the packet on the backend and writes the stream's packet, field engine and editor document;
-`Saved.`, or `The packet changed while it was being built: nothing was saved. Save again.`, or `The stream
-changed since the editor was opened (another change moved or replaced it): Cancel, then open it again.`
+
+Save builds the packet on the backend and writes the stream's packet, field engine and editor document:
+
+- `Saved.`;
+- or `The packet changed while it was being built: nothing was saved. Save again.`;
+- or `The stream changed since the editor was opened (another change moved or replaced it): Cancel, then open it
+  again.`
+
 Cancel with unsaved edits asks `Discard the packet edits?` Editor-moving table actions are off meanwhile.
 
 ### 9.7 Simulate
 
-An offline check with no server ([93](gui-inventory/screens/93-studio-simulate.png)): `Round trip: identical`
-or `differs` with the differences (the profile through the TRex client and back); a table **#**, **Name**,
-**Length**, **Mode**, **Rate as given**, **pps**, **bps L1**, **bps L2**, **Packets** (the first 100 streams)
-and a **Total** row; a value that cannot be known offline (a percentage of the line rate) is a dash, with
-`Streams given as a percentage add N % of the line rate, which is not known offline, so the totals leave them
-out.`; **Chains**, each `next` chain with how it ends and its packet total; `Nothing starts <streams>.`; the
-notes; **Close**.
+An offline check with no server ([93](gui-inventory/screens/93-studio-simulate.png)):
+
+- `Round trip: identical` or `differs` with the differences (the profile through the TRex client and back);
+- a table **#**, **Name**, **Length**, **Mode**, **Rate as given**, **pps**, **bps L1**, **bps L2**, **Packets** (the
+  first 100 streams) and a **Total** row;
+- a value that cannot be known offline (a percentage of the line rate) is a dash, with `Streams given as a
+  percentage add N % of the line rate, which is not known offline, so the totals leave them out.`;
+- **Chains**, each `next` chain with how it ends and its packet total;
+- `Nothing starts <streams>.`;
+- the notes;
+- **Close**.
 
 ---
 
