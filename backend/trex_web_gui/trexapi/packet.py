@@ -45,6 +45,15 @@ class PacketBusy(PacketError):
     """The queue wait passed PACKET_QUEUE_S: an earlier call is still running. Nothing was killed."""
 
 
+class PacketStartError(PacketError):
+    """A new worker did not send its ready line: no request reached it, so the failure says nothing about
+    the request. Always `restarted=True`."""
+
+    def __init__(self, message: str) -> None:
+        """A start failure always leaves no worker behind."""
+        super().__init__(message, restarted=True)
+
+
 class Definitions(TypedDict):
     etag: str
     layerIds: list[str]
@@ -197,7 +206,9 @@ class PacketEngine:
         return res                                          # type: ignore[return-value]
 
     async def tree(self, binary: str) -> dict[str, Any]:
-        """`{data, binary}`: the capture viewer's layer tree for the base64 frame `binary`."""
+        """`{data, binary}`: the capture viewer's layer tree for the base64 frame `binary`. It shares the
+        editor's worker and lock, so a capture click can hold an editor call up to PACKET_TIMEOUT_S, and a
+        frame that times out restarts the worker, which then fetches `definitions` again."""
         res = await self.call("tree", {"binary": binary})
         res.pop("ok", None)
         return res
@@ -304,7 +315,7 @@ class PacketEngine:
 
     async def _start(self) -> None:
         """Spawn a worker and wait for its ready line, at most PACKET_START_S. One attempt: a failure kills
-        the worker and raises PacketError(restarted=True)."""
+        the worker and raises PacketStartError."""
         tmp = tempfile.TemporaryDirectory(prefix="trex-web-gui-packet-")
         try:
             proc = await asyncio.create_subprocess_exec(
@@ -336,7 +347,7 @@ class PacketEngine:
                 raise
             why = (f"did not start within {PACKET_START_S:g} s" if isinstance(e, TimeoutError)
                    else "exited before it was ready")
-            raise PacketError(f"the packet worker {why}", restarted=True) from None
+            raise PacketStartError(f"the packet worker {why}") from None
 
     async def _exchange(self, op: str, args: dict[str, Any], timeout_s: float) -> dict[str, Any]:
         """Write one request and read its reply. Every failure kills the worker; a cancellation does too, so

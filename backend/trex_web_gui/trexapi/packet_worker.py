@@ -33,8 +33,9 @@ ETHER_LEN = 14
 # A list row's summary dissects only a record's first bytes: the headers it names sit there, and dissection
 # cost grows with length (a zero-filled IPv4 record parses as IPv6 hop-by-hop options, one Pad1 per byte).
 SUMMARY_BYTES = 2048
-# The editor dissects at most this many bytes of a record into layers; the rest is one raw layer. Dissection
-# of a zero-filled 70 000-byte IPv4 record took 12.9 s (the same Pad1 chain), against the 5 s call timeout.
+# The editor and the capture viewer's tree (the name predates the viewer) dissect at most this many bytes of a
+# record into layers; the rest is one raw layer. Dissection of a zero-filled 70 000-byte IPv4 record took
+# 12.9 s (the same Pad1 chain), against the 5 s call timeout.
 # Equal to studio.streams.PKT_MAX (a literal: streams is not imported here), so no packet Studio can build is
 # ever capped.
 EDITOR_DECODE_BYTES = 9238
@@ -95,7 +96,7 @@ class Engine:
         for name in ("_fully_define", "_packet_model_to_scapy_packet", "_pkt_data"):
             if not callable(getattr(self.svc, name, None)):
                 raise RuntimeError(f"the vendored Scapy_service has no method {name}; the packet editor's "
-                                   "decode cap relies on it")
+                                   "decode cap and the capture viewer's tree rely on it")
         self.h = self.svc.get_version_handler("1", "02")
         # Every build describes the packet by dissecting its bytes again (`_fully_define`); bound that to the
         # decode cap. The binary is still the whole packet; only the field tree stops at the cap.

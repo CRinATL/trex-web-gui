@@ -45,7 +45,7 @@ from trex_web_gui.store.test_setups import TestSetupStore
 from trex_web_gui.studio.library import ProfileLibrary, library_dir
 from trex_web_gui.studio.templates import TemplateStore, templates_dir
 from trex_web_gui.trexapi import lldp, scapy_exec
-from trex_web_gui.trexapi.packet import PacketBusy, PacketEngine, PacketError
+from trex_web_gui.trexapi.packet import PacketBusy, PacketEngine, PacketError, PacketStartError
 from trex_web_gui.trexapi.profiles import MAX_RESULT
 from trex_web_gui.validation import MULT, check_duration, check_ports
 
@@ -772,11 +772,14 @@ def create_app(data_dir: Path, server_hint: str | None = None, static_dir: Path 
     @app.post("/api/capture/packet/tree", response_model=None,
               responses=answers((400, "bad_packet", "the packet could not be dissected"),
                                 (503, "engine_busy", "the packet worker is busy"),
-                                (503, "engine_closed", "the packet worker is closed")))
+                                (503, "engine_closed", "the packet worker is closed"),
+                                (503, "engine_restarted",
+                                 "the packet worker did not start; the next call starts a fresh one")))
     async def packet_tree(b: PacketBody) -> dict[str, Any] | JSONResponse:
         """Dissects one base64 frame in the packet worker (its call timeout and address-space limit bound a
         frame whose dissection cost runs away) and returns the tree. 400 bad_packet when dissection raises,
-        times out or runs out of memory; 503 engine_busy or engine_closed when the engine cannot take it."""
+        times out or runs out of memory; 503 engine_busy or engine_closed when the engine cannot take it, and
+        503 engine_restarted when the worker did not start (the frame never reached it)."""
         try:
             return await packet_engine.tree(b.binary)
         except PacketBusy as e:
@@ -784,6 +787,8 @@ def create_app(data_dir: Path, server_hint: str | None = None, static_dir: Path 
         except PacketError as e:
             if packet_engine.closed:
                 return err(503, "engine_closed", str(e))
+            if isinstance(e, PacketStartError):
+                return err(503, "engine_restarted", str(e))
             return err(400, "bad_packet", f"The packet could not be dissected: {e}")
 
     # The Wireshark path is the saved preference, read here; never a request's (a body is ignored).

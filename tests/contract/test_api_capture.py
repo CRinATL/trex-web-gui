@@ -251,6 +251,17 @@ def test_a_busy_packet_engine_is_503(tmp_path: Path, monkeypatch: pytest.MonkeyP
         assert r.status_code == 503 and r.json()["error"] == "engine_busy", r.text
 
 
+
+def test_a_packet_worker_that_does_not_start_is_503_engine_restarted(tmp_path: Path,
+                                                                     monkeypatch: pytest.MonkeyPatch) -> None:
+    # The frame never reached a worker, so this is not the packet's fault: the Studio routes' answer, not 400.
+    from trex_web_gui.trexapi import packet
+    monkeypatch.setattr(packet, "MODULE", "trex_web_gui.no_such_worker")
+    with client(tmp_path) as c:
+        r = c.post("/api/capture/packet/tree", json={"binary": UDP})
+        assert r.status_code == 503 and r.json()["error"] == "engine_restarted", r.text
+        assert "exited before it was ready" in r.json()["message"]
+
 def test_invalid_bpf_is_400_with_server_text(lab: Lab) -> None:
     c = lab.c
     r = c.post("/api/capture/recorders", json={"rx": [1], "bpf": BAD_BPF})
