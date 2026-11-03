@@ -91,7 +91,7 @@ Compare the sha256 with the one the release page lists next to the wheel, then p
 terminal there is no pause: it installs at once and says so. `TREX_WEB_GUI_YES=1` skips the pause for an unattended
 install: put it before `sh`, as in `curl -fsSL … | TREX_WEB_GUI_YES=1 sh`.
 
-From the release after 1.1.0, the script ends by printing how to start the backend: `trex-web-gui`. When
+From 1.1.1 on, the script ends by printing how to start the backend: `trex-web-gui`. When
 `~/.local/bin` is not on your `PATH`, it does two more things:
 
 - It gives the command's full path instead.
@@ -110,7 +110,7 @@ trex-web-gui
 ```
 
 - **1.1.0 and earlier need the `serve`**: `trex-web-gui serve`. Without it they stop with `the following arguments
-  are required: cmd`. Later releases serve by default and still accept `serve`.
+  are required: cmd`. 1.1.1 and later serve by default and still accept `serve`.
 - **It prints a login URL**, `Open: http://127.0.0.1:8765/api/auth/login?token=...`. Open it in a browser on that
   host. Each start makes a new URL.
 - **From another machine**, use an SSH tunnel. The backend also prints the tunnel command,
@@ -122,7 +122,8 @@ trex-web-gui
   prefills the dialog. [Running it](#running-it) lists every option.
 - **Ctrl+C stops it.**
 - **`command not found`** means `~/.local/bin` is not on your `PATH`. The 1.1.0 installer does not add it. Run
-  `~/.local/bin/trex-web-gui serve` for now (it works on every release), and see
+  `~/.local/bin/trex-web-gui serve` for now (it works on every release), or re-run the installer, which from 1.1.1
+  adds the directory, and see
   [The `trex-web-gui` command and `PATH`](#the-trex-web-gui-command-and-path).
 - **Don't use `uv run --project backend trex-web-gui` here.** That form is for a source checkout only. On an
   installed host it fails with ``Project directory `backend` does not exist``.
