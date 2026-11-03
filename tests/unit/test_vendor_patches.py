@@ -16,7 +16,7 @@ def test_pin_records_sha_and_all_patches() -> None:
     pin = json.loads((VENDOR / "TREX_PIN").read_text())
     assert pin == json.loads(PIN_FILE.read_text())                  # copy in _vendor matches the record
     assert f"--sha {pinned_sha()}" in (ROOT / "Makefile").read_text()  # and the record matches the Makefile
-    assert [p[:2] for p in pin["patches"]] == [f"{n:02d}" for n in range(1, 14)]
+    assert [p[:2] for p in pin["patches"]] == [f"{n:02d}" for n in range(1, 15)]
 
 
 def test_vendor_is_reproducible(build_vendor: BuildVendor) -> None:  # canon:TSK-5
@@ -260,3 +260,20 @@ def test_13_py314_finally_flow(build_vendor: BuildVendor) -> None:
     if sys.version_info < (3, 14):
         pytest.skip("the SyntaxWarning exists from Python 3.14; test_vendor_tree.py covers 3.12 and 3.13")
     assert warnings_in(build_vendor(["13"]) / "trex") == 3     # the three sites the patch restructures
+
+
+# 14: IPv4 options are never a negative length: an IP header with ihl below 5 has none, instead of reading the
+# whole rest of the frame as options (the zero-filled frame of SEC-03)
+CODE_14 = IMPORT_ALL + """
+from scapy.all import Ether, IP, IPOption_NOP
+bad = Ether(bytes(12) + b'\\x08\\x00' + bytes(1500 - 14))[IP]
+good = IP(bytes(IP(ihl=6, options=[IPOption_NOP()])))
+print(len(bad.options), good.ihl, len(good.options), type(good.options[0]).__name__)
+"""
+
+
+def test_14_ip_options_ihl_guard(build_vendor: BuildVendor) -> None:
+    # A one-NOP header reads back as the NOP and three EOL from its pad bytes, with or without the patch.
+    assert run_vendor_python(VENDOR, CODE_14).stdout.strip().splitlines()[-1] == "0 6 4 IPOption_NOP"
+    unpatched = run_vendor_python(build_vendor(["14"]), CODE_14).stdout.strip().splitlines()[-1].split()
+    assert int(unpatched[0]) > 1000 and unpatched[1:] == ["6", "4", "IPOption_NOP"]
