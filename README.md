@@ -89,7 +89,10 @@ On a terminal the script:
 
 Compare the sha256 with the one the release page lists next to the wheel, then press Enter to install. Without a
 terminal there is no pause: it installs at once and says so. `TREX_WEB_GUI_YES=1` skips the pause for an unattended
-install: put it before `sh`, as in `curl -fsSL … | TREX_WEB_GUI_YES=1 sh`.
+install: put it before `sh`, as in `curl -fsSL … | TREX_WEB_GUI_YES=1 sh`. The install ends with
+`Installed 1 executable: trex-web-gui`.
+
+**To upgrade**, stop the running backend, then run the same command. It replaces the installed version.
 
 From 1.1.1 on, the script ends by printing how to start the backend: `trex-web-gui`. When
 `~/.local/bin` is not on your `PATH`, it does two more things:
@@ -156,15 +159,15 @@ To install v1.0.0, or to pin a version, install the wheel of a
 
 ```
 uv tool install --python 3.12 https://github.com/CRinATL/trex-web-gui/releases/download/<tag>/trex_web_gui-<version>-py3-none-any.whl
-trex-web-gui [--server HOST[:SYNC[:ASYNC]]] [--monitor-only] [--monitor HOST[:PORT]] [--daemon-port PORT]
+trex-web-gui serve [--server HOST[:SYNC[:ASYNC]]] [--monitor-only] [--monitor HOST[:PORT]] [--daemon-port PORT]
 ```
 
 With the [GitHub CLI](https://cli.github.com/), `gh release download <tag> -R CRinATL/trex-web-gui --pattern '*.whl'`
-fetches the wheel instead, and `uv tool install --python 3.12 ./trex_web_gui-<version>-py3-none-any.whl` installs it;
+fetches the wheel instead, and `uv tool install --python 3.12 ./trex_web_gui-<version>-py3-none-any.whl` installs it.
 `make wheel` builds one from a checkout.
 
 A host without Python 3.12 (Ubuntu 22.04 has 3.10) needs nothing more: uv downloads a Python 3.12 from GitHub and the
-dependencies from PyPI. The install ends with `Installed 1 executable: trex-web-gui`. The options are described under
+dependencies from PyPI. The options are described under
 [Running it](#running-it). First time? [`docs/howto-first-stream.md`](docs/howto-first-stream.md) sends a first
 stream, step by step.
 
@@ -214,8 +217,8 @@ A host that cannot reach PyPI installs from a wheelhouse, a directory of the whe
 
 ### The `trex-web-gui` command and `PATH`
 
-The command is in `~/.local/bin` (`uv tool dir --bin` prints the directory). If `trex-web-gui serve` answers
-`command not found`, that directory is not on your `PATH`.
+The command is in `~/.local/bin` (`uv tool dir --bin` prints the directory). If `trex-web-gui serve` (which works on
+every release) answers `command not found`, that directory is not on your `PATH`.
 
 The installer adds it to your shell profile, but a script run as `curl … | sh` cannot change the `PATH` of the
 terminal that started it. If the installer said it updated your profile, open a new terminal, or run `. ~/.profile`
@@ -232,9 +235,9 @@ Otherwise, add the directory to your shell profile yourself, in one of two ways:
 
 Then open a new terminal, or run `. ~/.profile` (or the file you edited) in the current one. `command -v
 trex-web-gui` prints the command's path once it is found. Until then, `~/.local/bin/trex-web-gui serve` runs it by
-its full path.
+its full path, on every release.
 
-More: the REST and WebSocket reference is [`docs/api.md`](docs/api.md); what changed in each release is in its
+More: the REST and WebSocket reference is [`docs/api.md`](docs/api.md). What changed in each release is in its
 [release notes](https://github.com/CRinATL/trex-web-gui/releases).
 
 ## Access: single user, localhost only
@@ -269,8 +272,10 @@ the serving port.
 To run it:
 
 - Linux, with Python 3.12 or later (tested on 3.12–3.14). `uv` fetches one if the host has none.
-- A TRex server (v3.08) in stateless mode to connect to. The vendored client is in the wheel; no trex-core checkout
-  is needed.
+- A TRex server (v3.08) in stateless mode to connect to. The vendored client is in the wheel. No trex-core
+  checkout is needed.
+- A current browser, on the backend host or on another machine through an SSH tunnel
+  ([Access](#access-single-user-localhost-only)).
 - Optional, on the backend host: Wireshark (the Capture page's **Open in Wireshark**, which needs a display there), and
   the TRex daemon (`trex_daemon_server`) for the daemon dialog.
 
@@ -329,6 +334,8 @@ Installed with `install.sh` or `uv tool install`:
 trex-web-gui [options]
 ```
 
+`trex-web-gui --help` lists the options (1.1.0 and earlier: `trex-web-gui serve --help`).
+
 From a source checkout, after `make build`:
 
 ```
@@ -380,11 +387,11 @@ the daemon's files directory and have a Python profile loaded, which is code run
 
 trex-web-gui's own checks are not a boundary against that. The rule on `trex_args` (at most 20 tokens of letters, digits
 and `_ . , : = / + -`, with the flags that change what TRex reads refused: `--cfg`, `-i`, `--astf`, `-f`, `-d`, `-m`,
-`-l`, `--rx-check`, `--client_cfg`, also abbreviated) is defence in depth on trex-web-gui's own route. Flags that take
-a path, such as `--rpc-logfile`, still pass it, and port 8090 accepts such arguments from anyone directly. Restrict
-port 8090 before you use daemon control outside the test VM: firewall it to the GUI host, or start the daemon with
-`--trex-host 127.0.0.1` and reach it through an SSH tunnel. The test VM is already safe: QEMU forwards its daemon port
-on `127.0.0.1` only (`vm/launch.sh`).
+`-l`, `--rx-check`, `--client_cfg`, also abbreviated) is defence in depth on trex-web-gui's own route. Flags that take a
+path, such as `--rpc-logfile`, still pass it, and port 8090 accepts such arguments from anyone directly. Restrict port
+8090 before you use daemon control outside a trusted test network: firewall it to the GUI host, or start the daemon with
+`--trex-host 127.0.0.1` and reach it through an SSH tunnel. The project's own test VM is already safe: QEMU forwards its
+daemon port on `127.0.0.1` only (`vm/launch.sh`).
 
 ## Development
 
