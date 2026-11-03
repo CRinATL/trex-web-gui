@@ -4,6 +4,8 @@ after a failure."""
 import hashlib
 import importlib.util
 import json
+import os
+import pwd
 import subprocess
 from collections.abc import Callable
 from pathlib import Path
@@ -1273,12 +1275,14 @@ PAGE_URL = "https://github.com/CRinATL/trex-web-gui/releases/tag/v1.0.1"
 
 def run_install_script(tmp_path: Path, tty: str | None, *, served: bytes = WHEEL_BYTES, sha: str = GOOD_SHA,
                        yes: bool = False, with_uv: bool = True, rel_dir: str = "rel",
-                       bin_on_path: bool = False,
+                       bin_on_path: bool = False, shell: str | None = "/bin/bash", update_rc: int = 0,
                        env_extra: dict[str, str] | None = None) -> subprocess.CompletedProcess[str]:
     """Generate install.sh for patch 1 with `sha`, serve `served` as its wheel from a file:// base and run it
     under /bin/sh with a stub uv that logs its arguments to tmp_path/uv.log. The stub answers
-    `uv tool dir --bin` with tmp_path/toolbin (not logged), which is on PATH only with `bin_on_path`. `tty`
-    is the text of the terminal file (None: the path does not exist); TMPDIR is tmp_path/tmp."""
+    `uv tool dir --bin` with tmp_path/toolbin (not logged), which is on PATH only with `bin_on_path`; on
+    `uv tool update-shell` it writes the SHELL it was given to tmp_path/shell.log and exits `update_rc`.
+    `tty` is the text of the terminal file (None: the path does not exist); TMPDIR is tmp_path/tmp, HOME is
+    tmp_path/home (created empty), SHELL is `shell` (None: unset)."""
     target = release.patch_target(1)
     script = tmp_path / "install.sh"
     script.write_text(release.install_script(target, sha))
@@ -1292,7 +1296,9 @@ def run_install_script(tmp_path: Path, tty: str | None, *, served: bytes = WHEEL
         uv = stub_dir / "uv"
         uv.write_text(f'#!/bin/sh\n'
                       f'if [ "$*" = "tool dir --bin" ]; then echo "{tmp_path}/toolbin"; exit 0; fi\n'
-                      f'echo "$@" >> "{tmp_path}/uv.log"\n')
+                      f'echo "$@" >> "{tmp_path}/uv.log"\n'
+                      f'if [ "$*" = "tool update-shell" ]; then echo "${{SHELL-}}" > "{tmp_path}/shell.log"; '
+                      f'exit {update_rc}; fi\n')
         uv.chmod(0o755)
     tty_path = tmp_path / "tty"
     if tty is not None:
@@ -1300,7 +1306,10 @@ def run_install_script(tmp_path: Path, tty: str | None, *, served: bytes = WHEEL
     path = f"{stub_dir}:/usr/bin:/bin" + (f":{tmp_path}/toolbin" if bin_on_path else "")
     env = {"PATH": path if with_uv else str(tmp_path / "empty"),
            "TREX_WEB_GUI_RELEASES": f"file://{tmp_path}/{rel_dir}", "TREX_WEB_GUI_TTY": str(tty_path),
-           "TMPDIR": str(tmp_path / "tmp")}
+           "TMPDIR": str(tmp_path / "tmp"), "HOME": str(tmp_path / "home")}
+    (tmp_path / "home").mkdir(exist_ok=True)
+    if shell is not None:
+        env["SHELL"] = shell
     if yes:
         env["TREX_WEB_GUI_YES"] = "1"
     env.update(env_extra or {})
@@ -1399,6 +1408,89 @@ def test_install_script_adds_a_missing_bin_dir_to_the_shell_profile(tmp_path: Pa
     assert f"Start the backend with:\n  {toolbin}/trex-web-gui\n" in done.stdout
     assert f"Your shell profile now adds {toolbin} to PATH" in done.stdout
     assert "open a new terminal" in done.stdout
+    assert f'  export PATH="{toolbin}:$PATH"\n' in done.stdout   # works in bash, zsh, dash and ksh
+    assert "~/.profile" not in done.stdout   # uv may have written ~/.bash_profile or ~/.zshenv instead
+    assert (tmp_path / "shell.log").read_text() == "/bin/bash\n"
+
+
+def test_install_script_skips_update_shell_when_a_profile_already_has_the_dir(tmp_path: Path) -> None:
+    """A re-run from a terminal that has not re-read its profile: the profile already names the directory,
+    so uv is not asked again (it would exit 2) and the output says how to pick the change up."""
+    toolbin = f"{tmp_path}/toolbin"
+    (tmp_path / "home").mkdir()
+    (tmp_path / "home" / ".bashrc").write_text(f'# uv\nexport PATH="{toolbin}:$PATH"\n')
+    done = run_install_script(tmp_path, "\n")
+    assert done.returncode == 0, done.stderr
+    assert "tool update-shell" not in (tmp_path / "uv.log").read_text()
+    assert f"Your shell profile already adds {toolbin} to PATH" in done.stdout
+    assert f'  export PATH="{toolbin}:$PATH"\n' in done.stdout
+    assert "uv tool update-shell" not in done.stdout
+
+
+def test_install_script_gives_the_manual_steps_when_update_shell_fails(tmp_path: Path) -> None:
+    """uv cannot tell the shell (it exits 2): the install still succeeds and prints the export line and the
+    startup files to put it in, without sending the user back to the `uv tool update-shell` that just
+    failed."""
+    done = run_install_script(tmp_path, "\n", update_rc=2)
+    assert done.returncode == 0, done.stderr
+    toolbin = f"{tmp_path}/toolbin"
+    assert f"{toolbin} is not on your PATH" in done.stdout
+    assert f'  export PATH="{toolbin}:$PATH"\n' in done.stdout
+    assert "To keep it, add that line" in done.stdout
+    assert "run 'uv tool update-shell'" not in done.stdout
+    assert "Your shell profile now adds" not in done.stdout
+
+
+def test_install_script_skips_update_shell_for_a_zdotdir_zshenv(tmp_path: Path) -> None:
+    """uv writes $ZDOTDIR/.zshenv for zsh when ZDOTDIR is set: a re-run finds the line there."""
+    toolbin = f"{tmp_path}/toolbin"
+    (tmp_path / "home" / "zdot").mkdir(parents=True)
+    (tmp_path / "home" / "zdot" / ".zshenv").write_text(f'# uv\nexport PATH="{toolbin}:$PATH"\n')
+    done = run_install_script(tmp_path, "\n", shell="/usr/bin/zsh",
+                              env_extra={"ZDOTDIR": str(tmp_path / "home" / "zdot")})
+    assert done.returncode == 0, done.stderr
+    assert "tool update-shell" not in (tmp_path / "uv.log").read_text()
+    assert f"Your shell profile already adds {toolbin} to PATH" in done.stdout
+
+
+def test_install_script_does_not_count_a_commented_out_line(tmp_path: Path) -> None:
+    """A startup file that names the directory only in a comment does not add it: uv is still run."""
+    toolbin = f"{tmp_path}/toolbin"
+    (tmp_path / "home").mkdir()
+    (tmp_path / "home" / ".profile").write_text(f'  # export PATH="{toolbin}:$PATH"\n')
+    done = run_install_script(tmp_path, "\n")
+    assert done.returncode == 0, done.stderr
+    assert (tmp_path / "uv.log").read_text().splitlines()[1:] == ["tool update-shell"]
+    assert "already adds" not in done.stdout
+
+
+def test_install_script_accepts_the_bin_dir_on_path_with_a_trailing_slash(tmp_path: Path) -> None:
+    """`<dir>/` on PATH is the same directory: the bare command is given and no profile is touched (uv itself
+    calls it already in PATH and names no file)."""
+    toolbin = f"{tmp_path}/toolbin"
+    done = run_install_script(tmp_path, "\n", env_extra={"PATH": f"{tmp_path}/bin:/usr/bin:/bin:{toolbin}/"})
+    assert done.returncode == 0, done.stderr
+    assert "Start the backend with:\n  trex-web-gui\n" in done.stdout
+    assert "tool update-shell" not in (tmp_path / "uv.log").read_text()
+
+
+@pytest.mark.parametrize("shell", [None, "", "sh", "/bin/sh", "/usr/bin/dash"])
+def test_install_script_tells_uv_the_login_shell(tmp_path: Path, shell: str | None) -> None:
+    """With SHELL unset or naming sh/dash (uv knows neither), uv is given the login shell from the passwd
+    database instead."""
+    login = pwd.getpwuid(os.getuid()).pw_shell
+    if login.rsplit("/", 1)[-1] in ("sh", "dash"):
+        pytest.skip(f"this user's login shell is {login}, so the case cannot tell a fix from no fix")
+    done = run_install_script(tmp_path, "\n", shell=shell)
+    assert done.returncode == 0, done.stderr
+    assert (tmp_path / "shell.log").read_text() == pwd.getpwuid(os.getuid()).pw_shell + "\n"
+
+
+def test_install_script_passes_a_known_shell_through(tmp_path: Path) -> None:
+    """A SHELL uv understands is passed to it unchanged (a guard: 1.1.1 did this too)."""
+    done = run_install_script(tmp_path, "\n", shell="/usr/bin/zsh")
+    assert done.returncode == 0, done.stderr
+    assert (tmp_path / "shell.log").read_text() == "/usr/bin/zsh\n"
 
 
 def test_install_script_leaves_the_profile_alone_when_asked(tmp_path: Path) -> None:
@@ -1409,9 +1501,9 @@ def test_install_script_leaves_the_profile_alone_when_asked(tmp_path: Path) -> N
     toolbin = f"{tmp_path}/toolbin"
     assert "tool update-shell" not in (tmp_path / "uv.log").read_text()
     assert f"{toolbin} is not on your PATH" in done.stdout
-    assert "  uv tool update-shell\n" in done.stdout
+    assert "run 'uv tool update-shell'" in done.stdout
     assert f'  export PATH="{toolbin}:$PATH"\n' in done.stdout
-    assert "~/.bashrc" in done.stdout and "~/.zshrc" in done.stdout
+    assert "~/.profile" in done.stdout and "~/.bashrc" in done.stdout and "~/.zshenv" in done.stdout
 
 
 def test_install_script_leaves_the_profile_alone_when_bin_is_on_path(tmp_path: Path) -> None:
