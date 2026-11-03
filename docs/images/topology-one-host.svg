@@ -2,8 +2,8 @@
 <defs><marker id="head" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto" markerUnits="userSpaceOnUse"><path d="M0 0 L10 5 L0 10 Z" fill="#5b6775"/></marker></defs>
 <rect width="1280" height="760" fill="#f3f5f7"/>
 <text x="64" y="92" font-family="'IBM Plex Sans', system-ui, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="28" font-weight="600" fill="#1b2430" text-anchor="start">Local console: everything on the TRex host</text>
-<text x="64" y="127" font-family="'IBM Plex Sans', system-ui, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="16" font-weight="400" fill="#5b6775" text-anchor="start">Browser, trex-web-gui backend and TRex server all run on one Linux host with a display. trex-web-gui listens on loopback only,</text>
-<text x="64" y="151" font-family="'IBM Plex Sans', system-ui, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="16" font-weight="400" fill="#5b6775" text-anchor="start">so there is no tunnel to set up.</text>
+<text x="64" y="127" font-family="'IBM Plex Sans', system-ui, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="16" font-weight="400" fill="#5b6775" text-anchor="start">Browser, trex-web-gui backend and TRex server all run on one Linux host with a display. trex-web-gui listens on loopback only, so there is no</text>
+<text x="64" y="151" font-family="'IBM Plex Sans', system-ui, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="16" font-weight="400" fill="#5b6775" text-anchor="start">tunnel to set up.</text>
 <rect x="64" y="176" width="1152" height="456" rx="16" fill="#ffffff" stroke="#cfd6dd"/>
 <text x="88" y="211" font-family="'IBM Plex Sans', system-ui, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="13" font-weight="600" fill="#5b6775" text-anchor="start" letter-spacing="0.78">ONE LINUX HOST · PYTHON 3.12 OR LATER · TREX V3.08</text>
 <text x="432" y="386" font-family="'IBM Plex Sans', system-ui, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="13" font-weight="400" fill="#5b6775" text-anchor="middle">HTTP + WebSocket</text>
@@ -14,10 +14,9 @@
 <line x1="928" y1="440" x2="773" y2="440" stroke="#5b6775" stroke-width="2" marker-end="url(#head)"/>
 <line x1="1056" y1="484" x2="1056" y2="539" stroke="#9aa5b1" stroke-width="2" stroke-dasharray="6 6"/>
 <rect x="512" y="356" width="256" height="128" rx="12" fill="#eaf1fb" stroke="#7fa3dc"/>
-<text x="640.0" y="395.0" font-family="'IBM Plex Sans', system-ui, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="16" font-weight="600" fill="#1b2430" text-anchor="middle">trex-web-gui backend</text>
-<text x="640.0" y="415.0" font-family="'IBM Plex Sans', system-ui, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="14" font-weight="400" fill="#1b2430" text-anchor="middle">serves the web UI and API</text>
-<text x="640.0" y="435.0" font-family="'IBM Plex Sans', system-ui, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="14" font-weight="400" fill="#1b2430" text-anchor="middle">listens on loopback only:</text>
-<text x="640.0" y="455.0" font-family="'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="13" font-weight="400" fill="#1b2430" text-anchor="middle">127.0.0.1:8765</text>
+<text x="640.0" y="405.0" font-family="'IBM Plex Sans', system-ui, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="16" font-weight="600" fill="#1b2430" text-anchor="middle">trex-web-gui backend</text>
+<text x="640.0" y="425.0" font-family="'IBM Plex Sans', system-ui, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="14" font-weight="400" fill="#1b2430" text-anchor="middle">serves the web UI and API</text>
+<text x="640.0" y="445.0" font-family="'IBM Plex Sans', system-ui, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="14" font-weight="400" fill="#1b2430" text-anchor="middle">listens on <tspan font-family="'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="13">127.0.0.1:8765</tspan> only</text>
 <rect x="928" y="356" width="256" height="128" rx="12" fill="#fff1e6" stroke="#e39a5f"/>
 <text x="1056.0" y="405.0" font-family="'IBM Plex Sans', system-ui, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="16" font-weight="600" fill="#1b2430" text-anchor="middle">TRex server</text>
 <text x="1056.0" y="425.0" font-family="'IBM Plex Sans', system-ui, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="14" font-weight="400" fill="#1b2430" text-anchor="middle">stateless mode, already running</text>
@@ -33,5 +32,6 @@
 <text x="224.0" y="435.0" font-family="'IBM Plex Sans', system-ui, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="14" font-weight="400" fill="#1b2430" text-anchor="middle">printed at start</text>
 <text x="224.0" y="455.0" font-family="'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="13" font-weight="400" fill="#1b2430" text-anchor="middle">http://127.0.0.1:8765/…</text>
 <text x="64" y="671" font-family="'IBM Plex Sans', system-ui, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="14" font-weight="400" fill="#5b6775" text-anchor="start">trex-web-gui does not start TRex: start the TRex server in stateless mode first, then run trex-web-gui as an ordinary user (no root). Single-user:</text>
-<text x="64" y="693" font-family="'IBM Plex Sans', system-ui, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="14" font-weight="400" fill="#5b6775" text-anchor="start">every logged-in tab shares the one TRex session, and each start makes a new login URL.</text>
+<text x="64" y="693" font-family="'IBM Plex Sans', system-ui, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="14" font-weight="400" fill="#5b6775" text-anchor="start">every logged-in tab shares the one TRex session, and each start makes a new login URL. TRex still listens on 4501/4500 (and the daemon on 8090) on</text>
+<text x="64" y="715" font-family="'IBM Plex Sans', system-ui, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="14" font-weight="400" fill="#5b6775" text-anchor="start">every interface, unencrypted and unauthenticated: on a shared network, block them with the host's firewall.</text>
 </svg>
