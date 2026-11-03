@@ -117,10 +117,20 @@ def _pid_alive(pid: int) -> bool:
     """True when the pid exists and is not a zombie (signal 0; another user's pid raises PermissionError)."""
     try:
         os.kill(pid, 0)
-    except ProcessLookupError:
+        # The process can exit and be reaped between the signal and this read (seen in CI on PR #31): its
+        # /proc entry is then gone, and a process that is gone is not alive.
+        return Path(f"/proc/{pid}/stat").read_text().split()[2] != "Z"
+    except (ProcessLookupError, FileNotFoundError):
         return False
-    return Path(f"/proc/{pid}/stat").read_text().split()[2] != "Z"
 
+
+def test_pid_alive_treats_a_vanished_proc_entry_as_gone(monkeypatch):
+    """The signal finds the process, and it is reaped before /proc/<pid>/stat is read: not alive, no raise."""
+    def gone(self, *a, **kw):
+        """Read of a /proc entry that has just disappeared."""
+        raise FileNotFoundError(2, "No such file or directory", str(self))
+    monkeypatch.setattr(Path, "read_text", gone)
+    assert _pid_alive(os.getpid()) is False
 
 def test_normal_finish_kills_leftover_children(tmp_path):
     prof = tmp_path / "spawns_child.py"                   # copied so the pid file lands in tmp_path
