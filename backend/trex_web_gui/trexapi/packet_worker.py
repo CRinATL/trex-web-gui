@@ -93,7 +93,7 @@ class Engine:
         from trex.scapy_server.scapy_service import Scapy_service
         self.packet_class = Packet
         self.svc = Scapy_service()
-        for name in ("_fully_define", "_packet_model_to_scapy_packet", "_pkt_data"):
+        for name in ("_fully_define", "_packet_model_to_scapy_packet", "_pkt_data", "_pkt_to_field_tree"):
             if not callable(getattr(self.svc, name, None)):
                 raise RuntimeError(f"the vendored Scapy_service has no method {name}; the packet editor's "
                                    "decode cap and the capture viewer's tree rely on it")
@@ -101,6 +101,9 @@ class Engine:
         # Every build describes the packet by dissecting its bytes again (`_fully_define`); bound that to the
         # decode cap. The binary is still the whole packet; only the field tree stops at the cap.
         self.svc._fully_define = self._bounded_define
+        # Layer offsets come from the bytes (look-7, `_field_tree`); keep the service's own method to call.
+        self._service_field_tree = self.svc._pkt_to_field_tree
+        self.svc._pkt_to_field_tree = self._field_tree
         self._definitions: dict[str, Any] | None = None
         self.ops: dict[str, Callable[[dict[str, Any]], dict[str, Any]]] = {
             "definitions": self.definitions, "build": self.build, "payload_classes": self.payload_classes,
@@ -253,6 +256,36 @@ class Engine:
             _chain(full)[-1].add_payload(Raw(data[EDITOR_DECODE_BYTES:]))
         full.build()
         return full
+
+    def _field_tree(self, pkt: Any) -> list[dict[str, Any]]:
+        """The service's field tree of `pkt`, with each layer's `offset` taken from the packet's own bytes.
+
+        The fork records a payload's offset before `IP.post_build` pads the options
+        (`_vendor/external_libs/scapy-2.4.3/scapy/packet.py:661-666`), and the service reads that model
+        offset (`_vendor/trex/scapy_server/scapy_service.py:705`), so with options that need padding every
+        later layer was early by the pad (DEFERRED look-7). The re-dissected bytes have the right offsets.
+        The model and the bytes are walked by depth, as the service's `valid_structure` does: a layer takes
+        its byte offset up to and including the first one whose class differs (it still starts where the
+        previous layer's payload does); deeper layers, and those past the end of the bytes, take the
+        service's offset moved by the last correction. Field offsets are relative to their layer, so they
+        need nothing. Costs one more dissection per tree, within the decode cap (`_bounded_define`)."""
+        result: list[dict[str, Any]] = self._service_field_tree(pkt)
+        model, data = _chain(pkt), _chain(self._bounded_define(pkt))
+        delta, done = 0, 0
+        for layer, m, b in zip(result, model, data, strict=False):
+            offset = getattr(b, "_offset", None)
+            if offset is not None and isinstance(layer.get("offset"), int):
+                delta = offset - layer["offset"]
+                layer["offset"] = offset
+            done += 1
+            if not (isinstance(m, type(b)) or isinstance(b, type(m))):
+                break
+        # The layers the walk did not reach are early by the same pad: move them by the last correction, so
+        # the offsets stay in order (the frontend ends each layer where the next one starts).
+        for layer in result[done:]:
+            if isinstance(layer.get("offset"), int):
+                layer["offset"] += delta
+        return result
 
     def _rebuilds(self, layers: list[dict[str, Any]], raw: bytes) -> bool:
         """True when the service builds `layers` into exactly `raw`. For a record over the cap only the bytes
