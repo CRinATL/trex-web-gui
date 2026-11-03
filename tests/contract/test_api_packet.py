@@ -615,7 +615,8 @@ def test_preset_route_returns_doc_and_flags(packet_client: TestClient) -> None:
     c = packet_client
     listing = c.get(f"{URL}/presets")
     assert listing.status_code == 200
-    assert [p["id"] for p in listing.json()["presets"]] == ["flood", "ip_sweep", "frame_size_sweep", "vlan"]
+    assert [p["id"] for p in listing.json()["presets"]] == ["flood", "ip_sweep", "frame_size_sweep", "vlan",
+                                                                 "evpn_vxlan"]
     flood = listing.json()["presets"][0]
     assert flood["name"] == "Flood" and flood["defaults"]["l4"] == "udp"
     params = {**flood["defaults"], "src_mac": {"mode": "packet", "value": "02:00:00:00:00:07"},

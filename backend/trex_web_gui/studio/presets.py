@@ -1,5 +1,6 @@
-"""Packet presets (P4b plan Task 11): four forms that replace the legacy Simple Mode, each building a packet
-document (`.trp`) with its Field Engine instructions, and, for the flood, the stream's MAC-mode bits.
+"""Packet presets (P4b plan Task 11, and EVPN-VXLAN after 1.1.2): forms that replace the legacy Simple Mode,
+each building a packet document (`.trp`) with its Field Engine instructions, and, for the flood, the stream's
+MAC-mode bits.
 
 Pure: nothing here imports `trex` or `scapy`, and nothing is built or evaluated; the editor builds the
 returned document through the engine like any other. Every Field Engine parameter value is a string, as in a
@@ -14,8 +15,9 @@ from pydantic import BaseModel, ConfigDict, Field, ValidationError, field_valida
 
 from trex_web_gui.studio.packetdoc import DocField, DocLayer, FeInstruction, PacketDoc, empty_doc
 
-PRESETS = ("flood", "ip_sweep", "frame_size_sweep", "vlan")
-NAMES = {"flood": "Flood", "ip_sweep": "IP sweep", "frame_size_sweep": "Frame-size sweep", "vlan": "VLAN"}
+PRESETS = ("flood", "ip_sweep", "frame_size_sweep", "vlan", "evpn_vxlan")
+NAMES = {"flood": "Flood", "ip_sweep": "IP sweep", "frame_size_sweep": "Frame-size sweep", "vlan": "VLAN",
+         "evpn_vxlan": "EVPN-VXLAN"}
 FRAME_MIN = 64                           # an Ethernet frame with its FCS
 FRAME_MAX = 9238                         # the longest stream packet P4a accepts
 FCS = 4                                  # bytes the frame size counts and the packet does not
@@ -26,6 +28,10 @@ L4_TYPE = {"udp": "11", "tcp": "13"}     # trex_stl_packet_builder_scapy.py:214-
 MAC_RE = re.compile(r"[0-9A-Fa-f]{2}(:[0-9A-Fa-f]{2}){5}")
 PAYLOAD_RE = re.compile(r"[\x20-\x7e]{1,64}")
 Op = Literal["inc", "dec", "random"]
+VXLAN_PORT = 4789                        # RFC 7348 section 5
+VXLAN_HEADERS = 92                       # outer Ether/IP/UDP/VXLAN 50 + inner Ether/IP/UDP 42
+VNI_MAX = 0xFFFFFF                       # 24 bits
+ENTROPY = (49152, 65535)                 # RFC 7348 section 5: a source port from the dynamic range
 
 
 class PresetError(ValueError):
@@ -245,8 +251,49 @@ class Vlan(_Model):
     tags: list[Tag] = Field(default_factory=lambda: [Tag(vlan=100, prio=0)], min_length=1, max_length=2)
 
 
+class EvpnVxlan(_Payload):
+    """The data plane of EVPN-VXLAN (RFC 7348 encapsulation): an inner UDP packet in a VXLAN tunnel between
+    two VTEPs, its VNI and inner source MAC stepped over a count, and the outer source port random for
+    entropy. No control plane: TRex stateless mode holds no BGP session, so no EVPN routes are sent."""
+
+    outer_src_ip: str = "10.0.0.1"
+    outer_dst_ip: str = "10.0.0.2"
+    vni: int = Field(default=10000, ge=1, le=VNI_MAX)
+    vni_count: int = Field(default=16, ge=1, le=VNI_MAX)
+    inner_src_mac: str = "00:00:00:00:00:01"
+    inner_dst_mac: str = "00:00:00:00:00:02"
+    inner_mac_count: int = Field(default=16, ge=1, le=MAC_COUNT_MAX)
+    inner_src_ip: str = "16.0.0.1"
+    inner_dst_ip: str = "48.0.0.1"
+    entropy: bool = True
+    frame: int = Field(default=128, ge=VXLAN_HEADERS + FCS, le=FRAME_MAX)
+
+    @field_validator("outer_src_ip", "outer_dst_ip", "inner_src_ip", "inner_dst_ip")
+    @classmethod
+    def _ip(cls, v: str) -> str:
+        """A dotted-quad IPv4 address."""
+        return _ipv4(v)
+
+    @field_validator("inner_src_mac", "inner_dst_mac")
+    @classmethod
+    def _mac(cls, v: str) -> str:
+        """Six colon-separated hex pairs."""
+        if not MAC_RE.fullmatch(v):
+            raise ValueError(f"{v!r} is not a MAC address (aa:bb:cc:dd:ee:ff)")
+        return v.lower()
+
+    @model_validator(mode="after")
+    def _fits(self) -> "EvpnVxlan":
+        """The VNIs stay inside 24 bits, and the stepped MACs inside the low 32 bits they vary."""
+        if self.vni + self.vni_count - 1 > VNI_MAX:
+            raise ValueError(f"the VNIs run past {VNI_MAX}")
+        if (int(self.inner_src_mac.replace(":", ""), 16) & LOW32) + self.inner_mac_count - 1 > LOW32:
+            raise ValueError("the inner source MACs run past the low 32 bits of the address")
+        return self
+
+
 MODELS: dict[str, type[_Model]] = {"flood": Flood, "ip_sweep": IpSweep, "frame_size_sweep": FrameSizeSweep,
-                                   "vlan": Vlan}
+                                   "vlan": Vlan, "evpn_vxlan": EvpnVxlan}
 
 
 def _ins(ident: str, **parameters: str) -> FeInstruction:
@@ -365,6 +412,40 @@ def _vlan(p: Vlan) -> PresetResult:
     return {"doc": doc, "flags": None}
 
 
+def _evpn_vxlan(p: EvpnVxlan) -> PresetResult:
+    """The EVPN-VXLAN preset. The VXLAN flags are set to 0x08 because the fork's build binding for VXLAN over
+    Ether (scapy/layers/vxlan.py `bind_top_down(VXLAN, Ether, flags=12, ...)`) would write VXLAN-GPE's 0x0c.
+    The outer UDP checksum is 0 (RFC 7348 allows it, and no Field Engine fix covers the outer UDP). Nothing
+    the Field Engine writes is under an IP or inner UDP checksum, so no fix instruction is needed."""
+    instructions: list[FeInstruction] = []
+    if p.vni_count > 1:     # 24 bits, a 4-byte write over the VNI and its reserved byte, which the mask keeps
+        instructions += [_ins("STLVmFlowVar", name="vni", min_value=str(p.vni),
+                              max_value=str(p.vni + p.vni_count - 1), size="4", op="inc", step="1"),
+                         _ins("STLVmWrMaskFlowVar", fv_name="vni", pkt_offset="VXLAN.vni", pkt_cast_size="4",
+                              mask=str(0xFFFFFF00), shift="8")]
+    if p.inner_mac_count > 1:
+        low = int(p.inner_src_mac.replace(":", ""), 16) & LOW32
+        instructions += [_ins("STLVmFlowVar", name="inner_mac", min_value=str(low),
+                              max_value=str(low + p.inner_mac_count - 1), size="4", op="inc", step="1"),
+                         _ins("STLVmWrFlowVar", fv_name="inner_mac", pkt_offset="Ether:1.src",
+                              offset_fixup="2")]
+    if p.entropy:
+        instructions += [_ins("STLVmFlowVar", name="entropy", min_value=str(ENTROPY[0]),
+                              max_value=str(ENTROPY[1]), size="2", op="random", step="1"),
+                         _ins("STLVmWrFlowVar", fv_name="entropy", pkt_offset="UDP.sport")]
+    doc = empty_doc()
+    doc["packet"] = [{"id": "Ether", "fields": []},
+                     {"id": "IP", "fields": _fields(src=p.outer_src_ip, dst=p.outer_dst_ip)},
+                     {"id": "UDP", "fields": _fields(sport=ENTROPY[0], dport=VXLAN_PORT, chksum=0)},
+                     {"id": "VXLAN", "fields": _fields(flags=8, vni=p.vni)},
+                     {"id": "Ether", "fields": _fields(src=p.inner_src_mac, dst=p.inner_dst_mac)},
+                     {"id": "IP", "fields": _fields(src=p.inner_src_ip, dst=p.inner_dst_ip)},
+                     {"id": "UDP", "fields": _fields(sport=1025, dport=12)}, _payload(p.payload, p.frame)]
+    doc["fePrarameters"] = {}
+    doc["feInstructions"] = instructions
+    return {"doc": doc, "flags": None}
+
+
 def _where_of(e: ValidationError) -> PresetError:
     """The first pydantic error as a PresetError naming its parameter."""
     first = e.errors()[0]
@@ -399,5 +480,7 @@ def preset(preset_id: str, params: object) -> PresetResult:
         return _ip_sweep(model)
     if isinstance(model, FrameSizeSweep):
         return _frame_size_sweep(model)
+    if isinstance(model, EvpnVxlan):
+        return _evpn_vxlan(model)
     assert isinstance(model, Vlan)
     return _vlan(model)

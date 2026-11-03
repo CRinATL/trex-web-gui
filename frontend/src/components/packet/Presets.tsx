@@ -2,7 +2,7 @@ import { Fragment, useEffect, useId, useRef, useState, type ReactNode } from 're
 import { buildPreset, listPresets, type PacketDoc, type PresetInfo } from '../../api'
 import { Tabs, tabPanel } from '../../ui/Tabs'
 
-// The four presets (B2.8, replacing Simple Mode): one form each. A form turns its text boxes into the parameters the backend
+// The presets (B2.8, replacing Simple Mode, plus EVPN-VXLAN): one form each. A form turns its text boxes into the parameters the backend
 // reads (strict: whole numbers as numbers, everything else as text) and Presets asks the backend for the document.
 type Params = Record<string, unknown>
 type Run = (id: string, params: () => Params) => void
@@ -189,7 +189,40 @@ function VlanForm({ info, run, busy, status }: FormProps) {
   )
 }
 
-const FORMS: Record<string, (p: FormProps) => ReactNode> = { flood: FloodForm, ip_sweep: IpSweepForm, frame_size_sweep: FrameSweepForm, vlan: VlanForm }
+// EVPN-VXLAN's data plane: an inner UDP packet in a VXLAN tunnel between two VTEPs (studio/presets.py EvpnVxlan).
+function EvpnVxlanForm({ info, run, busy, status }: FormProps) {
+  const d = info.defaults
+  const keys = ['outer_src_ip', 'outer_dst_ip', 'vni', 'vni_count', 'inner_src_mac', 'inner_dst_mac', 'inner_mac_count', 'inner_src_ip', 'inner_dst_ip', 'frame', 'payload'] as const
+  const [s, setS] = useState<Record<(typeof keys)[number], string>>(Object.fromEntries(keys.map((k) => [k, text(d, k)])) as Record<(typeof keys)[number], string>)
+  const [entropy, setEntropy] = useState(at(d, 'entropy') === false ? 'fixed' : 'random')
+  const set = (k: (typeof keys)[number]) => (v: string) => setS((p) => ({ ...p, [k]: v }))
+  return (
+    <Preset id={info.id} name={info.name} busy={busy} status={status}
+      blurb="VXLAN-encapsulated UDP between two VTEPs (RFC 7348), its VNI and inner source MAC stepped over a count. The data plane only: TRex sends no BGP EVPN routes, so a switch that admits VXLAN only from VTEPs it learned over BGP may drop it. Add the outer source address as a static VTEP or flood-list entry there."
+      onSubmit={() => run(info.id, () => ({
+        outer_src_ip: s.outer_src_ip.trim(), outer_dst_ip: s.outer_dst_ip.trim(),
+        vni: whole(s.vni, 'VNI'), vni_count: whole(s.vni_count, 'VNI count'),
+        inner_src_mac: s.inner_src_mac.trim(), inner_dst_mac: s.inner_dst_mac.trim(), inner_mac_count: whole(s.inner_mac_count, 'Inner source MAC count'),
+        inner_src_ip: s.inner_src_ip.trim(), inner_dst_ip: s.inner_dst_ip.trim(),
+        entropy: entropy === 'random', frame: whole(s.frame, 'Frame size'), payload: s.payload,
+      }))}>
+      <Row label="Outer source IP (this VTEP)" value={s.outer_src_ip} onChange={set('outer_src_ip')} />
+      <Row label="Outer destination IP (remote VTEP)" value={s.outer_dst_ip} onChange={set('outer_dst_ip')} />
+      <Row label="Outer source port" value={entropy} options={[['random', 'Random, 49152-65535'], ['fixed', 'Fixed, 49152']]} onChange={setEntropy} />
+      <Row label="VNI" value={s.vni} onChange={set('vni')} />
+      <Row label="VNI count" value={s.vni_count} onChange={set('vni_count')} />
+      <Row label="Inner source MAC" value={s.inner_src_mac} onChange={set('inner_src_mac')} narrow={false} />
+      <Row label="Inner source MAC count" value={s.inner_mac_count} onChange={set('inner_mac_count')} />
+      <Row label="Inner destination MAC" value={s.inner_dst_mac} onChange={set('inner_dst_mac')} narrow={false} />
+      <Row label="Inner source IP" value={s.inner_src_ip} onChange={set('inner_src_ip')} />
+      <Row label="Inner destination IP" value={s.inner_dst_ip} onChange={set('inner_dst_ip')} />
+      <Row label="Frame size (with FCS)" value={s.frame} onChange={set('frame')} />
+      <Row label="Payload" value={s.payload} onChange={set('payload')} narrow={false} />
+    </Preset>
+  )
+}
+
+const FORMS: Record<string, (p: FormProps) => ReactNode> = { flood: FloodForm, ip_sweep: IpSweepForm, frame_size_sweep: FrameSweepForm, vlan: VlanForm, evpn_vxlan: EvpnVxlanForm }
 
 // The presets page. A preset's document goes to `onOpen` together with the stream's MAC-mode bits (null: leave them).
 // A tab whose preset was refused while another tab was showing: the form's error mark, and words for a screen reader.

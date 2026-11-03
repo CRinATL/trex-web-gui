@@ -14,6 +14,7 @@ const presets: PresetInfo[] = [
   { id: 'ip_sweep', name: 'IP sweep', defaults: { which: 'both', src: { start: '16.0.0.1', step: 1, op: 'inc', count: 254 }, dst: { start: '48.0.0.1', step: 1, op: 'inc', count: 254 }, checksum: 'ipv4' } },
   { id: 'frame_size_sweep', name: 'Frame-size sweep', defaults: { min: 64, max: 1518, step: 1, op: 'inc' } },
   { id: 'vlan', name: 'VLAN', defaults: { tags: [{ vlan: 100, prio: 0 }] } },
+  { id: 'evpn_vxlan', name: 'EVPN-VXLAN', defaults: { payload: 'x', outer_src_ip: '10.0.0.1', outer_dst_ip: '10.0.0.2', vni: 10000, vni_count: 16, inner_src_mac: '00:00:00:00:00:01', inner_dst_mac: '00:00:00:00:00:02', inner_mac_count: 16, inner_src_ip: '16.0.0.1', inner_dst_ip: '48.0.0.1', entropy: true, frame: 128 } },
 ]
 const doc: PacketDoc = { fileType: 'trex-packet-editor', version: '1.0.0', metadata: { caption: '' }, fePrarameters: {}, feInstructions: [], packet: [{ id: 'Ether', fields: [] }] }
 const result = (flags: number | null): PresetResult => ({ doc, flags })
@@ -35,7 +36,7 @@ describe('Presets', () => {
   it('one tab per preset; only the selected preset form shows, and a form keeps its edits across tabs', async () => {
     render(<Presets onOpen={vi.fn()} />)
     const tabs = await screen.findAllByRole('tab')
-    expect(tabs.map((t) => t.textContent)).toEqual(['Flood', 'IP sweep', 'Frame-size sweep', 'VLAN'])
+    expect(tabs.map((t) => t.textContent)).toEqual(['Flood', 'IP sweep', 'Frame-size sweep', 'VLAN', 'EVPN-VXLAN'])
     expect(screen.getByRole('tab', { name: 'Flood' })).toHaveAttribute('aria-selected', 'true')
     expect(screen.getAllByRole('region').map((r) => r.getAttribute('data-preset'))).toEqual(['flood'])
 
@@ -127,6 +128,28 @@ describe('Presets', () => {
     await userEvent.click(vlan.getByRole('button', { name: 'Open in editor' }))
     await waitFor(() => expect(api.buildPreset).toHaveBeenCalledTimes(3))
     expect(sent()).toEqual(['vlan', { tags: [{ vlan: 100, prio: 0 }] }])
+  })
+
+  it('evpn-vxlan sends its params and says it sends no routes', async () => {
+    render(<Presets onOpen={vi.fn()} />)
+    const f = await form('EVPN-VXLAN')
+    expect(f.getByText(/no BGP EVPN routes/)).toBeInTheDocument()
+    await userEvent.click(f.getByRole('button', { name: 'Open in editor' }))
+    await waitFor(() => expect(api.buildPreset).toHaveBeenCalledTimes(1))
+    expect(sent()).toEqual(['evpn_vxlan', { outer_src_ip: '10.0.0.1', outer_dst_ip: '10.0.0.2', vni: 10000, vni_count: 16, inner_src_mac: '00:00:00:00:00:01', inner_dst_mac: '00:00:00:00:00:02', inner_mac_count: 16, inner_src_ip: '16.0.0.1', inner_dst_ip: '48.0.0.1', entropy: true, frame: 128, payload: 'x' }])
+
+    await userEvent.clear(f.getByLabelText('VNI'))
+    await userEvent.type(f.getByLabelText('VNI'), '5001')
+    await userEvent.selectOptions(f.getByLabelText('Outer source port'), 'fixed')
+    await userEvent.click(f.getByRole('button', { name: 'Open in editor' }))
+    await waitFor(() => expect(api.buildPreset).toHaveBeenCalledTimes(2))
+    expect(sent()[1]).toMatchObject({ vni: 5001, entropy: false })
+
+    await userEvent.clear(f.getByLabelText('VNI count'))
+    await userEvent.type(f.getByLabelText('VNI count'), '1.5')
+    await userEvent.click(f.getByRole('button', { name: 'Open in editor' }))
+    expect(await f.findByRole('alert')).toHaveTextContent('VNI count must be a whole number')
+    expect(api.buildPreset).toHaveBeenCalledTimes(2)
   })
 
   it('open passes doc and flags', async () => {
