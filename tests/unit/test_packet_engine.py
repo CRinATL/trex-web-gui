@@ -1024,7 +1024,11 @@ def test_field_edit_on_a_jumbo_record_in_time() -> None:
         zed = bytearray(zeros)
         zed[22] = 99
         zres = await e.reconstruct_edit(zdoc, b64(bytes(zed)), {"layer": 1, "field": "ttl"})
-        assert packet_worker.FALLBACK_WARNING in zres["warnings"]
+        # Its ihl is 0, so vendor patch 14 gives the IP layer no options: the field edit applies as one.
+        # Before the patch the options list read the whole frame, the model did not rebuild to these bytes,
+        # and the edit fell back to re-deriving the packet from them (FALLBACK_WARNING).
+        assert packet_worker.FALLBACK_WARNING not in zres["warnings"]
+        assert await rebuilt(e, zres["doc"]) == bytes(zed)
         assert e.starts == 1
     with_engine(body)
 
@@ -1292,4 +1296,15 @@ def test_editor_builds_gtp_u_and_lacp() -> None:
             assert r["error"] is None, r["error"]
             ids = [layer["id"] for layer in model]
             assert [layer["id"] for layer in (await e.tree(r["binary"]))["data"]][:len(ids)] == ids
+
+
+def test_capture_tree_of_a_zero_filled_ipv4_frame_has_no_options() -> None:
+    """ihl 0 means no IP options (vendor patch 14): the fork used to read the whole frame as options, about
+    2 s and 270 MiB for this frame (SEC-03)."""
+    from trex_web_gui.trexapi import packet_worker
+    frame = bytes(12) + b"\x08\x00" + bytes(packet_worker.EDITOR_DECODE_BYTES - 14)
+
+    async def body(e: PacketEngine) -> None:
+        ip = next(layer for layer in (await e.tree(b64(frame)))["data"] if layer["id"] == "IP")
+        assert next(f for f in ip["fields"] if f["id"] == "options")["hvalue"] == "[]"
     with_engine(body)

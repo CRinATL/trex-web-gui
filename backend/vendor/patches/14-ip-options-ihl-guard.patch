@@ -1,0 +1,21 @@
+Fixes the IP layer's options field in the bundled Scapy 2.4.3 fork (external_libs/scapy-2.4.3/scapy/layers/inet.py:475
+at the pin), whose `length_from=lambda p:p.ihl * 4 - 20` is negative for an ihl below 5. A negative length makes
+PacketListField read the rest of the frame, all but its last 20 bytes, as IP options: a zero-filled IPv4 frame
+(ihl 0) of 9 238 bytes becomes 9 184 options. Through trex-web-gui's capture layer tree that took 2.5 s and
+272 MiB (the SEC-03 shape, measured 2026-11-02), and 0.002 s and 47 MiB with the patch. The patch reads
+`max(0, p.ihl * 4 - 20)`: a header with ihl 5 to 15 dissects as before, one with ihl below 5 has no options.
+Upstream: current Scapy caps list fields with conf.max_list_count (2.5.0 on); not reported against the TRex fork.
+Not touched by any other patch.
+
+diff -ruN a/external_libs/scapy-2.4.3/scapy/layers/inet.py b/external_libs/scapy-2.4.3/scapy/layers/inet.py
+--- a/external_libs/scapy-2.4.3/scapy/layers/inet.py
++++ b/external_libs/scapy-2.4.3/scapy/layers/inet.py
+@@ -472,7 +472,7 @@
+                    # Emph(DestIPField("dst", "127.0.0.1")),
+                    Emph(IPField("src", "16.0.0.1")),
+                    Emph(IPField("dst", "48.0.0.1")),
+-                   PacketListField("options", [], IPOption, length_from=lambda p:p.ihl * 4 - 20)]  # noqa: E501
++                   PacketListField("options", [], IPOption, length_from=lambda p:max(0, p.ihl * 4 - 20))]  # noqa: E501
+ 
+     def post_build(self, p, pay):
+         ihl = self.ihl
