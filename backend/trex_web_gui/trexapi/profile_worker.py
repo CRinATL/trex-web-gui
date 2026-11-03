@@ -245,13 +245,40 @@ def _jsonable(v: object) -> bool:
         return False
 
 
+def _scaled(v: float, unit: str) -> str:
+    """v with a k/M/G/T prefix, as Studio's stream table writes it (frontend/src/statsFormat.ts `scaled`):
+    two decimals once scaled, a whole number from 10 to 999, and the unit taken from the rounded value, so
+    999.995 reads "1.00 k…" and 250 000 000 reads "250.00 M…"."""
+    prefixes = ["", "k", "M", "G", "T"]
+    i, x = 0, float(v)
+
+    def shown() -> str:
+        """x as it will be written at the current prefix."""
+        return f"{x:.0f}" if i == 0 and x >= 10 else f"{x:.2f}"
+
+    while i < len(prefixes) - 1 and (x >= 1000 or float(shown()) >= 1000):
+        x /= 1000
+        i += 1
+    if i:
+        return f"{shown()} {prefixes[i]}{unit}"
+    plain = float(shown())                       # as JS Number(): "1.50" reads 1.5, "5.00" reads 5
+    return f"{int(plain) if plain.is_integer() else plain} {unit}"
+
+
 def _rate(mode: dict[str, Any]) -> str:
-    """A stream mode's rate as text, e.g. "100 pps" or "10 %"."""
+    """A stream mode's rate as text, as Studio's stream table writes it: "4.00 kpps", "250.00 Mbps L2",
+    "10 %"."""
     r = mode.get("rate") or {}
-    units = {"pps": "pps", "bps_L1": "bps L1", "bps_L2": "bps L2", "percentage": "%"}
-    unit = units.get(str(r.get("type")), r.get("type"))
-    v = r.get("value")
-    return f"{v:g} {unit}" if isinstance(v, (int, float)) else str(unit)
+    kind, v = str(r.get("type")), r.get("value")
+    if not isinstance(v, (int, float)) or isinstance(v, bool):
+        return str(r.get("type"))
+    if kind == "percentage":
+        return f"{v:g} %"
+    if kind in ("bps_L1", "bps_L2"):
+        return f"{_scaled(v, 'bps')} {kind[-2:]}"
+    if kind == "pps":
+        return _scaled(v, "pps")
+    return f"{v:g} {kind}"
 
 
 def _summary(i: int, s: dict[str, Any], Ether: Any) -> dict[str, Any]:
