@@ -87,7 +87,7 @@ button.unsaved-count:focus-visible { outline: 2px solid var(--edited); outline-o
 .unsaved-list th, .unsaved-list td { text-align: left; vertical-align: top; padding: .1rem .5rem; border-bottom: 1px solid var(--border);
   overflow-wrap: anywhere; }
 .unsaved-list td { white-space: pre-wrap; }   /* a change of spaces alone shows as one */
-.unsaved-list thead th { color: var(--muted); font-weight: normal; }
+.unsaved-list thead th { color: var(--muted); font-weight: normal; white-space: nowrap; overflow-wrap: normal; }   /* not squeezed */
 .unsaved-list tbody th { font-weight: 600; }
 .stretch-field { display: flex; align-items: center; } .stretch-field > input { flex: 1; min-width: 0; }   /* a control that filled its grid cell still does with a tag after it */
 .toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: .4rem .8rem; margin-bottom: .5rem; padding: .25rem 0; }
@@ -207,6 +207,7 @@ button[data-run]:enabled { border-color: var(--run); background: var(--run); col
   box-shadow: 0 0 0 1px var(--bg), 0 0 0 2px var(--run); }
 button[data-run]:enabled:hover { background: color-mix(in srgb, var(--run) 85%, var(--fg)); }
 button[data-run]:enabled:focus-visible { outline: 2px solid var(--run); outline-offset: 4px; }   /* outside the 2px box, with a gap */
+p button[data-run] { margin-inline: 3px; }   /* in running text the ring (a shadow, no space) would touch the words */
 button[data-run][data-on] { border-color: var(--run); box-shadow: inset 0 0 0 1px var(--run);
   background: color-mix(in srgb, var(--run) var(--run-tint), var(--bg)); color: var(--run); font-weight: 600; opacity: 1; }
 .run-label { display: inline-grid; }

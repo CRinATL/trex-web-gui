@@ -2,8 +2,8 @@
 
 The `real` test tier and the fixture recorders run against TRex v3.08 in an Ubuntu KVM guest, jammy (22.04)
 unless `TREX_VM_GUEST` names noble (24.04) or resolute (26.04) (the table below), with
-two veth ports (`vm/guest/trex_cfg.yaml`; no `stack` key, and the server reports `legacy`). This design was measured in P0 spike 2
-(2026-10-16; results in the maintainer's private planning records).
+two veth ports (`vm/guest/trex_cfg.yaml`; no `stack` key, and the server reports `legacy`). This design was measured in
+P0 spike 2 (2026-10-16; results in the maintainer's private planning records).
 
 ## Host prerequisites
 

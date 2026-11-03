@@ -929,7 +929,8 @@ async def set_input_file(b, path):
 
 
 async def step_settings(c):
-    """53-58: the Settings sections and the changed-on-the-server line; 61-63: the Import settings dialog."""
+    """53-58: the Settings sections and the changed-on-the-server line; 116: the unsaved-changes list;
+    61-63: the Import settings dialog."""
     b, api = c.b, c.api
     await b.click("Settings", "a")
     tabs = (("Appearance", "53-settings-appearance"), ("Files on the backend host", "54-settings-files"),
@@ -939,8 +940,17 @@ async def step_settings(c):
         await b.click(tab, "[role=tab]")
         await asyncio.sleep(0.5)
         await b.shot(name)
-    # an unsaved edit here, then a different Wireshark path saved "by another tab"
+    # the unsaved-changes count opened as its list (116), on a neutral field, then put back
     await b.click("Files on the backend host", "[role=tab]")
+    await b.fill("Largest capture the packet editor opens (MiB)", "128")
+    await b.click("1 unsaved change", "button")
+    shown = "[...document.querySelectorAll('table[aria-label=\"Unsaved changes\"]')].some((e) => S.vis(e))"
+    await b.wait(shown, 10, "the unsaved-changes list")
+    await b.shot("116-settings-unsaved-list")
+    await b.key("Escape")
+    await b.click("Revert", "button")
+    await b.wait_gone("1 unsaved change", "button")
+    # an unsaved edit here, then a different Wireshark path saved "by another tab"
     await b.fill("Workspace directory", "/srv/trex-workspace")
     cur = api.get("/api/settings")["settings"]
     cur["preferences"]["wireshark_path"] = "/opt/wireshark/bin/wireshark"
@@ -1075,7 +1085,8 @@ async def step_packet(c):
     await b.click("Presets…", "button")
     await b.wait_for("Presets", "[role=dialog]")
     await b.shot("108-packet-presets")
-    await b.click("Open in editor", "button", "[role=dialog]", nth=1)       # the IP sweep
+    await b.click("IP sweep", "[role=tab]", "[role=dialog]")      # one preset form per tab since 1.1.0
+    await b.click("Open in editor", "button", "[role=dialog]")
     await b.wait_gone("Presets", "[role=dialog]")
     await b.click("Field engine", "[role=tab]")
     await b.wait_for("~STLVmFlowVar", "h3")

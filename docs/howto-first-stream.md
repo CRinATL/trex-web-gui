@@ -28,8 +28,8 @@ machine.
    `localhost` login URL in your browser. The GUI is single-user and listens on the server's loopback only, which is
    why the tunnel is needed.
 
-2. **Connect.** In the status bar at the bottom press **Connect…**. In the **Connect to TRex** dialog the host is `127.0.0.1`
-   (the server is the machine the backend runs on); press **Connect**.
+2. **Connect.** In the status bar at the bottom press **Connect…**. In the **Connect to TRex** dialog the host is
+   `127.0.0.1` (the server is the machine the backend runs on); press **Connect**.
 
    ![The Connect dialog](howto/screens/01-connect-dialog.png)
 
@@ -121,8 +121,8 @@ machine.
    ![dport changed to 5000](howto/screens/12-studio-dport-changed.png)
 
 10. **Set the rate.** Open the stream's **Properties** tab, type `1000` into **Rate** (a bare number is pps; the
-    reading beside it says `= 1,000 pps`) and press **Save**. The stream table's **Rate** column then reads `1.00 kpps` (the shot is taken before Save: the
-    field is marked edited and the table still reads `1 pps`).
+    reading beside it says `= 1,000 pps`) and press **Save**. The stream table's **Rate** column then reads `1.00 kpps`
+    (the shot is taken before Save: the field is marked edited and the table still reads `1 pps`).
 
     ![Properties: Rate 1000](howto/screens/13-studio-properties-rate.png)
 

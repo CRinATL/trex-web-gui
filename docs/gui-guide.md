@@ -104,6 +104,11 @@ Reconnect shows its message in red in the bar until the next attempt or the next
   and an `edited` tag after it, and `N unsaved changes` (`1 unsaved change`) shows beside Save, until Save lands
   or the field holds its stored value again (Cancel and Revert put it back). A field retyped to its stored value
   is not marked.
+  - The count is a button. It opens a list that floats under it, a table of each edited field with its saved
+    value and the value Save would store ([116](gui-inventory/screens/116-settings-unsaved-list.png)). It closes
+    as an ⓘ note does.
+  - An empty value shows as `(empty)`. A value longer than 80 characters is cut with `…`, and its whole text shows
+    when the pointer rests on it.
 - Every tab strip, the devices tree, the setups and library lists and the context menus take the arrow keys,
   Home and End. The full list is in [16](#16-keyboard-shortcuts).
 
@@ -233,8 +238,9 @@ Pause and Stop also cancel a pending live rate update ([4.3](#43-traffic-tab)). 
 buttons are disabled while one is in flight.
 
 Start, Stop and Pause buttons, here and on every page, are coloured by what they do: green starts or resumes,
-red stops, amber pauses. A button filled with its colour can be used. Grey means it cannot. Connect (the
-status bar's and the dialog's) and Turn service mode on/off are green the same way.
+red stops, amber pauses. A button filled with its colour can be used, and has a thin ring of the same colour
+around it, a small gap away. Grey means it cannot. Connect (the status bar's, the Control page's and the
+dialog's) and Turn service mode on/off are green the same way.
 
 While the thing a Start began is running, that Start is lit and names the state instead of the action:
 

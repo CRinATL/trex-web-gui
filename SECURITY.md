@@ -6,7 +6,8 @@ Report it privately through GitHub: the repository's **Security** tab, **Report 
 public issue. trex-web-gui has one maintainer, who answers on a best-effort basis. Only the latest release is supported,
 and there is no bug bounty.
 
-A problem in TRex itself, its daemon or Scapy belongs upstream ([Upstream, not trex-web-gui](#upstream-not-trex-web-gui)).
+A problem in TRex itself, its daemon or Scapy belongs upstream
+([Upstream, not trex-web-gui](#upstream-not-trex-web-gui)).
 
 ## What trex-web-gui is built for
 
@@ -39,8 +40,9 @@ encryption and the authentication of the remote end.
 - **Anyone who can read the login URL can drive the GUI.** The token is in the start-up banner, and in the journal
   when trex-web-gui runs as a service. Any process running as the same user can read it, from the terminal, the journal
   or, when `TREX_WEB_GUI_TOKEN` supplied the token, the backend's start-up environment (`/proc/<pid>/environ`).
-  Logging out (`POST /api/auth/logout`) deletes only that browser's cookie (`backend/trex_web_gui/api/app.py:395`):
-  the token stays valid until the backend exits, so restart it to revoke a login URL someone else has seen.
+  Logging out (`POST /api/auth/logout`) deletes that browser's cookie and, when the request carried a valid cookie,
+  closes every open WebSocket of the backend, every tab's (`backend/trex_web_gui/api/app.py:392-400`). The token
+  stays valid until the backend exits, so restart it to revoke a login URL someone else has seen.
 - **The Wireshark path is a program the backend runs**, as the user who runs trex-web-gui
   (`backend/trex_web_gui/sessions/wireshark.py:133`). Whoever can change the settings chooses it: anyone with the
   token, or a settings bundle applied with Preferences set to replace, whose preview names the change
@@ -50,7 +52,8 @@ encryption and the authentication of the remote end.
 
 - **No size cap on most JSON request bodies.** The routes that read their body by hand (the Studio library, the
   packet editor, test setups and the settings bundle) refuse one over their limit with 413
-  (`backend/trex_web_gui/api/bodies.py:22`); file uploads are capped at 64 MiB (`backend/trex_web_gui/api/studio.py:46`).
+  (`backend/trex_web_gui/api/bodies.py:22`); file uploads are capped at 64 MiB
+  (`backend/trex_web_gui/api/studio.py:46`).
   The routes whose body is a validated model have no cap of their own. Only an authenticated user can send one.
 - **The cookie is shared across ports.** A browser sends a cookie to every server on the same host name, whatever
   the port, so another local web server reached under the host name the GUI was opened with can read the token
