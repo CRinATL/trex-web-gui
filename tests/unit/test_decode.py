@@ -129,3 +129,13 @@ def test_summary_dissects_at_most_summary_bytes(monkeypatch: pytest.MonkeyPatch)
     long_udp = bytes(Ether() / IP() / UDP(sport=1234, dport=4321) / (bytes(range(256)) * 36))
     assert len(long_udp) > decode.SUMMARY_BYTES
     assert decode.summary(long_udp).proto == "UDP" and "1234" in decode.summary(long_udp).info
+
+
+def test_summary_names_geneve_gtp_lacp() -> None:
+    """A capture row names its innermost layer, so a tunnel's row says what it carries and `info` names the
+    tunnel; an LACPDU's row says LACP (the loader loads the three contribs)."""
+    from test_packet_engine import CONTRIB_FRAMES
+    geneve, gtp_u, lacp = (decode.summary(CONTRIB_FRAMES[k]) for k in ("GENEVE", "GTP_U", "LACP"))
+    assert geneve.proto == "IP" and "GENEVE" in geneve.info
+    assert gtp_u.proto == "IP" and "GTP_U_Header" in gtp_u.info
+    assert lacp.proto == "LACP"

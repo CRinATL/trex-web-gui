@@ -1059,7 +1059,9 @@ packet you have since changed.
   - `<id> (not decoded)` when the bytes hold no such layer;
   - a `!` for an invalid structure;
 - **Add layer…** (a text box that lists the protocols the last layer can carry first, then every protocol;
-  `unknown protocol "x"`);
+  `unknown protocol "x"`). GENEVE, GTP and LACP are among them. A GENEVE layer under UDP shows as `GENEVE as Raw`
+  while UDP's source port is 53, its default, because Scapy then tries the bytes as DNS first. Set the source
+  port to any other value;
 - the hex view.
 
 The packet is rebuilt on the backend after every edit. The hex view and byte ranges show the last good build, and a
