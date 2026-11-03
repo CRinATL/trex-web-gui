@@ -49,7 +49,9 @@ def test_each_preset_builds() -> None:
              ("ip_sweep", {"which": "src", "checksum": "hw",
                            "src": {"start": "10.0.0.1", "end": "10.0.0.9", "op": "random"}}),
              ("frame_size_sweep", {}), ("frame_size_sweep", {"min": 100, "max": 200, "step": 4, "op": "dec"}),
-             ("vlan", {}), ("vlan", {"tags": [{"vlan": 5, "prio": 3}, {"vlan": 4094, "prio": 7}]})]
+             ("vlan", {}), ("vlan", {"tags": [{"vlan": 5, "prio": 3}, {"vlan": 4094, "prio": 7}]}),
+             ("evpn_vxlan", {}), ("evpn_vxlan", {"vni_count": 1, "inner_mac_count": 1, "entropy": False}),
+             ("evpn_vxlan", {"vni": 16777214, "vni_count": 2, "frame": 96})]
 
     async def body(e: PacketEngine) -> None:
         assert {p for p, _ in cases} == set(PRESETS)
@@ -240,12 +242,61 @@ def test_vlan_two_tags() -> None:
     ("vlan", {"tags": []}, "tags"), ("vlan", {"tags": [{"vlan": 1}] * 3}, "tags"),
     ("vlan", {"tags": [{"vlan": 0}]}, "tags.0.vlan"), ("vlan", {"tags": [{"vlan": 4095}]}, "tags.0.vlan"),
     ("vlan", {"tags": [{"vlan": 1, "prio": 8}]}, "tags.0.prio"),
-    ("vlan", {"tags": [{"prio": 1}]}, "tags.0.vlan")])
+    ("vlan", {"tags": [{"prio": 1}]}, "tags.0.vlan"),
+    ("evpn_vxlan", {"vni": 0}, "vni"), ("evpn_vxlan", {"vni": 16777216}, "vni"),
+    ("evpn_vxlan", {"vni": 16777215, "vni_count": 2}, "params"),
+    ("evpn_vxlan", {"vni_count": 0}, "vni_count"),
+    ("evpn_vxlan", {"inner_src_mac": "00:00:00:00:00:0g"}, "inner_src_mac"),
+    ("evpn_vxlan", {"inner_src_mac": "00:00:ff:ff:ff:ff", "inner_mac_count": 2}, "params"),
+    ("evpn_vxlan", {"outer_dst_ip": "10.0.0"}, "outer_dst_ip"), ("evpn_vxlan", {"frame": 95}, "frame"),
+    ("evpn_vxlan", {"entropy": "yes"}, "entropy")])
 def test_params_refused(pid: str, params: Any, where: str) -> None:
     with pytest.raises(PresetError) as e:
         preset(pid, params)
     assert e.value.where == where or (where != "params" and e.value.where.startswith(where + ".")), e.value
     assert str(e.value).startswith(e.value.where + ": ")
+
+
+def test_evpn_vxlan_document() -> None:
+    doc = preset("evpn_vxlan", {})["doc"]
+    assert [lay["id"] for lay in doc["packet"]] == ["Ether", "IP", "UDP", "VXLAN",
+                                                    "Ether", "IP", "UDP", "Raw"]
+    outer_udp, vxlan = doc["packet"][2], doc["packet"][3]
+    assert {f["id"]: f["value"] for f in outer_udp["fields"]} == {"sport": 49152, "dport": 4789, "chksum": 0}
+    # RFC 7348: flags 0x08 (I) only. The fork's VXLAN/Ether build binding would set 0x0c and a next protocol.
+    assert {f["id"]: f["value"] for f in vxlan["fields"]} == {"flags": 8, "vni": 10000}
+    assert doc["packet"][0]["fields"] == []                    # outer MACs from the TRex configuration
+    assert preset("evpn_vxlan", {})["flags"] is None
+    assert ids(doc) == ["STLVmFlowVar", "STLVmWrMaskFlowVar", "STLVmFlowVar", "STLVmWrFlowVar",
+                        "STLVmFlowVar", "STLVmWrFlowVar"]
+    assert param(doc, "vni") == {"name": "vni", "min_value": "10000", "max_value": "10015", "size": "4",
+                                 "op": "inc", "step": "1"}
+    assert param(doc, "entropy") == {"name": "entropy", "min_value": "49152", "max_value": "65535",
+                                     "size": "2", "op": "random", "step": "1"}
+
+
+def test_evpn_vxlan_without_variation_has_no_field_engine() -> None:
+    doc = preset("evpn_vxlan", {"vni_count": 1, "inner_mac_count": 1, "entropy": False})["doc"]
+    assert doc["feInstructions"] == []
+
+
+def test_evpn_vxlan_offsets_and_header_bytes() -> None:
+    """The Field Engine writes land where the evaluation measured them (VNI 46, inner source MAC's low
+    32 bits 58, outer source port 34), and the built header is RFC 7348's."""
+    async def body(e: PacketEngine) -> None:
+        packet, fe = model_of(parse_doc(preset("evpn_vxlan", {"vni": 5000, "frame": 128})["doc"]))
+        b = base64.b64decode((await e.build(packet, fe))["binary"])
+        assert len(b) == 128 - 4
+        assert b[40:42] == b"\x00\x00"                         # outer UDP checksum 0
+        assert b[42:50] == bytes.fromhex("0800000000138800")     # flags 0x08, VNI 5000
+        stream = await e.to_stream(packet, fe)
+        writes = {i["name"]: i for i in stream["vm"]["instructions"] if i["type"].startswith("write")}
+        vni = writes["vni"]
+        assert (vni["pkt_offset"], vni["mask"], vni["shift"]) == (46, 0xFFFFFF00, 8)
+        assert writes["inner_mac"]["pkt_offset"] == 58 and writes["entropy"]["pkt_offset"] == 34
+        packet, fe = model_of(parse_doc(preset("evpn_vxlan", {"frame": 96})["doc"]))
+        assert len(base64.b64decode((await e.build(packet, fe))["binary"])) == 92   # the headers alone
+    with_engine(body)
 
 
 def test_unknown_preset_and_defaults() -> None:
@@ -256,7 +307,8 @@ def test_unknown_preset_and_defaults() -> None:
 
 
 def test_no_split_by_var() -> None:
-    cases = [("flood", {**VARYING, **STEPPED_MACS}), ("ip_sweep", {}), ("frame_size_sweep", {}), ("vlan", {})]
+    cases = [("flood", {**VARYING, **STEPPED_MACS}), ("ip_sweep", {}), ("frame_size_sweep", {}), ("vlan", {}),
+             ("evpn_vxlan", {})]
     for pid, params in cases:
         assert "split_by_var" not in json.dumps(preset(pid, params))
 

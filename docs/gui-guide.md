@@ -1133,7 +1133,7 @@ name like `lab/syn-flood`, **Save**. An existing name asks `Replace <name>?`. **
 
 ### 10.6 Presets
 
-[108](gui-inventory/screens/108-packet-presets.png). Four forms, one per tab (the dialog keeps its top edge when the
+[108](gui-inventory/screens/108-packet-presets.png). Five forms, one per tab (the dialog keeps its top edge when the
 tab changes, and **Close** stays in view), each ending in **Open in editor**:
 
 - **Flood** (one UDP or TCP packet; protocol, source and destination MAC from the TRex configuration, from the
@@ -1141,7 +1141,18 @@ tab changes, and **Close** stays in view), each ending in **Open in editor**:
 - **IP sweep** (source, destination or both IPv4 addresses stepped through a range by count or last address;
   checksum in software or hardware);
 - **Frame-size sweep** (UDP packets between two sizes, stepped or random);
-- **VLAN** (a UDP packet behind one or two 802.1Q tags with VLAN and priority).
+- **VLAN** (a UDP packet behind one or two 802.1Q tags with VLAN and priority);
+- **EVPN-VXLAN** (UDP in a VXLAN tunnel between two VTEPs, RFC 7348):
+  - the outer source and destination IPs (this VTEP and the remote one), with the outer MACs from the TRex
+    configuration;
+  - the outer source port, random over 49152-65535 for entropy or fixed at 49152, to UDP port 4789 with a zero
+    checksum;
+  - a VNI and a VNI count, and an inner source MAC and a count, each stepped up by one;
+  - the inner destination MAC, the inner IPs, the frame size (at least 96 bytes with the FCS) and the payload.
+
+  It is the data plane only. TRex stateless mode holds no BGP session, so no EVPN routes are sent, and a switch
+  that admits VXLAN only from VTEPs it learned over BGP may drop the traffic. Add the outer source address as a static
+  VTEP or flood-list entry on the switch first. The 108 screenshot predates this tab.
 
 A bad number says so beside the button (`Source port must be a whole number`). A refusal that arrives after you moved
 to another tab marks the preset's tab with `!` while another tab is showing, until its next **Open in editor**. A
