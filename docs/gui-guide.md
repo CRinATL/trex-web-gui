@@ -765,6 +765,8 @@ starts none above 9, and keeps one for ping, ARP and scan. The Rx ports of a cap
   - Enter or a double-click opens the packet viewer.
   - Empty, it reads `No packets. Start the monitor to capture.`, or
     `No packets yet: waiting for the first one that matches.` while the monitor runs.
+  - **Src**, **Dst**, **Type** and **Info** come from a record's first 2048 bytes only; **Len** is the whole
+    record's.
 
 ### 8.2 Packet viewer
 
@@ -772,6 +774,14 @@ starts none above 9, and keeps one for ping, ARP and scan. The Rx ports of a cap
 click a field to mark its bytes) and the hex and ASCII dump at the right (click a byte to select the field
 that holds it); **Expand all** / **Collapse all**; **Copy hex**; **Close**. `Packet tree unavailable: <error>`
 leaves the bytes shown ([46](gui-inventory/screens/46-packet-viewer.png)).
+
+The tree is dissected in the packet worker, not in the backend:
+- A record over 9238 bytes is dissected that far into layers, and the rest is one Raw layer. Nothing on the page
+  says it was cut.
+- A dissection that fails, or runs past the worker's 5 s timeout or its memory limit, shows
+  `Packet tree unavailable: The packet could not be dissected: <why>`.
+- A worker still busy with an earlier call after 15 s, or one that is shutting down, shows its message the same
+  way.
 
 ### 8.3 Recorders
 
@@ -986,7 +996,7 @@ there is a change and while a field is invalid. Each field it would send is mark
 
 [91](gui-inventory/screens/91-studio-packet.png).
 
-- The packet summary, `N bytes (N+4 with FCS)`, `Field engine: N instructions`;
+- the packet summary, `N bytes (N+4 with FCS)`, `Field engine: N instructions`;
 - **View packet…** (the packet viewer, [8.2](#82-packet-viewer));
 - **Edit packet**;
 - **Export ▾** (**pcap**, written by the browser from the stored bytes; **YAML**, from the backend).
@@ -1035,9 +1045,9 @@ The heading `Packet editor — <name or Untitled>` with a `•` while there are 
 
 - **New**;
 - **Open .trp…**:
-  - A file from this computer;
-  - The note: `A .trp may contain expressions; they are evaluated on the backend host when the packet is built.`;
-  - At most 4 MiB.
+  - a file from this computer;
+  - the note: `A .trp may contain expressions; they are evaluated on the backend host when the packet is built.`;
+  - at most 4 MiB;
 - **Save** (the note `Downloads a .trp file.`; downloads `<name>.trp`);
 - **Save as template…**;
 - **Open pcap…**;
@@ -1164,9 +1174,9 @@ preset's MAC mode is carried into the stream when the packet is added to a profi
 
 - **On the backend host** (a path with **Browse…**) or **From this computer** (a `.pcap`/`.cap` upload);
 - **List packets**;
-- The capture's warnings (cut or truncated records);
+- the capture's warnings (cut or truncated records);
 - `Packets 1–100 of N` with **Previous** / **Next**;
-- A row per packet with its number (a button that opens it), bytes and summary.
+- a row per packet with its number (a button that opens it), bytes and summary.
 
 A capture over the **Largest capture the packet editor opens (MiB)** setting is refused before it is read:
 `<path> is N bytes; the pcap size cap is 64 MiB (Settings, pcap_size_cap_mib)`.
