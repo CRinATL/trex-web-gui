@@ -16,7 +16,7 @@ Run it from the repo top level; PATH is relative to it.
 Categories (fenced blocks are removed first, then each is extracted)
 --------------------------------------------------------------------
   word        a set of case-folded words, from the text without code spans and link targets, and without
-              negations
+              negations and digit-only tokens (those are numbers only)
   code        a multiset of code spans, inner whitespace collapsed
   code-split  a multiset of spans that contain a newline; only `+` is reported (a span that was on one line)
   number      a multiset of numbers, from the same text as `word`
@@ -25,6 +25,15 @@ Categories (fenced blocks are removed first, then each is extracted)
   heading     lines starting `#` to `######` and a space
   table       right-stripped lines that start with `|`, in order
   negation    a multiset of not, no, never, only, without, unless, cannot, except, nor and every n't word
+  symbol      a multiset of the symbols that carry meaning (% × − ± → ← ↔ ≤ ≥ ≠ ≈ ° µ ÷), from the same text
+              as `word`; other punctuation is not checked, since a reflow may turn a semicolon into a full
+              stop
+
+Not seen: ~~~ fences, link titles, reference-style link definitions, indented code blocks and setext headings
+(underlined with = or -). None is used in the files this is run on; their text is checked as plain prose at
+most.
+Order within prose is not checked either: a reflow may reorder it, so a swapped "Tx − Rx" passes.
+Both sides are read as UTF-8 with CRLF taken as LF: a line ending is not a fact.
 
 Signs: `-` is in the old text only, `+` in the new text only, `~ order` the same items in another order
 (fence, heading and table).
@@ -33,7 +42,8 @@ Info only (never a failure): a change in the count of a bold span, and in the co
 occurs on both sides (function words and negations are left out).
 
 Allow file: one `PATH<TAB>CATEGORY<TAB>SIGN<TAB>TOKEN<TAB>REASON` per line; `#` and blank lines are skipped.
-One line covers one occurrence, and a line that matches nothing fails the run. In a printed TOKEN a newline
+One line covers one occurrence, and a line that matches nothing fails the run. Lines for another path are
+ignored for this path, neither used nor reported unused. In a printed TOKEN a newline
 is `\\n` and a tab is `\\t`, so a printed difference can be copied into the allow file.
 
 Exit codes: 0 every path keeps its facts; 1 a difference not allowed, or an allow line not used; 2 a usage
@@ -50,7 +60,9 @@ from typing import NamedTuple
 NEGATIONS = {"not", "no", "never", "only", "without", "unless", "cannot", "except", "nor"}
 FUNCTION_WORDS = {"a", "an", "and", "are", "as", "at", "be", "by", "for", "from", "in", "into", "is", "it",
                   "its", "of", "on", "so", "that", "the", "then", "this", "to", "with"}
-CATEGORIES = ("code", "code-split", "fence", "heading", "link", "negation", "number", "table", "word")
+CATEGORIES = ("code", "code-split", "fence", "heading", "link", "negation", "number", "symbol", "table",
+              "word")
+SYMBOLS = frozenset("%×−±→←↔≤≥≠≈°µ÷")
 SIGNS = ("-", "+", "~")
 
 WORD_RE = re.compile(r"[^\W_]+(?:['’][^\W_]+)*")
@@ -92,6 +104,7 @@ class Facts(NamedTuple):
     code: Counter[str]
     code_split: Counter[str]
     numbers: Counter[str]
+    symbols: Counter[str]
     links: Counter[str]
     bold: Counter[str]
     fences: list[str]
@@ -135,23 +148,24 @@ def _mask_spans(text: str) -> tuple[str, list[str]]:
         if index % 2:
             out.append(chunk)
             continue
+        # (start, end, opening start): a backslash before a run escapes its first backtick only where the run
+        # would open a span; inside a span a backslash is literal, so a closing run keeps its full width.
         runs = []
         for m in BACKTICKS_RE.finditer(chunk):
-            start = m.start()
-            if start and chunk[start - 1] == "\\":
-                start += 1
-            if m.end() > start:
-                runs.append((start, m.end()))
+            escaped = m.start() > 0 and chunk[m.start() - 1] == "\\"
+            runs.append((m.start(), m.end(), m.start() + escaped))
         pos = 0
         j = 0
         while j < len(runs):
-            width = runs[j][1] - runs[j][0]
-            k = next((n for n in range(j + 1, len(runs)) if runs[n][1] - runs[n][0] == width), None)
+            open_start, end = runs[j][2], runs[j][1]
+            width = end - open_start
+            k = None if width == 0 else next(
+                (n for n in range(j + 1, len(runs)) if runs[n][1] - runs[n][0] == width), None)
             if k is None:
                 j += 1
                 continue
-            out.append(chunk[pos:runs[j][0]] + SPAN_MARK)
-            spans.append(chunk[runs[j][1]:runs[k][0]])
+            out.append(chunk[pos:open_start] + SPAN_MARK)
+            spans.append(chunk[end:runs[k][0]])
             pos = runs[k][1]
             j = k + 1
         out.append(chunk[pos:])
@@ -206,10 +220,12 @@ def facts(text: str) -> Facts:
         norm = token.replace("’", "'")
         if norm in NEGATIONS or norm.endswith("n't"):
             negations[norm] += 1
-        else:
+        elif not token.isdigit():            # a digit-only token is a number, counted below
             words[token] += 1
+    symbols = Counter(ch for ch in plain if ch in SYMBOLS)
     lines = prose.split("\n")
-    return Facts(words, negations, code, code_split, Counter(NUMBER_RE.findall(plain)), links, bold, fences,
+    return Facts(words, negations, code, code_split, Counter(NUMBER_RE.findall(plain)), symbols, links, bold,
+                 fences,
                  [ln for ln in lines if HEADING_RE.match(ln)],
                  [ln.rstrip() for ln in lines if ln.lstrip().startswith("|")])
 
@@ -238,6 +254,7 @@ def compare(old: str, new: str) -> list[Diff]:
     out += _multiset("code", a.code, b.code)
     out += [d for d in _multiset("code-split", a.code_split, b.code_split) if d.sign == "+"]
     out += _multiset("number", a.numbers, b.numbers)
+    out += _multiset("symbol", a.symbols, b.symbols)
     out += _multiset("link", a.links, b.links)
     out += _sequence("fence", a.fences, b.fences)
     out += _sequence("heading", a.headings, b.headings)
@@ -251,7 +268,7 @@ def info(old: str, new: str) -> list[str]:
     lines = [f"info: bold - {t}" for t in sorted((a.bold - b.bold).elements())]
     lines += [f"info: bold + {t}" for t in sorted((b.bold - a.bold).elements())]
     for word in sorted(a.words.keys() & b.words.keys()):
-        if word in FUNCTION_WORDS or word.isdigit() or a.words[word] == b.words[word]:
+        if word in FUNCTION_WORDS or a.words[word] == b.words[word]:
             continue
         lines.append(f"info: word {word} {a.words[word]}->{b.words[word]}")
     return lines
@@ -292,7 +309,7 @@ def _git(*args: str, cwd: Path | None = None) -> str:
     if proc.returncode:
         raise UsageError(f"git {' '.join(args)}: {proc.stderr.decode(errors='replace').strip()}")
     try:
-        return proc.stdout.decode()
+        return proc.stdout.decode().replace("\r\n", "\n")
     except UnicodeDecodeError as exc:
         raise UsageError(f"git {' '.join(args)}: not UTF-8 ({exc})") from exc
 
@@ -304,18 +321,21 @@ def _check_path(path: str, args: argparse.Namespace, top: Path, allows: list[All
         new = _git("show", f"{args.to}:{path}", cwd=top)
     else:
         try:
-            new = (top / path).read_text()
+            new = (top / path).read_bytes().decode().replace("\r\n", "\n")   # as _git reads the old side
         except (OSError, UnicodeDecodeError) as exc:
             raise UsageError(f"{path}: {exc}") from exc
     mine = Counter((a.category, a.sign, a.token) for a in allows if a.path == path)
-    reasons = {(a.category, a.sign, a.token): a.reason for a in allows if a.path == path}
+    reasons: dict[tuple[str, str, str], list[str]] = {}       # each line's own reason, in file order
+    for a in allows:
+        if a.path == path:
+            reasons.setdefault((a.category, a.sign, a.token), []).append(a.reason)
     problems = 0
     for diff in compare(old, new):
         key = (diff.category, diff.sign, _printable(diff.token))
         text = f"{diff.category} {diff.sign} {key[2]}"
         if mine[key] > 0:
             mine[key] -= 1
-            print(f"{path}: allowed {text} ({reasons[key]})")
+            print(f"{path}: allowed {text} ({reasons[key].pop(0)})")
         else:
             problems += 1
             print(f"{path}: {text}")

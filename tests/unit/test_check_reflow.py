@@ -136,9 +136,44 @@ def test_parse_allow() -> None:
     """A valid line is one Allow; a short line, an unknown category or an empty reason names line 1."""
     got = cr.parse_allow("# note\n\ndoc.md\tword\t+\tstatus\tnew label\n")
     assert got == [cr.Allow("doc.md", "word", "+", "status", "new label")]
-    for bad in ("doc.md\tword\t+\tstatus\n", "doc.md\tcolour\t+\tx\twhy\n", "doc.md\tword\t+\tx\t \n"):
+    for bad in ("doc.md\tword\t+\tstatus\n", "doc.md\tcolour\t+\tx\twhy\n", "doc.md\tword\t+\tx\t \n",
+                "doc.md\tword\t*\tx\twhy\n"):
         with pytest.raises(ValueError, match="line 1"):
             cr.parse_allow(bad)
+
+
+def test_symbols_are_a_multiset() -> None:
+    """docs-cleanup-26: a dropped or added symbol that carries meaning is a difference; punctuation a reflow
+    may change (a semicolon to a full stop) is not, and neither is a symbol inside a code span."""
+    assert cr.compare("Load is 85 % now.\n", "Load is 85 now.\n") == [Diff("symbol", "-", "%")]
+    assert cr.compare("4 × 2 and 1 ≤ 3\n", "4 × 2 and 1 ≤ 3 ≤ 5\n") == [Diff("number", "+", "5"),
+                                                                   Diff("symbol", "+", "≤")]
+    assert cr.compare("a; b\n", "a. B\n") == []
+    assert cr.compare("run `x % y` now\n", "run `x % y` now\n") == []
+    assert cr.compare("Tx − Rx\n", "Rx − Tx\n") == []          # order is out of scope, by design
+
+
+def test_a_digit_only_token_is_a_number_not_a_word() -> None:
+    """docs-cleanup-28: a changed number is one number pair, not also a word pair."""
+    assert cr.compare("Wait 10 s.\n", "Wait 12 s.\n") == [Diff("number", "+", "12"),
+                                                         Diff("number", "-", "10")]
+    assert cr.compare("use v1 now\n", "use now\n") == [Diff("number", "-", "1"), Diff("word", "-", "v1")]
+
+
+def test_a_backslash_escapes_only_an_opening_backtick() -> None:
+    """docs-cleanup-97: inside a code span a backslash is literal, so `x\\` closes at its backtick;
+    before an opening backtick it escapes it."""
+    assert cr.facts("a `x\\` b\n").code == {"x\\": 1}
+    assert cr.facts("a `x\\` b `y`\n").code == {"x\\": 1, "y": 1}
+    assert cr.facts("a \\`x` b\n").code == {}
+
+
+def test_not_listed_constructs_are_named_in_the_docstring() -> None:
+    """docs-cleanup-27 and -29: the constructs the check does not see, and its two judgment calls."""
+    doc = cr.__doc__
+    for name in ("~~~", "link titles", "reference-style", "indented code", "setext"):
+        assert name in doc
+    assert "Lines for another path" in doc and "ignored for this path" in doc and "digit-only" in doc
 
 
 def git(repo: Path, *args: str) -> None:
@@ -193,6 +228,27 @@ def test_cli(repo: Path, capsys: pytest.CaptureFixture[str]) -> None:
     allow.write_text("doc.md\tnegation\t-\tnot\tshown now\n")
     rc, out = run("--rev", "HEAD", "--allow", str(allow), "doc.md")
     assert rc == 0 and "doc.md: allowed negation - not (shown now)\n" in out
+
+    allow.write_text("other.md\tnegation\t-\tnot\tfor another file\n")       # another path: neither used
+    rc, out = run("--rev", "HEAD", "--allow", str(allow), "doc.md")            # nor reported unused
+    assert rc == 1 and "unused allow" not in out and "doc.md: negation - not\n" in out
+
+    doc.write_text("The browser shows the port.\nIt is kept and is shown.\n")
+    allow.write_text("doc.md\tnegation\t-\tnot\tfirst reason\ndoc.md\tnegation\t-\tnot\tsecond reason\n")
+    rc, out = run("--rev", "HEAD", "--allow", str(allow), "doc.md")            # docs-cleanup-31: each its own
+    assert rc == 0 and "(first reason)\n" in out and "(second reason)\n" in out
+
+    # docs-cleanup-30: both sides are read the same way, and a line ending is not a fact. A CRLF file compared
+    # with itself (git's raw bytes against the work tree), and a file only converted to CRLF, keep their
+    # facts.
+    crlf = b"# Title\r\n\n| a | b |\r\n\nThe browser shows the port.\r\nIt is not kept and is not shown.\r\n"
+    doc.write_bytes(crlf)
+    git(repo, "commit", "-qam", "crlf")
+    assert run("--rev", "HEAD", "doc.md")[0] == 0
+    doc.write_bytes(crlf.replace(b"\r\n", b"\n"))
+    assert run("--rev", "HEAD", "doc.md")[0] == 0
+    doc.write_text("The browser shows the port.\nIt is kept and is shown.\n")
+    git(repo, "commit", "-qam", "back")
 
     assert run("--rev", "nosuchrev", "doc.md")[0] == 2
     assert run("--rev", "HEAD", "missing.md")[0] == 2
