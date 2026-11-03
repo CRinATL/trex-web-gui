@@ -334,20 +334,16 @@ To use the GUI from another machine, tunnel the port over SSH. The banner prints
 it. Keep the local port the same as the backend's (`--port`, 8765 by default), because the `Origin` check accepts only
 the serving port.
 
-- `TREX_WEB_GUI_TOKEN` sets the token instead (16 or more characters from `A-Za-z0-9_-`; the backend exits with
-  status 2 otherwise):
-  - It is read once and removed from the environment, so no child process inherits it.
-  - The kernel's copy of the start-up environment keeps it: `/proc/<pid>/environ` of the backend, and of the `uv`
-    process that launched it, is readable by your own user (same uid) only.
-  - Do not pass it inline (`TREX_WEB_GUI_TOKEN=... trex-web-gui`): the value lands in your shell history.
-- The banner carries the token. Run as a service, it lands in the journal, readable by members of
-  `systemd-journal` and `adm`. Treat the journal like the terminal. The uvicorn access log redacts the login
-  query.
-- The cookie is the token, and a browser sends a cookie to every server on the same host, whatever the port.
-  Any HTTP server your browser reaches under the host name you opened the GUI with can read it, so open other
-  local web apps under the other name: `http://localhost:<port>` when the GUI is at `127.0.0.1`, and
-  `http://127.0.0.1:<port>` when you reach the GUI through a tunnel at `localhost`. The `Origin` check is what
-  stops a page on another loopback port from using it.
+Anyone who has the token can drive the GUI. [`SECURITY.md`](SECURITY.md) says how it is protected and where it can
+leak. What to do about it:
+
+- **`TREX_WEB_GUI_TOKEN`** sets the token instead: 16 or more characters from `A-Za-z0-9_-`, or the backend exits
+  with status 2. Do not pass it inline (`TREX_WEB_GUI_TOKEN=... trex-web-gui`): the value lands in your shell
+  history.
+- **The banner carries the token.** Run as a service, it lands in the journal. Treat the journal like the terminal.
+- **The cookie is the token**, and a browser sends a cookie to every server on the same host, whatever the port. Open
+  other local web apps under the other name: `http://localhost:<port>` when the GUI is at `127.0.0.1`, and
+  `http://127.0.0.1:<port>` when you reach the GUI through a tunnel at `localhost`.
 
 ## Command-line options
 
@@ -404,15 +400,11 @@ connection and changes nothing on the server, so it also works beside a stateful
 ## Daemon exposure
 
 The **TRex daemon…** dialog starts and stops TRex through the TRex daemon (`trex_daemon_server`, port 8090). That daemon
-is not part of trex-web-gui, and it has no authentication: it runs as root and binds `0.0.0.0` by default
-(`--trex-host`, trex-core's `scripts/automation/trex_control_plane/server/trex_server.py:740-741`). Its
-`push_file` and `prepare_astf_profile` (`trex_server.py:113-135`) let anyone who can reach port 8090 write a file into
-the daemon's files directory and have a Python profile loaded, which is code run as root, whatever trex-web-gui does.
+is not part of trex-web-gui, and it has no authentication: it runs as root and binds `0.0.0.0` by default. Anyone who
+can reach port 8090 can have code run as root, whatever trex-web-gui does, and trex-web-gui's own checks are not a
+boundary against that ([`SECURITY.md`](SECURITY.md#upstream-not-trex-web-gui) has the mechanism).
 
-trex-web-gui's own checks are not a boundary against that. The rule on `trex_args` (at most 20 tokens of letters, digits
-and `_ . , : = / + -`, with the flags that change what TRex reads refused: `--cfg`, `-i`, `--astf`, `-f`, `-d`, `-m`,
-`-l`, `--rx-check`, `--client_cfg`, also abbreviated) is defence in depth on trex-web-gui's own route. Flags that take a
-path, such as `--rpc-logfile`, still pass it, and port 8090 accepts such arguments from anyone directly. Restrict port
+Restrict port
 8090 before you use daemon control outside a trusted test network: firewall it to the GUI host, or start the daemon with
 `--trex-host 127.0.0.1` and reach it through an SSH tunnel. The project's own test VM is already safe: QEMU forwards its
 daemon port on `127.0.0.1` only (`vm/launch.sh`).
