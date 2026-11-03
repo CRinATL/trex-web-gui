@@ -302,6 +302,7 @@ def main() -> None:
     daemon = Daemon(args)
     httpd = ThreadingHTTPServer(("127.0.0.1", args.port), make_handler(daemon, args))
     httpd.daemon_threads = True
+    args.port = httpd.server_address[1]          # port 0: the one bound, for the ready line and --redirect
     signal.signal(signal.SIGTERM, lambda *_: sys.exit(0))
     print(f"[fake-daemon] ready port={args.port}", flush=True)
     try:

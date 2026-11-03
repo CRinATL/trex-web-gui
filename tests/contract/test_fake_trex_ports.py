@@ -2,25 +2,16 @@
 import re
 import subprocess
 import sys
-from collections.abc import Sequence
 
 import zmq
-from support import FAKE, FIXTURES, free_port_pair
+from support import FAKE, FAKE_READY, FIXTURES, free_port_pair, spawn_ready
 from test_fake_delay import REQ, sock
 
-READY = re.compile(r"\[fake\] ready rpc=(\d+) pub=(\d+) ")
 
-
-def start(rpc: int, pub: int) -> tuple[subprocess.Popen, re.Match]:
+def start(rpc: int, pub: int) -> tuple[subprocess.Popen[str], re.Match[str]]:
     """Spawn the fake on `rpc` and `pub`; return it with the match of its ready line (the caller kills it)."""
-    argv: Sequence[str] = [sys.executable, "-I", "-B", str(FAKE), str(FIXTURES), str(rpc), str(pub)]
-    proc = subprocess.Popen(argv, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
-    ready = proc.stdout.readline() if proc.stdout else ""
-    m = READY.match(ready)
-    if not m:
-        proc.kill()
-        raise AssertionError(f"fake did not start: {ready + proc.communicate(timeout=5)[0]!r}")
-    return proc, m
+    return spawn_ready([sys.executable, "-I", "-B", str(FAKE), str(FIXTURES), str(rpc), str(pub)], FAKE_READY,
+                       "fake")
 
 
 def test_the_fake_binds_its_own_ports_when_given_zero() -> None:
@@ -41,9 +32,16 @@ def test_the_fake_binds_its_own_ports_when_given_zero() -> None:
 
 
 def test_the_fake_binds_explicit_ports_as_given() -> None:
-    """Explicit ports: the fake binds exactly the ports given."""
-    rpc, pub = free_port_pair()
-    proc, m = start(rpc, pub)
+    """Explicit ports: the fake binds exactly the ports given. Choosing them is racy by nature (another xdist
+    worker can take one first), so a start that fails on a taken port is retried with a fresh pair."""
+    for attempt in range(3):
+        rpc, pub = free_port_pair()
+        try:
+            proc, m = start(rpc, pub)
+            break
+        except RuntimeError as e:
+            if "Address already in use" not in str(e) or attempt == 2:
+                raise
     try:
         assert (int(m[1]), int(m[2])) == (rpc, pub)
     finally:
