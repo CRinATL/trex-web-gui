@@ -28,6 +28,9 @@ export type ChartSeries = { label: string; color: string }   // color: a CSS col
 
 type Props = {
   title: string
+  // Read once per build (the effect keyed by `identity`): a different function passed later with the same identity is
+  // never subscribed to, so it must be stable. Every caller passes a module store's method (statsStore, utilStore,
+  // pgidStore, monitorStore). `data`, `format` and the rest are read on each repaint and may change freely.
   subscribe: (fn: () => void) => () => void
   data: (windowS: number) => uPlot.AlignedData
   series: ChartSeries[]

@@ -36,6 +36,19 @@ function When({ ts }: { ts: number }) {
 // Kinds are stored in capitals with underscores; shown as `server event`.
 const kindLabel = (k: LogEntry['kind']) => k.toLowerCase().replace('_', ' ')
 
+// Row keys from what an entry says, not where it sits: once the log is at its cap every new entry shifts every index, so
+// keys by index made React rewrite all the rows (P1-109). Identical entries are told apart by how many came before them;
+// swapping two of them changes nothing on screen.
+function rowKeys(entries: LogEntry[]): string[] {
+  const seen = new Map<string, number>()
+  return entries.map((e) => {
+    const base = `${e.ts}\u0000${e.kind}\u0000${e.message}`
+    const n = seen.get(base) ?? 0
+    seen.set(base, n + 1)
+    return `${base}\u0000${n}`
+  })
+}
+
 // The event log as a table (Time, Kind, Message). The scroller follows new entries while it is within 4 px of the bottom;
 // once the user scrolls up it stays put and a Jump to newest button appears. `summary` leads the status line.
 export function LogView({ entries, summary }: { entries: LogEntry[]; summary?: string }) {
@@ -52,6 +65,7 @@ export function LogView({ entries, summary }: { entries: LogEntry[]; summary?: s
     pinned.current = t.scrollTop + t.clientHeight >= t.scrollHeight - 4
     setFollowing(pinned.current)
   }
+  const keys = rowKeys(entries)
   return (
     <div className="logview">
       <p className="log-status muted">
@@ -64,8 +78,8 @@ export function LogView({ entries, summary }: { entries: LogEntry[]; summary?: s
           <tbody>
             {entries.length === 0 && <tr><td colSpan={3} className="muted">No log entries yet.</td></tr>}
             {entries.map((e, i) => e.kind === 'MARK'
-              ? <tr key={i} className="log-mark"><When ts={e.ts} /><td className="log-kind">session</td><td className="log-msg">{e.message}</td></tr>
-              : <tr key={i} className={`log-${e.kind}`}><When ts={e.ts} /><td className="log-kind">{kindLabel(e.kind)}</td><td className="log-msg">{e.message}</td></tr>)}
+              ? <tr key={keys[i]} className="log-mark"><When ts={e.ts} /><td className="log-kind">session</td><td className="log-msg">{e.message}</td></tr>
+              : <tr key={keys[i]} className={`log-${e.kind}`}><When ts={e.ts} /><td className="log-kind">{kindLabel(e.kind)}</td><td className="log-msg">{e.message}</td></tr>)}
           </tbody>
         </table>
       </div>
