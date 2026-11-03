@@ -106,7 +106,8 @@ From 1.1.1 on, the script ends by printing how to start the backend: `trex-web-g
 
 - It gives the command's full path instead.
 - It adds the directory to your shell profile with `uv tool update-shell`. To have it print the steps instead and
-  leave your profile alone, put `TREX_WEB_GUI_NO_MODIFY_PATH=1` before `sh`.
+  leave your profile alone, put `TREX_WEB_GUI_NO_MODIFY_PATH=1` before `sh`. From 1.1.2 on, a re-run whose profile
+  already names the directory says so instead of asking uv again.
 
 The terminal you installed from keeps its old `PATH`
 ([The `trex-web-gui` command and `PATH`](#the-trex-web-gui-command-and-path)). Next: the [Quick start](#quick-start).
@@ -197,21 +198,20 @@ The command is in `~/.local/bin` (`uv tool dir --bin` prints the directory). If 
 every release) answers `command not found`, that directory is not on your `PATH`.
 
 The installer adds it to your shell profile, but a script run as `curl … | sh` cannot change the `PATH` of the
-terminal that started it. If the installer said it updated your profile, open a new terminal, or run `. ~/.profile`
-in the current one.
+terminal that started it. If the installer said it updated your profile, open a new terminal, or run the
+`export PATH=…` line it printed in the current one.
 
 Otherwise, add the directory to your shell profile yourself, in one of two ways:
 
 - Run `uv tool update-shell`. It adds the directory to your shell's startup files.
-- Or add this line yourself, to `~/.profile` for a login shell, `~/.bashrc` for bash, or `~/.zshrc` for zsh:
+- Or add this line yourself, to `~/.profile` for a login shell, `~/.bashrc` for bash, or `~/.zshenv` for zsh:
 
   ```
   export PATH="$HOME/.local/bin:$PATH"
   ```
 
-Then open a new terminal, or run `. ~/.profile` (or the file you edited) in the current one. `command -v
-trex-web-gui` prints the command's path once it is found. Until then, `~/.local/bin/trex-web-gui serve` runs it by
-its full path, on every release.
+Then open a new terminal, or run that line in the current one. `command -v trex-web-gui` prints the command's path
+once it is found. Until then, `~/.local/bin/trex-web-gui serve` runs it by its full path, on every release.
 
 ## Quick start
 
@@ -248,6 +248,10 @@ If the backend does not start:
   `~/.local/bin/trex-web-gui serve` for now (it works on every release), or re-run the installer, which from 1.1.1
   adds the directory, and see
   [The `trex-web-gui` command and `PATH`](#the-trex-web-gui-command-and-path).
+- **`ssh <host> trex-web-gui` answers `command not found`** even when a login finds it. A command given to `ssh`
+  runs in a shell that is neither a login shell nor interactive, and Ubuntu's `~/.bashrc` stops early for such a
+  shell, so no startup file adds the directory. Log in and start it there, or give the full path:
+  `ssh <host> '~/.local/bin/trex-web-gui'`.
 - **Don't use `uv run --project backend trex-web-gui` here.** That form is for a source checkout only. On an
   installed host it fails with ``Project directory `backend` does not exist``.
 
