@@ -51,7 +51,7 @@ Then open the `:5173` login URL that `make dev` prints. To run the GUI as a user
 | `make check-golden` | Checks every stock stateless profile against the snapshots in `tests/golden/stl` (`WRITE_GOLDEN=1` rewrites them) |
 | `make dev` | Starts the backend on `127.0.0.1:8765` without the UI (`trex-web-gui --dev`). Run `npm --prefix frontend run dev` to serve the UI on `:5173`, then open the `:5173` login URL the backend prints |
 | `make citations` | Checks every `file:line` citation in code, tests and docs |
-| `python3 -I scripts/check_reflow.py --rev REV [--allow FILE] PATH…` | Checks that a layout-only edit of a Markdown file kept its facts: words, code spans, numbers, links, fenced blocks, headings and table rows |
+| `python3 -I scripts/check_reflow.py --rev REV [--allow FILE] PATH…` | Checks that a layout-only edit of a Markdown file kept its facts: words, negations, code spans, numbers, symbols, links, fenced blocks, headings and table rows |
 | `make docstrings` | Checks that every project function has a docstring or a real comment |
 | `make api-docs` | Regenerates [`docs/api.md`](docs/api.md), the HTTP API reference, from the routes' docstrings and models |
 | `make wire-fixtures` | Re-records the JSON files in `frontend/src/__fixtures__/` from the stateful fake |
