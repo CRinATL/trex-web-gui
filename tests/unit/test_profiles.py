@@ -50,7 +50,22 @@ def test_py_without_tunables():
 
 def test_legacy_gui_yaml():
     lp = run(trexapi.load_profile(str(P / "gui_example.yaml"), [0], []))
-    assert lp.kind == "yaml" and lp.summary[0]["rate"] == "4000 pps"
+    assert lp.kind == "yaml" and lp.summary[0]["rate"] == "4.00 kpps"
+
+
+@pytest.mark.parametrize(("rate", "text"), [
+    ({"type": "bps_L2", "value": 250_000_000}, "250.00 Mbps L2"),   # was "2.5e+08 bps L2"
+    ({"type": "bps_L1", "value": 1e9}, "1.00 Gbps L1"),
+    ({"type": "pps", "value": 4000}, "4.00 kpps"),
+    ({"type": "pps", "value": 10}, "10 pps"),
+    ({"type": "pps", "value": 1.5}, "1.5 pps"),
+    ({"type": "pps", "value": 999.995}, "1.00 kpps"),
+    ({"type": "percentage", "value": 10}, "10 %"),
+])
+def test_rate_text_reads_like_the_studio_table(rate, text):
+    """The Control preview and Studio's stream table say a rate the same way (statsFormat.ts scaled)."""
+    from trex_web_gui.trexapi.profile_worker import _rate
+    assert _rate({"rate": rate}) == text
 
 
 def test_json_profile():

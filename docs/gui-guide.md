@@ -413,7 +413,8 @@ Each port's form is kept while you switch ports, tabs and pages, and is emptied 
   library and opens it in Studio.
 
 **What it holds**: a table **#**, **Name**, **Enabled**, **Mode**, **Rate**, **Packet**, **Length**, **VM** of
-the inspected (or, after Assign, the assigned) streams, `Showing the first N of M streams` when cut.
+the inspected (or, after Assign, the assigned) streams, `Showing the first N of M streams` when cut. **Rate** reads
+as in Studio's stream table: `4.00 kpps`, `250.00 Mbps L2`, `10 %`.
 **Show rate at ×1** (an owned port with streams) asks the server what ×1 means: `At ×1: max 1.1 kpps, L2 1.2
 Mbps, 0.012% line utilisation`, and a fold **Full validate response** with the raw answer.
 
@@ -443,9 +444,13 @@ The multiplier is disabled with the tooltip `not connected`, `read-only session`
 **Actions**
 
 - **Assign**: replaces the port's streams with the inspected profile. Disabled until something is inspected
-  (`Inspect a profile first.`). While the port is transmitting or paused it reads **Stop and assign** in red,
-  and the first click turns it into `Click again to stop and assign` for 5 s.
-- **Start**: as the toolbar's Start, lit the same way from the default profile's state.
+  (`Inspect a profile first.`).
+  - It is green while the inspected profile is not on the port, the step before Start can send it.
+  - While the port is transmitting or paused it reads **Stop and assign** in red, and the first click turns it
+    into `Click again to stop and assign` for 5 s.
+- **Start**: as the toolbar's Start, lit the same way from the default profile's state. While Assign is green it
+  is not: still usable, it is boxed like a plain button, because it would send what is on the port, not the
+  inspected profile.
 - Beside the buttons, one line: the reason the tab is blocked (`Acquire the port first.`, as the tooltip
   says), else `Inspect a profile first.`, else what Start will send, `Start at 5 kpps, 30 s.` (the toolbar
   Start's tooltip, from the same form).

@@ -9,6 +9,7 @@ const GLYPH: Record<RunKind, string> = { go: '●', stop: '■', hold: '❚❚' 
 
 type Props = Omit<ButtonHTMLAttributes<HTMLButtonElement>, 'type'> & {
   kind: RunKind
+  quiet?: boolean          // available but not the step to take: no colour while unlit (the lit form keeps its hue)
   fits?: string[]          // other lit labels this slot can show (Transmitting / Paused), to reserve their width
   children: ReactNode
 } & (
@@ -16,10 +17,11 @@ type Props = Omit<ButtonHTMLAttributes<HTMLButtonElement>, 'type'> & {
   | { lit?: boolean; litLabel: string }         // `lit` needs the state's name, so lit is never colour alone
 )
 
-export function RunButton({ kind, lit = false, litLabel, fits = [], disabled, children, ...rest }: Props) {
+export function RunButton({ kind, quiet = false, lit = false, litLabel, fits = [], disabled, children, ...rest }: Props) {
   const on = lit && litLabel !== undefined
+  const hush = (quiet && !on) || undefined
   if (litLabel === undefined) {
-    return <button type="button" data-run={kind} disabled={disabled} {...rest}>{children}</button>
+    return <button type="button" data-run={kind} data-quiet={hush} disabled={disabled} {...rest}>{children}</button>
   }
   const litForm = (label: string, glyph = GLYPH[kind]) => <><span data-glyph aria-hidden="true">{glyph} </span>{label}</>
   // the hidden labels take the widest glyph, so a slot that lights as Transmitting or as Paused keeps one width
@@ -27,7 +29,7 @@ export function RunButton({ kind, lit = false, litLabel, fits = [], disabled, ch
   const labels = [...new Set([litLabel, ...fits])]
   const ghosts = on ? [children, ...labels.map(ghost)] : labels.map(ghost)
   return (
-    <button type="button" data-run={kind} data-on={on || undefined} disabled={disabled || on} {...rest}>
+    <button type="button" data-run={kind} data-quiet={hush} data-on={on || undefined} disabled={disabled || on} {...rest}>
       <span className="run-label">
         <span>{on ? litForm(litLabel) : children}</span>
         {ghosts.map((g, i) => <span key={i} className="run-ghost" aria-hidden="true" style={{ visibility: 'hidden' }}>{g}</span>)}

@@ -309,10 +309,13 @@ export function TrafficTab({ port, selection, ports, readOnly, connected, visibl
       </section>
 
       <div className="action-bar">
-        <button type="button" disabled={!assignEnabled} className={needsStop ? 'danger' : undefined} onClick={() => void doAssign()}>
+        {/* Green while the profile in the box is not on the port: Assign is then the step before Start sends it */}
+        <button type="button" disabled={!assignEnabled} className={needsStop ? 'danger' : undefined}
+          data-run={notOnPort && !needsStop ? 'go' : undefined} onClick={() => void doAssign()}>
           {confirmAssign ? 'Click again to stop and assign' : needsStop ? 'Stop and assign' : 'Assign'}
         </button>
-        <RunButton kind={dflt === 'PAUSE' ? 'hold' : 'go'} lit={dflt === 'PAUSE' || TRANSMITTING.includes(dflt)}
+        {/* while Assign is the green step, Start (which would send what is on the port) is not green too */}
+        <RunButton kind={dflt === 'PAUSE' ? 'hold' : 'go'} quiet={notOnPort && !needsStop} lit={dflt === 'PAUSE' || TRANSMITTING.includes(dflt)}
           litLabel={dflt === 'PAUSE' ? 'Paused' : 'Transmitting'} fits={['Transmitting', 'Paused']} disabled={!tx('start')}
           onClick={() => void doStart()}>Start</RunButton>
         {/* the reason the bar is blocked, shown as text (not only as a tooltip), else what Start will send */}

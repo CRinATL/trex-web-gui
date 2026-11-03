@@ -1,4 +1,4 @@
-import { act, fireEvent, render, screen } from '@testing-library/react'
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, useLocation } from 'react-router-dom'
 import { afterEach, describe, expect, it, vi } from 'vitest'
@@ -245,6 +245,20 @@ describe('TrafficTab re-inspect', () => {
     expect(screen.getByText('In udp, not on the port: Assign puts these streams on the port.')).toBeInTheDocument()
     expect(screen.getByRole('table', { name: 'Streams on the port' })).toBeInTheDocument()
     expect(screen.getByText('Start at ×1, no limit, sending simple, not udp: assign it first.')).toBeInTheDocument()
+  })
+  it('Assign is green (data-run go) while the profile in the box is not on the port, and plain once it is', async () => {
+    vi.spyOn(api, 'inspect').mockResolvedValue(inspected())
+    const on = vi.spyOn(api, 'assignedOn').mockResolvedValue({ streams: true, assigned: { path: '/p/simple.json', name: 'simple.json', tunables: [], summary: [stream(0)], stream_count: 1 } })
+    setup()
+    await inspectProfile()
+    expect(screen.getByRole('button', { name: 'Assign' })).toHaveAttribute('data-run', 'go')
+    // Start would send the old profile, so it is not green beside Assign (the toolbar's Start is unchanged)
+    expect(within(screen.getByText(/^Start at /).parentElement!).getByRole('button', { name: 'Start' })).toHaveAttribute('data-quiet')
+    on.mockResolvedValue({ streams: true, assigned: { path: '/p/udp.py', name: 'udp.py', tunables: [], summary: [stream(0)], stream_count: 1 } })
+    vi.spyOn(api, 'assign').mockResolvedValue(assigned())
+    await userEvent.click(screen.getByRole('button', { name: 'Assign' }))
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Assign' })).not.toHaveAttribute('data-run'))
+    expect(within(screen.getByText(/^Start at /).parentElement!).getByRole('button', { name: 'Start' })).not.toHaveAttribute('data-quiet')
   })
   it('streams this session did not assign are named as such', async () => {
     vi.spyOn(api, 'assignedOn').mockResolvedValue({ streams: true, assigned: null })
