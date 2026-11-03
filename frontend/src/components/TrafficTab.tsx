@@ -331,7 +331,7 @@ export function TrafficTab({ port, selection, ports, readOnly, connected, visibl
           </span>
         )}
       </div>
-      {(error ?? reqErr) && <p role="alert" className="error">{error ?? reqErr}</p>}
+      {(error ?? reqErr) && <p role="alert" className="error error-block">{error ?? reqErr}</p>}
     </div>
   )
 }

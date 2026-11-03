@@ -162,11 +162,13 @@ def fail_fast(c: Any) -> None:
 _DST_MAC_REFUSED = re.compile(r"Port (\d+) dest MAC is invalid and there are streams without explicit")
 
 
-def explain_dst_mac(c: Any, text: str) -> str | None:
+def explain_dst_mac(c: Any, text: str, ifaces: dict[int, str] | None = None) -> str | None:
     """A plain explanation of the server's dest-MAC refusal in `text`, read from the client's cache: why
-    the port has no destination MAC and which streams of profile "_" take theirs from the port (numbered by
-    0-based position in the sorted stream ids, not by TRex stream id), then the two ways out. None when
-    `text` is another error or names an unknown port. Executor thread only."""
+    the port has no destination MAC (for an unresolved gateway, the ARP's source and target), and which
+    streams of profile "_" take theirs from the port (numbered by 0-based position in the sorted stream ids,
+    not by TRex stream id); then, on a line of its own, the two ways out. `ifaces` maps a port to its
+    confirmed interface name, shown after the port number. None when `text` is another error or names an
+    unknown port. Executor thread only."""
     m = _DST_MAC_REFUSED.search(text)
     if not m:
         return None
@@ -177,8 +179,11 @@ def explain_dst_mac(c: Any, text: str) -> str | None:
     lc = (p.get_ts_attr() or {}).get("layer_cfg") or {}
     ipv4 = lc.get("ipv4") or {}
     if ipv4.get("state") == "unresolved":
-        gw = ipv4.get("dst")
-        why = f"its L3 gateway {gw} did not answer ARP" if gw else "its L3 gateway did not answer ARP"
+        gw, src = ipv4.get("dst"), ipv4.get("src")
+        if not gw:
+            why = "its L3 gateway did not answer ARP"
+        else:
+            why = f"its ARP{f' from {src}' if src else ''} for its L3 gateway {gw} got no answer"
     else:
         why = "it has no destination MAC set"
     ids = sorted((getattr(p, "profile_stream_list", None) or {}).get("_", []))
@@ -191,7 +196,9 @@ def explain_dst_mac(c: Any, text: str) -> str | None:
         which = f"stream {implicit[0]} takes"
     else:
         which = f"streams {', '.join(implicit)} take"
-    return (f"Port {pid} cannot start: {why}, and {which} the destination MAC from the port. Give port "
+    iface = (ifaces or {}).get(pid)
+    name = f"Port {pid} ({iface})" if iface else f"Port {pid}"
+    return (f"{name} cannot start: {why}, and {which} the destination MAC from the port.\nGive port "
             f"{pid} a destination on Control > Config (an L2 destination MAC, or an L3 gateway that answers "
             f"ARP), or set Destination MAC to From packet on those streams in Studio > Properties and assign "
             f"the profile again.")

@@ -83,6 +83,7 @@ describe('ControlPage', () => {
     spy.mockReturnValue({ ...base, portError: { port: 0, seq: 1 }, portErrorSeq: 1 })
     rerender(<ControlPage />)
     expect(await screen.findByRole('alert')).toHaveTextContent('Port 0 reported an error; see Events')
+    expect(screen.getByRole('alert')).toHaveClass('error', 'error-block')      // a narrow block, line breaks kept
     await userEvent.click(screen.getByRole('treeitem', { name: /^Port 0,/ }))
     await userEvent.click(screen.getByRole('button', { name: 'Stop' }))
     expect(screen.queryByRole('alert')).toBeNull()

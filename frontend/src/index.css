@@ -68,6 +68,9 @@ main { padding: 1rem 1.5rem; overflow: auto; }
 .modal dt { color: var(--muted); }
 .modal dd { margin: 0 0 .5rem; }
 .error { color: var(--bad); }
+/* A page or tab alert that can run to several sentences (the start refusal's problem, then its fix on a line of
+   its own): a readable measure instead of the window's width, and the message's own line breaks kept. */
+.error-block { max-width: 80ch; white-space: pre-line; }
 /* An unsaved edit (RC1-31): the control that differs from its stored value is a dashed teal box (one more pixel along the
    bottom) on a pale teal fill, with a small rounded `edited` tag after it; the form's Save has an "N unsaved changes" button beside it that lists the edits.
    The border keeps the browser's own widths and the bottom line is an inset shadow, so the box does not change size when it

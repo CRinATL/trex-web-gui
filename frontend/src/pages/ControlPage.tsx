@@ -139,7 +139,7 @@ export function ControlPage({ active = true, onConnect }: { active?: boolean; on
         onError={setError} onFormError={onFormError} onStartAll={() => setStartAll(true)}
         onSaveSetup={() => setSetupsDialog('save')} onManageSetups={() => setSetupsDialog('manage')} onDaemon={() => setDaemonOpen(true)} />
       {stfOnHint && serverHint && <p role="status" className="banner">{stfRunText(serverHint)} <OpenMonitorLink /></p>}
-      {error && <p role="alert" className="error">{error}</p>}
+      {error && <p role="alert" className="error error-block">{error}</p>}
       <div className="control-grid">
         <div className="control-left">
           <DevicesTree host={info?.hostname ?? session.params?.host ?? ''} ports={ports} selection={selection} onSelect={setSelection} labelOf={labelOf}
