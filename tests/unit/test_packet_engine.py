@@ -1224,14 +1224,16 @@ def test_layer_offsets_past_the_decode_cap_fall_back() -> None:
 
 
 def test_layer_offsets_when_the_model_outlasts_its_bytes() -> None:
-    """A trailing empty Raw has no bytes of its own: the byte chain ends a layer early, and that layer keeps
-    the service's offset."""
+    """A trailing empty Raw has no bytes of its own: the byte chain ends a layer early. That layer takes the
+    service's offset moved by the last matched layer's correction (57 + 3 = 60, its true start), so the
+    offsets stay in order and the layer before it keeps its hex range (the frontend ends a layer where the
+    next one starts)."""
     empty_raw = {"id": "Raw", "fields": [{"id": "load", "value": {"vtype": "BYTES", "base64": ""}}]}
 
     async def body(e: PacketEngine) -> None:
         r = await e.build([*options_model(ONE_NOP, top="TCP"), empty_raw], None)
         assert r["error"] is None
-        assert offsets(r) == [("Ether", 0), ("IP", 14), ("TCP", 38), ("Raw", 58), ("Raw", 57)]
+        assert offsets(r) == [("Ether", 0), ("IP", 14), ("TCP", 38), ("Raw", 58), ("Raw", 60)]
     with_engine(body)
 
 

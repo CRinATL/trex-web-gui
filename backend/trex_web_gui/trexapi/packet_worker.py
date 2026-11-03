@@ -266,17 +266,25 @@ class Engine:
         later layer was early by the pad (DEFERRED look-7). The re-dissected bytes have the right offsets.
         The model and the bytes are walked by depth, as the service's `valid_structure` does: a layer takes
         its byte offset up to and including the first one whose class differs (it still starts where the
-        previous layer's payload does); deeper layers, and those past the end of the bytes, keep the
-        service's offset. Field offsets are relative to their layer, so they need nothing. Costs one more
-        dissection per tree, within the decode cap (`_bounded_define`)."""
+        previous layer's payload does); deeper layers, and those past the end of the bytes, take the
+        service's offset moved by the last correction. Field offsets are relative to their layer, so they
+        need nothing. Costs one more dissection per tree, within the decode cap (`_bounded_define`)."""
         result: list[dict[str, Any]] = self._service_field_tree(pkt)
         model, data = _chain(pkt), _chain(self._bounded_define(pkt))
+        delta, done = 0, 0
         for layer, m, b in zip(result, model, data, strict=False):
             offset = getattr(b, "_offset", None)
-            if offset is not None:
+            if offset is not None and isinstance(layer.get("offset"), int):
+                delta = offset - layer["offset"]
                 layer["offset"] = offset
+            done += 1
             if not (isinstance(m, type(b)) or isinstance(b, type(m))):
                 break
+        # The layers the walk did not reach are early by the same pad: move them by the last correction, so
+        # the offsets stay in order (the frontend ends each layer where the next one starts).
+        for layer in result[done:]:
+            if isinstance(layer.get("offset"), int):
+                layer["offset"] += delta
         return result
 
     def _rebuilds(self, layers: list[dict[str, Any]], raw: bytes) -> bool:
