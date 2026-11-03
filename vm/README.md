@@ -68,9 +68,14 @@ the steps below, and `build.sh jammy` always refuses.
 The script refuses (exit 2, before touching anything):
 
 - an unknown guest;
-- a `TREX_VM_DIR`, `TREX_VM_DL` or `TREX_VM_SHARED` set by hand (`TREX_VM_BASE` is the only redirect);
+- a `TREX_VM_BASE` that is not an absolute path;
+- a `TREX_VM_DIR`, `TREX_VM_DL` or `TREX_VM_SHARED` set by hand to anything but the guest's row's own value
+  (`TREX_VM_BASE` is the only redirect);
 - a dir that is, or lies under, a protected dir (`/var/tmp/trex-vm`, plus each entry of `TREX_VM_PROTECT_ALSO`,
   compared by `realpath -m`);
+- a work, shared, download or TLS dir that exists and is a symlink, is not yours, or is group- or world-writable;
+- a file it writes or removes in the work dir (`seed`, `seed/user-data`, `seed/meta-data`, `seed.iso`,
+  `trex.qcow2`, `qemu.pid`, `console.log`, `known_hosts`, `id_ed25519`, `id_ed25519.pub`) that is a symlink;
 - a guest whose QEMU or ports are in use;
 - an existing `trex.qcow2` unless `--rebuild` is given.
 

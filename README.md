@@ -32,8 +32,11 @@ The backend runs on Linux with Python 3.12 or newer. Traffic control targets TRe
   export) and a packet editor (layers, fields, payloads, Field Engine, presets, templates).
 - **Monitor**: a passive view of what a TRex server publishes on its event port, independent of the control
   connection, also as a wall display.
-- **TRex daemon**: write a TRex config, start and stop TRex through its optional daemon (`trex_daemon_server`), run
-  stateful profiles, and read its logs.
+- **TRex daemon**, through TRex's optional daemon (`trex_daemon_server`):
+  - write a TRex config;
+  - start and stop TRex;
+  - run stateful profiles;
+  - read its logs.
 
 ## Before you start
 
