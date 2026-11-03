@@ -1241,4 +1241,55 @@ def test_capture_tree_offsets_follow_padded_ip_options() -> None:
     async def body(e: PacketEngine) -> None:
         binary = (await e.build(options_model(ONE_NOP), None))["binary"]
         assert offsets(await e.tree(binary))[2] == ("UDP", 38)
+
+
+# Capture-shaped frames of the three contribs the loader loads (Scapy fork patches, Task 2), kept as bytes so
+# that building them loads nothing: GENEVE (UDP 49152 -> 6081) carrying Ether/IP, GTP-U (UDP 2152) carrying
+# IP, and an LACPDU (slow protocols, 01:80:c2:00:00:02, EtherType 0x8809).
+CONTRIB_FRAMES = {
+    "GENEVE": bytes.fromhex(
+        "0000000100000000000200000800450000460001000040113aa51000000130000001c00017c100327a6b000065580000"
+        "00000000000100000000000200000800450000140001000040003ae81000000130000001"),
+    "GTP_U": bytes.fromhex(
+        "0000000100000000000200000800450000380001000040113ab310000001300000010868086800247dc130ff00140000"
+        "0000450000140001000040003ae81000000130000001"),
+    "LACP": bytes.fromhex(
+        "0180c2000002000000020000880901010114000000000000000000000000000000000000021400000000000000000000"
+        "000000000000000003100000000000000000000000000000000000000000000000000000000000000000000000000000"
+        "00000000000000000000000000000000000000000000000000000000"),
+}
+CONTRIB_TREES = {
+    "GENEVE": ["Ether", "IP", "UDP", "GENEVE", "Ether", "IP"],
+    "GTP_U": ["Ether", "IP", "UDP", "GTP_U_Header", "IP"],
+    "LACP": ["Ether", "SlowProtocol", "LACP"],
+}
+
+
+def test_definitions_list_the_loaded_contribs() -> None:
+    """GENEVE, GTP and LACP are in the fork; the loader loads them, so the editor offers them. GTP_U_Header
+    subclasses GTPHeader, and get_definitions lists direct Packet subclasses only: it is a layer id, not a
+    protocol."""
+    async def body(e: PacketEngine) -> None:
+        d = await e.definitions()
+        assert {"GENEVE", "GTPHeader", "SlowProtocol", "LACP"} <= {p["id"] for p in d["protocols"]}
+        assert "GTP_U_Header" in d["layerIds"]
+    with_engine(body)
+
+
+@pytest.mark.parametrize("name", sorted(CONTRIB_FRAMES))
+def test_capture_tree_names_geneve_gtp_lacp(name: str) -> None:
+    async def body(e: PacketEngine) -> None:
+        tree = await e.tree(b64(CONTRIB_FRAMES[name]))
+        assert [layer["id"] for layer in tree["data"]][:len(CONTRIB_TREES[name])] == CONTRIB_TREES[name]
+    with_engine(body)
+
+
+def test_editor_builds_gtp_u_and_lacp() -> None:
+    async def body(e: PacketEngine) -> None:
+        for model in ([{"id": "Ether"}, {"id": "IP"}, {"id": "UDP"}, {"id": "GTP_U_Header"}, {"id": "IP"}],
+                      [{"id": "Ether"}, {"id": "SlowProtocol"}, {"id": "LACP"}]):
+            r = await e.build(model, None)
+            assert r["error"] is None, r["error"]
+            ids = [layer["id"] for layer in model]
+            assert [layer["id"] for layer in (await e.tree(r["binary"]))["data"]][:len(ids)] == ids
     with_engine(body)
