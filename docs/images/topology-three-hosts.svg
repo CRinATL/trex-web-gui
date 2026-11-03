@@ -1,0 +1,45 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="760" viewBox="0 0 1280 760" role="img" aria-label="Three hosts: a browser machine tunnels over SSH to the trex-web-gui backend host, which reaches the TRex server on a third host on ports 4501 and 4500.">
+<defs><marker id="head" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto" markerUnits="userSpaceOnUse"><path d="M0 0 L10 5 L0 10 Z" fill="#5b6775"/></marker></defs>
+<rect width="1280" height="760" fill="#f3f5f7"/>
+<text x="64" y="92" font-family="'IBM Plex Sans', system-ui, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="28" font-weight="600" fill="#1b2430" text-anchor="start">Dedicated backend host: browser, backend and TRex on three machines</text>
+<text x="64" y="127" font-family="'IBM Plex Sans', system-ui, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="16" font-weight="400" fill="#5b6775" text-anchor="start">The backend still listens on loopback only, so the browser tunnels to it, and the backend host must reach TRex's command and</text>
+<text x="64" y="151" font-family="'IBM Plex Sans', system-ui, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="16" font-weight="400" fill="#5b6775" text-anchor="start">event ports over the network. Use it when the backend needs a display (Wireshark) or must sit on a management host.</text>
+<rect x="64" y="176" width="320" height="456" rx="16" fill="#ffffff" stroke="#cfd6dd"/>
+<text x="88" y="211" font-family="'IBM Plex Sans', system-ui, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="13" font-weight="600" fill="#5b6775" text-anchor="start" letter-spacing="0.78">BROWSER MACHINE</text>
+<rect x="480" y="176" width="320" height="456" rx="16" fill="#ffffff" stroke="#cfd6dd"/>
+<text x="504" y="211" font-family="'IBM Plex Sans', system-ui, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="13" font-weight="600" fill="#5b6775" text-anchor="start" letter-spacing="0.78">BACKEND HOST · LINUX, PYTHON 3.12+</text>
+<rect x="896" y="176" width="320" height="456" rx="16" fill="#ffffff" stroke="#cfd6dd"/>
+<text x="920" y="211" font-family="'IBM Plex Sans', system-ui, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="13" font-weight="600" fill="#5b6775" text-anchor="start" letter-spacing="0.78">TREX HOST · TREX V3.08</text>
+<rect x="336" y="364" width="192" height="112" rx="56" fill="#e4f3ec" stroke="#3f8a67" stroke-width="2" stroke-dasharray="6 6"/>
+<text x="432" y="344" font-family="'IBM Plex Sans', system-ui, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="12" font-weight="600" fill="#2f6e51" text-anchor="middle" letter-spacing="0.72">SSH TUNNEL · PORT 22</text>
+<text x="432" y="386" font-family="'IBM Plex Sans', system-ui, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="13" font-weight="400" fill="#2f6e51" text-anchor="middle">HTTP + WebSocket</text>
+<text x="432" y="466" font-family="'IBM Plex Sans', system-ui, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="13" font-weight="400" fill="#2f6e51" text-anchor="middle">to 127.0.0.1:8765</text>
+<line x1="352" y1="400" x2="507" y2="400" stroke="#5b6775" stroke-width="2" marker-end="url(#head)"/>
+<line x1="512" y1="436" x2="357" y2="436" stroke="#5b6775" stroke-width="2" marker-end="url(#head)"/>
+<line x1="768" y1="400" x2="923" y2="400" stroke="#5b6775" stroke-width="2" marker-end="url(#head)"/>
+<line x1="928" y1="440" x2="773" y2="440" stroke="#5b6775" stroke-width="2" marker-end="url(#head)"/>
+<line x1="1056" y1="484" x2="1056" y2="539" stroke="#9aa5b1" stroke-width="2" stroke-dasharray="6 6"/>
+<rect x="512" y="356" width="256" height="128" rx="12" fill="#eaf1fb" stroke="#7fa3dc"/>
+<text x="640.0" y="395.0" font-family="'IBM Plex Sans', system-ui, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="16" font-weight="600" fill="#1b2430" text-anchor="middle">trex-web-gui backend</text>
+<text x="640.0" y="415.0" font-family="'IBM Plex Sans', system-ui, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="14" font-weight="400" fill="#1b2430" text-anchor="middle">serves the web UI and API</text>
+<text x="640.0" y="435.0" font-family="'IBM Plex Sans', system-ui, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="14" font-weight="400" fill="#1b2430" text-anchor="middle">listens on loopback only:</text>
+<text x="640.0" y="455.0" font-family="'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="13" font-weight="400" fill="#1b2430" text-anchor="middle">127.0.0.1:8765</text>
+<rect x="928" y="356" width="256" height="128" rx="12" fill="#fff1e6" stroke="#e39a5f"/>
+<text x="1056.0" y="405.0" font-family="'IBM Plex Sans', system-ui, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="16" font-weight="600" fill="#1b2430" text-anchor="middle">TRex server</text>
+<text x="1056.0" y="425.0" font-family="'IBM Plex Sans', system-ui, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="14" font-weight="400" fill="#1b2430" text-anchor="middle">stateless mode, already running</text>
+<text x="1056.0" y="445.0" font-family="'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="13" font-weight="400" fill="#1b2430" text-anchor="middle">4501 cmd · 4500 events</text>
+<rect x="928" y="540" width="256" height="56" rx="10" fill="#ffffff" stroke="#9aa5b1" stroke-dasharray="5 4"/>
+<text x="1056" y="564" font-family="'IBM Plex Sans', system-ui, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="13" font-weight="400" fill="#5b6775" text-anchor="middle">TRex daemon (optional)</text>
+<text x="1056" y="582" font-family="'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="12" font-weight="400" fill="#5b6775" text-anchor="middle">trex_daemon_server :8090</text>
+<text x="848" y="386" font-family="'IBM Plex Sans', system-ui, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="13" font-weight="400" fill="#5b6775" text-anchor="middle">commands :4501</text>
+<text x="848" y="466" font-family="'IBM Plex Sans', system-ui, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="13" font-weight="400" fill="#5b6775" text-anchor="middle">events :4500</text>
+<rect x="96" y="540" width="256" height="56" rx="10" fill="#f3f5f7" stroke="#cfd6dd"/>
+<text x="224" y="573" font-family="'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="11" font-weight="400" fill="#5b6775" text-anchor="middle">ssh -N -L 8765:127.0.0.1:8765 user@backend</text>
+<rect x="96" y="356" width="256" height="128" rx="12" fill="#ffffff" stroke="#b8c2cc"/>
+<text x="224.0" y="395.0" font-family="'IBM Plex Sans', system-ui, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="16" font-weight="600" fill="#1b2430" text-anchor="middle">Browser</text>
+<text x="224.0" y="415.0" font-family="'IBM Plex Sans', system-ui, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="14" font-weight="400" fill="#1b2430" text-anchor="middle">opens the login URL at</text>
+<text x="224.0" y="435.0" font-family="'IBM Plex Sans', system-ui, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="14" font-weight="400" fill="#1b2430" text-anchor="middle">the tunnel's near end</text>
+<text x="224.0" y="455.0" font-family="'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="13" font-weight="400" fill="#1b2430" text-anchor="middle">http://localhost:8765/…</text>
+<text x="64" y="671" font-family="'IBM Plex Sans', system-ui, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="14" font-weight="400" fill="#5b6775" text-anchor="start">Keep the tunnel's local port equal to the backend's (8765 by default): the Origin check accepts only that. File-browser paths, .py profiles and</text>
+<text x="64" y="693" font-family="'IBM Plex Sans', system-ui, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="14" font-weight="400" fill="#5b6775" text-anchor="start">Wireshark all live on the backend host. Restrict daemon port 8090 to the backend host before using daemon control outside a trusted test network.</text>
+</svg>
