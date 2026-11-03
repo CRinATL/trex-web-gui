@@ -20,6 +20,17 @@ const geom = (el: HTMLElement, top: number) => {
 }
 
 describe('LogView', () => {
+  it('a row keeps its element when the cap drops the oldest entry (P1-109: rows are not keyed by index)', () => {
+    const a = { kind: 'INFO' as const, ts: 1, message: 'a' }, b = { kind: 'INFO' as const, ts: 2, message: 'b' }
+    const c = { kind: 'INFO' as const, ts: 3, message: 'c' }
+    const { rerender } = render(<LogView entries={[a, b]} />)
+    const rowB = screen.getByText('b').closest('tr')
+    rerender(<LogView entries={[b, c]} />)
+    expect(screen.getByText('b').closest('tr')).toBe(rowB)
+    // identical entries get distinct keys (no duplicate-key warning), and keep their order
+    rerender(<LogView entries={[b, b, c]} />)
+    expect(screen.getAllByText('b')).toHaveLength(2)
+  })
   it('formats entries as [TYPE] <local date and time with UTC offset> message, the legacy HH:mm:ss inside it', () => {
     expect(formatEntry({ kind: 'ERROR', ts: 43200, message: 'boom' })).toMatch(/^\[ERROR\] \d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}[+-]\d{2}:\d{2} boom$/)
     expect(formatEntry({ kind: 'ERROR', ts: 43200, message: 'boom' })).toBe(`[ERROR] ${iso(43200)} boom`)

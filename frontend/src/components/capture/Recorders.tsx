@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { recorderRemove, recorderSave, recorderStop, type CaptureRow, type SpoolFile } from '../../api'
 import { errText } from '../../portGate'
 import { useAppState } from '../../state'
@@ -32,25 +32,31 @@ export function Recorders({ spool }: { spool: SpoolSource }) {
   const [seenSeq, setSeenSeq] = useState(session.connect_seq)
   if (session.connect_seq !== seenSeq) { setSeenSeq(session.connect_seq); setResults({}); setErrors({}) }
   const inFlight = useRef(new Set<number>())
+  // The connection a command was clicked on: a result or error that arrives after a reconnect belongs to the old
+  // server's capture, which may share its id with one on the new server, so it is dropped (behaviour-minors-37).
+  const seqNow = useRef(session.connect_seq)
+  useEffect(() => { seqNow.current = session.connect_seq }, [session.connect_seq])
   const monitorId = capture.monitor?.id ?? null
   // SpoolFile.server is the `host:sync_port` the backend recorded (sessions/capture.py recorder_save).
   const server = session.params ? `${session.params.host}:${session.params.sync_port}` : null
   const ctl = session.state === 'connected' && !(session.params?.read_only ?? false)
 
-  async function run(id: number, fn: () => Promise<unknown>) {
+  async function run(id: number, fn: (current: () => boolean) => Promise<unknown>) {
     if (inFlight.current.has(id)) return
+    const seq = seqNow.current
+    const current = () => seqNow.current === seq
     inFlight.current.add(id); setPending((p) => [...p, id]); setErrors((e) => ({ ...e, [id]: '' }))
-    try { await fn() }
-    catch (x) { setErrors((e) => ({ ...e, [id]: errText(x) })) }
+    try { await fn(current) }
+    catch (x) { if (current()) setErrors((e) => ({ ...e, [id]: errText(x) })) }
     finally { inFlight.current.delete(id); setPending((p) => p.filter((x) => x !== id)) }
   }
 
   // A Save click forgets the last result of this capture, then records how the call ended.
   function saveRow(id: number) {
     setResults((m) => Object.fromEntries(Object.entries(m).filter(([k]) => Number(k) !== id)))
-    void run(id, async () => {
-      try { const res = await recorderSave(id); setResults((m) => ({ ...m, [id]: res.file })) }
-      catch (x) { setResults((m) => ({ ...m, [id]: null })); throw x }
+    void run(id, async (current) => {
+      try { const res = await recorderSave(id); if (current()) setResults((m) => ({ ...m, [id]: res.file })) }
+      catch (x) { if (current()) setResults((m) => ({ ...m, [id]: null })); throw x }
     })
   }
 

@@ -188,4 +188,22 @@ describe('Recorders', () => {
     expect(within(rowOf(1)).getByRole('button', { name: 'Save' })).toBeEnabled()
     expect(screen.queryByText(/Saved as/)).toBeNull()
   })
+  it('a Save or a command still in flight across a reconnect lands nowhere (behaviour-minors-37)', async () => {
+    const r = [row({ id: 1, count: 10 }), row({ id: 2, count: 4, state: 'ACTIVE' })]
+    mockState(r, { session: session({ connect_seq: 'u:1' }) })
+    let finishSave!: (v: { file: api.SpoolFile }) => void
+    let failStop!: (e: Error) => void
+    vi.spyOn(api, 'recorderSave').mockReturnValue(new Promise((res) => { finishSave = res }))
+    vi.spyOn(api, 'recorderStop').mockReturnValue(new Promise((_, rej) => { failStop = rej }))
+    const { rerender } = render(<Recorders spool={spool()} />)
+    await userEvent.click(within(rowOf(1)).getByRole('button', { name: 'Save' }))
+    await userEvent.click(within(rowOf(2)).getByRole('button', { name: 'Stop' }))
+    // the new server's captures 1 and 2 are other captures with the same ids
+    mockState([row({ id: 1, count: 3 }), row({ id: 2, count: 1, state: 'ACTIVE' })], { session: session({ connect_seq: 'u:2' }) })
+    rerender(<Recorders spool={spool()} />)
+    await act(async () => { finishSave({ file: file() }); failStop(new Error('stale stop failure')) })
+    expect(screen.queryByText(/Saved as/)).toBeNull()
+    expect(screen.queryByText(/stale stop failure/)).toBeNull()
+    expect(within(rowOf(1)).getByRole('button', { name: 'Save' })).toBeInTheDocument()
+  })
 })
