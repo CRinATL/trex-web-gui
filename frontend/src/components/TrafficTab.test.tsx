@@ -138,6 +138,16 @@ describe('TrafficTab profile section', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Assign' }))
     expect(await screen.findByRole('alert')).toHaveTextContent('port 0 is not owned')
   })
+  it('a long refusal wraps: the alert is a narrow block that keeps the line between the problem and the fix', async () => {
+    vi.spyOn(api, 'inspect').mockResolvedValue(inspected())
+    vi.spyOn(api, 'assign').mockRejectedValue(new api.ApiError(409, 'x', 'Port 0 cannot start: why.\nGive port 0 a destination.'))
+    setup()
+    await inspectProfile()
+    await userEvent.click(screen.getByRole('button', { name: 'Assign' }))
+    const alert = await screen.findByRole('alert')
+    expect(alert).toHaveClass('error', 'error-block')
+    expect(alert.textContent).toBe('Port 0 cannot start: why.\nGive port 0 a destination.')
+  })
   it('Assign is disabled for a port that is not owned and for a read-only session', async () => {
     vi.spyOn(api, 'inspect').mockResolvedValue(inspected())
     const { unmount } = setup(port({ owned: false, owner: 'bob' }))

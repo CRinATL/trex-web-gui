@@ -504,12 +504,16 @@ class TrexSession(PortConfigCommands, CaptureCommands):
         server's dest-MAC refusal is raised as trexapi.explain_dst_mac's explanation instead."""
         label = f"Start port(s) {ports} at {mult}" + (f" for {duration:g} s" if duration > 0 else "")
 
+        # the confirmed kernel interface names, read here on the loop thread that owns _ifaces
+        names = {int(i["port"]): str(i["kernel_name"]) for i in self._ifaces
+                 if i.get("confirmed") and i.get("kernel_name")}
+
         # control executor: start; the server's dest-MAC refusal is replaced by what to do about it (RC1-30)
         def blocking(c: Any) -> None:
             try:
                 c.start(ports=ports, mult=mult, duration=duration, force=force)
             except Exception as e:
-                why = trexapi.explain_dst_mac(c, trexapi.translate(e).message)
+                why = trexapi.explain_dst_mac(c, trexapi.translate(e).message, names)
                 if why is None:
                     raise
                 raise TrexApiError(why) from e
