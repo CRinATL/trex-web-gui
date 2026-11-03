@@ -1154,3 +1154,89 @@ def test_tree_op_refuses_a_frame_shorter_than_ethernet() -> None:
             await e.tree(b64(bytes(5)))
         assert not info.value.restarted and "unpack requires a buffer" in str(info.value)
     with_engine(body)
+
+
+# look-7: with IP options that need padding, the fork records each later layer's offset before IP.post_build
+# pads, so the editor's byte highlights ran early by the pad. The worker now takes layer offsets from the
+# bytes.
+ZZ = {"vtype": "BYTES", "base64": base64.b64encode(b"zz").decode()}
+
+
+def options_model(opts: str | None, top: str = "UDP", load: dict[str, Any] = ZZ) -> list[dict[str, Any]]:
+    """Ether / IP(options=`opts`, an EXPRESSION; none when None) / `top` / Raw(load=`load`)."""
+    ip: dict[str, Any] = {"id": "IP"}
+    if opts is not None:
+        ip["fields"] = [{"id": "options", "value": {"vtype": "EXPRESSION", "expr": opts}}]
+    return [{"id": "Ether"}, ip, {"id": top}, {"id": "Raw", "fields": [{"id": "load", "value": load}]}]
+
+
+def offsets(r: Any) -> list[tuple[str, int]]:
+    """Each built layer's (id, offset), outermost first."""
+    return [(layer["id"], layer["offset"]) for layer in r["data"]]
+
+
+ONE_NOP = "[IPOption_NOP()]"
+FOUR_NOPS = "[IPOption_NOP(), IPOption_NOP(), IPOption_NOP(), IPOption_NOP()]"
+
+
+def test_layer_offsets_follow_padded_ip_options() -> None:
+    async def body(e: PacketEngine) -> None:
+        r = await e.build(options_model(ONE_NOP), None)
+        assert r["error"] is None and len(base64.b64decode(r["binary"])) == 48
+        assert offsets(r) == [("Ether", 0), ("IP", 14), ("UDP", 38), ("Raw", 46)]
+    with_engine(body)
+
+
+def test_layer_offsets_without_padding_are_unchanged() -> None:
+    async def body(e: PacketEngine) -> None:
+        r = await e.build(options_model(FOUR_NOPS), None)
+        assert offsets(r) == [("Ether", 0), ("IP", 14), ("UDP", 38), ("Raw", 46)]
+        r = await e.build(options_model(None), None)
+        assert offsets(r) == [("Ether", 0), ("IP", 14), ("UDP", 34), ("Raw", 42)]
+    with_engine(body)
+
+
+def test_first_layer_that_dissects_differently_still_gets_its_byte_offset() -> None:
+    """UDP's default ports are 53, so the bytes after it read as DNS: Raw does not match, and still starts
+    at 46."""
+    async def body(e: PacketEngine) -> None:
+        raw = (await e.build(options_model(ONE_NOP), None))["data"][3]
+        assert raw["valid_structure"] is False and raw["offset"] == 46
+    with_engine(body)
+
+
+def test_field_offsets_stay_relative_to_their_layer() -> None:
+    async def body(e: PacketEngine) -> None:
+        udp = (await e.build(options_model(ONE_NOP), None))["data"][2]
+        assert {f["id"]: f["offset"] for f in udp["fields"]}.items() >= {"sport": 0, "dport": 2}.items()
+    with_engine(body)
+
+
+def test_layer_offsets_past_the_decode_cap_fall_back() -> None:
+    from trex_web_gui.trexapi import packet_worker
+    long = {"vtype": "BYTES", "base64": base64.b64encode(bytes(packet_worker.EDITOR_DECODE_BYTES)).decode()}
+
+    async def body(e: PacketEngine) -> None:
+        r = await e.build(options_model(ONE_NOP, load=long), None)
+        assert r["error"] is None
+        assert offsets(r)[2] == ("UDP", 38)
+    with_engine(body)
+
+
+def test_layer_offsets_when_the_model_outlasts_its_bytes() -> None:
+    """A trailing empty Raw has no bytes of its own: the byte chain ends a layer early, and that layer keeps
+    the service's offset."""
+    empty_raw = {"id": "Raw", "fields": [{"id": "load", "value": {"vtype": "BYTES", "base64": ""}}]}
+
+    async def body(e: PacketEngine) -> None:
+        r = await e.build([*options_model(ONE_NOP, top="TCP"), empty_raw], None)
+        assert r["error"] is None
+        assert offsets(r) == [("Ether", 0), ("IP", 14), ("TCP", 38), ("Raw", 58), ("Raw", 57)]
+    with_engine(body)
+
+
+def test_capture_tree_offsets_follow_padded_ip_options() -> None:
+    async def body(e: PacketEngine) -> None:
+        binary = (await e.build(options_model(ONE_NOP), None))["binary"]
+        assert offsets(await e.tree(binary))[2] == ("UDP", 38)
+    with_engine(body)
