@@ -114,7 +114,9 @@ def test_service_unit_sample() -> None:
 
 def test_readme_install_section() -> None:
     text = (ROOT / "README.md").read_text()
-    assert text.index("## Install") < text.index("## Requirements")
+    # Requirements first, then the install, then the first start (the README study's order, 2026-11-02).
+    assert text.index("## Before you start") < text.index("## Install") < text.index("## Quick start")
+    assert "## Requirements" not in text
     for needle in ("uv tool install", "journalctl --user -u trex-web-gui", "### Offline host",
                    "--no-index --find-links", "docs/api.md"):
         assert needle in text, needle
