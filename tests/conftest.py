@@ -1,6 +1,5 @@
 import contextlib
 import json
-import re
 import signal
 import subprocess
 import sys
@@ -12,7 +11,17 @@ from pathlib import Path
 from typing import Any
 
 import pytest
-from support import FAKE, FAKE_DAEMON, FIXTURES, ROOT, SRC, free_port, pinned_sha
+from support import (
+    FAKE,
+    FAKE_DAEMON,
+    FAKE_DAEMON_READY,
+    FAKE_READY,
+    FIXTURES,
+    ROOT,
+    SRC,
+    pinned_sha,
+    spawn_ready,
+)
 
 
 def pytest_collection_modifyitems(items: list[pytest.Item]) -> None:
@@ -90,14 +99,8 @@ def fake_trex() -> Iterator[Callable[..., FakeTrex]]:
         """Spawn the fake on ports it binds itself (0 0) with `flags`, wait for its ready line and read the
         bound ports from it; RuntimeError (the fake killed, its output appended) when the first line is
         anything else."""
-        proc = subprocess.Popen([sys.executable, "-I", "-B", str(FAKE), str(FIXTURES), "0", "0", *flags],
-                                stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
-        ready = proc.stdout.readline() if proc.stdout else ""
-        m = re.match(r"\[fake\] ready rpc=(\d+) pub=(\d+) ", ready)
-        if not m:
-            proc.kill()
-            rest = proc.communicate(timeout=5)[0]
-            raise RuntimeError(f"HARNESS ERROR: fake did not start: {ready + rest!r}")
+        proc, m = spawn_ready([sys.executable, "-I", "-B", str(FAKE), str(FIXTURES), "0", "0", *flags],
+                              FAKE_READY, "fake")
         rpc, pub = int(m[1]), int(m[2])
         f = FakeTrex("127.0.0.1", rpc, pub, proc)
         started.append(f)
@@ -173,16 +176,12 @@ def fake_daemon() -> Iterator[Callable[..., FakeDaemon]]:
     started: list[FakeDaemon] = []
 
     def start(*flags: str) -> FakeDaemon:
-        """Spawn the fake on a free port and wait for its ready line; RuntimeError (the fake killed) when
-        the first line is anything else. A thread keeps collecting its output into `lines`."""
-        port = free_port()
-        proc = subprocess.Popen([sys.executable, "-I", "-B", str(FAKE_DAEMON), str(port), *flags],
-                                stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
-        ready = proc.stdout.readline() if proc.stdout else ""
-        if not ready.startswith("[fake-daemon] ready"):
-            proc.kill()
-            raise RuntimeError(f"HARNESS ERROR: fake daemon did not start: {ready!r}")
-        d = FakeDaemon("127.0.0.1", port, proc, [ready.rstrip("\n")])
+        """Spawn the fake on a port it binds itself (0) and read the port from its ready line; RuntimeError
+        (the fake killed, its whole output appended) when the first line is anything else. A thread keeps
+        collecting its output into `lines`."""
+        proc, m = spawn_ready([sys.executable, "-I", "-B", str(FAKE_DAEMON), "0", *flags], FAKE_DAEMON_READY,
+                              "fake daemon")
+        d = FakeDaemon("127.0.0.1", int(m[1]), proc, [m[0]])
 
         def collect() -> None:
             """Append each further stdout line to d.lines until the pipe closes."""

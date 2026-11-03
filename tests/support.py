@@ -5,13 +5,14 @@ import fcntl
 import importlib.util
 import json
 import os
+import re
 import socket
 import subprocess
 import sys
 import tempfile
 import time
 import warnings
-from collections.abc import Iterator
+from collections.abc import Iterator, Sequence
 from pathlib import Path
 from typing import Any
 
@@ -96,10 +97,36 @@ def free_port_pair() -> tuple[int, int]:
 
 
 def free_port() -> int:
-    """One free loopback port. Racy by nature; the fake daemon fails loudly if it is taken."""
+    """One free loopback port. Racy by nature: use it only for a port that nothing should listen on, or one
+    a process outside the tests must be given. The fakes bind port 0 themselves (spawn_ready)."""
     with socket.socket() as s:
         s.bind(("127.0.0.1", 0))
         return int(s.getsockname()[1])
+
+
+FAKE_READY = re.compile(r"\[fake\] ready rpc=(\d+) pub=(\d+) ")       # fake_trex.py's first line
+FAKE_DAEMON_READY = re.compile(r"\[fake-daemon\] ready port=(\d+)$")   # fake_daemon.py's first line
+
+
+def spawn_ready(argv: Sequence[str], ready: re.Pattern[str],
+                what: str) -> tuple[subprocess.Popen[str], re.Match[str]]:
+    """Start `argv` with its output piped and match its first line against `ready`; return the process and the
+    match (the caller stops the process). A first line that does not match kills it and raises RuntimeError
+    with everything it printed, so a start failure shows its whole traceback (docs-cleanup-81)."""
+    proc = subprocess.Popen(argv, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
+    first = proc.stdout.readline() if proc.stdout else ""
+    m = ready.match(first.rstrip("\n"))
+    if not m:
+        try:                                     # a failed start is usually exiting: let it finish writing
+            proc.wait(timeout=2)
+        except subprocess.TimeoutExpired:
+            proc.kill()
+            proc.wait(timeout=5)
+        # Read through the text wrapper: readline() may already hold the rest in its buffer, which
+        # communicate() bypasses (it reads the raw pipe), so a failure used to show only its first line.
+        rest = proc.stdout.read() if proc.stdout else ""
+        raise RuntimeError(f"HARNESS ERROR: {what} did not start: {first + rest!r}")
+    return proc, m
 
 
 DEMO_PORTS_LOCK = Path(tempfile.gettempdir()) / f"trex-web-gui-demo-ports-{os.getuid()}.lock"

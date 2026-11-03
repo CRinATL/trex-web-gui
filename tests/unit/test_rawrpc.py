@@ -26,12 +26,11 @@ class Rep:
 
     def __init__(self, handler: Callable[[bytes], bytes]) -> None:
         """Bind and start serving on a thread."""
-        self.port = free_port_pair()[0]
         self.requests: list[dict[str, Any]] = []
         self._ctx = zmq.Context()
         self._sock = self._ctx.socket(zmq.REP)
         self._sock.setsockopt(zmq.LINGER, 0)
-        self._sock.bind(f"tcp://127.0.0.1:{self.port}")
+        self.port = self._sock.bind_to_random_port("tcp://127.0.0.1")   # bound here, so no port to lose
         self._handler = handler
         self._stop = threading.Event()
         self._thread = threading.Thread(target=self._serve, daemon=True)
