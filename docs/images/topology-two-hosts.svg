@@ -32,7 +32,8 @@
 <text x="848" y="386" font-family="'IBM Plex Sans', system-ui, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="13" font-weight="400" fill="#5b6775" text-anchor="middle">commands :4501</text>
 <text x="848" y="466" font-family="'IBM Plex Sans', system-ui, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="13" font-weight="400" fill="#5b6775" text-anchor="middle">events :4500</text>
 <rect x="96" y="540" width="256" height="56" rx="10" fill="#f3f5f7" stroke="#cfd6dd"/>
-<text x="224" y="573" font-family="'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="11" font-weight="400" fill="#5b6775" text-anchor="middle">ssh -N -L 8765:127.0.0.1:8765 user@trexhost</text>
+<text x="122" y="564" font-family="'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="11" font-weight="400" fill="#5b6775" text-anchor="start">ssh -N -L 8765:127.0.0.1:8765 \</text>
+<text x="135" y="582" font-family="'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="11" font-weight="400" fill="#5b6775" text-anchor="start">user@trexhost</text>
 <rect x="96" y="356" width="256" height="128" rx="12" fill="#ffffff" stroke="#b8c2cc"/>
 <text x="224.0" y="395.0" font-family="'IBM Plex Sans', system-ui, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="16" font-weight="600" fill="#1b2430" text-anchor="middle">Browser</text>
 <text x="224.0" y="415.0" font-family="'IBM Plex Sans', system-ui, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="14" font-weight="400" fill="#1b2430" text-anchor="middle">opens the login URL at</text>
