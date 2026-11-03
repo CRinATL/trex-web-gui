@@ -57,19 +57,22 @@ The browser, the backend and the TRex server can be on three different machines:
 
 Three common layouts, from one host to three:
 
-1. **Local console.** Everything on the TRex host, which needs a display for the browser. No tunnel.
+1. **Local console.** Everything on the TRex host, which needs a display for the browser. No tunnel. TRex still
+   listens on 4501, 4500 and the daemon's 8090 on every interface, so on a shared network block them with the
+   host's firewall.
 
    ![One host: the browser, the trex-web-gui backend on 127.0.0.1:8765 and the TRex server on ports 4501 and 4500, all on one Linux host](docs/images/topology-one-host.svg)
 
 2. **Remote browser,** the usual lab shape. The backend runs on the TRex host, and a browser on your workstation
-   reaches it through an SSH tunnel.
+   reaches it through an SSH tunnel. Only SSH needs to face the network.
 
-   ![Two hosts: a workstation browser reaches the backend through an SSH tunnel to 127.0.0.1:8765, and the backend and the TRex server share the TRex host](docs/images/topology-two-hosts.svg)
+   ![Two hosts: a workstation browser reaches the backend through an encrypted SSH tunnel to 127.0.0.1:8765, and the backend and the TRex server share the TRex host](docs/images/topology-two-hosts.svg)
 
 3. **Dedicated backend host.** The backend runs on a third machine, for example one with a display for Wireshark.
-   It must reach the TRex server's ports 4501 and 4500 over the network.
+   It must reach the TRex server's ports 4501 and 4500 over the network, and that ZMQ traffic has no encryption
+   or authentication, so use this layout only on a trusted test network.
 
-   ![Three hosts: a browser machine tunnels over SSH to the backend host, which reaches the TRex server on a third host on ports 4501 and 4500](docs/images/topology-three-hosts.svg)
+   ![Three hosts: a browser machine tunnels over SSH to the backend host, which reaches the TRex server on a third host over unencrypted, unauthenticated ZMQ on ports 4501 and 4500](docs/images/topology-three-hosts.svg)
 
 trex-web-gui does not start TRex or `trex-console`. It takes `trex-console`'s place as a client of a TRex server that is
 already running in stateless mode, on its command and event ports (`--server`). Only the **TRex daemon…** dialog

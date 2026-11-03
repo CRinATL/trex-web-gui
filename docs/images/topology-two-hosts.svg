@@ -1,8 +1,9 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="760" viewBox="0 0 1280 760" role="img" aria-label="Two hosts: a browser on a workstation reaches the trex-web-gui backend through an SSH tunnel to 127.0.0.1:8765; the backend and the TRex server share the TRex host.">
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="760" viewBox="0 0 1280 760" role="img" aria-label="Two hosts: a browser on a workstation reaches the trex-web-gui backend through an encrypted SSH tunnel to 127.0.0.1:8765; the backend and the TRex server share the TRex host.">
 <defs><marker id="head" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto" markerUnits="userSpaceOnUse"><path d="M0 0 L10 5 L0 10 Z" fill="#5b6775"/></marker></defs>
 <rect width="1280" height="760" fill="#f3f5f7"/>
 <text x="64" y="92" font-family="'IBM Plex Sans', system-ui, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="28" font-weight="600" fill="#1b2430" text-anchor="start">Remote browser: backend and TRex share one host</text>
-<text x="64" y="127" font-family="'IBM Plex Sans', system-ui, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="16" font-weight="400" fill="#5b6775" text-anchor="start">The usual lab shape: a headless TRex box in the rack runs both trex-web-gui and TRex, and you tunnel in from your workstation.</text>
+<text x="64" y="127" font-family="'IBM Plex Sans', system-ui, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="16" font-weight="400" fill="#5b6775" text-anchor="start">The usual lab shape: a headless TRex box in the rack runs both trex-web-gui and TRex, and you tunnel in from your workstation. Everything on the</text>
+<text x="64" y="151" font-family="'IBM Plex Sans', system-ui, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="16" font-weight="400" fill="#5b6775" text-anchor="start">wire is SSH-encrypted, and TRex control stays on the TRex host.</text>
 <rect x="64" y="176" width="320" height="456" rx="16" fill="#ffffff" stroke="#cfd6dd"/>
 <text x="88" y="211" font-family="'IBM Plex Sans', system-ui, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="13" font-weight="600" fill="#5b6775" text-anchor="start" letter-spacing="0.78">WORKSTATION</text>
 <rect x="480" y="176" width="736" height="456" rx="16" fill="#ffffff" stroke="#cfd6dd"/>
@@ -11,16 +12,16 @@
 <text x="432" y="344" font-family="'IBM Plex Sans', system-ui, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="12" font-weight="600" fill="#2f6e51" text-anchor="middle" letter-spacing="0.72">SSH TUNNEL · PORT 22</text>
 <text x="432" y="386" font-family="'IBM Plex Sans', system-ui, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="13" font-weight="400" fill="#2f6e51" text-anchor="middle">HTTP + WebSocket</text>
 <text x="432" y="466" font-family="'IBM Plex Sans', system-ui, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="13" font-weight="400" fill="#2f6e51" text-anchor="middle">to 127.0.0.1:8765</text>
+<text x="432" y="500" font-family="'IBM Plex Sans', system-ui, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="12" font-weight="600" fill="#2f6e51" text-anchor="middle" letter-spacing="0.72">ENCRYPTED TRAFFIC</text>
 <line x1="352" y1="400" x2="507" y2="400" stroke="#5b6775" stroke-width="2" marker-end="url(#head)"/>
-<line x1="512" y1="436" x2="357" y2="436" stroke="#5b6775" stroke-width="2" marker-end="url(#head)"/>
+<line x1="512" y1="432" x2="357" y2="432" stroke="#5b6775" stroke-width="2" marker-end="url(#head)"/>
 <line x1="768" y1="400" x2="923" y2="400" stroke="#5b6775" stroke-width="2" marker-end="url(#head)"/>
-<line x1="928" y1="440" x2="773" y2="440" stroke="#5b6775" stroke-width="2" marker-end="url(#head)"/>
+<line x1="928" y1="432" x2="773" y2="432" stroke="#5b6775" stroke-width="2" marker-end="url(#head)"/>
 <line x1="1056" y1="484" x2="1056" y2="539" stroke="#9aa5b1" stroke-width="2" stroke-dasharray="6 6"/>
 <rect x="512" y="356" width="256" height="128" rx="12" fill="#eaf1fb" stroke="#7fa3dc"/>
-<text x="640.0" y="395.0" font-family="'IBM Plex Sans', system-ui, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="16" font-weight="600" fill="#1b2430" text-anchor="middle">trex-web-gui backend</text>
-<text x="640.0" y="415.0" font-family="'IBM Plex Sans', system-ui, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="14" font-weight="400" fill="#1b2430" text-anchor="middle">serves the web UI and API</text>
-<text x="640.0" y="435.0" font-family="'IBM Plex Sans', system-ui, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="14" font-weight="400" fill="#1b2430" text-anchor="middle">listens on loopback only:</text>
-<text x="640.0" y="455.0" font-family="'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="13" font-weight="400" fill="#1b2430" text-anchor="middle">127.0.0.1:8765</text>
+<text x="640.0" y="405.0" font-family="'IBM Plex Sans', system-ui, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="16" font-weight="600" fill="#1b2430" text-anchor="middle">trex-web-gui backend</text>
+<text x="640.0" y="425.0" font-family="'IBM Plex Sans', system-ui, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="14" font-weight="400" fill="#1b2430" text-anchor="middle">serves the web UI and API</text>
+<text x="640.0" y="445.0" font-family="'IBM Plex Sans', system-ui, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="14" font-weight="400" fill="#1b2430" text-anchor="middle">listens on <tspan font-family="'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="13">127.0.0.1:8765</tspan> only</text>
 <rect x="928" y="356" width="256" height="128" rx="12" fill="#fff1e6" stroke="#e39a5f"/>
 <text x="1056.0" y="405.0" font-family="'IBM Plex Sans', system-ui, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="16" font-weight="600" fill="#1b2430" text-anchor="middle">TRex server</text>
 <text x="1056.0" y="425.0" font-family="'IBM Plex Sans', system-ui, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="14" font-weight="400" fill="#1b2430" text-anchor="middle">stateless mode, already running</text>
