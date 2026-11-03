@@ -2,6 +2,16 @@
 
 ## Scope
 
+**Re-shot for 1.1.1 (2026-11-02).** Every screen was shot again on `main` before the 1.1.1 release commit, so the
+version is still `1.1.0` (About, [57](screens/57-settings-about.png), shows that), against the same guest. The HOWTO's
+screens (`docs/howto/screens/`) were shot again in the same session. New: [116](screens/116-settings-unsaved-list.png),
+Settings' unsaved-changes list. What changed on screen:
+- an enabled run button (the status bar's and the Control page's **Connect…**, the Connect dialog's **Connect**, Start,
+  Pause and Stop, the service-mode buttons) has a thin ring of its colour, a small gap away;
+- `N unsaved changes` beside a Save is a button;
+- 1.1.0's packet editor: Presets as tabs ([108](screens/108-packet-presets.png)), a **New** button, and Studio's table
+  spacing.
+
 **Re-shot for v1.0.0 (2026-10-30).** Every screen was shot again on the renamed application (`1.0.0rc5`; About,
 [57](screens/57-settings-about.png), was retaken on `1.0.0`) against the same guest, replacing the pre-release shots of
 2026-10-21 to 10-26. New: [115](screens/115-traffic-profile-note.png), a floating ⓘ note. The backend runs under the
@@ -987,14 +997,14 @@ Source: `frontend/src/pages/PacketPage.tsx`, `frontend/src/components/packet/` (
 
 Route `/studio/packet` (the **Packet editor** link on the Studio page): a title with the packet's name (a dot after it while
 there are unsaved changes), **File ▾** (New, Open .trp…, Save, Save as template…, Open pcap…, Save as pcap, Add to profile as a
-new stream…), **Templates…** and **Presets…**, then the editor: Undo, Redo, Expand all, Collapse all, the tabs **Packet** and
+new stream…), **New**, **Templates…** and **Presets…**, then the editor: Undo, Redo, Expand all, Collapse all, the tabs **Packet** and
 **Field engine**, the layer panes (a field is its name, a control for its type, the user-set dot and reset ×, and its byte
 range), **Add layer…**, and the hex view under them.
 
 ![Packet editor, a template](screens/107-packet-standalone-template.png)
 
-- **Presets…** is a dialog with one form per preset (Flood, IP sweep, Frame-size sweep, VLAN), each ending in **Open in editor**
-  ([108](screens/108-packet-presets.png)).
+- **Presets…** is a dialog with one tab per preset (Flood, IP sweep, Frame-size sweep, VLAN), each tab a form ending in **Open in
+  editor** ([108](screens/108-packet-presets.png)).
 - **Field engine** lists the instructions (Structure), the global Cache size and one block per instruction with its parameters
   ([109](screens/109-packet-field-engine.png)).
 - **Payload…** on a Raw layer opens the payload dialog: Source, then the fields of that source, **Cancel** and **Save**
@@ -1092,13 +1102,14 @@ Control page carries the same sentence in a banner:
 
 Route `/settings` (also Ctrl+Shift+P). Source: `frontend/src/pages/SettingsPage.tsx`,
 `frontend/src/components/settings/AboutSection.tsx`, `frontend/src/components/settings/BundleImportDialog.tsx`,
-`frontend/src/theme.ts`.
+`frontend/src/theme.ts`, `frontend/src/ui/Edited.tsx`.
 
 - **Purpose:** the browser's theme, the backend's preferences file, moving the backend's settings between machines, and what
   version this is.
 - **Layout:** a side list with a vertical divider; one section shown at a time. Each section that needs one has its own **Save**
   and **Revert** (disabled until it has an edit); saving one section never saves unsaved edits in another, and a section with
-  unsaved edits is marked "· unsaved" in the list.
+  unsaved edits is marked "· unsaved" in the list. Beside Save, **N unsaved changes** is a button: it opens a floating table
+  (**Field**, **Saved**, **Edited**) of the section's edited fields, closed by Escape or a click elsewhere, as an ⓘ note is.
   - **Appearance:** the Theme radios **System**, **Light**, **Dark**, **High contrast**. The choice is kept in this browser only,
     takes effect at once, and needs no Save.
   - **Files on the backend host:** **Templates directory** (the user packet templates; empty means `<data dir>/templates`), **Workspace directory** (where
@@ -1133,6 +1144,11 @@ The "Settings changed on the server" line (Workspace directory was edited here a
 Wireshark path, so the field still shows the old one until Reload):
 
 ![Settings, changed on the server](screens/58-settings-changed-on-server.png)
+
+The unsaved-changes list (**Largest capture the packet editor opens (MiB)** edited from 64 to 128, not saved; the script
+then reverts it):
+
+![Settings, the unsaved-changes list](screens/116-settings-unsaved-list.png)
 
 ### 6.1 Themes
 
@@ -1308,7 +1324,7 @@ Mismatches found:
 `01` not authorised · `02` Control disconnected · `03`-`07` Connect dialog · `08` root selected · `09`, `10` context menus · `11` Start all
 · `12` profile row · `13`-`15` Control tab · `16`, `17` Config · `18`-`20` Tools · `21`, `23`-`25` Traffic · `22` Browse · `26`, `27` Counters ·
 `28`-`30`, `33` Events · `31`, `32` connection lost · `34`-`42` Dashboard · `43`-`50` Capture · `52` Monitor disconnected, `95`-`99` Monitor (`97`-`99` on recorded stateful frames), `100`-`104` daemon dialog, `105` stateful run, `106` Connect with a stateful run · `53`-`58` Settings ·
-`59`, `60` themes · `61`-`63`, `84` import · `64`-`82` setups menu, Save and Test setups dialogs · `83` backend offline · `85`-`87` State chips · `88`-`93` Studio · `94` Control's library pick · `115` the Traffic tab's floating ⓘ note.
+`59`, `60` themes · `61`-`63`, `84` import · `64`-`82` setups menu, Save and Test setups dialogs · `83` backend offline · `85`-`87` State chips · `88`-`93` Studio · `94` Control's library pick · `115` the Traffic tab's floating ⓘ note · `116` Settings' unsaved-changes list.
 `51` (the Studio placeholder) is gone since P4a; `74` is unused (a Run in progress was not caught); `85` to `87` are crops of the status line.
 
 **Packet editor (P4b, 2026-10-25).** Shots [107](screens/107-packet-standalone-template.png)-[114](screens/114-studio-py-source.png)

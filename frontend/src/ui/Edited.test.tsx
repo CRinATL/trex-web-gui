@@ -1,4 +1,6 @@
 import { fireEvent, render, screen, within } from '@testing-library/react'
+import { readFileSync } from 'node:fs'
+import { resolve } from 'node:path'
 import { describe, expect, it } from 'vitest'
 import { EditedTag, UnsavedChanges, unsavedText, shown } from './Edited'
 
@@ -81,5 +83,15 @@ describe('UnsavedChanges cells', () => {
     const cells = within(screen.getByRole('table', { name: 'Unsaved changes' })).getAllByRole('cell')
     expect(cells.map((c) => c.getAttribute('title'))).toEqual([null, long, null, null])
     expect(cells[0]).toHaveTextContent('(empty)')
+  })
+})
+
+
+describe('change list layout', () => {
+  // The cells break anywhere, so a long value cannot widen the panel; that also let the table squeeze the column
+  // headers to a letter's width ("Save|d", 1.1.1 re-shoot, shot 116). jsdom has no layout, so the rule is pinned.
+  it('keeps the column headers on one line', () => {
+    const css = readFileSync(resolve(import.meta.dirname, '../index.css'), 'utf8')
+    expect(css).toMatch(/\.unsaved-list thead th \{[^}]*white-space: nowrap;[^}]*overflow-wrap: normal;/)
   })
 })

@@ -90,6 +90,10 @@ describe('run button box', () => {
   it('index.css boxes an enabled run button with a ring in its own hue', () => {
     expect(css).toContain('box-shadow: 0 0 0 1px var(--bg), 0 0 0 2px var(--run);')
   })
+  it('index.css spaces a run button in running text, so the ring clears the words beside it', () => {
+    // The ring is a box-shadow and takes no space: ControlPage's "or click Connect…." had its full stop on the ring.
+    expect(css).toMatch(/p button\[data-run\] \{ margin-inline: 3px; \}/)
+  })
   for (const [scheme, b] of Object.entries(BLOCKS)) it(`${scheme}: the ring is at least 3:1 on --bg and --panel`, () => {
     for (const run of ['--ok', '--bad', '--warn']) for (const bg of ['--bg', '--panel']) {
       const r = contrastRatio(b[run], b[bg])

@@ -62,7 +62,7 @@ def test_a_status_with_a_pipe_is_refused(tmp_path: Path) -> None:
 
 
 def test_host_rows_are_not_ledger_rows() -> None:
-    """H-* rows (the 1.0.x host findings) have no ledger link; deferred.py leaves them to release.py."""
+    """H-* rows (the 1.x host findings) have no ledger link; deferred.py leaves them to release.py."""
     row = "| H-1 | host use, 2026-10-31 | a finding | open |"
     assert deferred.ROW.match(row) is None
 
