@@ -636,6 +636,10 @@ has its own legend under it, with no standing time entry (hovering adds the time
 - A chart of several series has one chip per series: ✓ or ✗, the series' colour, its label and its latest (or hovered)
   value. A click hides or shows that line, and the last chip still shown is disabled
   (`The last shown series cannot be hidden`).
+- While the cursor is over a chart's plot, a pop-up beside it gives the cursor's time and, for each line shown, its
+  colour, label and value there (`no value` where it has no sample). A dashed vertical line marks the time and a dot
+  marks each line's point. The pop-up sits right of and below the cursor, flips left or up near the plot's edge, and
+  goes when the cursor leaves.
 - A **Y axis** control, **Fit** (the default: the range fits the lines) or **From 0** (the axis starts at 0), sits
   beside Layout on Overview and beside the charts on Streams, Latency and Utilization. It is one setting for every
   Dashboard chart, kept in the browser with the interval and layout (a saved setup keeps the interval and layout, not
