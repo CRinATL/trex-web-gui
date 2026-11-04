@@ -102,6 +102,7 @@ never opens it. Screens:
 [02](gui-inventory/screens/02-control-disconnected.png), [05](gui-inventory/screens/05-connect-connecting.png),
 [08](gui-inventory/screens/08-control-root-connected.png),
 [31](gui-inventory/screens/31-control-connection-lost.png),
+[117](gui-inventory/screens/117-connection-lost-dialog.png) (the dialog),
 [32](gui-inventory/screens/32-statusbar-reconnect-failed.png),
 [83](gui-inventory/screens/83-statusbar-backend-offline.png).
 

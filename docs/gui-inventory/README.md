@@ -2,6 +2,17 @@
 
 ## Scope
 
+**Re-shot for 1.1.4 (2026-11-04).** Every screen was shot again on `main` after the 1.1.4 release (About,
+[57](screens/57-settings-about.png), shows `1.1.4` and 14 vendor patches), against the same guest, and the HOWTO's
+screens with them. New: [117](screens/117-connection-lost-dialog.png), the Connection to TRex lost dialog, which
+`vm/shoot_inventory.py` now shoots and closes before 42 and 31. What changed on screen:
+- a lost connection's reason says what the backend could find out, `No response from the TRex server at
+  127.0.0.1:4501 for 12 s. …` instead of `subscriber timeout`, in the status bar, the Control page's lost line and the
+  Events log ([31](screens/31-control-connection-lost.png), [33](screens/33-events-marks.png),
+  [42](screens/42-dash-connection-lost.png));
+- the packet editor's Presets have a fifth tab, EVPN-VXLAN ([108](screens/108-packet-presets.png));
+- a profile's rate on the Traffic tab reads as in Studio (`1.00 kpps`, the HOWTO's shot 15).
+
 **Re-shot for 1.1.1 (2026-11-02).** Every screen was shot again on `main` before the 1.1.1 release commit, so the
 version is still `1.1.0` (About, [57](screens/57-settings-about.png), shows that), against the same guest. The HOWTO's
 screens (`docs/howto/screens/`) were shot again in the same session. New: [116](screens/116-settings-unsaved-list.png),
@@ -532,9 +543,15 @@ The RPC view with Capture on, after a Pause and a Resume:
 
 ### 2.16 Connection lost
 
-- **How reached:** the guest was paused (QEMU `stop`) until the backend reported `subscriber timeout`, about half a minute here.
-- **What changes:** the toolbar's port and group buttons are disabled; the page text reads "Connection lost; Reconnect is
-  in the status bar."; the tree and panel keep the last known state (ports still shown as TX); the status bar turns red and
+- **How reached:** the guest was paused (QEMU `stop`) until the backend reported 12 s of silence, about half a minute here.
+- **The loss dialog:** a loss opens **Connection to TRex lost** once, over whatever page is open (the Dashboard here): the
+  reason, `The pages keep the last values received. The status bar keeps this message.`, then **Reconnect**, **See
+  Events** and **Close**. The script closes it before the next shots.
+
+![Connection to TRex lost dialog](screens/117-connection-lost-dialog.png)
+
+- **What changes:** the toolbar's port and group buttons are disabled; the page text reads "Connection lost: <reason>
+  Reconnect is in the status bar."; the tree and panel keep the last known state (ports still shown as TX); the status bar turns red and
   offers **See Events**, **Reconnect** and **Connect…** ([1.3](#13-status-bar)).
 
 ![Control page, connection lost](screens/31-control-connection-lost.png)
@@ -1323,7 +1340,7 @@ Mismatches found:
 
 `01` not authorised · `02` Control disconnected · `03`-`07` Connect dialog · `08` root selected · `09`, `10` context menus · `11` Start all
 · `12` profile row · `13`-`15` Control tab · `16`, `17` Config · `18`-`20` Tools · `21`, `23`-`25` Traffic · `22` Browse · `26`, `27` Counters ·
-`28`-`30`, `33` Events · `31`, `32` connection lost · `34`-`42` Dashboard · `43`-`50` Capture · `52` Monitor disconnected, `95`-`99` Monitor (`97`-`99` on recorded stateful frames), `100`-`104` daemon dialog, `105` stateful run, `106` Connect with a stateful run · `53`-`58` Settings ·
+`28`-`30`, `33` Events · `31`, `32`, `117` connection lost · `34`-`42` Dashboard · `43`-`50` Capture · `52` Monitor disconnected, `95`-`99` Monitor (`97`-`99` on recorded stateful frames), `100`-`104` daemon dialog, `105` stateful run, `106` Connect with a stateful run · `53`-`58` Settings ·
 `59`, `60` themes · `61`-`63`, `84` import · `64`-`82` setups menu, Save and Test setups dialogs · `83` backend offline · `85`-`87` State chips · `88`-`93` Studio · `94` Control's library pick · `115` the Traffic tab's floating ⓘ note · `116` Settings' unsaved-changes list.
 `51` (the Studio placeholder) is gone since P4a; `74` is unused (a Run in progress was not caught); `85` to `87` are crops of the status line.
 
