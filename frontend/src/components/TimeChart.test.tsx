@@ -185,6 +185,49 @@ describe('TimeChart', () => {
       cursor(0)
       expect(screen.getAllByRole('button')[1]).toHaveTextContent('b 3 pps')
     })
+    describe('hover pop-up', () => {
+      // uPlot's setCursor hook with the cursor at (left, top) in the plot area, as uPlot reports it; left -10 is
+      // where uPlot parks the cursor once the mouse leaves.
+      const over = { clientWidth: 600, clientHeight: 200, getBoundingClientRect: () => ({ left: 0, top: 0 }) }
+      const hoverAt = (idx: number | null, left: number, top: number) =>
+        act(() => opts(0).hooks.setCursor[0]({ cursor: { idx, left, top }, over }))
+      const tip = () => screen.queryByRole('tooltip')
+
+      it('uPlot draws only the vertical cursor line, with its point on each series', () => {
+        render(<TimeChart {...base(emitter())} series={one} />)
+        expect((mock.instances[0].opts as { cursor: unknown }).cursor).toEqual({ y: false })
+      })
+      it('shows the time, the series and its value beside the cursor, and goes when the mouse leaves', () => {
+        render(<TimeChart {...base(emitter())} data={lineData} format={pps} series={one} />)
+        expect(tip()).toBeNull()
+        hoverAt(1, 100, 50)
+        expect(tip()).toHaveTextContent('10:43:52')
+        expect(tip()).toHaveTextContent('a845 pps')
+        expect(tip()).toHaveStyle({ left: '112px', top: '62px' })
+        hoverAt(null, -10, -10)
+        expect(tip()).toBeNull()
+      })
+      it('reads no value over a missing point', () => {
+        render(<TimeChart {...base(emitter())} data={() => [[x0 - 1, x0], [null, 845]] as unknown as [number[], number[]]} format={pps} series={one} />)
+        hoverAt(0, 100, 50)
+        expect(tip()).toHaveTextContent('ano value')
+      })
+      it('flips to the cursor\'s left near the right edge and above it near the bottom', () => {
+        render(<TimeChart {...base(emitter())} data={lineData} format={pps} series={one} />)
+        hoverAt(1, 580, 190)
+        const style = (tip() as HTMLElement).style
+        expect(parseFloat(style.left)).toBeLessThan(580)
+        expect(parseFloat(style.top)).toBeLessThan(190)
+      })
+      it('chips: lists each shown series with its value at the cursor, not a hidden one', () => {
+        render(<TimeChart {...base(emitter())} legend="chips" format={pps} data={() => [[x0 - 1, x0], [1, 2], [3, 4], [5, 6]]} series={three} />)
+        fireEvent.click(screen.getAllByRole('button')[1])
+        hoverAt(0, 100, 50)
+        expect(tip()).toHaveTextContent('a1 pps')
+        expect(tip()).not.toHaveTextContent('b3 pps')
+        expect(tip()).toHaveTextContent('c5 pps')
+      })
+    })
     it('yFrom0: the y range starts at 0, [0, 1] without a positive max; toggling redraws without rebuilding', () => {
       const props = { ...base(emitter()), series: one }
       const { rerender } = render(<TimeChart {...props} />)

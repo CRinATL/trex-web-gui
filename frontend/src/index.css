@@ -264,6 +264,14 @@ button[data-run][data-on] { border-color: var(--run); box-shadow: inset 0 0 0 1p
 .overview-grid > * { min-width: 0; overflow-x: auto; }
 @media (max-width: 1199px) { .overview-grid { grid-template-columns: minmax(0, 1fr); } }
 .stats-chart figcaption { margin-bottom: .25rem; }
+.chart-frame { position: relative; }
+/* the hover pop-up beside the cursor; pointer-events none, so it never takes the mouse from the plot under it */
+.chart-tip { position: absolute; z-index: 2; pointer-events: none; min-width: 8rem; padding: .3rem .5rem; font-size: .85rem;
+  font-variant-numeric: tabular-nums; white-space: nowrap; background: var(--bg); color: var(--fg); border: 1px solid var(--border);
+  border-radius: 4px; box-shadow: 0 4px 16px rgb(0 0 0 / .3); }
+.chart-tip-time { color: var(--muted); margin-bottom: .15rem; }
+.chart-tip-row { display: flex; gap: .4rem; align-items: center; }
+.chart-tip-value { margin-left: auto; padding-left: .75rem; font-weight: 600; }
 .chart-legend { margin: .25rem 0 0; font-size: .85rem; color: var(--muted); font-variant-numeric: tabular-nums; display: flex; flex-wrap: wrap; gap: .4rem; align-items: center; }
 .legend-chip { display: inline-flex; gap: .35rem; align-items: center; padding: .1rem .5rem; font-size: .85rem; background: var(--panel); color: var(--fg); border: 1px solid var(--border); border-radius: 999px; }
 .legend-chip[aria-pressed="false"] { color: var(--muted); border-style: dashed; background: transparent; }

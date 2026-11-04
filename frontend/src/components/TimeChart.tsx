@@ -38,6 +38,23 @@ function yAxisSize(self: uPlot, values: string[] | null, axisIdx: number): numbe
   return Math.max(Y_AXIS_MIN, Math.ceil(ticks + (axis.gap ?? 5) + text))
 }
 
+// The hover pop-up (Grafana's tooltip): GAP px right of and below the pointer, flipped to its left or above it when it
+// would leave the plot area. TIP_W/TIP_H stand in for its size until it has been laid out once (and in jsdom).
+const GAP = 12
+const TIP_W = 160
+const TIP_H = 48
+type Hover = { id: string; idx: number | null; left?: number; top?: number; w: number; h: number; ox: number; oy: number; tw: number; th: number }
+
+// Where the pop-up's top-left corner goes, in px from the chart's frame: beside the cursor at (left, top) of a plot
+// area w × h whose corner is at (ox, oy) in the frame, for a pop-up of tw × th (its size when last drawn).
+function tipPosition(h: Hover): { left: number; top: number } {
+  const l = h.left ?? 0
+  const t = h.top ?? 0
+  const x = l + GAP + h.tw > h.w ? l - GAP - h.tw : l + GAP
+  const y = t + GAP + h.th > h.h ? t - GAP - h.th : t + GAP
+  return { left: h.ox + Math.max(0, x), top: h.oy + Math.max(0, y) }
+}
+
 export type ChartSeries ={ label: string; color: string }   // color: a CSS colour or `var(--name)`
 
 type Props = {
@@ -64,13 +81,15 @@ type Props = {
 // never assumed.
 export function TimeChart({ title, subscribe, data, series, format, windowS, latestTs, controls, caption, dataKey, legend, yFrom0 = false }: Props) {
   const host = useRef<HTMLDivElement>(null)
+  const frame = useRef<HTMLDivElement>(null)   // the pop-up's positioning parent, holding uPlot's root
+  const tipEl = useRef<HTMLDivElement>(null)
   const plot = useRef<uPlot | null>(null)
   const live = useRef({ data, format, latestTs, windowS, subscribe, yFrom0 })
   const { scheme } = useTheme()   // uPlot paints resolved colours, so a scheme change must rebuild it
   const identity = scheme + '\u0002' + series.map((s) => `${s.label}\u0000${s.color}`).join('\u0001')
   const seriesRef = useRef(series)
   const [, repaint] = useReducer((n: number) => n + 1, 0)   // the legend reads the store, so each push repaints it
-  const [hover, setHover] = useState<{ id: string; idx: number | null }>({ id: identity, idx: null })
+  const [hover, setHover] = useState<Hover>({ id: identity, idx: null, w: 0, h: 0, ox: 0, oy: 0, tw: TIP_W, th: TIP_H })
   const [hiddenState, setHiddenState] = useState<{ id: string; set: ReadonlySet<number> }>({ id: identity, set: new Set() })
   const hovered = hover.id === identity ? hover.idx : null
   const hidden = hiddenState.id === identity ? hiddenState.set : new Set<number>()   // a rebuilt chart shows every series
@@ -106,7 +125,20 @@ export function TimeChart({ title, subscribe, data, series, format, windowS, lat
             },
           },
         },
-        hooks: { setCursor: [(self: uPlot) => setHover({ id: identity, idx: self.cursor.idx ?? null })] },
+        cursor: { y: false },   // a vertical line at the cursor's time, with uPlot's point on each series
+        hooks: {
+          setCursor: [(self: uPlot) => {
+            const over = self.over as HTMLDivElement | undefined
+            const o = over?.getBoundingClientRect()
+            const f = frame.current?.getBoundingClientRect()
+            setHover({
+              id: identity, idx: self.cursor.idx ?? null, left: self.cursor.left, top: self.cursor.top,
+              w: over?.clientWidth ?? 0, h: over?.clientHeight ?? 0,
+              ox: o && f ? o.left - f.left : 0, oy: o && f ? o.top - f.top : 0,
+              tw: tipEl.current?.offsetWidth || TIP_W, th: tipEl.current?.offsetHeight || TIP_H,
+            })
+          }],
+        },
         legend: { show: false },
         axes: [{ ...axis, values: (_u, splits) => splits.map(tickOf) }, { ...axis, size: yAxisSize, values: (_u, splits) => splits.map((x) => live.current.format(x)) }],
         series: [{}, ...seriesRef.current.map((s) => ({ label: s.label, stroke: resolve(s.color), width: 2 }))],
@@ -148,12 +180,33 @@ export function TimeChart({ title, subscribe, data, series, format, windowS, lat
   const clock = hovered === null ? null : clockOf(cols[0][hovered])
   const lineValue = at(0)
   const shown = series.length - hidden.size
+  // The pop-up shows while the mouse is in the plot area (uPlot parks the cursor at a negative left once it leaves).
+  const tipOn = hover.id === identity && hovered !== null && clock !== null && (hover.left ?? -1) >= 0
+  const tipAt = tipOn ? tipPosition(hover) : null
 
   return (
     <figure className="stats-chart" aria-label={title}>
       <figcaption>{caption ?? title}</figcaption>
       {controls}
-      <div ref={host} />
+      <div ref={frame} className="chart-frame">
+        <div ref={host} />
+        {tipAt && (
+          <div ref={tipEl} role="tooltip" className="chart-tip" style={{ left: `${tipAt.left}px`, top: `${tipAt.top}px` }}>
+            <div className="chart-tip-time">{clock}</div>
+            {series.map((s, i) => {
+              if (hidden.has(i)) return null
+              const v = at(i)
+              return (
+                <div key={i} className="chart-tip-row">
+                  <span className="legend-swatch" style={{ background: s.color }} aria-hidden="true" />
+                  <span className="chart-tip-label">{s.label}</span>
+                  <span className="chart-tip-value">{v === null ? 'no value' : format(v)}</span>
+                </div>
+              )
+            })}
+          </div>
+        )}
+      </div>
       {legend === 'line' && (clock !== null || lineValue !== null) && (
         <p className="chart-legend">{clock !== null ? `${clock} · ${lineValue === null ? 'no value' : format(lineValue)}` : `latest ${format(lineValue)}`}</p>
       )}
