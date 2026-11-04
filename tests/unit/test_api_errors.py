@@ -173,6 +173,7 @@ HEAD = ("import asyncio\n"
         "from trex_web_gui import trexapi\n"
         "from trex_web_gui.api.auth import token_matches\n"
         "from trex_web_gui.api.bodies import BodyRefused, err, read_json_capped\n"
+        "from trex_web_gui.api.pages import for_browser\n"
         "from trex_web_gui.api.studio import UPLOAD_ID_RE, upload_path\n"
         "from trex_web_gui.studio import bundles\n"
         "from trex_web_gui.daemon import DaemonRefused\n"
@@ -361,7 +362,7 @@ def test_decorator_and_shared_names_are_not_unresolved() -> None:
             body = await read_json_capped(request, 10)
             if token_matches(token):
                 return {"ok": body}
-            return err(401, "bad_token", "m")
+            return for_browser(request.scope, err(401, "bad_token", "m"))
         '''
     assert reach(src) == {(401, "bad_token")} | READ_JSON_CAPPED
     spec = {"paths": {"/login": {"post": op(s401=["bad_token"], s411=["length_required"], s413=["too_large"],
@@ -585,7 +586,7 @@ def test_an_undeclared_answer_is_reported_on_the_real_app(tmp_path: Path) -> Non
     checker = load_checker()
     app = create_app(tmp_path)
     sources = api_sources()
-    marker = ('SameSite=Strict); otherwise 403 bad_token. Reachable without the cookie (auth.EXEMPT)."""\n')
+    marker = ('shows the token). Reachable without the cookie (auth.EXEMPT)."""\n')
     assert sources["app.py"].count(marker) == 1
     sources["app.py"] = sources["app.py"].replace(
         marker, marker + '        return err(409, "zz_test", "x")\n')

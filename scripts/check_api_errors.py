@@ -67,6 +67,9 @@ SHARED: dict[str, set[Pair]] = {
     "read_json_capped": {(411, "length_required"), (413, "too_large"), (422, "bad_request")},
     # api/auth.py: compares a token, returns a bool
     "token_matches": set(),
+    # api/pages.py: the `err(...)` it is given, or the HTML page with that err's status and code for a browser
+    # navigation; the err call is its argument, so the walk reads the pair there
+    "for_browser": set(),
 }
 RESPONSES = ("err", "JSONResponse", "Response")      # the calls that make an error response
 BODY_REFUSED = "BodyRefused"     # api/bodies.py's carrier; its argument is walked, `e.response` is SHARED's

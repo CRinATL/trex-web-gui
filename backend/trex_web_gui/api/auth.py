@@ -22,13 +22,15 @@ from urllib.parse import unquote_plus
 from starlette.requests import cookie_parser
 from starlette.types import ASGIApp, Receive, Scope, Send
 
+from trex_web_gui.api.bodies import err
+from trex_web_gui.api.pages import for_browser
+
 MIN_ENV_TOKEN = 16
 ENV_VAR = "TREX_WEB_GUI_TOKEN"
 URLSAFE = re.compile(r"[A-Za-z0-9_-]+")
 LOGIN_PATH = "/api/auth/login"
 EXEMPT = frozenset({LOGIN_PATH, "/api/auth/status", "/api/auth/logout"})
-UNAUTHENTICATED_BODY = (b'{"error":"unauthenticated",'
-                        b'"message":"Open the URL printed by trex-web-gui serve."}')
+UNAUTHENTICATED_MESSAGE = "Open the URL printed by trex-web-gui serve."
 
 
 def new_token() -> str:
@@ -84,16 +86,15 @@ class TokenMiddleware:
 
     async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
         """Passes an http or websocket request that `_allowed` accepts; otherwise answers 401
-        `unauthenticated` JSON (http) or closes with 1008 (websocket). Other scope types pass untouched."""
+        `unauthenticated` JSON (http; the HTML page of pages.py for a browser navigation) or closes with 1008
+        (websocket). Other scope types pass untouched."""
         kind = scope["type"]
         if kind in ("http", "websocket") and not self._allowed(scope):
             if kind == "websocket":
                 await send({"type": "websocket.close", "code": 1008})
                 return
-            await send({"type": "http.response.start", "status": 401,
-                        "headers": [(b"content-type", b"application/json"),
-                                    (b"content-length", str(len(UNAUTHENTICATED_BODY)).encode())]})
-            await send({"type": "http.response.body", "body": UNAUTHENTICATED_BODY})
+            refusal = for_browser(scope, err(401, "unauthenticated", UNAUTHENTICATED_MESSAGE))
+            await refusal(scope, receive, send)
             return
         await self.app(scope, receive, send)
 
