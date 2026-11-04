@@ -59,7 +59,7 @@ def test_stats_failure_marks_lost(fake_trex, new_session):
         f.stop()
         await wait_for(lambda: s.snapshot()["state"] == "lost", loss_bound(2.0))
         assert s.snapshot()["error"] and (
-            "subscriber timeout" in s.snapshot()["error"]
+            "No response from the TRex server at" in s.snapshot()["error"]
             or "Cannot reach the TRex server" in s.snapshot()["error"]
         ), s.snapshot()["error"]
         lost_at = max(i for i, m in enumerate(rec.msgs) if m["type"] == "session" and m["state"] == "lost")

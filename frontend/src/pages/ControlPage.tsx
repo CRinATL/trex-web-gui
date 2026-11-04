@@ -44,6 +44,9 @@ function StartAllDialog({ ports, busy, onConfirm, onCancel }: { ports: number[];
 }
 
 // onConnect opens the Connect dialog, as the status bar's Connect… does.
+// The lost session's cause as a sentence, as the status bar and the loss dialog give it.
+const lostCause = (error: string | null) => { const t = error ?? 'unknown cause'; return /[.!?]$/.test(t) ? t : `${t}.` }
+
 export function ControlPage({ active = true, onConnect }: { active?: boolean; onConnect?: () => void }) {
   const { session, ports, portError, capture, setups, setupLoadErrors, daemon, lastStfRun, serverHint } = useAppState()
   const labelOf = usePortDisplayLabelOf(ports)
@@ -130,7 +133,7 @@ export function ControlPage({ active = true, onConnect }: { active?: boolean; on
   const connectHere = onConnect && <> or click <button type="button" data-run="go" onClick={onConnect}>Connect…</button></>
   const notConnected = session.state === 'disconnected'
     ? <>Not connected. Use {reconnectOffered ? 'Reconnect or Connect…' : 'Connect…'} in the status bar (Ctrl+Shift+C){connectHere}.</>
-    : session.state === 'lost' ? 'Connection lost; Reconnect is in the status bar.' : null
+    : session.state === 'lost' ? `Connection lost: ${lostCause(session.error)} Reconnect is in the status bar.` : null
   const showPanel = !(notConnected && !selectedPortView)
   return (
     <section>

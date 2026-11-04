@@ -81,7 +81,24 @@ The footer on every page states the connection and offers the actions that chang
 | `Backend offline, reconnecting…` | the browser lost the backend's WebSocket | **Connect…**, disabled |
 
 **Reconnect** connects again with the lost session's parameters, without a dialog. A failed Disconnect or
-Reconnect shows its message in red in the bar until the next attempt or the next change of state. Screens:
+Reconnect shows its message in red in the bar until the next attempt or the next change of state.
+
+The `<reason>` for a server that went silent says what the backend could find out. When TRex runs on the backend's
+own host (the server reports the backend's hostname) and its server process, `_t-rex-64` started with `-i`, was
+running at connect, the backend checks for that process every 2 s:
+
+| Reason | When |
+|---|---|
+| `TRex server stopped: the TRex server process (_t-rex-64) on this host has exited.` | the process is gone; shown within about 2 s |
+| `No response from the TRex server at <host>:<port> for 12 s. The TRex server process is still running; it may be hung or overloaded.` | silent, but the process runs |
+| `No response from the TRex server at <host>:<port> for 12 s. The TRex server process may have stopped, or the network may be down.` | silent, and the process cannot be checked: TRex on another host, or no server process seen at connect |
+
+The 12 s is four times the connect timeout (3 s by default). With two TRex servers on one host, either one
+running counts as running.
+
+A loss also opens the **Connection to TRex lost** dialog, once per loss: the reason, then **Reconnect** (focused),
+**See Events** and **Close** (or Escape). Closed, it stays closed until a later connection is lost; a Disconnect
+never opens it. Screens:
 [02](gui-inventory/screens/02-control-disconnected.png), [05](gui-inventory/screens/05-connect-connecting.png),
 [08](gui-inventory/screens/08-control-root-connected.png),
 [31](gui-inventory/screens/31-control-connection-lost.png),
@@ -181,7 +198,7 @@ devices tree at the left, the selected item's panel at the right.
 Not connected, the right column says `Not connected. Use Connect… in the status bar (Ctrl+Shift+C) or click`
 followed by a green **Connect…** button that opens the same dialog (after a failed Reconnect, `Not connected. Use
 Reconnect or Connect… in the status bar (Ctrl+Shift+C) or click` **Connect…**); while the
-session is lost, `Connection lost; Reconnect is in the status bar.` and the tree keeps the last state it saw
+session is lost, `Connection lost: <reason> Reconnect is in the status bar.` and the tree keeps the last state it saw
 ([02](gui-inventory/screens/02-control-disconnected.png),
 [31](gui-inventory/screens/31-control-connection-lost.png)).
 
