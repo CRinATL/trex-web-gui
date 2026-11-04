@@ -17,6 +17,11 @@ a built UI's fallback may answer those paths with its `index.html`): this file i
   a plain-text body. A request that carries an `Origin` header must name an `http` origin on `127.0.0.1` or
   `localhost` at the backend's own port (and the Vite dev port with `--dev`); any other is 403
   `forbidden_origin`. A request without `Origin` (curl, a script) passes that check.
+- **A browser navigation gets a page.** When a request's `Accept` lists `text/html` and its
+  `Sec-Fetch-Dest`, if sent, is `document` (a tab opened on the address: a bookmark, a pasted link, a stale
+  login URL), the 400, 401, 403, 404, 405, 422 and 500 refusals above and below are an HTML page with the
+  same status instead of the JSON body; it names the code and never carries the query string. A fetch or
+  XHR, curl and a script get the JSON.
 - **`--monitor-only`.** A backend started with `--monitor-only` answers 409 `monitor_only` to every request,
   of any method, under `/api/daemon`, `/api/profiles`, `/api/capture`, `/api/studio`, `/api/fs`, and to every DELETE, PATCH, POST, PUT outside `/api/monitor`, `/api/auth`. Reads of the other routes
   stay live.
@@ -24,7 +29,7 @@ a built UI's fallback may answer those paths with its `index.html`): this file i
 ## Errors
 
 Every error except the trusted-host 400 is JSON, `{"error": <code>, "message": <text>}`, with the HTTP
-status of the refusal.
+status of the refusal (a browser navigation gets an HTML page with the same status instead, see Access).
 
 - 422 `bad_request`: the body or a query parameter failed validation (the message lists the first three
   problems). This replaces FastAPI's own 422 body, which is never sent.
@@ -106,7 +111,8 @@ and the name of the computer running trex-web-gui (`host`).
 ### GET /api/auth/login
 
 GET: with a matching token, a 303 to `/` that sets the session cookie (HttpOnly,
-SameSite=Strict); otherwise 403 bad_token. Reachable without the cookie (auth.EXEMPT).
+SameSite=Strict); otherwise 403 bad_token (an HTML page for a browser navigation, which never
+shows the token). Reachable without the cookie (auth.EXEMPT).
 
 **Query parameters**
 

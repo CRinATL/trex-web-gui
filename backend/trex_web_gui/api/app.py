@@ -17,7 +17,6 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field, field_validator, model_validator
 from starlette.exceptions import HTTPException as StarletteHTTPException
 from starlette.middleware.gzip import GZipMiddleware
-from starlette.middleware.trustedhost import TrustedHostMiddleware
 
 from trex_web_gui import __version__, trexapi
 from trex_web_gui.api.auth import TokenMiddleware, cookie_name, new_token, token_matches
@@ -28,8 +27,9 @@ from trex_web_gui.api.daemon import daemon_router
 from trex_web_gui.api.declared import Item, answers
 from trex_web_gui.api.hub import Hub
 from trex_web_gui.api.monitor import MONITOR_ONLY_MESSAGE, MonitorOnly, monitor_router, require_full_mode
-from trex_web_gui.api.origin import LoopbackOriginMiddleware
+from trex_web_gui.api.origin import LoopbackHostMiddleware, LoopbackOriginMiddleware
 from trex_web_gui.api.packet import packet_router
+from trex_web_gui.api.pages import for_browser
 from trex_web_gui.api.port_config import LayerBody, PingBody, ScanBody
 from trex_web_gui.api.studio import remove_expired_uploads, studio_router
 from trex_web_gui.api.test_setups import test_setups_router
@@ -305,11 +305,13 @@ def create_app(data_dir: Path, server_hint: str | None = None, static_dir: Path 
     app.state.packet_engine = packet_engine
     app.state.token = token
     cookie = cookie_name(token)
-    # Gate order (Starlette: the last add_middleware call is outermost): GZip, Origin, TrustedHost, Token.
-    # The token gate is added first, so it is innermost and Origin runs before it.
+    # Gate order (Starlette: the last add_middleware call is outermost): GZip, Origin, Host, Token.
+    # The token gate is added first, so it is innermost and Origin runs before it. Each gate's refusal is
+    # JSON, or the HTML page of pages.py for a browser navigation (pages.for_browser, as the exception
+    # handlers and the login route below).
     app.add_middleware(TokenMiddleware, token=token)
     # DNS-rebinding guard: only loopback names (the middleware ignores the port).
-    app.add_middleware(TrustedHostMiddleware, allowed_hosts=["127.0.0.1", "localhost"])
+    app.add_middleware(LoopbackHostMiddleware)
     # CSRF / cross-site WebSocket guard: browsers' cross-site requests carry a foreign Origin. Only the
     # serving port (and the Vite port with --dev) are accepted.
     app.add_middleware(LoopbackOriginMiddleware, ports=origin_ports)
@@ -317,22 +319,24 @@ def create_app(data_dir: Path, server_hint: str | None = None, static_dir: Path 
     app.add_middleware(GZipMiddleware, minimum_size=500)
 
     @app.exception_handler(RequestValidationError)
-    async def bad_request(_: Request, e: RequestValidationError) -> JSONResponse:
+    async def bad_request(request: Request, e: RequestValidationError) -> Response:
         """422 bad_request for a body or query that failed validation: the first three errors as `field:
         message`, with a count of the rest."""
         found = e.errors()
         where = [".".join(str(x) for x in d["loc"][1:]) or str(d["loc"][0]) for d in found]
         shown = "; ".join(f"{w}: {d['msg']}" for w, d in zip(where[:3], found[:3], strict=False))
-        return err(422, "bad_request", shown + (f" (and {len(found) - 3} more)" if len(found) > 3 else ""))
+        message = shown + (f" (and {len(found) - 3} more)" if len(found) > 3 else "")
+        return for_browser(request.scope, err(422, "bad_request", message))
 
     @app.exception_handler(StarletteHTTPException)
-    async def http_error(_: Request, e: StarletteHTTPException) -> JSONResponse:
+    async def http_error(request: Request, e: StarletteHTTPException) -> Response:
         """Framework HTTP errors (unknown route, wrong method, others) as `{error, message}` JSON, with the
-        exception's status and headers."""
+        exception's status and headers (the HTML page for a browser navigation keeps the headers too)."""
         # Framework 404/405 (unknown route, wrong method) would otherwise answer {"detail": ...}.
         code = {404: "not_found", 405: "method_not_allowed"}.get(e.status_code, "http_error")
-        return JSONResponse({"error": code, "message": str(e.detail)}, status_code=e.status_code,
-                            headers=getattr(e, "headers", None))
+        r = for_browser(request.scope, err(e.status_code, code, str(e.detail)))
+        r.headers.update(getattr(e, "headers", None) or {})
+        return r
 
     @app.exception_handler(MonitorOnly)
     async def monitor_only_refused(_: Request, e: MonitorOnly) -> JSONResponse:
@@ -340,11 +344,11 @@ def create_app(data_dir: Path, server_hint: str | None = None, static_dir: Path 
         return err(409, "monitor_only", MONITOR_ONLY_MESSAGE)
 
     @app.exception_handler(Exception)
-    async def internal(_: Request, e: Exception) -> JSONResponse:
+    async def internal(request: Request, e: Exception) -> Response:
         """500 `internal` carrying the exception's type and message for any unhandled exception; it does
         not log."""
         # No log call: ServerErrorMiddleware re-raises after this response and uvicorn logs the traceback.
-        return err(500, "internal", f"{type(e).__name__}: {e}")
+        return for_browser(request.scope, err(500, "internal", f"{type(e).__name__}: {e}"))
 
     def session() -> TrexSession:
         """The TrexSession that lifespan built; valid only once startup has run."""
@@ -371,12 +375,14 @@ def create_app(data_dir: Path, server_hint: str | None = None, static_dir: Path 
 
     @app.get("/api/auth/login", response_model=None, status_code=303,
              responses=answers((403, "bad_token", "the token does not match")))
-    def login(token: str = "") -> Response:
+    def login(request: Request, token: str = "") -> Response:
         """GET: with a matching token, a 303 to `/` that sets the session cookie (HttpOnly,
-        SameSite=Strict); otherwise 403 bad_token. Reachable without the cookie (auth.EXEMPT)."""
+        SameSite=Strict); otherwise 403 bad_token (an HTML page for a browser navigation, which never
+        shows the token). Reachable without the cookie (auth.EXEMPT)."""
         # Any `next` query is ignored: the redirect target is always "/".
         if not token_matches(app.state.token, token):
-            return err(403, "bad_token", "That token does not match this backend.")
+            refusal = err(403, "bad_token", "That token does not match this backend.")
+            return for_browser(request.scope, refusal)
         r = RedirectResponse("/", status_code=303)
         r.set_cookie(cookie, token, path="/", httponly=True, samesite="strict")
         return r
@@ -984,9 +990,9 @@ def create_app(data_dir: Path, server_hint: str | None = None, static_dir: Path 
         app.mount("/assets", StaticFiles(directory=static_dir / "assets"), name="assets")
 
         @app.get("/{path:path}", response_model=None)
-        def spa(path: str) -> FileResponse | JSONResponse:      # client-side routes fall back to index.html
+        def spa(request: Request, path: str) -> Response:      # client-side routes fall back to index.html
             if path == "api" or path.startswith("api/"):
-                return err(404, "not_found", f"No such API route: /{path}")
+                return for_browser(request.scope, err(404, "not_found", f"No such API route: /{path}"))
             root = static_dir.resolve()
             try:
                 f = (root / path).resolve()
