@@ -51,18 +51,18 @@ describe('StatsChart', () => {
     expect(screen.getAllByRole('combobox', { name: /Chart \d series/ })).toHaveLength(4)
   })
 
-  it('axes and series use the CSS variables, with a 80 px y axis formatted by unit', () => {
+  it('axes and series use the CSS variables, with a y axis sized to its labels and formatted by unit', () => {
     vi.spyOn(window, 'getComputedStyle').mockReturnValue({
       getPropertyValue: (n: string) => ({ '--fg': '#eee', '--border': '#333', '--chart-grid': '#444', '--accent': '#8af' })[n] ?? '',
     } as unknown as CSSStyleDeclaration)
     render(<StatsChart initialSeriesId="tx_bps_l2" windowS={60} label="Chart 1 series" />)
     const o = mock.instances[0].opts as {
-      axes: { stroke: string; grid: { stroke: string }; ticks: { stroke: string }; size?: number; values?: (u: unknown, s: number[]) => string[] }[]
+      axes: { stroke: string; grid: { stroke: string }; ticks: { stroke: string }; size?: unknown; values?: (u: unknown, s: number[]) => string[] }[]
       series: { stroke: string }[]
     }
     for (const a of o.axes) expect([a.stroke, a.grid.stroke, a.ticks.stroke]).toEqual(['#eee', '#444', '#333'])
     expect(o.series[1].stroke).toBe('#8af')
-    expect(o.axes[1].size).toBeGreaterThanOrEqual(80)
+    expect(typeof o.axes[1].size).toBe('function')   // TimeChart.test.tsx pins the width it returns
     expect(o.axes[1].values?.(null, [1.5e9])).toEqual(['1.50 Gbps'])
   })
 
