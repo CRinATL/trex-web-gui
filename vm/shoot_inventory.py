@@ -674,10 +674,10 @@ async def ensure_traffic(c):
 
 
 async def step_lost(c):
-    """41-42, 31-33: the guest is paused (QEMU `stop`): stale, then connection lost on the Dashboard; the
-    Control page and status bar in the lost state; a Reconnect that fails (the bar reads `Disconnected:` with
-    the error and still offers See Events, Reconnect and Connect…); then the guest resumes, Reconnect
-    succeeds, and the Events page shows the divider rows."""
+    """41-42, 117, 31-33: the guest is paused (QEMU `stop`): stale, then connection lost on the Dashboard (the
+    loss dialog, 117, then closed); the Control page and status bar in the lost state; a Reconnect that fails
+    (the bar reads `Disconnected:` with the error and still offers See Events, Reconnect and Connect…); then
+    the guest resumes, Reconnect succeeds, and the Events page shows the divider rows."""
     b, api = c.b, c.api
     qemu("stop")
     try:
@@ -685,6 +685,11 @@ async def step_lost(c):
         await b.shot("41-dash-stale")
         await b.wait_text("Connection lost", 40)
         await asyncio.sleep(1)
+        # a loss opens the Connection to TRex lost dialog once (#47): shot, then closed, so 42 and 31 show
+        # the pages under it
+        await b.wait_for("Close", "button", "[role=dialog]")
+        await b.shot("117-connection-lost-dialog")
+        await b.click("Close", "button", "[role=dialog]")
         await b.shot("42-dash-connection-lost")
         await b.click("Control", "a")
         await b.shot("31-control-connection-lost")
