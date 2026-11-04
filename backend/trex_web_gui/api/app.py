@@ -384,7 +384,8 @@ def create_app(data_dir: Path, server_hint: str | None = None, static_dir: Path 
             refusal = err(403, "bad_token", "That token does not match this backend.")
             return for_browser(request.scope, refusal)
         r = RedirectResponse("/", status_code=303)
-        r.set_cookie(cookie, token, path="/", httponly=True, samesite="strict")
+        # The backend's own token, not the query string: equal once matched, and never user-supplied.
+        r.set_cookie(cookie, app.state.token, path="/", httponly=True, samesite="strict")
         return r
 
     @app.get("/api/auth/status")
