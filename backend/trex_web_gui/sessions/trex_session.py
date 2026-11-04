@@ -24,6 +24,7 @@ from typing import Any, TypeVar
 from trex_web_gui import trexapi
 from trex_web_gui.hostinfo import read_cfg, resolve
 from trex_web_gui.trexapi import ClientEvent, TrexApiError
+from trex_web_gui.trexproc import STOPPED, server_running, silence_message
 
 from .capture import CaptureCommands
 from .port_config import PortConfigCommands
@@ -70,10 +71,12 @@ class TrexSession(PortConfigCommands, CaptureCommands):
     def __init__(self, publish: Publish, *, poll_s: float = 2.0, stats_s: float = 1.0,
                  release_on_exit: Callable[[], bool] = lambda: True,
                  trex_cfg_path: Callable[[], str] = lambda: "/etc/trex_cfg.yaml",
-                 hostinfo_root: Path = Path("/"), spool_dir: Path | None = None) -> None:
+                 hostinfo_root: Path = Path("/"), spool_dir: Path | None = None,
+                 proc_root: Path = Path("/proc"),
+                 local_hostname: Callable[[], str] = socket.gethostname) -> None:
         """A DISCONNECTED session that connects nothing yet: one single-thread executor per client (`trex`
         for the control client, `trex-reader` for the reader), the connect/disconnect lock and the capture
-        state."""
+        state. `proc_root` and `local_hostname` are where the TRex server process check looks (trexproc)."""
         self._publish = publish
         self._executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix="trex")
         self._lock = asyncio.Lock()
@@ -92,6 +95,11 @@ class TrexSession(PortConfigCommands, CaptureCommands):
         self._release_on_exit = release_on_exit
         self._trex_cfg_path = trex_cfg_path
         self._hostinfo_root = hostinfo_root
+        self._proc_root = proc_root
+        self._local_hostname = local_hostname
+        # loop thread: the TRex server process was seen on this host at connect, so it is checked on each poll
+        # tick and asked about on a silence; False on another host, or when it was never seen
+        self._watch_proc = False
         self._ifaces: list[dict[str, Any]] = []    # loop thread; resolved once per connect, kept when LOST
         self._ifaces_note: str | None = None
         self._ports: list[trexapi.PortView] = []
@@ -146,6 +154,7 @@ class TrexSession(PortConfigCommands, CaptureCommands):
             self._params, self._info, self._error = p, None, None
             self._restart_cause = None
             self._timeout_seen = False
+            self._watch_proc = False
             self._ports = []                             # silent: the next _set_ports must broadcast
             self._ifaces, self._ifaces_note = [], None
             if self._reset_capture_state():              # a stale monitor id must never reach the next server
@@ -210,6 +219,11 @@ class TrexSession(PortConfigCommands, CaptureCommands):
                 self._error = cause
                 self._set(SessionState.LOST)
                 raise TrexApiError(f"Connection lost during connect: {cause}")
+            # before CONNECTED, so the poll loop's first tick already knows. On the loop, not awaited: an
+            # await here would open a cancel window between the loss check above and CONNECTED; one /proc
+            # scan takes milliseconds
+            self._watch_proc = (info.hostname == self._local_hostname()
+                                and server_running(self._proc_root) is True)
             self._set(SessionState.CONNECTED)
             self._poll_task = asyncio.create_task(self._poll_loop())   # before the await below
             self._stats_task = asyncio.create_task(self._stats_loop())
@@ -717,17 +731,22 @@ class TrexSession(PortConfigCommands, CaptureCommands):
     async def _poll_loop(self) -> None:
         """2 s get_port_status safety poll (plan §4.1 Events), which keeps the port cache honest. A restarted
         server is normally caught first by the subscriber's get_async_events plus the RPC tap (_on_rpc); this
-        poll is the fallback when its tick comes first. It does NOT shorten loss detection, which stays
-        loss_bound(timeout_s)."""
+        poll is the fallback when its tick comes first. It does not shorten loss detection, which stays
+        loss_bound(timeout_s), except where the TRex server process is watched (_watch_proc): its exit is
+        seen on the next tick and reported as STOPPED, which also replaces an unreachable server's text."""
         while self._state == SessionState.CONNECTED:
             await asyncio.sleep(self._poll_s)
             c = self._client
             if c is None or self._state != SessionState.CONNECTED:
                 return
+            if self._watch_proc and await asyncio.to_thread(server_running, self._proc_root) is False:
+                self._mark_lost(STOPPED)
+                return
             try:
                 views = await self._run(trexapi.sync_ports, c)
             except (trexapi.ServerRestarted, trexapi.ServerUnreachable) as e:
-                self._mark_lost(e.message)
+                gone = isinstance(e, trexapi.ServerUnreachable) and self._server_process() is False
+                self._mark_lost(STOPPED if gone else e.message)
                 return
             except TrexApiError as e:
                 self._log("warning", f"Port status poll failed: {e.message}")
@@ -945,7 +964,7 @@ class TrexSession(PortConfigCommands, CaptureCommands):
             return
         if ev.name not in trexapi.LOSS_EVENTS:
             return
-        cause = self._restart_cause or ev.message or ev.name
+        cause = self._restart_cause or self._loss_text(ev)
         self._log("error", f"Reader: {cause}")
         self._mark_lost(cause)
 
@@ -966,8 +985,21 @@ class TrexSession(PortConfigCommands, CaptureCommands):
         # A restarted server fails the subscriber's get_async_events poll at once (API handler mismatch) and
         # upstream reports that as "subscriber timeout", long before the port poll runs. The RPC tap saw the
         # real reason, so it wins over the event's generic text.
-        cause = self._restart_cause or ev.message or ev.name
+        cause = self._restart_cause or self._loss_text(ev)
         self._mark_lost(cause)                           # CONNECTING: connect() turns this into LOST
+
+    def _server_process(self) -> bool | None:
+        """Loop thread: whether the TRex server process still runs on this host; None when it is not watched
+        (_watch_proc) or /proc cannot be read. A /proc scan, run on the loop: it is asked once per loss."""
+        return server_running(self._proc_root) if self._watch_proc else None
+
+    def _loss_text(self, ev: ClientEvent) -> str:
+        """The cause a loss event reports: for "subscriber timeout" (the server silent), a message naming the
+        server and what the process check found (trexproc.silence_message); any other, its own text."""
+        p = self._params
+        if ev.name != "subscriber timeout" or p is None:
+            return ev.message or ev.name
+        return silence_message(p.host, p.sync_port, p.timeout_s, self._server_process())
 
     # -- subscriber / executor thread → loop ----------------------------------------------------
     def _on_rpc(self, r: trexapi.RpcRecord) -> None:

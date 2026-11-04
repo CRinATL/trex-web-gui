@@ -13,6 +13,7 @@ from trex_web_gui.trexapi import (
     UnsupportedServerVersion,
     loss_bound,
 )
+from trex_web_gui.trexproc import STOPPED, silence_message
 
 
 def crash_message(rec: Recorder) -> str | None:
@@ -276,4 +277,66 @@ def test_refresh_failure_is_logged_not_left_unretrieved(fake_trex, new_session, 
         )
         await s.disconnect()
         await s.close()
+    new_session.run(run())
+
+
+def _server_proc(root, pid: int = 4242):
+    """A fake /proc under `root` holding one interactive TRex server process; returns its pid directory."""
+    d = root / str(pid)
+    d.mkdir(parents=True)
+    (d / "cmdline").write_bytes(b"./_t-rex-64\0-i\0--mlx5-so\0")
+    return d
+
+
+def test_colocated_server_process_exit_marks_lost_as_stopped(fake_trex, new_session, tmp_path) -> None:
+    """The fake reports hostname trex-vm; a backend on "trex-vm" that saw the server process at connect
+    checks it on each poll tick and reports its exit at once, long before the subscriber's silence timeout."""
+    async def run() -> None:
+        d = _server_proc(tmp_path)
+        s = new_session(Recorder(), poll_s=0.1, proc_root=tmp_path, local_hostname=lambda: "trex-vm")
+        await s.connect(params(fake_trex(), timeout_s=5.0))
+        await asyncio.sleep(0.3)
+        assert s.snapshot()["state"] == "connected"
+        (d / "cmdline").unlink()
+        d.rmdir()
+        await wait_for(lambda: s.snapshot()["state"] == "lost", 2.0)
+        assert s.snapshot()["error"] == STOPPED
+    new_session.run(run())
+
+
+def test_silence_cause_says_the_colocated_server_process_still_runs(fake_trex, new_session, tmp_path) -> None:
+    async def run() -> None:
+        _server_proc(tmp_path)
+        s = new_session(Recorder(), proc_root=tmp_path, local_hostname=lambda: "trex-vm")
+        f = fake_trex()
+        await s.connect(params(f, timeout_s=3.0))
+        s._handle_event(ClientEvent("subscriber timeout", [], "subscriber timeout", 1.0, level="warning"))
+        assert s.snapshot()["error"] == silence_message(f.host, f.rpc_port, 3.0, True)
+        assert "still running" in s.snapshot()["error"]
+    new_session.run(run())
+
+
+def test_silence_cause_on_another_host_names_host_and_port(fake_trex, new_session, tmp_path) -> None:
+    async def run() -> None:
+        _server_proc(tmp_path)                           # present, but this backend is not on the TRex host
+        s = new_session(Recorder(), proc_root=tmp_path, local_hostname=lambda: "elsewhere")
+        f = fake_trex()
+        await s.connect(params(f, timeout_s=3.0))
+        s._handle_reader_event(ClientEvent("subscriber timeout", [], "subscriber timeout", 1.0))
+        assert s.snapshot()["error"] == (
+            f"No response from the TRex server at {f.host}:{f.rpc_port} for 12 s. "
+            "The TRex server process may have stopped, or the network may be down.")
+    new_session.run(run())
+
+
+def test_no_server_process_seen_at_connect_disables_the_check(fake_trex, new_session, tmp_path) -> None:
+    """TRex in a container, or a build named otherwise: never seen, so its absence is no sign of an exit."""
+    async def run() -> None:
+        s = new_session(Recorder(), poll_s=0.1, proc_root=tmp_path, local_hostname=lambda: "trex-vm")
+        f = fake_trex()
+        await s.connect(params(f, timeout_s=3.0))
+        await asyncio.sleep(0.4)
+        assert s.snapshot()["state"] == "connected"
+        s._handle_event(ClientEvent("subscriber timeout", [], "subscriber timeout", 1.0, level="warning"))
+        assert "may have stopped, or the network may be down" in s.snapshot()["error"]
     new_session.run(run())

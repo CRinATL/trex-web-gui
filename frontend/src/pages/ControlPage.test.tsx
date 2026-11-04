@@ -34,15 +34,15 @@ describe('ControlPage', () => {
     render(<ControlPage />)
     expect(screen.getByText('Not connected. Use Connect… in the status bar (Ctrl+Shift+C).')).toBeInTheDocument()
   })
-  it('lost, the line points at Reconnect, and a selected port panel stays below it', async () => {
+  it('lost, the line gives the cause and points at Reconnect, and a selected port panel stays below it', async () => {
     const state = await import('../state')
     vi.spyOn(state, 'useAppState').mockReturnValue({ ...state.initialState, backendOnline: true, session: { ...connected, state: 'lost', error: 'x' }, ports: [port0] })
     render(<ControlPage onConnect={() => {}} />)
-    expect(screen.getByText('Connection lost; Reconnect is in the status bar.')).toBeInTheDocument()
+    expect(screen.getByText('Connection lost: x. Reconnect is in the status bar.')).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Connect…' })).toBeNull()   // lost: the way back is Reconnect
     expect(screen.queryByRole('alert')).toBeNull()
     await userEvent.click(screen.getByRole('treeitem', { name: /^Port 0,/ }))
-    expect(screen.getByText('Connection lost; Reconnect is in the status bar.')).toBeInTheDocument()
+    expect(screen.getByText('Connection lost: x. Reconnect is in the status bar.')).toBeInTheDocument()
     expect(screen.getByRole('tab', { name: 'Control' })).toBeInTheDocument()
   })
   it('a selected port, then a disconnect: the column shows the not-connected line and no stale port', async () => {

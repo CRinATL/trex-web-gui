@@ -387,7 +387,9 @@ def test_a_reader_only_loss_marks_the_session_lost(fake_trex, new_session) -> No
         await s.connect(params(fake_trex()))
         s._on_reader_event(ClientEvent("subscriber timeout", [], "reader-only", time.time()))
         await wait_for(lambda: s._state == SessionState.LOST, 2)
-        assert s._error == "reader-only"
+        # a silence names the server instead of upstream's text; this backend is not on the fake's host
+        assert s._error.startswith("No response from the TRex server at ")
+        assert s._error.endswith("The TRex server process may have stopped, or the network may be down.")
         assert any(
             m["type"] == "log" and m["level"] == "error" and "Reader" in m["message"] for m in rec.msgs
         )
