@@ -17,8 +17,11 @@ interface FormProps {
 // The inputs and their state. The caller keys it on the connection and the label key, so a new connect or another port
 // starts it afresh. The fields start from the target; a later change to it replaces them only while they hold no typed edit.
 function NameForm({ where, saved, suggestion, loadError, focus, onFocused }: FormProps) {
-  // what Revert goes back to: the saved label, else the suggestion (a confirmed kernel name)
-  const target = saved ?? { name: suggestion ?? '', description: '' }
+  // what Revert goes back to: the saved label, else empty. A suggestion (a confirmed kernel name) is only the Name
+  // placeholder: the port lists already show that name for an unnamed port, so an untouched form has nothing to save
+  // and nothing marked edited.
+  const target = saved ?? { name: '', description: '' }
+  const placeholder = saved ? undefined : suggestion ?? undefined
   const [name, setName] = useState(target.name)
   const [description, setDescription] = useState(target.description)
   // Follow a label that changes underneath: another browser saves or deletes it, or the server trimmed what was saved.
@@ -48,7 +51,7 @@ function NameForm({ where, saved, suggestion, loadError, focus, onFocused }: For
   const edited = name !== target.name || description !== target.description
   const off = where === null
   // a field differs from the saved label, as Save's `differs` judges it: marked edited (RC1-31) and counted, so the marks
-  // agree with Save (R6); a suggested name with no saved label is unsaved and is marked
+  // agree with Save (R6)
   const nameEdited = name !== savedName, descEdited = description !== savedDescription
   const changes: UnsavedChange[] = [
     ...(nameEdited ? [{ field: LABEL.name, saved: savedName, edited: name }] : []),
@@ -73,7 +76,7 @@ function NameForm({ where, saved, suggestion, loadError, focus, onFocused }: For
       <div className="form-grid">
         <div className="form-row">
           <label htmlFor="port-name-input">{LABEL.name}</label>
-          <span><input id="port-name-input" ref={nameRef} value={name} disabled={off} onChange={(e) => setName(oneLine(e.target.value))} onPaste={pasteInto(setName)}
+          <span><input id="port-name-input" ref={nameRef} value={name} placeholder={placeholder} disabled={off} onChange={(e) => setName(oneLine(e.target.value))} onPaste={pasteInto(setName)}
             className={nameEdited ? 'edited' : undefined} aria-describedby={nameEdited ? 'port-name-count port-name-ed' : 'port-name-count'} />
             {nameEdited && <EditedTag id="port-name-ed" />}<span id="port-name-count" className="muted"> {nameLen}/{NAME_MAX}</span></span>
         </div>

@@ -148,42 +148,67 @@ describe('PortsTable counter order', () => {
   })
 })
 
-describe('PortsTable trend arrows', () => {
-  const pushTotals = (values: number[]) => values.forEach((v, i) => statsStore.push(statsFromSample(3, { ts: 1000 + i, total: { tx_bps: v } })))
+describe('PortsTable trend chevrons', () => {
+  const pushTotals = (values: number[], t0 = 1000) => values.forEach((v, i) => statsStore.push(statsFromSample(3, { ts: t0 + i, total: { tx_bps: v } })))
   const txL2 = () => screen.getByRole('row', { name: /^Tx L2 bps/ })
+  // +10 % a step from 1 Mbps, above the 10 kbps floor: the last three trends agree at level 3
+  const rising = [1e6, 1.1e6, 1.21e6, 1.331e6, 1.4641e6, 1.61051e6, 1.771561e6]
 
-  it('a rising series shows three up arrows labelled rising', () => {
-    pushTotals([1000, 1100, 1210, 1331, 1464])
+  it('a steady rise shows one bold up chevron whose label gives the change', () => {
+    pushTotals(rising)
     render(<PortsTable ports={[p0, p1]} />)
-    const arrow = within(txL2()).getByRole('img', { name: 'rising' })
-    expect(arrow).toHaveTextContent('▲▲▲')
-    expect(arrow).toHaveAttribute('title', 'Rising: change over the last 5 samples: one arrow above 1 %, two above 2 %, three above 5 %')
+    const mark = within(txL2()).getByRole('img', { name: 'rising, about 10 %' })
+    expect(mark).toHaveTextContent(/^▲$/)
+    expect(mark).toHaveClass('trend', 'trend-strong')
+    expect(mark).toHaveAttribute('title', `Rising, about 10 %: ${'the weighted change over the last 5 samples, shown once it holds for 3; bold above 5 %, faint from 1 %; never under 10 kbps or 10 pps'}`)
   })
-  it('a falling series shows down arrows labelled falling', () => {
-    pushTotals([1464, 1331, 1210, 1100, 1000])
+  it('a steady fall shows one down chevron', () => {
+    pushTotals([...rising].reverse())
     render(<PortsTable ports={[p0, p1]} />)
-    expect(within(txL2()).getByRole('img', { name: 'falling' })).toHaveTextContent('▼▼▼')
+    expect(within(txL2()).getByRole('img', { name: /^falling/ })).toHaveTextContent(/^▼$/)
   })
-  it('fewer than five samples show no arrow', () => {
-    pushTotals([1000, 1100, 1210, 1331])
+  it('a gentle rise (1-5 %) is faint', () => {
+    pushTotals([0, 1, 2, 3, 4, 5, 6].map((i) => 1e6 * 1.02 ** i))
     render(<PortsTable ports={[p0, p1]} />)
-    expect(screen.queryByRole('img', { name: /rising|falling/ })).toBeNull()
+    expect(within(txL2()).getByRole('img', { name: /^rising/ })).toHaveClass('trend-weak')
   })
-  it('a flat series shows none, and the arrow appears as the fifth sample arrives', () => {
-    pushTotals([1000, 1100, 1210, 1331])
+  it('until the trend has held for 3 samples there is no chevron, but its slot is kept so the column does not shift', () => {
+    pushTotals(rising.slice(0, 6))
     render(<PortsTable ports={[p0, p1]} />)
-    act(() => statsStore.push(statsFromSample(3, { ts: 1004, total: { tx_bps: 1464 } })))
-    expect(within(txL2()).getByRole('img', { name: 'rising' })).toBeInTheDocument()
-    // Five equal values at contiguous ts after the rising ones: trend() sees five samples, and they are flat.
-    for (let i = 0; i < 5; i++) act(() => statsStore.push(statsFromSample(3, { ts: 1005 + i, total: { tx_bps: 5000 } })))
-    const seen = statsStore.series('total', 6).map((p) => p.tx_bps as number)
-    expect(seen.slice(-5)).toEqual([5000, 5000, 5000, 5000, 5000])
+    expect(within(txL2()).queryByRole('img')).toBeNull()
+    const slot = txL2().querySelector('.trend')
+    expect(slot).not.toBeNull()
+    expect(slot).toHaveAttribute('aria-hidden', 'true')
+    expect(slot).toBeEmptyDOMElement()
+  })
+  it('a turn shows nothing until the new direction has held for 3 samples', () => {
+    pushTotals([1e6, 1.1e6, 1.21e6, 1.331e6, 1.4641e6, 1e6, 1e6])
+    render(<PortsTable ports={[p0, p1]} />)
+    expect(within(txL2()).queryByRole('img')).toBeNull()
+  })
+  it('a rate under 10 kbps shows none however it moves, and a pps rate under 10 pps none', () => {
+    pushTotals(rising.map((v) => v / 200))   // 5 kbps to 8.9 kbps
+    render(<PortsTable ports={[p0, p1]} />)
+    expect(within(txL2()).queryByRole('img')).toBeNull()
+  })
+  it('a pps rate is gated by 10 pps, not 10 kbps', () => {
+    [0, 1, 2, 3, 4, 5, 6].forEach((i) => statsStore.push(statsFromSample(3, { ts: 1000 + i, total: { tx_pps: 100 * 1.1 ** i } })))
+    render(<PortsTable ports={[p0, p1]} />)
+    expect(within(screen.getByRole('row', { name: /^Tx pps/ })).getByRole('img', { name: /^rising/ })).toBeInTheDocument()
+  })
+  it('the chevron appears as the seventh sample arrives, and goes once the rate is flat', () => {
+    pushTotals(rising.slice(0, 6))
+    render(<PortsTable ports={[p0, p1]} />)
+    act(() => statsStore.push(statsFromSample(3, { ts: 1006, total: { tx_bps: rising[6] } })))
+    expect(within(txL2()).getByRole('img', { name: /^rising/ })).toBeInTheDocument()
+    for (let i = 0; i < 5; i++) act(() => statsStore.push(statsFromSample(3, { ts: 1007 + i, total: { tx_bps: 5e6 } })))
+    const seen = statsStore.series('total', 8).map((p) => p.tx_bps as number)
     expect(trend(seen)).toBe(0)
     expect(within(txL2()).queryByRole('img')).toBeNull()
   })
-  it('counter rows carry no arrows', () => {
-    pushTotals([1000, 1100, 1210, 1331, 1464])
+  it('counter rows carry no chevron or slot', () => {
+    pushTotals(rising)
     render(<PortsTable ports={[p0, p1]} />)
-    expect(within(screen.getByRole('row', { name: /^Tx packets/ })).queryByRole('img')).toBeNull()
+    expect(screen.getByRole('row', { name: /^Tx packets/ }).querySelector('.trend')).toBeNull()
   })
 })

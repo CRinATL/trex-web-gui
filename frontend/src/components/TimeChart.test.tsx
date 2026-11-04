@@ -79,6 +79,20 @@ describe('TimeChart', () => {
     expect(opts(0).scales.x.range(null, 5, 6)).toEqual([5, 6])
     expect(opts(0).axes[1].values?.(null, [1, 2])).toEqual(['<1>', '<2>'])
   })
+  it('the y axis is as wide as its widest tick label, never under 80 px, so "400.00 kpps" is not clipped', () => {
+    const e = emitter()
+    render(<TimeChart {...base(e)} series={[{ label: 'a', color: '#111' }]} />)
+    const size = (opts(0).axes[1] as unknown as { size: (u: unknown, v: string[] | null, i: number, c: number) => number }).size
+    expect(typeof size).toBe('function')
+    // a canvas at pixel ratio 2 whose font is 7 CSS px per character; ticks 10 px and gap 5 px, as uPlot's defaults
+    const ctx = { font: '', measureText: (s: string) => ({ width: s.length * 7 * 2 }) }
+    const self = { ctx, axes: [{}, { font: ['24px sans'], ticks: { show: true, size: 10 }, gap: 5 }] }
+    UPlot.pxRatio = 2
+    expect(size(self, ['0 pps', '200.00 kpps', '400.00 kpps'], 1, 1)).toBe(10 + 5 + 11 * 7)
+    expect(ctx.font).toBe('24px sans')
+    expect(size(self, ['0 pps', '2 pps'], 1, 1)).toBe(80)
+    expect(size(self, null, 1, 0)).toBe(80)   // uPlot's first call, before any ticks exist
+  })
   it('x ticks are one line: :ss, or the time at a whole minute, never a date (RC1-38)', () => {
     const e = emitter()
     render(<TimeChart {...base(e)} series={[{ label: 'a', color: '#111' }]} />)

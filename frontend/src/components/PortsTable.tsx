@@ -5,7 +5,7 @@ import { portAria, portTitle, type PortLabel } from '../portLabels'
 import { statsStore } from '../stats'
 import { useStatsSelector } from '../useStats'
 import { cell, humanBps, humanPps } from '../statsFormat'
-import { trend, trendLevel } from '../trend'
+import { steadyTrend, TREND_FLOOR, TREND_SAMPLES } from '../trend'
 
 type Fmt = (v: unknown) => string
 const ROWS: { label: string; tx: string; rx: string; fmt: Fmt }[] = [
@@ -18,21 +18,28 @@ const PACKET_ROWS: typeof ROWS = [{ label: 'packets', tx: 'opackets', rx: 'ipack
 const BYTES_ROWS: typeof ROWS = [{ label: 'bytes', tx: 'obytes', rx: 'ibytes', fmt: cell }]
 const ERROR_ROWS: typeof ROWS = [{ label: 'errors', tx: 'oerrors', rx: 'ierrors', fmt: cell }]
 
-// -3..3 over the newest five samples of one rate. The window is six periods, so five samples fit even when the
-// stats tick runs late; the samples' own ts decide, never an assumed 1 s.
-function useTrendLevel(scope: string, k: string): number {
-  return useStatsSelector(() => {
+// steadyTrend over the newest samples of one rate, as "level|pct" (the selector returns a primitive). The window is one
+// period more than the samples it needs, so they fit even when the stats tick runs late; the samples' own ts decide,
+// never an assumed 1 s. A pps key is gated by the pps floor, every other rate by the bps one.
+function useSteadyTrend(scope: string, k: string): { level: number; pct: number } {
+  const [level, pct] = useStatsSelector(() => {
     const interval = statsStore.latest()?.interval_s ?? 1
-    const samples = statsStore.series(scope, 6 * interval).map((p) => p[k]).filter((x): x is number => typeof x === 'number')
-    return trendLevel(trend(samples))
-  })
+    const samples = statsStore.series(scope, (TREND_SAMPLES + 1) * interval).map((p) => p[k]).filter((x): x is number => typeof x === 'number')
+    const t = steadyTrend(samples, k.endsWith('pps') ? TREND_FLOOR.pps : TREND_FLOOR.bps)
+    return `${t.level}|${Math.round(Math.abs(t.pct))}`
+  }).split('|').map(Number)
+  return { level, pct }
 }
 
+// One chevron in a slot that is always there, so a column does not shift as it comes and goes. No colour: a rise is
+// not good or bad traffic. Faint for levels 1-2 (1-5 %), bold for 3 (above 5 %).
 function Trend({ scope, k }: { scope: string; k: string }) {
-  const level = useTrendLevel(scope, k)
-  if (level === 0) return null
+  const { level, pct } = useSteadyTrend(scope, k)
+  if (level === 0) return <span className="trend" aria-hidden="true" />
   const dir = level > 0 ? 'rising' : 'falling'
-  return <span role="img" aria-label={dir} title={`${dir[0].toUpperCase()}${dir.slice(1)}: ${TREND_HINT}`} className="trend">{(level > 0 ? '▲' : '▼').repeat(Math.abs(level))}</span>
+  const said = `${dir}, about ${pct} %`
+  return <span role="img" aria-label={said} title={`${said[0].toUpperCase()}${said.slice(1)}: ${TREND_HINT}`}
+    className={`trend ${Math.abs(level) === 3 ? 'trend-strong' : 'trend-weak'}`}>{level > 0 ? '▲' : '▼'}</span>
 }
 
 function Val({ scope, k, fmt, arrow }: { scope: string; k: string; fmt: Fmt; arrow?: boolean }) {
@@ -45,8 +52,8 @@ const NO_LABEL = () => null
 // Where service mode changes for a port this session does not own: the banner never acquires one.
 export const SERVICE_HOW = 'Turn it off on the Control page: acquire the port, then its Control tab, Service mode Off.'
 const plural = (ids: number[]) => `port${ids.length > 1 ? 's' : ''} ${ids.join(', ')}`
-// The arrows port the TUI's trend (trend.ts); the tooltip says what they count.
-const TREND_HINT = 'change over the last 5 samples: one arrow above 1 %, two above 2 %, three above 5 %'
+// The chevron is the TUI's trend behind the GUI's filter (trend.ts); the tooltip says what it shows.
+const TREND_HINT = 'the weighted change over the last 5 samples, shown once it holds for 3; bold above 5 %, faint from 1 %; never under 10 kbps or 10 pps'
 
 // Service mode is a port's state, not the table's: the Dashboard shows this above its tabs, so every tab carries it
 // (RC1-21). The state leads, in bold; how to change it follows. `canAct` (connected, not read-only): the ports this session

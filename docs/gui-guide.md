@@ -641,10 +641,13 @@ has its own legend under it, with no standing time entry (hovering adds the time
 - **Ports table**:
   - **Show** (All / My ports) and **▸ Show bytes** (it reads **▾ Hide bytes** while the bytes rows show).
   - A column per port and **Total**.
-  - Rows Tx/Rx L1 bps, L2 bps, pps with ▲/▼ trend marks, then `Counters: since connect, Reset or Clear`: packets,
+  - Rows Tx/Rx L1 bps, L2 bps, pps with a ▲/▼ trend chevron, then `Counters: since connect, Reset or Clear`: packets,
     bytes (folded behind Show bytes), errors.
-  - A mark is the TUI's trend: the weighted change over the last 5 samples, one arrow above 1 %, two above 2 %, three
-    above 5 %, none below 1 % or while the rate is under 10. Its tooltip says so.
+  - The chevron is the TUI's trend (the weighted change over the last 5 samples) behind two filters: it shows only
+    once the direction has held for 3 samples, and never while the rate is under 10 kbps (10 pps for a pps row), where
+    idle traffic would make it flicker. One chevron, faint from 1 %, bold above 5 %, and no colour, since a rise is
+    not good or bad in itself. It sits in a fixed slot, so the column does not shift. Its label and tooltip give the
+    change, e.g. `Rising, about 7 %`.
 - **Charts**:
   - **Interval** (60, 90, 120, 300 s) and **Layout** (1, 2 or 4 charts).
   - Each chart's caption is its series select (Tx pps, Rx pps, Tx bps L2, Rx bps L2, Tx bps L1, Rx bps L1) over the

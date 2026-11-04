@@ -24,7 +24,21 @@ function tickOf(x: number): string {
   return `${h % 12 === 0 ? 12 : h % 12}:${two(d.getMinutes())}${h < 12 ? 'am' : 'pm'}`
 }
 
-export type ChartSeries = { label: string; color: string }   // color: a CSS colour or `var(--name)`
+// The y axis width (uPlot's `size`): the widest tick label plus the ticks and the gap, so a long label ("400.00 kpps")
+// is not clipped at the chart's left edge, as a fixed 80 px clipped it. Never under 80 px, so a chart of short labels
+// keeps its old width. uPlot calls this before the ticks exist (values null) and again as they settle; its canvas
+// is in device pixels, so the measured width is divided by the pixel ratio.
+const Y_AXIS_MIN = 80
+function yAxisSize(self: uPlot, values: string[] | null, axisIdx: number): number {
+  const axis = self.axes[axisIdx] as uPlot.Axis & { font: [string, number, number] }
+  if (!values?.length) return Y_AXIS_MIN
+  self.ctx.font = axis.font[0]
+  const text = Math.max(...values.map((s) => self.ctx.measureText(s).width)) / (uPlot.pxRatio || 1)
+  const ticks = axis.ticks?.show === false ? 0 : (axis.ticks?.size ?? 10)
+  return Math.max(Y_AXIS_MIN, Math.ceil(ticks + (axis.gap ?? 5) + text))
+}
+
+export type ChartSeries ={ label: string; color: string }   // color: a CSS colour or `var(--name)`
 
 type Props = {
   title: string
@@ -94,7 +108,7 @@ export function TimeChart({ title, subscribe, data, series, format, windowS, lat
         },
         hooks: { setCursor: [(self: uPlot) => setHover({ id: identity, idx: self.cursor.idx ?? null })] },
         legend: { show: false },
-        axes: [{ ...axis, values: (_u, splits) => splits.map(tickOf) }, { ...axis, size: 80, values: (_u, splits) => splits.map((x) => live.current.format(x)) }],
+        axes: [{ ...axis, values: (_u, splits) => splits.map(tickOf) }, { ...axis, size: yAxisSize, values: (_u, splits) => splits.map((x) => live.current.format(x)) }],
         series: [{}, ...seriesRef.current.map((s) => ({ label: s.label, stroke: resolve(s.color), width: 2 }))],
       },
       live.current.data(live.current.windowS),

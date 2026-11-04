@@ -32,12 +32,14 @@ const nameBox = () => screen.getByRole('textbox', { name: /^Name/ })
 const save = () => screen.getByRole('button', { name: 'Save' })
 
 describe('PortNameField', () => {
-  it('a suggested name with no saved label is marked and counted, as Save is enabled (R6)', () => {
+  it('a suggested name with no saved label is only a placeholder: the field is empty, unmarked and Save is disabled', () => {
     open({ suggestName: 'enp3s0f0' })
-    expect(save()).toBeEnabled()
-    expect(nameBox()).toHaveClass('edited')
-    expect(screen.getByText('1 unsaved change')).toBeInTheDocument()
-    expect(screen.getByRole('textbox', { name: /^Description/ })).not.toHaveClass('edited')
+    expect(nameBox()).toHaveValue('')
+    expect(nameBox()).toHaveAttribute('placeholder', 'enp3s0f0')
+    expect(nameBox()).not.toHaveClass('edited')
+    expect(screen.queryByText(/unsaved change/)).not.toBeInTheDocument()
+    expect(save()).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Revert' })).toBeDisabled()
   })
   it('a field changed from the saved label is marked and counted beside Save (RC1-31)', async () => {
     open({ initial: { name: 'uplink', description: 'to the DUT' } })
@@ -52,13 +54,13 @@ describe('PortNameField', () => {
     expect(nameBox()).not.toHaveClass('edited')
     expect(screen.queryByText('edited')).not.toBeInTheDocument()
   })
-  it('pre-fills the name with the suggested kernel name when the port has no label, still editable', async () => {
+  it('with a suggestion as the placeholder, Save stores what is typed', async () => {
     const put = vi.spyOn(api, 'putPortLabel').mockResolvedValue({ labels: {}, load_error: null })
     open({ suggestName: 'enp3s0f0' })
-    expect(nameBox()).toHaveValue('enp3s0f0')
-    await userEvent.type(nameBox(), '-x')
+    await userEvent.type(nameBox(), 'uplink')
+    expect(nameBox()).toHaveClass('edited')
     await userEvent.click(save())
-    expect(put).toHaveBeenCalledWith({ server: 'h:4501', key: '#0', name: 'enp3s0f0-x', description: '' })
+    expect(put).toHaveBeenCalledWith({ server: 'h:4501', key: '#0', name: 'uplink', description: '' })
   })
   it('a saved label wins over the suggestion', () => {
     open({ initial: { name: 'uplink', description: '' }, suggestName: 'enp3s0f0' })
@@ -129,17 +131,18 @@ describe('PortNameField', () => {
     await userEvent.click(save())
     expect(put).toHaveBeenCalledWith({ server: 'h:4501', key: '#0', name: 'a b', description: 'line one line two three' })
   })
-  it('Name… pre-fills a confirmed kernel name when the port has no label, but a saved label wins', () => {
+  it('Name… shows a confirmed kernel name as the placeholder when the port has no label, but a saved label wins', () => {
     const { unmount } = open({ suggestName: 'veth0' })
-    expect(nameBox()).toHaveValue('veth0')
+    expect(nameBox()).toHaveAttribute('placeholder', 'veth0')
     unmount()
     open({ suggestName: 'veth0', initial: { name: 'uplink-A', description: '' } })
     expect(nameBox()).toHaveValue('uplink-A')
   })
-  it('Name… does not pre-fill from an unconfirmed entry, even one carrying a kernel_name', () => {
+  it('Name… shows no placeholder from an unconfirmed entry, even one carrying a kernel_name', () => {
     vi.spyOn(state, 'useAppState').mockReturnValue({ ...stateFor({}), session: { ...session, params, ifaces: [kernel(false)] } })
     render(<PortNameField port={port} ports={[port]} />)
     expect(nameBox()).toHaveValue('')
+    expect(nameBox()).not.toHaveAttribute('placeholder')
   })
   it('Save is disabled until the field differs', async () => {
     open({ initial: { name: 'uplink', description: '' } })

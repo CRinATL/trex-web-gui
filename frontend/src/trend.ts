@@ -30,3 +30,25 @@ export function trendLevel(v: number): number {
   const level = a < 1 ? 0 : a > 5 ? 3 : a > 2 ? 2 : 1
   return v < 0 && level !== 0 ? -level : level
 }
+
+// How many consecutive trends must agree before the GUI shows one: about 3 s at the 1 s stats tick.
+export const HOLD = 3
+// A rate under these never shows a trend: the idle trickle (ARP, LLDP) is a few kbps and pps, where one extra frame is
+// a +100 % step, so trend() swings to its top level on noise.
+export const TREND_FLOOR = { bps: 10_000, pps: 10 } as const
+// The samples steadyTrend needs: trend() reads 5, and HOLD of them end one sample apart.
+export const TREND_SAMPLES = 4 + HOLD
+
+// The GUI's filter in front of the TUI's trend (trend() and trendLevel() stay its exact port). samples: oldest first.
+// The trends ending at each of the last HOLD samples must share a direction; the level shown is the weakest of them, so
+// a single spike neither starts a chevron nor makes it bold. Nothing while the latest rate is under `floor`.
+// pct is the newest trend, for the label.
+export function steadyTrend(samples: number[], floor: number): { level: number; pct: number } {
+  const n = samples.length
+  if (n < TREND_SAMPLES || samples[n - 1] < floor) return { level: 0, pct: 0 }
+  const levels = Array.from({ length: HOLD }, (_, i) => trendLevel(trend(samples.slice(0, n - HOLD + 1 + i))))
+  const up = levels.every((l) => l > 0), down = levels.every((l) => l < 0)
+  if (!up && !down) return { level: 0, pct: 0 }
+  const weakest = Math.min(...levels.map(Math.abs))
+  return { level: up ? weakest : -weakest, pct: trend(samples) }
+}
