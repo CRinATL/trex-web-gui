@@ -304,6 +304,30 @@ def test_colocated_server_process_exit_marks_lost_as_stopped(fake_trex, new_sess
     new_session.run(run())
 
 
+@pytest.mark.parametrize("exits", [True, False])
+def test_an_unreachable_poll_reads_as_stopped_only_once_the_process_is_gone(fake_trex, new_session, tmp_path,
+                                                                           monkeypatch, exits) -> None:
+    """The tick's /proc check passed, then the server exited before its sync_ports RPC: the RPC's
+    ServerUnreachable reads as STOPPED when the process is gone by then, and keeps its own text when it
+    still runs."""
+    import trex_web_gui.trexapi as api
+
+    async def run() -> None:
+        d = _server_proc(tmp_path)
+        s = new_session(Recorder(), poll_s=0.1, proc_root=tmp_path, local_hostname=lambda: "trex-vm")
+        await s.connect(params(fake_trex(), timeout_s=5.0))
+
+        def unreachable(c):
+            if exits:
+                (d / "cmdline").unlink()
+                d.rmdir()
+            raise ServerUnreachable("rpc unreachable")
+        monkeypatch.setattr(api, "sync_ports", unreachable)
+        await wait_for(lambda: s.snapshot()["state"] == "lost", 2.0)
+        assert s.snapshot()["error"] == (STOPPED if exits else "rpc unreachable")
+    new_session.run(run())
+
+
 def test_silence_cause_says_the_colocated_server_process_still_runs(fake_trex, new_session, tmp_path) -> None:
     async def run() -> None:
         _server_proc(tmp_path)

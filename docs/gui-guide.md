@@ -344,7 +344,7 @@ Shown in [13](gui-inventory/screens/13-port-control-top.png), [14](gui-inventory
 - **Name**:
   - `Shown in the port lists. Saved by this GUI for <host>:<port>; clear both fields to remove the name.`
   - **Name** (40 characters) and **Description** (500) with live counts, **Save** and **Revert**.
-  - A port with no saved name starts from its confirmed kernel interface name.
+  - A port with no saved name starts empty, with its confirmed kernel interface name as the Name placeholder.
   - The name is keyed by the port's MAC (by its number when the MAC is unusable or repeated), per server, and is
     stored in the backend's data directory, so every browser sees it.
   - Over the limit: `The name is limited to 40 characters and the description to 500.`
