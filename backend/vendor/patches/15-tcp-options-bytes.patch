@@ -1,0 +1,21 @@
+Lets the TCP layer's options field take its option bytes as they are: `TCPOptionsField.i2m` in the bundled Scapy 2.4.3
+fork (external_libs/scapy-2.4.3/scapy/layers/inet.py:369 at the pin) walks its value as a list of (name, value)
+pairs, so a `bytes` value raises. trex-web-gui's packet editor stores TCP options as the exact bytes (a Scapy
+re-encode rewrites a lossy option, `1e 01` to `1e 02`) and hands them to the field. The patch returns bytes
+zero-padded to a multiple of 4; `TCP.post_build` takes `dataofs` from that padded length, so the header length and
+the offsets of later layers follow. A list value goes through the old code unchanged.
+Upstream: the unpatched i2m fails on bytes, so a document with MACHINE TCP options does not build in the legacy
+scapy server. Not reported. Not touched by any other patch.
+
+diff -ruN a/external_libs/scapy-2.4.3/scapy/layers/inet.py b/external_libs/scapy-2.4.3/scapy/layers/inet.py
+--- a/external_libs/scapy-2.4.3/scapy/layers/inet.py
++++ b/external_libs/scapy-2.4.3/scapy/layers/inet.py
+@@ -367,6 +367,8 @@
+         return x
+ 
+     def i2m(self, pkt, x):
++        if isinstance(x, bytes):
++            return x + b"\x00" * (-len(x) % 4)
+         opt = b""
+         for oname, oval in x:
+             # We check for a (0, b'') or (1, b'') option first

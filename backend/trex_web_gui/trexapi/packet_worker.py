@@ -23,9 +23,12 @@ import sys
 import threading
 import time
 from collections.abc import Callable
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from trex_web_gui.studio.packetdoc import NotRepresentable, doc_value, empty_doc, literal_expr
+
+if TYPE_CHECKING:
+    from trex_web_gui.trexapi.packet_options import OptionLayer
 
 PR_SET_PDEATHSIG = 1
 PARENT_POLL_S = 1.0        # the getppid watchdog's period (platforms without prctl)
@@ -93,7 +96,9 @@ class Engine:
         from trex.scapy_server.scapy_service import Scapy_service
         self.packet_class = Packet
         self.svc = Scapy_service()
-        for name in ("_fully_define", "_packet_model_to_scapy_packet", "_pkt_data", "_pkt_to_field_tree"):
+        names = ("_fully_define", "_packet_model_to_scapy_packet", "_pkt_data", "_pkt_to_field_tree",
+                 "_field_value_from_def")
+        for name in names:
             if not callable(getattr(self.svc, name, None)):
                 raise RuntimeError(f"the vendored Scapy_service has no method {name}; the packet editor's "
                                    "decode cap and the capture viewer's tree rely on it")
@@ -104,6 +109,9 @@ class Engine:
         # Layer offsets come from the bytes (look-7, `_field_tree`); keep the service's own method to call.
         self._service_field_tree = self.svc._pkt_to_field_tree
         self.svc._pkt_to_field_tree = self._field_tree
+        # An IP or TCP `options` field of MACHINE bytes is built from exactly those bytes (`_field_value`).
+        self._service_field_value = self.svc._field_value_from_def
+        self.svc._field_value_from_def = self._field_value
         self._definitions: dict[str, Any] | None = None
         self.ops: dict[str, Callable[[dict[str, Any]], dict[str, Any]]] = {
             "definitions": self.definitions, "build": self.build, "payload_classes": self.payload_classes,
@@ -219,6 +227,11 @@ class Engine:
             for desc in layer.fields_desc:
                 if desc.name not in layer.fields:
                     continue
+                kind = _option_layer(layer) if desc.name == "options" else None
+                if kind is not None:
+                    mine = raw[len(raw) - min(lengths[i], len(raw)):]
+                    fields.append({"id": "options", "value": _machine(option_bytes(kind, mine))})
+                    continue
                 try:
                     fields.append({"id": desc.name, "value": doc_value(layer.fields[desc.name])})
                 except NotRepresentable:
@@ -256,6 +269,33 @@ class Engine:
             _chain(full)[-1].add_payload(Raw(data[EDITOR_DECODE_BYTES:]))
         full.build()
         return full
+
+    def _field_value(self, scapy_pkt: Any, layer: Any, field_id: str, val: Any) -> Any:
+        """The service's `_field_value_from_def`, except for the `options` of an IP- or TCP-family layer given
+        as MACHINE: its base64 must be strict, it holds 40 bytes at most (`OptionsTooLong`, so a document or a
+        `.trp` cannot bypass the limit), and it is zero-padded to 4 bytes here, before Scapy builds it, so a
+        Field Engine offset past an IP layer is right (the fork records a payload's offset before
+        `IP.post_build` pads). IP gets the bytes as one Raw item of its list, TCP gets them as the value; both
+        carry the document's length (`OptionBytes`) for `_retext`."""
+        kind = _option_layer(layer) if field_id == "options" else None
+        if kind is None or not isinstance(val, dict) or val.get("vtype") != "MACHINE":
+            return self._service_field_value(scapy_pkt, layer, field_id, val)
+        from scapy.config import conf
+
+        from trex_web_gui.trexapi.packet_options import MAX_OPTION_BYTES, OptionsTooLong
+        text = val.get("base64")
+        try:
+            if not isinstance(text, str):
+                raise ValueError(text)
+            given = base64.b64decode(text, validate=True)
+        except ValueError:
+            raise ValueError("the options value is not valid base64") from None
+        if len(given) > MAX_OPTION_BYTES:
+            raise OptionsTooLong(
+                f"options are {len(given)} bytes; the header holds {MAX_OPTION_BYTES} at most")
+        value = OptionBytes(given + bytes(-len(given) % 4))
+        value.document_length = len(given)
+        return [conf.raw_layer(load=value)] if kind == "IP" else value
 
     def _field_tree(self, pkt: Any) -> list[dict[str, Any]]:
         """The service's field tree of `pkt`, with each layer's `offset` taken from the packet's own bytes.
@@ -304,10 +344,10 @@ class Engine:
 
     def reconstruct_edit(self, args: dict[str, Any]) -> dict[str, Any]:
         """`{doc, warnings}` after the byte edit that produced `args["binary"]` (D12). With `args["edited"]`
-        `{layer, field}`, the service's `reconstruct_pkt` runs on the document's packet without that field,
-        and only that field takes its value from the bytes. Otherwise, or when the bytes dissect to a
-        different layer stack, or the value is not a literal, the whole packet is re-derived from the
-        bytes (the Field Engine is kept) with a warning."""
+        `{layer, field}`, the bytes are reconstructed on the document's packet without that field
+        (`_reconstructed`), and only that field takes its value from the bytes. Otherwise, or when the bytes
+        dissect to a different layer stack, or the value is not a literal, the whole packet is re-derived from
+        the bytes (the Field Engine is kept) with a warning."""
         doc, edited = args["doc"], args.get("edited")
         if edited is not None:
             try:
@@ -341,17 +381,22 @@ class Engine:
         model = [{**layer, "fields": [f for f in layer["fields"] if not (j == at and f["id"] == name)]}
                  for j, layer in enumerate(packet)]
         try:
-            res = self.svc.reconstruct_pkt(self.h, binary, model)
+            built = self._reconstructed(binary, model)
         except Exception as e:
             if _caused_by_memory(e):
                 raise
             raise _Fallback from None
-        if res["binary"] is None:
-            raise _Fallback
-        stack = _chain(Ether(base64.b64decode(res["binary"])))
+        stack = _chain(Ether(built))
         if [type(x).__name__ for x in stack] != [layer["id"] for layer in packet]:
             raise _Fallback
-        value = doc_value(stack[at].getfieldval(name))
+        kind = _option_layer(stack[at]) if name == "options" else None
+        if kind is not None:
+            # The edited bytes as they are, dissected and never rebuilt: `res["binary"]` is Scapy's rebuild
+            # of its reading, which rewrites a lossy TCP option (`1e 01` becomes `1e 02`).
+            head = base64.b64decode(binary)
+            value = _machine(option_bytes(kind, bytes(_chain(Ether(head))[at])))
+        else:
+            value = doc_value(stack[at].getfieldval(name))
         out = [{**layer, "fields": list(layer["fields"])} for layer in packet]
         fields = out[at]["fields"]
         for f in fields:
@@ -360,6 +405,25 @@ class Engine:
                 return [*out, *tail]
         fields.append({"id": name, "value": value})
         return [*out, *tail]
+
+    def _reconstructed(self, binary: str, model: list[dict[str, Any]]) -> bytes:
+        """The service's `reconstruct_pkt` for a model with no deleted layer, as bytes: the frame `binary` is
+        dissected, each model layer's fields are set on the layer of the same position, and layers the frame
+        lacks are appended from the model. The layers are walked with `_chain`: the service indexes with
+        `pkt[depth]`, which Scapy's `getlayer` counts through an IP layer's option packets, so any frame
+        with IP options raised "Protocol id inconsistent" and fell back. ScapyException (a stack that
+        differs) is _Fallback."""
+        from scapy.layers.l2 import Ether
+        pkt = Ether(base64.b64decode(binary))
+        layers = _chain(pkt)
+        for depth, ml in enumerate(model):
+            if depth >= len(layers):
+                return bytes(pkt / self.svc._packet_model_to_scapy_packet(model[depth:]))
+            if ml["id"] != type(layers[depth]).__name__:
+                raise _Fallback
+            if "fields" in ml:
+                self.svc._modify_layer(pkt, layers[depth], ml["fields"])
+        return bytes(pkt)
 
     def decompile(self, args: dict[str, Any]) -> dict[str, Any]:
         """`{instructions, global_parameters, warnings}` for the VM `args["vm"]` of the packet bytes
@@ -495,52 +559,77 @@ class _NotPcap(Exception):
     """The file is not a capture the worker can read; the message is the whole error."""
 
 
-IP_OPTION_ID_FIELDS = ("copy_flag", "optclass", "option", "length")   # named by the option's name instead
+class OptionBytes(bytes):
+    """Option bytes zero-padded to 4 that a document's MACHINE value built, with the length of the document's
+    own bytes. It rides on the value through `Packet.__div__`'s copies (`Field.do_copy` returns bytes as is)
+    so `_retext` can show the document's bytes and how many zeros the build added."""
+
+    document_length: int = 0
 
 
-def _option_text(opt: Any) -> str:
-    """One IP option as Wireshark names it: `NOP`, `Router Alert (alert=...)`, or `option 25 (value=...)` for
-    one Scapy has no class for; its fields other than the type and the length follow in parentheses."""
-    cls = type(opt).__name__
-    name = (f"option {int(opt.option)}" if cls == "IPOption"
-            else cls.removeprefix("IPOption_").replace("_", " "))
-    shown = [f"{fd.name}={fd.i2repr(opt, opt.getfieldval(fd.name))}"
-             for fd in opt.fields_desc if fd.name not in IP_OPTION_ID_FIELDS]
-    return f"{name} ({', '.join(shown)})" if shown else name
+def _option_layer(layer: Any) -> OptionLayer | None:
+    """`"IP"` for an IP-family layer (`IPerror` too), `"TCP"` for a TCP-family one, else None."""
+    from scapy.layers.inet import IP, TCP
+    return "IP" if isinstance(layer, IP) else "TCP" if isinstance(layer, TCP) else None
 
 
-def ip_options_text(opts: list[Any]) -> str:
-    """The IP options `opts` as one line, as Wireshark reads them. Scapy 2.4.3 parses every zero byte after
-    End of Options as one more EOL; when only such zeros follow the first EOL, they are `padding N bytes`.
-    Any other option after it is listed as Scapy read it."""
-    from scapy.layers.inet import IPOption_EOL
-    end = next((i for i, o in enumerate(opts) if type(o) is IPOption_EOL), None)
-    tail = opts[end + 1:] if end is not None else []
-    pad = len(tail) if tail and all(type(o) is IPOption_EOL for o in tail) else 0
-    parts = [_option_text(o) for o in opts[:len(opts) - pad]]
-    if pad:
-        parts.append(f"padding {pad} byte{'' if pad == 1 else 's'}")
-    return ", ".join(parts)
+def option_bytes(kind: OptionLayer, layer_bytes: bytes) -> bytes:
+    """The option bytes of an IP or TCP header: those between the fixed 20 bytes and the header's end, read
+    with the header-length byte of `layer_bytes` (IP `ihl`, TCP `dataofs`), padding included."""
+    if kind == "IP":
+        end = (layer_bytes[0] & 0x0F) * 4 if layer_bytes else 0
+    else:
+        end = (layer_bytes[12] >> 4) * 4 if len(layer_bytes) > 12 else 0
+    return layer_bytes[20:end]
+
+
+def _machine(data: bytes) -> dict[str, str]:
+    """`data` as a MACHINE value."""
+    return {"vtype": "MACHINE", "base64": base64.b64encode(data).decode("ascii")}
+
+
+def _document_options(layer: Any, kind: str) -> OptionBytes | None:
+    """The bytes a document's MACHINE options gave the model `layer` (`OptionBytes`), else None."""
+    held = layer.fields.get("options")
+    if kind == "IP":
+        one = isinstance(held, list) and len(held) == 1 and "load" in held[0].fields
+        held = held[0].load if one else None
+    return held if isinstance(held, OptionBytes) else None
 
 
 def _retext(result: list[dict[str, Any]], model: list[Any], data: list[Any]) -> None:
-    """Rewrite two shown texts (`hvalue`) of the field tree `result`; values are left alone, so a tree still
-    rebuilds its bytes. A flags field with no flag set shows `0`, where Scapy's text is empty. A layer's IP
-    options show as `ip_options_text` of the options dissected from the bytes (`data`, the layers matched by
-    class), which is what the wire carries and what Wireshark shows."""
+    """Rewrite what the field tree `result` shows. A flags field with no flag set shows `0`, where Scapy's
+    text is empty. Every IP- or TCP-family layer's `options` field gets `value` MACHINE, `options` (the
+    decoded rows, `packet_options.decode`) and `hvalue` (`options_text`): the bytes are the document's own
+    when it gave MACHINE options (`padded` is the zeros the build added), else those the wire carries, read
+    from the layer dissected from the bytes (`data`, matched by class) or, past a class mismatch, from the
+    model layer's own build."""
     from scapy.fields import FlagsField
-    from scapy.layers.inet import IPOption
+
+    from trex_web_gui.trexapi.packet_options import decode, options_text
     for layer, m in zip(result, model, strict=False):
         by_id = {f["id"]: f for f in layer.get("fields", [])}
         for fd in m.fields_desc:
             f = by_id.get(fd.name)
             if f is not None and isinstance(fd, FlagsField) and f.get("hvalue") == "":
                 f["hvalue"] = "0"
-    for layer, b in zip(result, data, strict=False):
-        opts = getattr(b, "options", None) if layer.get("id") == type(b).__name__ else None
+    for i, (layer, m) in enumerate(zip(result, model, strict=False)):
+        kind = _option_layer(m)
         f = next((f for f in layer.get("fields", []) if f["id"] == "options"), None)
-        if f is not None and opts and isinstance(opts, list) and all(isinstance(o, IPOption) for o in opts):
-            f["hvalue"] = ip_options_text(opts)
+        if kind is None or f is None:
+            continue
+        held = _document_options(m, kind)
+        if held is not None:
+            shown, padded = bytes(held)[:held.document_length], len(held) - held.document_length
+        else:
+            b = data[i] if i < len(data) else m
+            same = isinstance(m, type(b)) or isinstance(b, type(m))
+            shown, padded = option_bytes(kind, bytes(b if same else m)), 0
+        decoded = decode(kind, shown)
+        decoded["padded"] = padded
+        f["value"] = _machine(shown)
+        f["options"] = decoded
+        f["hvalue"] = options_text(kind, decoded)
 
 
 def _chain(pkt: Any) -> list[Any]:
@@ -572,6 +661,15 @@ def _dissect(raw: bytes, capped: bool) -> tuple[Any, list[Any], list[int]]:
     for layer in layers:
         layer.raw_packet_cache = None
     pkt.hide_defaults()
+    # Judge the derived fields over the exact option bytes: Scapy rebuilds a lossy TCP option differently
+    # (`1e 01` becomes `1e 02`), which would keep the frame's checksum in the document. An empty value is not
+    # the default, so this follows `hide_defaults`: only a layer that has options still has the field.
+    from scapy.config import conf
+    for i, layer in enumerate(layers):
+        kind = _option_layer(layer)
+        if kind is not None and "options" in layer.fields:
+            exact = option_bytes(kind, raw[len(raw) - min(lengths[i], len(raw)):])
+            layer.fields["options"] = [conf.raw_layer(load=exact)] if kind == "IP" else exact
     _drop_derived(pkt, layers)
     return pkt, layers, lengths
 

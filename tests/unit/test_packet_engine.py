@@ -24,7 +24,7 @@ from trex_web_gui.trexapi.packet import PacketEngine, PacketError
 PROTOCOL_KEYS = ["fields", "id", "name"]
 FIELD_KEYS = ["auto", "bits", "id", "max", "min", "name", "regex", "type", "values_dict"]
 LAYER_KEYS = ["fields", "id", "offset", "real_id", "valid_structure"]
-FIELD_RESULT_KEYS = ["hvalue", "id", "length", "offset", "value"]
+FIELD_RESULT_KEYS = ["hvalue", "id", "length", "offset", "options", "value"]   # `options`: IP and TCP options
 
 ETHER_IP = [{"id": "Ether"}, {"id": "IP"}]
 
@@ -605,15 +605,15 @@ def test_doc_from_binary_emits_no_code() -> None:
             for expr in exprs:
                 ast.literal_eval(expr)
             assert await rebuilt(e, res["doc"]) == raw, name
-            if name == "tcp_options":
-                assert exprs and res["warnings"] == []
+            if name in ("ip_options", "tcp_options"):      # opened field by field, options as exact bytes
+                assert not exprs and res["warnings"] == [], name
             else:
                 assert not exprs and len(res["warnings"]) == 1
                 assert "cannot be edited as a field here; from this layer on the packet is raw bytes" \
                     in res["warnings"][0]
         ip = await e.doc_from_binary(b64(bytes.fromhex(FRAMES["ip_options"])), None)
-        assert ip["warnings"][0].startswith("layer 1 IP: options ")
-        assert [layer["id"] for layer in ip["doc"]["packet"]] == ["Ether", "Raw"]
+        assert [layer["id"] for layer in ip["doc"]["packet"]] == ["Ether", "IP", "UDP", "Raw"]
+        assert field_in(ip["doc"]["packet"][1], "options") == {"vtype": "MACHINE", "base64": b64(b"\1\1\1\1")}
     with_engine(body)
 
 
@@ -673,12 +673,11 @@ def test_reconstruct_edit_emits_no_code() -> None:
         assert raw[34:38] == b"\x01\x01\x01\x01"
         raw[34] = 0x94                                              # the first option byte
         res = await e.reconstruct_edit(doc, b64(bytes(raw)), {"layer": 1, "field": "options"})
-        assert res["warnings"][0].startswith("the byte edit re-derived")
-        assert any("raw bytes" in w for w in res["warnings"])
-        for n in walk(res["doc"]["packet"]):
-            if isinstance(n, dict) and n.get("vtype") == "EXPRESSION":
-                ast.literal_eval(n["expr"])
-        assert await rebuilt(e, res["doc"]) == bytes(raw)
+        assert res["warnings"] == []                                # D12 keeps the document field by field
+        assert field_in(res["doc"]["packet"][1], "options") == {"vtype": "MACHINE", "base64": b64(raw[34:38])}
+        assert not [n for n in walk(res["doc"]["packet"]) if isinstance(n, dict) and "expr" in n]
+        again = bytearray(await rebuilt(e, res["doc"]))             # the document computes a new IP checksum
+        assert again[:24] + again[26:] == raw[:24] + raw[26:]
     with_engine(body)
 
 
@@ -1101,6 +1100,9 @@ def test_building_an_opened_jumbo_record_stays_in_time(tmp_path: Path) -> None:
 
 # --- the capture viewer's tree runs here, not in the backend (gemini-security-review 2026-11-01 SEC-03) ---
 
+NO_OPTIONS_IP = {"layer": "IP", "rows": [], "padding": 0, "length": 0, "padded": 0, "problem": None}
+
+
 def test_tree_op_matches_the_backend_tree() -> None:
     """The worker's tree is the service's, but for the texts the worker rewrites: here IP flags 0 shows 0."""
     from trex_web_gui.trexapi import decode
@@ -1111,6 +1113,10 @@ def test_tree_op_matches_the_backend_tree() -> None:
     flags = next(f for f in want["data"][1]["fields"] if f["id"] == "flags")
     assert flags["hvalue"] == ""
     flags["hvalue"] = "0"
+    opts = next(f for f in want["data"][1]["fields"] if f["id"] == "options")
+    opts["value"] = {"vtype": "MACHINE", "base64": ""}          # the worker adds the editable options field
+    got = next(f for f in res["data"][1]["fields"] if f["id"] == "options")
+    assert got.pop("options") == NO_OPTIONS_IP
     assert res == want
 
 
@@ -1323,6 +1329,14 @@ ROUTER_ALERT_FRAME = bytes.fromhex(
     "ffffffffffff0200000000010800470000240001000040013343100000013000000101940400000000000800f7ff00000000")
 
 
+RA = ROUTER_ALERT_FRAME[34:42]       # the frame's option bytes: NOP, Router Alert, EOL, two zeros
+
+
+def field_in(layer: dict[str, Any], name: str) -> Any:
+    """The value of the field `name` of one document layer."""
+    return next(f["value"] for f in layer["fields"] if f["id"] == name)
+
+
 def field_of(r: Any, layer: str, name: str) -> dict[str, Any]:
     """The field `name` of the first layer `layer` in a tree or build result."""
     return next(f for d in r["data"] if d["id"] == layer for f in d["fields"] if f["id"] == name)
@@ -1332,7 +1346,7 @@ def test_ip_options_show_as_a_summary_with_padding_after_eol() -> None:
     async def body(e: PacketEngine) -> None:
         opts = field_of(await e.tree(b64(ROUTER_ALERT_FRAME)), "IP", "options")
         assert opts["hvalue"] == "NOP, Router Alert (alert=router_shall_examine_packet), EOL, padding 2 bytes"
-        assert opts["value"]["expr"].count("IPOption_EOL(") == 3      # the expression still rebuilds them
+        assert opts["value"] == {"vtype": "MACHINE", "base64": b64(RA)}     # exact bytes, not an expression
     with_engine(body)
 
 
@@ -1370,4 +1384,269 @@ def test_no_options_and_empty_flags_read_as_such() -> None:
         df = await e.build([{"id": "Ether"}, {"id": "IP", "fields": [{"id": "flags", "value": 2}]}], None)
         assert field_of(df, "IP", "flags")["hvalue"] == "DF"
         assert field_of(await e.build(options_model(None), None), "IP", "options")["hvalue"] == "[]"
+    with_engine(body)
+
+
+# --- IP and TCP options as exact bytes (options-editing Task 2) ---
+
+def machine(data: bytes) -> dict[str, str]:
+    """A MACHINE value of `data`."""
+    return {"vtype": "MACHINE", "base64": b64(data)}
+
+
+def with_options(layer: str, data: bytes, top: str | None = None) -> list[dict[str, Any]]:
+    """Ether / IP / UDP (TCP when `layer` is TCP) / Raw, with the options of `layer` MACHINE `data`."""
+    top = top or ("TCP" if layer == "TCP" else "UDP")
+    fields = [{"id": "options", "value": machine(data)}]
+    ports = [{"id": "sport", "value": 4000}, {"id": "dport", "value": 5000}]    # not 53: that reads as DNS
+    stack: list[dict[str, Any]] = [{"id": "Ether"}, {"id": "IP"}, {"id": top, "fields": ports},
+                                   {"id": "Raw", "fields": [{"id": "load", "value": ZZ}]}]
+    stack[1 if layer == "IP" else 2]["fields"] = fields
+    return stack
+
+
+async def built(e: PacketEngine, model: list[dict[str, Any]], fe: Any = None) -> dict[str, Any]:
+    """A build that must succeed."""
+    r = await e.build(model, fe)
+    assert r["error"] is None, r["error"]
+    return r
+
+
+async def doc_of(e: PacketEngine, raw: bytes) -> dict[str, Any]:
+    """The document `doc_from_binary` gives for `raw`, which must open without warnings."""
+    res = await e.doc_from_binary(b64(raw), None)
+    assert res["warnings"] == [], res["warnings"]
+    return res["doc"]
+
+
+def inet_sum(data: bytes) -> int:
+    """The Internet checksum of `data`: 0 for a header or segment whose checksum field is right."""
+    if len(data) % 2:
+        data += b"\0"
+    total = sum(struct.unpack(f"!{len(data) // 2}H", data))
+    while total > 0xFFFF:
+        total = (total & 0xFFFF) + (total >> 16)
+    return total ^ 0xFFFF
+
+
+def test_a_capture_with_ip_options_opens_field_by_field() -> None:
+    async def body(e: PacketEngine) -> None:
+        res = await e.doc_from_binary(b64(ROUTER_ALERT_FRAME), None)
+        assert [layer["id"] for layer in res["doc"]["packet"]] == ["Ether", "IP", "ICMP"]
+        assert res["warnings"] == []
+        assert field_in(res["doc"]["packet"][1], "options") == machine(RA)
+        assert await rebuilt(e, res["doc"]) == ROUTER_ALERT_FRAME
+    with_engine(body)
+
+
+PADDED_12 = bytes.fromhex("94040000") + bytes(8)        # Router Alert, EOL, then 7 more zeros: ihl 8
+
+
+def test_extra_padding_round_trips() -> None:
+    """Review Focus 1: more zeros than the boundary needs open and save as the same 12 bytes."""
+    async def body(e: PacketEngine) -> None:
+        frame = base64.b64decode((await built(e, with_options("IP", PADDED_12)))["binary"])
+        assert frame[14] == 0x48 and frame[34:46] == PADDED_12
+        doc = await doc_of(e, frame)
+        assert field_in(doc["packet"][1], "options") == machine(PADDED_12)
+        assert await rebuilt(e, doc) == frame
+        edited = bytearray(frame)
+        edited[38] = 1                                              # the alert value, same length
+        res = await e.reconstruct_edit(doc, b64(bytes(edited)), {"layer": 1, "field": "options"})
+        assert res["warnings"] == []
+        assert field_in(res["doc"]["packet"][1], "options") == machine(bytes(edited[34:46]))
+    with_engine(body)
+
+
+def test_forty_bytes_of_options_round_trip() -> None:
+    """Review Focus 2: ihl 15."""
+    forty = bytes.fromhex("94040000") * 10
+
+    async def body(e: PacketEngine) -> None:
+        frame = base64.b64decode((await built(e, with_options("IP", forty)))["binary"])
+        assert frame[14] == 0x4F
+        doc = await doc_of(e, frame)
+        assert field_in(doc["packet"][1], "options") == machine(forty)
+        assert await rebuilt(e, doc) == frame
+    with_engine(body)
+
+
+def test_a_document_over_40_bytes_does_not_build() -> None:
+    async def body(e: PacketEngine) -> None:
+        for layer in ("IP", "TCP"):
+            r = await e.build(with_options(layer, bytes(41)), None)
+            assert r["binary"] is None and "options are 41 bytes; the header holds 40 at most" in r["error"]
+        await built(e, with_options("IP", bytes(40)))              # the bound is 40 itself
+    with_engine(body)
+
+
+def test_options_that_are_not_base64_do_not_build() -> None:
+    async def body(e: PacketEngine) -> None:
+        for bad in ("a!b", "AAA", 7):                               # junk, bad padding, not a string
+            model = with_options("IP", b"")
+            model[1]["fields"][0]["value"] = {"vtype": "MACHINE", "base64": bad}
+            r = await e.build(model, None)
+            assert r["binary"] is None and "the options value is not valid base64" in r["error"], bad
+    with_engine(body)
+
+
+def test_an_icmp_error_quoting_ip_options_round_trips() -> None:
+    """Review Focus 3: the quoted header's options are a MACHINE field of IPerror."""
+    model = [{"id": "Ether"}, {"id": "IP"}, {"id": "ICMP", "fields": [{"id": "type", "value": 3}]},
+             {"id": "IPerror", "fields": [{"id": "options", "value": machine(RA)}]}, {"id": "UDPerror"}]
+
+    async def body(e: PacketEngine) -> None:
+        frame = base64.b64decode((await built(e, model))["binary"])
+        doc = await doc_of(e, frame)
+        assert [layer["id"] for layer in doc["packet"]] == ["Ether", "IP", "ICMP", "IPerror", "UDPerror"]
+        assert field_in(doc["packet"][3], "options") == machine(RA)
+        assert await rebuilt(e, doc) == frame
+    with_engine(body)
+
+
+# MSS, NOP, a SAck with 5 value bytes, 1e 01, two zeros
+TCP_OPTIONS = bytes.fromhex("020405b4" "01" "0507aabbccddee" "1e01" "0000")
+
+
+def test_tcp_options_round_trip_including_other_rows() -> None:
+    """Review Focus 4: a SAck of 5 value bytes and a length byte of 1 are "other" rows, kept byte for byte."""
+    async def body(e: PacketEngine) -> None:
+        r = await built(e, with_options("TCP", TCP_OPTIONS))
+        frame = base64.b64decode(r["binary"])
+        assert frame[34 + 12] >> 4 == 9
+        doc = await doc_of(e, frame)
+        tcp = doc["packet"][2]
+        assert [f["id"] for f in tcp["fields"] if f["id"] in ("chksum", "dataofs")] == []
+        assert field_in(tcp, "options") == machine(TCP_OPTIONS)
+        assert await rebuilt(e, doc) == frame
+        rows = field_of(r, "TCP", "options")["options"]["rows"]
+        assert [row["name"] for row in rows].count(None) == 2
+    with_engine(body)
+
+
+def test_malformed_options_build_as_typed_with_a_problem() -> None:
+    typed = bytes.fromhex("070900")
+    problem = "option 7 at byte 0 claims 9 bytes, 3 remain"
+
+    async def body(e: PacketEngine) -> None:
+        r = await built(e, with_options("IP", typed))
+        frame = base64.b64decode(r["binary"])
+        assert frame[14] == 0x46 and frame[34:38] == typed + b"\0"
+        opts = field_of(r, "IP", "options")
+        assert opts["value"] == machine(typed)
+        assert opts["options"]["problem"] == problem and opts["options"]["padded"] == 1
+        assert opts["hvalue"] == f"unparsed: 070900 ({problem}), padded to 4 bytes"
+    with_engine(body)
+
+
+def test_hex_not_a_multiple_of_4_is_padded() -> None:
+    async def body(e: PacketEngine) -> None:
+        r = await built(e, with_options("IP", b"\1\1\1"))
+        frame = base64.b64decode(r["binary"])
+        assert frame[14] == 0x46 and frame[34:38] == b"\1\1\1\0"
+        opts = field_of(r, "IP", "options")
+        assert opts["value"] == machine(b"\1\1\1")             # the document's bytes, not the padded ones
+        assert [row["name"] for row in opts["options"]["rows"]] == ["NOP"] * 3
+        assert opts["options"]["padded"] == 1 and opts["hvalue"].endswith(", padded to 4 bytes")
+        tcp = field_of(await built(e, with_options("TCP", b"\1\1\1")), "TCP", "options")
+        assert tcp["options"]["padded"] == 1 and tcp["hvalue"].endswith(", padded to 4 bytes")
+    with_engine(body)
+
+
+def test_an_fe_write_past_odd_options_lands_on_its_field() -> None:
+    """Review Focus 9: the build pads IP's options before Scapy records a payload's offset."""
+    def fe(target: str) -> dict[str, Any]:
+        """A 2-byte flow var written at `target`."""
+        return {"instructions": [
+            {"id": "STLVmFlowVar", "parameters": {"name": "v", "min_value": "1", "max_value": "9",
+                                                  "size": "2", "op": "inc"}},
+            {"id": "STLVmWrFlowVar", "parameters": {"fv_name": "v", "pkt_offset": target}}],
+            "global_parameters": {"cache_size": "10"}}
+
+    async def body(e: PacketEngine) -> None:
+        r = await built(e, with_options("IP", b"\1\1\1"), fe("UDP.sport"))
+        assert r["field_engine"]["error"] is None
+        assert r["field_engine"]["instructions"]["instructions"][1]["pkt_offset"] == 14 + 4 * 6
+        r = await built(e, with_options("TCP", b"\1\1\1"), fe("Raw.load"))
+        assert r["field_engine"]["error"] is None
+        assert r["field_engine"]["instructions"]["instructions"][1]["pkt_offset"] == 14 + 20 + 4 * 6
+    with_engine(body)
+
+
+def test_a_byte_edit_inside_the_options_keeps_the_document_fieldwise() -> None:
+    """Review Focus 5: IP, and TCP with an option Scapy rebuilds differently (`1e 01` as `1e 02`)."""
+    async def body(e: PacketEngine) -> None:
+        doc = await doc_of(e, ROUTER_ALERT_FRAME)
+        edited = bytearray(ROUTER_ALERT_FRAME)
+        edited[38] = 7
+        res = await e.reconstruct_edit(doc, b64(bytes(edited)), {"layer": 1, "field": "options"})
+        assert res["warnings"] == []
+        assert [layer["id"] for layer in res["doc"]["packet"]] == ["Ether", "IP", "ICMP"]
+        assert field_in(res["doc"]["packet"][1], "options") == machine(bytes(edited[34:42]))
+        lossy = bytes.fromhex("020405b4" "01" "1e01" "00")
+        frame = base64.b64decode((await built(e, with_options("TCP", lossy)))["binary"])
+        tdoc = await doc_of(e, frame)
+        tcp_edit = bytearray(frame)
+        tcp_edit[14 + 20 + 20 + 3] = 0xB5                           # the MSS value's low byte
+        res = await e.reconstruct_edit(tdoc, b64(bytes(tcp_edit)), {"layer": 2, "field": "options"})
+        assert res["warnings"] == []
+        assert field_in(res["doc"]["packet"][2], "options") == machine(bytes(tcp_edit[54:62]))
+        assert bytes(tcp_edit[54:62]).hex().endswith("1e0100")     # kept, not rebuilt as 1e 02
+    with_engine(body)
+
+
+def test_field_tree_carries_rows() -> None:
+    async def body(e: PacketEngine) -> None:
+        opts = field_of(await e.tree(b64(ROUTER_ALERT_FRAME)), "IP", "options")
+        assert opts["options"]["rows"][1]["name"] == "Router_Alert"
+    with_engine(body)
+
+
+def test_no_options_is_an_empty_editable_field() -> None:
+    async def body(e: PacketEngine) -> None:
+        opts = field_of(await built(e, options_model(None)), "IP", "options")
+        assert opts["value"] == machine(b"") and opts["options"] == NO_OPTIONS_IP and opts["hvalue"] == "[]"
+        tcp = field_of(await built(e, options_model(None, top="TCP")), "TCP", "options")
+        assert tcp["value"] == machine(b"") and tcp["options"] == {**NO_OPTIONS_IP, "layer": "TCP"}
+    with_engine(body)
+
+
+def test_a_typed_expression_still_builds() -> None:
+    async def body(e: PacketEngine) -> None:
+        r = await built(e, options_model(ONE_NOP))
+        assert len(base64.b64decode(r["binary"])) == 48
+        assert field_of(r, "IP", "options")["value"] == machine(b"\1\0\0\0")      # the wire bytes
+    with_engine(body)
+
+
+def test_no_expression_reaches_the_tree_past_a_class_mismatch() -> None:
+    """UDP port 53 dissects as DNS, so the model's next layers stop matching the bytes."""
+    udp = {"id": "UDP", "fields": [{"id": "dport", "value": 53}]}
+    ip = options_model(ONE_NOP)[1]
+    raw = {"id": "Raw", "fields": [{"id": "load", "value": ZZ}]}
+
+    async def body(e: PacketEngine) -> None:
+        for model in ([{"id": "Ether"}, {"id": "IP"}, udp, ip, raw],               # the layer is the mismatch
+                      [{"id": "Ether"}, {"id": "IP"}, udp, raw, ip, raw]):        # the layer is past it
+            r = await built(e, model)
+            opts = [f for layer in r["data"] if layer["id"] == "IP" for f in layer["fields"]
+                    if f["id"] == "options"]
+            assert [f["value"] for f in opts][-1] == machine(b"\1\0\0\0")
+            assert not any(f["value"].get("vtype") == "EXPRESSION" for f in opts)
+    with_engine(body)
+
+
+def test_header_lengths_follow_an_options_edit() -> None:
+    """Spec goal 5: the options grow to 12 bytes and the header length, total length and checksums follow."""
+    async def body(e: PacketEngine) -> None:
+        doc = await doc_of(e, ROUTER_ALERT_FRAME)
+        doc["packet"][1]["fields"] = [{"id": "options", "value": machine(PADDED_12)}]
+        frame = await rebuilt(e, doc)
+        assert frame[14] == 0x48 and inet_sum(frame[14:46]) == 0
+        assert struct.unpack("!H", frame[16:18])[0] == len(frame) - 14
+        tcp = base64.b64decode((await built(e, with_options("TCP", bytes(12))))["binary"])
+        segment = tcp[34:]
+        assert segment[12] >> 4 == 8
+        pseudo = tcp[26:34] + struct.pack("!BBH", 0, 6, len(segment))
+        assert inet_sum(pseudo + segment) == 0
     with_engine(body)

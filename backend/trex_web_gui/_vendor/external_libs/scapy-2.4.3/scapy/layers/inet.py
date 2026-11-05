@@ -368,6 +368,8 @@ class TCPOptionsField(StrField):
         return x
 
     def i2m(self, pkt, x):
+        if isinstance(x, bytes):
+            return x + b"\x00" * (-len(x) % 4)
         opt = b""
         for oname, oval in x:
             # We check for a (0, b'') or (1, b'') option first

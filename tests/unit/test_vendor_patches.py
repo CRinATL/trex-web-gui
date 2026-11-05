@@ -16,7 +16,7 @@ def test_pin_records_sha_and_all_patches() -> None:
     pin = json.loads((VENDOR / "TREX_PIN").read_text())
     assert pin == json.loads(PIN_FILE.read_text())                  # copy in _vendor matches the record
     assert f"--sha {pinned_sha()}" in (ROOT / "Makefile").read_text()  # and the record matches the Makefile
-    assert [p[:2] for p in pin["patches"]] == [f"{n:02d}" for n in range(1, 15)]
+    assert [p[:2] for p in pin["patches"]] == [f"{n:02d}" for n in range(1, 16)]
 
 
 def test_vendor_is_reproducible(build_vendor: BuildVendor) -> None:  # canon:TSK-5
@@ -277,3 +277,17 @@ def test_14_ip_options_ihl_guard(build_vendor: BuildVendor) -> None:
     assert run_vendor_python(VENDOR, CODE_14).stdout.strip().splitlines()[-1] == "0 6 4 IPOption_NOP"
     unpatched = run_vendor_python(build_vendor(["14"]), CODE_14).stdout.strip().splitlines()[-1].split()
     assert int(unpatched[0]) > 1000 and unpatched[1:] == ["6", "4", "IPOption_NOP"]
+
+
+# 15: the TCP options field takes bytes as they are, zero-padded to a multiple of 4
+CODE_15 = IMPORT_ALL + """
+from scapy.all import TCP
+print(bytes(TCP(options=b'\\x01\\x01\\x01')).hex())
+"""
+
+
+def test_15_tcp_options_bytes(build_vendor: BuildVendor) -> None:
+    got = run_vendor_python(VENDOR, CODE_15).stdout.strip().splitlines()[-1]
+    assert got.endswith("01010100") and got[24:25] == "6"      # dataofs 6, the bytes padded with one zero
+    neg = run_vendor_python(build_vendor(["15"]), CODE_15)       # canon:VER-2: patch 15 skipped
+    assert "01010100" not in neg.stdout and "Traceback" in neg.stderr

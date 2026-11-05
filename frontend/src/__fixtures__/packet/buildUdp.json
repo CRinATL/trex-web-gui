@@ -122,9 +122,17 @@
             "id": "options",
             "length": 2,
             "offset": 20,
+            "options": {
+              "layer": "IP",
+              "length": 0,
+              "padded": 0,
+              "padding": 0,
+              "problem": null,
+              "rows": []
+            },
             "value": {
-              "expr": "[]",
-              "vtype": "EXPRESSION"
+              "base64": "",
+              "vtype": "MACHINE"
             }
           }
         ],
