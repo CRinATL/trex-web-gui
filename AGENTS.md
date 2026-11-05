@@ -33,6 +33,14 @@ do not "fix" them.
 - `backend/trex_web_gui/_vendor/` is generated. Change the vendored TRex client with a patch in
   `backend/vendor/patches/` and a row in `backend/vendor/patches.md`, never by editing the copy.
 - A change in behaviour comes with a test that fails without it.
+- A test proves the behaviour it names: it fails when the line it protects is deleted, not only when the module
+  is missing. Each error, retry, interrupt or bound branch has such a test; when a fake cannot reach a branch,
+  give the fake a flag for it (as `fake_emu.py`'s `--interrupt-iter` does). A test body shaped like a server
+  reply comes from a recorded fixture (`tests/fixtures/`, `frontend/src/__fixtures__/`), or says why not.
+- Data that depends on a context is tied to it. A poll or cached value that belongs to a connection, a page, a
+  request path or a server generation is dropped when that changes, and its tests cover the change, a reconnect
+  and a backend restart. A partial or interrupted listing never decides a destructive action or an "it does not
+  exist" answer. An `except` on a base error class re-raises the loss and refusal subclasses first.
 - `make check` runs pytest on every core (`--dist worksteal`). A test that binds or probes a fixed port (the
   guest VM's, 8765/8865/8965) holds `demo_ports_lock()` from `tests/support.py`, never nested. A test that starts
   the fake TRex uses the `fake_trex` fixture (it binds port 0 itself); a test that talks to EMU uses the `fake_emu`
