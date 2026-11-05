@@ -128,8 +128,8 @@ def test_translate_emu_texts_from_negatives(name: str) -> None:
 def test_translate_emu_other_exceptions() -> None:
     """A TrexApiError that is not a server error passes unchanged; a foreign exception is unreachable."""
     gone = ServerUnreachable("no answer")
-    assert translate_emu(gone) is gone
-    assert isinstance(translate_emu(OSError("boom")), ServerUnreachable)
+    assert translate_emu(gone, "ping") is gone
+    assert isinstance(translate_emu(OSError("boom"), "ping"), ServerUnreachable)
 
 
 def test_emu_rpc_passes_its_reply_cap_through(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -250,3 +250,28 @@ def test_rate_pacer_waits_for_the_schedule() -> None:
     now[0] += 5                 # slower than the rate: nothing owed
     assert pacer.after(255) == 0.0
     assert emu.RatePacer(None, lambda: 0.0).after(10**6) == 0.0
+
+
+def test_ping_times_one_call_on_the_given_clock() -> None:
+    """ping() reads `clock` before and after one ping request and returns the difference."""
+    rpc, spy = spied()
+    readings = iter([10.0, 10.25])
+    rpc.clock = lambda: next(readings)
+    assert rpc.ping() == 0.25
+    assert spy.calls == [("ping", None)]
+
+
+def test_an_empty_page_ends_the_walk_even_without_stopped_or_empty() -> None:
+    """A page with no data ends a cursor walk although it sets neither `stopped` nor `empty`: one request,
+    an empty complete listing (no endless re-asking)."""
+    rpc, spy = spied()
+    pages = iter([{"data": [], "stopped": False, "empty": False}])
+
+    def call(method: str, params: dict[str, Any] | None = None) -> Any:
+        """Record and answer the next page; a second request has no page and fails the test."""
+        spy.calls.append((method, params))
+        return next(pages)
+    spy.call = call     # type: ignore[method-assign]
+    listing = rpc.list_namespaces()
+    assert (listing.items, listing.interrupted) == ([], False)
+    assert [m for m, _ in spy.calls] == ["ctx_iter"]

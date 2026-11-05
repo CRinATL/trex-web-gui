@@ -35,7 +35,6 @@ from ..trexapi.errors import (
     UnsupportedServerVersion,
 )
 from ..trexapi.profiles import LoadedEmuProfile, load_emu_profile
-from ..trexapi.rawrpc import RawRpcError
 from .trex_session import Publish
 
 log = logging.getLogger(__name__)
@@ -60,7 +59,6 @@ class _Conn:
     rpc: EmuRpc
     info: EmuInfo
     meta: dict[tuple[str, NsKey | None, Mac | None], dict[str, Any]] = field(default_factory=dict)
-    missing: set[str] = field(default_factory=set)      # counter methods the server answered method-not-found
 
 
 def _int_field(row: dict[str, Any], name: str) -> int:
@@ -161,11 +159,14 @@ class EmuSession:
     async def connect(self, host: str, port: int = 4510, timeout_s: float = 3.0) -> dict[str, Any]:
         """Drop any connection, then connect to host:port with a new EmuRpc and publish `connected`.
         EmuRefused `busy` when a connect is in flight or a write is running, `unsupported_server` when the
-        server speaks another EMU API, and `not_connected` when disconnect() ran meanwhile;
+        server speaks another EMU API, and `not_connected` when disconnect() or close() ran meanwhile (close()
+        cancelling the queued connect included) or the session is already closed;
         ServerUnreachable or another TrexApiError when the server cannot be read (the session is then
         disconnected, with the error)."""
         if self._lock.locked() or self._busy:
             raise EmuRefused("busy", "Another EMU operation is in progress.")
+        if self._closed:                                # its executor is shut down: nothing can be submitted
+            raise EmuRefused("not_connected", "The EMU session is closed.")
         async with self._lock:
             await self._drop()
             self._state, self._target, self._error = "connecting", {"host": host, "port": port}, None
@@ -183,6 +184,11 @@ class EmuSession:
                     self._flush()
                 if isinstance(exc, UnsupportedServerVersion):
                     raise EmuRefused("unsupported_server", exc.message) from exc
+                task = asyncio.current_task()
+                if (isinstance(exc, asyncio.CancelledError) and job.cancelled()
+                        and task is not None and not task.cancelling()):
+                    # close() cancelled the queued job, not our caller's task: a refusal, not a cancellation
+                    raise EmuRefused("not_connected", "Disconnected while connecting.") from None
                 raise
             if self._target is not token:               # disconnect() or close() ran meanwhile
                 conn.rpc.close()                        # not via the executor: close() may have shut it
@@ -403,13 +409,10 @@ class EmuSession:
         unsupported: list[str] = []
         for name, method in self._methods(scope, plugin):
             try:
-                if not method or method in conn.missing:
-                    raise EmuUnsupported(method or f"{name} counters in a {scope} scope")
-                tables |= self._method_rows(conn, method, ns, mac, meta)
+                if not method:
+                    raise EmuUnsupported(f"{name} counters in a {scope} scope")
+                tables |= self._method_rows(conn, method, ns, mac, meta)     # EmuRpc remembers -32601 itself
             except EmuUnsupported as exc:
-                cause = exc.__cause__
-                if isinstance(cause, RawRpcError) and cause.code == -32601:
-                    conn.missing.add(exc.method)
                 if plugin is not None:
                     raise EmuRefused("unsupported", f"The EMU server does not have the {plugin} counters "
                                      f"for this {scope}.") from exc

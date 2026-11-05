@@ -120,7 +120,7 @@ class Listing[T]:
     interrupted: bool = False
 
 
-def translate_emu(exc: BaseException, method: str = "") -> TrexApiError:
+def translate_emu(exc: BaseException, method: str) -> TrexApiError:
     """The typed error for `exc` by the EMU server's own wording: a handshake mismatch is
     UnsupportedServerVersion naming the server's API, -32602 'Method with not a valid API' is ServerRestarted,
     -32601 or a plugin that is not loaded is EmuUnsupported(method). A TrexApiError that matches none of

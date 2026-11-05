@@ -415,3 +415,52 @@ def test_write_bodies_are_strict(tmp_path: Path) -> None:
         assert r.status_code == 422 and r.json()["error"] == "bad_request"
         r = c.post("/api/emu/profile/inspect", json={"path": PROFILE, "tunables": ["x" * 1001]})
         assert r.status_code == 422
+
+
+def test_a_plugin_not_loaded_is_409_unsupported_and_asked_again(tmp_path: Path, fake_emu: Factory) -> None:
+    """A plugin the namespace does not load (igmp; the fake loads arp and icmp) is answered 'no valid
+    plugin' by the server: named, it is 409 unsupported, and unlike a method-not-found it is asked again on
+    the next request, since another namespace may load it (ruling R11's second route)."""
+    f = fake_emu("--foreign-ns", "1", "--clients", "1")
+    with authed(create_app(tmp_path, token=TEST_TOKEN)) as c:
+        connect(c, f)
+        for n in (1, 2):
+            r = c.get("/api/emu/counters", params={"scope": "ns", "vport": 0, "plugin": "igmp"})
+            assert r.status_code == 409 and r.json()["error"] == "unsupported", r.text
+            assert len(served(f, "igmp_ns_cnt")) >= n
+
+
+def test_connect_and_disconnect_refusals_over_http(tmp_path: Path, fake_emu: Factory,
+                                                   monkeypatch: pytest.MonkeyPatch) -> None:
+    """409 busy for a connect while another is in flight, 409 unsupported_server for a server on another
+    EMU API, and 409 busy for a disconnect the session refuses during a write."""
+    import threading
+
+    from trex_web_gui.trexapi import emu as emu_api
+    hung = fake_emu("--hang", "get_version")
+    app = create_app(tmp_path, token=TEST_TOKEN)
+    with authed(app) as c:
+        first: dict[str, Any] = {}
+        t = threading.Thread(target=lambda: first.update(r=c.post(
+            "/api/emu/connect", json={"host": hung.host, "port": hung.port, "timeout_s": 1})))
+        t.start()
+        end = time.monotonic() + 5
+        while c.get("/api/emu").json()["state"] != "connecting" and time.monotonic() < end:
+            time.sleep(0.02)
+        busy = c.post("/api/emu/connect", json={"host": hung.host, "port": hung.port, "timeout_s": 1})
+        assert busy.status_code == 409 and busy.json()["error"] == "busy", busy.text
+        t.join(10)
+        assert first["r"].status_code == 502          # the first one timed out against the hung method
+
+        f = fake_emu()
+        monkeypatch.setattr(emu_api, "EMU_API", ("EMU", 2, 0))
+        other = c.post("/api/emu/connect", json={"host": f.host, "port": f.port, "timeout_s": 2})
+        assert other.status_code == 409 and other.json()["error"] == "unsupported_server", other.text
+        monkeypatch.undo()
+
+        async def refuse() -> None:
+            """The session's refusal during a write."""
+            raise EmuRefused("busy", "An EMU write is in progress.")
+        monkeypatch.setattr(app.state.emu, "disconnect", refuse)
+        r = c.post("/api/emu/disconnect")
+        assert r.status_code == 409 and r.json()["error"] == "busy", r.text

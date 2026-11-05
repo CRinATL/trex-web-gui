@@ -12,6 +12,7 @@ from trex_web_gui.sessions import EmuRefused, EmuSession, TrexSession
 from trex_web_gui.sessions.emu_session import _rows
 from trex_web_gui.trexapi import emu
 from trex_web_gui.trexapi.emu import EmuRpc, NsKey
+from trex_web_gui.trexapi.errors import ServerUnreachable
 
 Factory = Callable[..., Any]
 KEY0 = NsKey(0)
@@ -143,7 +144,7 @@ def test_a_second_concurrent_connect_is_busy(fake_emu: Factory) -> None:
             with pytest.raises(EmuRefused) as e:
                 await s.connect(f.host, f.port, 0.5)
             assert e.value.code == "busy"
-            with pytest.raises(Exception):  # noqa: B017  # the first one times out against the hung method
+            with pytest.raises(ServerUnreachable):   # the first one times out against the hung method
                 await first
         finally:
             await s.close()
@@ -417,6 +418,36 @@ def test_close_is_idempotent(fake_emu: Factory) -> None:
         assert len(out) == n and s.snapshot()["state"] == "disconnected"
         with pytest.raises(EmuRefused):
             await s.namespaces()
+    run(body())
+
+
+def test_connect_after_close_is_refused_not_connected() -> None:
+    """A closed session refuses connect with not_connected before submitting to its shut-down executor (which
+    would raise RuntimeError)."""
+    async def body() -> None:
+        s = EmuSession(lambda _m: None)
+        await s.close()
+        with pytest.raises(EmuRefused) as e:
+            await s.connect("127.0.0.1", 9, 0.3)
+        assert e.value.code == "not_connected" and s.snapshot()["state"] == "disconnected"
+    run(body())
+
+
+def test_close_while_a_connect_is_queued_refuses_it_not_connected() -> None:
+    """A connect whose job is still queued behind another when close() shuts the executor down (its queued
+    jobs cancelled) ends in EmuRefused not_connected, not a CancelledError of the caller's task."""
+    async def body() -> None:
+        s = EmuSession(lambda _m: None)
+        gate = threading.Event()
+        s._executor.submit(gate.wait, 5)                 # the one executor thread is busy
+        task = asyncio.create_task(s.connect("127.0.0.1", 9, 0.3))
+        assert await until(lambda: s.snapshot()["state"] == "connecting", 2)
+        asyncio.get_running_loop().call_later(0.2, gate.set)
+        await s.close()                                  # cancels the queued connect job, waits for the gate
+        with pytest.raises(EmuRefused) as e:
+            await task
+        assert e.value.code == "not_connected" and not task.cancelled()
+        assert s.snapshot()["state"] == "disconnected"
     run(body())
 
 
