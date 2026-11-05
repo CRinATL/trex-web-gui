@@ -309,7 +309,8 @@ button[data-run][data-on] { border-color: var(--run); box-shadow: inset 0 0 0 1p
 .packet-viewer-body { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; gap: .75rem; }
 .packet-viewer-tree { flex: 1 1 auto; min-height: 6rem; overflow: auto; }
 .packet-viewer-bytes { flex: none; border-top: 1px solid var(--border); padding-top: .5rem; overflow-x: auto; }
-.packet-viewer .field-row { grid-template-columns: 8rem minmax(0, 1fr) 1.5rem 10rem; }
+/* baseline, not centre: a value that wraps keeps its name and byte range on its first line */
+.packet-viewer .field-row { grid-template-columns: 8rem minmax(0, 1fr) 1.5rem 10rem; align-items: baseline; }
 .packet-viewer .field-range { white-space: nowrap; justify-self: start; text-align: left; }
 .packet-viewer .field-value { overflow-wrap: anywhere; }
 .hex-view { font-family: monospace; white-space: pre; }

@@ -1102,11 +1102,16 @@ def test_building_an_opened_jumbo_record_stays_in_time(tmp_path: Path) -> None:
 # --- the capture viewer's tree runs here, not in the backend (gemini-security-review 2026-11-01 SEC-03) ---
 
 def test_tree_op_matches_the_backend_tree() -> None:
+    """The worker's tree is the service's, but for the texts the worker rewrites: here IP flags 0 shows 0."""
     from trex_web_gui.trexapi import decode
     raw = udp_record(200)
     res = engine_worker().tree({"binary": b64(raw)})
     assert res.pop("ok") is True
-    assert res == decode.tree(raw)
+    want = decode.tree(raw)
+    flags = next(f for f in want["data"][1]["fields"] if f["id"] == "flags")
+    assert flags["hvalue"] == ""
+    flags["hvalue"] = "0"
+    assert res == want
 
 
 def test_tree_op_dissects_at_most_the_cap_and_keeps_every_byte(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -1307,4 +1312,62 @@ def test_capture_tree_of_a_zero_filled_ipv4_frame_has_no_options() -> None:
     async def body(e: PacketEngine) -> None:
         ip = next(layer for layer in (await e.tree(b64(frame)))["data"] if layer["id"] == "IP")
         assert next(f for f in ip["fields"] if f["id"] == "options")["hvalue"] == "[]"
+    with_engine(body)
+
+
+# IP options as Wireshark reads them: Scapy 2.4.3 parses the zeros after End of Options as more EOLs, and its
+# expression names every field. The shown text (hvalue) is a summary; the value stays the service's
+# expression.
+# The option bytes are those of a user's capture (01 | 94 04 00 00 | 00 | 00 00); the addresses are test ones.
+ROUTER_ALERT_FRAME = bytes.fromhex(
+    "ffffffffffff0200000000010800470000240001000040013343100000013000000101940400000000000800f7ff00000000")
+
+
+def field_of(r: Any, layer: str, name: str) -> dict[str, Any]:
+    """The field `name` of the first layer `layer` in a tree or build result."""
+    return next(f for d in r["data"] if d["id"] == layer for f in d["fields"] if f["id"] == name)
+
+
+def test_ip_options_show_as_a_summary_with_padding_after_eol() -> None:
+    async def body(e: PacketEngine) -> None:
+        opts = field_of(await e.tree(b64(ROUTER_ALERT_FRAME)), "IP", "options")
+        assert opts["hvalue"] == "NOP, Router Alert (alert=router_shall_examine_packet), EOL, padding 2 bytes"
+        assert opts["value"]["expr"].count("IPOption_EOL(") == 3      # the expression still rebuilds them
+    with_engine(body)
+
+
+def test_built_ip_options_show_the_padding_ip_adds() -> None:
+    """One NOP is padded to four bytes with zeros: Wireshark reads NOP, EOL and two bytes of padding."""
+    async def body(e: PacketEngine) -> None:
+        assert field_of(await e.build(options_model(ONE_NOP), None), "IP", "options")["hvalue"] == (
+            "NOP, EOL, padding 2 bytes")
+    with_engine(body)
+
+
+def test_an_option_after_eol_is_listed_not_counted_as_padding() -> None:
+    async def body(e: PacketEngine) -> None:
+        model = options_model("[IPOption_EOL(), IPOption_NOP(), IPOption_EOL(), IPOption_EOL()]")
+        r = await e.build(model, None)
+        assert field_of(r, "IP", "options")["hvalue"] == "EOL, NOP, EOL, EOL"
+    with_engine(body)
+
+
+def test_an_unnamed_option_shows_its_number_and_value() -> None:
+    raw = bytearray(ROUTER_ALERT_FRAME)
+    raw[35:39] = bytes.fromhex("19040102")      # in place of the Router Alert: option 25, length 4, 01 02
+
+    async def body(e: PacketEngine) -> None:
+        opts = field_of(await e.tree(b64(bytes(raw))), "IP", "options")["hvalue"]
+        assert opts.startswith("NOP, option 25 (value=") and opts.endswith("), EOL, padding 2 bytes")
+    with_engine(body)
+
+
+def test_no_options_and_empty_flags_read_as_such() -> None:
+    """IP flags 0 shows 0, not an empty cell; DF still shows its name; no options stays []."""
+    async def body(e: PacketEngine) -> None:
+        r = await e.tree(b64(ROUTER_ALERT_FRAME))
+        assert field_of(r, "IP", "flags")["hvalue"] == "0"
+        df = await e.build([{"id": "Ether"}, {"id": "IP", "fields": [{"id": "flags", "value": 2}]}], None)
+        assert field_of(df, "IP", "flags")["hvalue"] == "DF"
+        assert field_of(await e.build(options_model(None), None), "IP", "options")["hvalue"] == "[]"
     with_engine(body)
