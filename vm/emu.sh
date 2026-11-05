@@ -1,7 +1,8 @@
 #!/bin/bash
 # Usage: vm/emu.sh start|stop|status
-# Run EMU standalone (no TRex) in the running guest (P7, spec 5.3 layer 1). `start` refuses while any trex-emu or TRex (_t-rex-64) runs in
-# the guest, runs `LD_LIBRARY_PATH=/opt/trex/v3.08/so ./trex_emu/trex-emu -p 4510` under setsid nohup (NO -d: it accepts
+# Run EMU standalone (no TRex) in the running guest (P7, spec 5.3 layer 1). `start` refuses while TRex
+# (_t-rex-64) or any trex-emu runs in the guest (TRex first: under TRex --emu both run, and vm/mode.sh stop stops
+# both), runs `LD_LIBRARY_PATH=/opt/trex/v3.08/so ./trex_emu/trex-emu -p 4510` under setsid nohup (NO -d: it accepts
 # one handshake per process) with log /tmp/trex-emu.log, records its pid in /tmp/trex-emu.pid, then waits for EMU to
 # answer (vm/emu_ready.py, 60 s). `stop` sends TERM to that pid (only while its cmdline names trex-emu), KILL after
 # 15 s, and removes the pidfile. `status` reads the guest's process list. Seams: TREX_VM_SSH (default vm/ssh.sh),
@@ -17,8 +18,8 @@ PIDFILE=/tmp/trex-emu.pid
 running() { "$SSH" "pgrep -x trex-emu >/dev/null" </dev/null; }
 
 start() {
-  if running; then echo "a trex-emu already runs in the guest; stop it first"; return 1; fi
   if "$SSH" "pgrep -x _t-rex-64 >/dev/null" </dev/null; then echo "TRex runs in the guest; stop it first (vm/mode.sh stop)"; return 1; fi
+  if running; then echo "a trex-emu already runs in the guest; stop it first"; return 1; fi
   "$SSH" "sudo sh -c 'rm -f $LOG; cd /opt/trex/v3.08 && LD_LIBRARY_PATH=/opt/trex/v3.08/so setsid nohup ./trex_emu/trex-emu -p 4510 >$LOG 2>&1 </dev/null & echo \$! >$PIDFILE'" </dev/null \
     || { echo "could not start EMU"; return 1; }
   # shellcheck disable=SC2086  # the seam is a command line

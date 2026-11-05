@@ -71,11 +71,41 @@ def test_mode_emu_fails_when_emu_never_answers(rig: dict[str, Path]) -> None:
 
 
 def test_emu_sh_start_refuses_while_a_trex_emu_runs(rig: dict[str, Path]) -> None:
-    """The ssh stub answers the pgrep probe with success (EMU running): no start command is sent."""
+    """A trex-emu runs and TRex does not: no start command is sent, and the refusal names trex-emu."""
+    _ssh_fails_on(rig, "pgrep -x _t-rex-64")
     r = run(rig, "emu.sh", "start")
     assert r.returncode == 1, r
     assert "already runs" in r.stdout
     assert "setsid" not in log(rig)
+
+
+def test_emu_sh_start_names_trex_when_trex_and_its_emu_run(rig: dict[str, Path]) -> None:
+    """Under TRex --emu both processes run: the refusal names TRex and vm/mode.sh stop, which stops both
+    (the trex-emu is TRex's, so `emu.sh stop` would not be the way out)."""
+    r = run(rig, "emu.sh", "start")
+    assert r.returncode == 1, r
+    assert "TRex runs" in r.stdout and "vm/mode.sh stop" in r.stdout and "already runs" not in r.stdout
+    assert "setsid" not in log(rig)
+
+
+def test_emu_sh_status_reads_the_process_list(rig: dict[str, Path]) -> None:
+    """status says running while pgrep finds trex-emu and stopped once it does not; both exit 0."""
+    r = run(rig, "emu.sh", "status")
+    assert (r.returncode, r.stdout) == (0, "emu: running\n")
+    assert "pgrep -x trex-emu" in log(rig)
+    _no_emu_running(rig)
+    r = run(rig, "emu.sh", "status")
+    assert (r.returncode, r.stdout) == (0, "emu: stopped\n")
+
+
+def test_the_emu_make_targets_run_real_sh(rig: dict[str, Path]) -> None:
+    """record-p7 records through real.sh as TREX_VM_RECORD=p7, and check-emu-real runs the emu_real mark."""
+    for target, want in (("record-p7", "TREX_VM_RECORD=p7 vm/real.sh"),
+                         ("check-emu-real", "TREX_VM_MARK=emu_real vm/real.sh")):
+        r = subprocess.run(["make", "-n", "-C", str(ROOT), target], capture_output=True, text=True,
+                           check=False, timeout=60)
+        assert r.returncode == 0, r
+        assert want in r.stdout.splitlines(), (target, r.stdout)
 
 
 def test_emu_sh_start_runs_standalone_without_d(rig: dict[str, Path]) -> None:
@@ -161,6 +191,43 @@ def test_emu_ready_handshakes_then_pings(monkeypatch: pytest.MonkeyPatch) -> Non
     monkeypatch.setattr(mod.sys, "argv", ["emu_ready.py", "--timeout", "5"])
     assert mod.main() == 0
     assert ("sync", "EMU", "1", "1") in seen and seen[-2:] == [("call", "ping"), ("close",)]
+
+
+def _emu_ready() -> object:
+    """vm/emu_ready.py loaded as a fresh module."""
+    spec = importlib.util.spec_from_file_location("emu_ready_under_test", ROOT / "vm" / "emu_ready.py")
+    assert spec and spec.loader
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod
+
+
+def test_emu_ready_counts_a_connect_error_as_a_failed_attempt(monkeypatch: pytest.MonkeyPatch) -> None:
+    """A RawRpc that cannot even be built (the connect fails) is a failed attempt, not a traceback."""
+    mod = _emu_ready()
+
+    def refuse(host: str, port: int, timeout_s: float) -> None:
+        """The constructor's connect fails as RawRpc's does."""
+        raise mod.TrexApiError("connect refused")
+
+    monkeypatch.setattr(mod, "RawRpc", refuse)
+    assert mod.attempt(4510) is False
+
+
+def test_emu_ready_gives_up_after_the_timeout(monkeypatch: pytest.MonkeyPatch,
+                                              capsys: pytest.CaptureFixture[str]) -> None:
+    """Attempts that keep failing end at --timeout with exit 1 and the no-answer line. The fake clock moves
+    1 s per reading, one reading per attempt after the start, so a 5 s timeout allows exactly 5 attempts."""
+    mod = _emu_ready()
+    clock = iter(range(0, 100))
+    tried: list[int] = []
+    monkeypatch.setattr(mod, "attempt", lambda port: tried.append(port) is not None)
+    monkeypatch.setattr(mod.time, "monotonic", lambda: float(next(clock)))
+    monkeypatch.setattr(mod.time, "sleep", lambda s: None)
+    monkeypatch.setattr(mod.sys, "argv", ["emu_ready.py", "--timeout", "5"])
+    assert mod.main() == 1
+    assert capsys.readouterr().out == "no EMU answer within 5 s\n"
+    assert len(tried) == 5
 
 
 def _ssh_fails_on(rig: dict[str, Path], pattern: str) -> None:

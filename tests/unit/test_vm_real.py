@@ -225,27 +225,8 @@ def test_real_accepts_p5_and_refuses_a_bad_mark(tmp_path: Path, stubs: Path, row
 def test_real_restores_stateless_after_the_p5_recorder(tmp_path: Path, stubs: Path, record: str,
                                                        script: str) -> None:
     """A failing p5 or p5-stf recorder (rc 3) still stops the daemon, restarts legacy, keeps rc 3."""
-    if taken(2222):
-        pytest.skip("127.0.0.1:2222 is in use")
-    jammy = tmp_path / "base" / "trex-vm"
-    jammy.mkdir(parents=True)
-    (jammy / "trex.qcow2").write_bytes(b"")
-    log = tmp_path / "calls.log"
-    sysrun = stubs / "systemd-run"
-    pidfile = tmp_path / "sleeper.pid"
-    sysrun.write_text(f'#!/bin/bash\necho "systemd-run $*" >> "{log}"\n'
-                      f'case "$*" in *qemu-system-x86_64*) echo $$ > "{pidfile}"; exec sleep 30;; esac\n'
-                      'exit 3\n')
-    (stubs / "socat").write_text(f'#!/bin/bash\necho "socat $*" >> "{log}"\n'
-                                 f'kill $(cat "{pidfile}")\nexit 0\n')
-    for tool in ("ssh", "uv", "curl"):
-        (stubs / tool).write_text(f'#!/bin/bash\necho "{tool} $*" >> "{log}"\nexit 0\n')
-    env = make_env(tmp_path, stubs, TREX_VM_GUEST="jammy", TREX_VM_RECORD=record)
-    t0 = time.monotonic()
-    r = run("real.sh", env)
-    assert time.monotonic() - t0 < 10
+    r, text = _failing_run(tmp_path, stubs, TREX_VM_RECORD=record)
     assert r.returncode == 3, r
-    text = calls(tmp_path)
     rec = text.index(script)
     stop = text.index("kill -TERM $p", rec)
     legacy = text.index("--cfg /etc/trex_cfg_legacy.yaml", stop)
@@ -361,7 +342,9 @@ def test_real_restores_stateless_after_the_p7_recorder(tmp_path: Path, stubs: Pa
     r, text = _failing_run(tmp_path, stubs, TREX_VM_RECORD="p7")
     assert r.returncode == 3, r
     rec = text.index("record_p7.py")
-    assert rec < text.index("--cfg /etc/trex_cfg_legacy.yaml", rec)
+    # the standalone trex-emu the recorder started is stopped before the guest goes back to legacy
+    emu_stop = text.index("pkill -TERM -x trex-emu", rec)
+    assert rec < emu_stop < text.index("--cfg /etc/trex_cfg_legacy.yaml", rec)
 
 
 def test_check_emu_real_restores_stateless(tmp_path: Path, stubs: Path) -> None:
