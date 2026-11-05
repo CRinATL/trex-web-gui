@@ -17,6 +17,8 @@ from trex_web_gui.trexapi.errors import (
 )
 from trex_web_gui.trexapi.rawrpc import RawRpc, RawRpcError
 
+FAKE_OF: dict[int, Any] = {}     # the fake behind each EmuRpc the emu_rpc factory made, by id(rpc)
+
 
 @pytest.fixture
 def emu_rpc(fake_emu: Callable[..., object]) -> Iterator[Callable[..., EmuRpc]]:
@@ -27,12 +29,13 @@ def emu_rpc(fake_emu: Callable[..., object]) -> Iterator[Callable[..., EmuRpc]]:
         """Start the fake and connect a client object to it (no handshake yet)."""
         f = fake_emu(*flags)
         rpc = EmuRpc(f.host, f.port, timeout_s)    # type: ignore[attr-defined]
-        rpc.fake = f                               # type: ignore[attr-defined]
+        FAKE_OF[id(rpc)] = f
         made.append(rpc)
         return rpc
     yield make
     for r in made:
         r.close()
+        FAKE_OF.pop(id(r), None)
 
 
 def test_connect_and_version(emu_rpc: Callable[..., EmuRpc]) -> None:
@@ -58,7 +61,7 @@ def test_restart_is_server_restarted(emu_rpc: Callable[..., EmuRpc]) -> None:
     works. The signal is asynchronous, so the ping repeats until it lands."""
     rpc = emu_rpc()
     rpc.connect()
-    rpc.fake.restart()      # type: ignore[attr-defined]
+    FAKE_OF[id(rpc)].restart()
     deadline = time.monotonic() + 5
     with pytest.raises(ServerRestarted):
         while time.monotonic() < deadline:
@@ -73,8 +76,10 @@ def test_hang_times_out_and_next_call_works(emu_rpc: Callable[..., EmuRpc]) -> N
     which the fake answers) works on the rebuilt socket."""
     rpc = emu_rpc("--hang", "ping", timeout_s=0.4)
     rpc.connect()
+    t0 = time.monotonic()
     with pytest.raises(ServerUnreachable):
         rpc.ping()
+    assert time.monotonic() - t0 < 0.4 + 0.5          # within the timeout, not some longer default
     assert rpc.call("get_version")["mode"] == "emulation"
 
 
@@ -111,7 +116,7 @@ def test_fixture_fails_the_test_when_shutdown_was_sent(fake_emu: Callable[..., A
     clean.assert_clean()
     with pytest.raises(AssertionError, match="sent shutdown"):
         f.assert_clean()
-    f._tail = ""        # the fixture's own teardown check must now pass
+    f.shutdown_expected = True      # sent on purpose here: the fixture's teardown check skips this fake
 
 
 CNT = json.loads((Path(__file__).resolve().parent.parent / "fixtures" / "p7" / "counters.json").read_text())
@@ -119,7 +124,7 @@ CNT = json.loads((Path(__file__).resolve().parent.parent / "fixtures" / "p7" / "
 
 def sent(rpc: EmuRpc, method: str) -> list[dict[str, Any]]:
     """The params of every `method` request the fake behind `rpc` has received."""
-    return [r["params"] for r in rpc.fake.requests() if r["method"] == method]     # type: ignore[attr-defined]
+    return [r["params"] for r in FAKE_OF[id(rpc)].requests() if r["method"] == method]
 
 
 def test_list_600_namespaces_in_chunks(emu_rpc: Callable[..., EmuRpc]) -> None:
@@ -130,8 +135,8 @@ def test_list_600_namespaces_in_chunks(emu_rpc: Callable[..., EmuRpc]) -> None:
     assert not got.interrupted
     assert [k.vport for k in got.items] == list(range(600))
     reqs = sent(rpc, "ctx_iter")
-    assert [r["reset"] for r in reqs] == [True, False, False, False]       # 255 + 255 + 90, then 'stopped'
-    assert all(r["count"] <= emu.CHUNK for r in reqs)
+    # four requests of a whole CHUNK each, the first a reset (the fake's pages: 255 + 255 + 90, then stopped)
+    assert [(r["reset"], r["count"]) for r in reqs] == [(True, emu.CHUNK)] + [(False, emu.CHUNK)] * 3
 
 
 def test_interrupted_listing_retries_then_flags(emu_rpc: Callable[..., EmuRpc]) -> None:
@@ -235,7 +240,7 @@ def test_counters_meta_and_sparse_values(emu_rpc: Callable[..., EmuRpc]) -> None
     assert sum(map(len, sparse.values())) < sum(map(len, full.values()))
     assert rpc.counters("arp_ns_cnt", ns, meta=True) == CNT["plugins"]["arp"]["ns"]["meta"]
     assert "arp" in rpc.counters("arp_ns_cnt", ns, zero=True)
-    assert all(r["params"]["clear"] is False for r in rpc.fake.requests() if "mask" in r["params"])  # type: ignore[attr-defined]
+    assert all(r["params"]["clear"] is False for r in FAKE_OF[id(rpc)].requests() if "mask" in r["params"])  # type: ignore[attr-defined]
 
 
 def test_mask_honoured(emu_rpc: Callable[..., EmuRpc]) -> None:

@@ -144,6 +144,7 @@ class FakeEmu:
     port: int
     proc: subprocess.Popen[str]
     log: Path
+    shutdown_expected: bool = False     # a test sent shutdown on purpose: teardown skips the check
     _tail: str = field(default="", repr=False)
 
     def requests(self) -> list[dict[str, Any]]:
@@ -194,7 +195,8 @@ def fake_emu(tmp_path: Path) -> Iterator[Callable[..., FakeEmu]]:
     for f in started:
         f.stop()
     for f in started:
-        f.assert_clean()
+        if not f.shutdown_expected:
+            f.assert_clean()
 
 
 @dataclass
