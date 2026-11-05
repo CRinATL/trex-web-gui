@@ -1,0 +1,3967 @@
+{
+ "plugins": {
+  "appsim": {
+   "server_name": "appsim",
+   "client": {
+    "cmd": "appsim_client_cnt",
+    "meta": {
+     "appsim": {
+      "name": "appsim",
+      "meta": [
+       {
+        "name": "eventInvalidtid",
+        "help": "invalid tid in client json ",
+        "unit": "event",
+        "zero": false,
+        "info": 20
+       },
+       {
+        "name": "eventInvalidApp",
+        "help": "invalid app json ",
+        "unit": "event",
+        "zero": false,
+        "info": 20
+       },
+       {
+        "name": "eventTx",
+        "help": "write event ",
+        "unit": "event",
+        "zero": false,
+        "info": 18
+       },
+       {
+        "name": "event Rx",
+        "help": "event rx",
+        "unit": "event",
+        "zero": false,
+        "info": 18
+       },
+       {
+        "name": "bytesTx",
+        "help": "tx bytes ",
+        "unit": "bytes",
+        "zero": false,
+        "info": 18
+       },
+       {
+        "name": "bytesRx",
+        "help": "rx bytes ",
+        "unit": "bytes",
+        "zero": false,
+        "info": 18
+       },
+       {
+        "name": "DropConnection",
+        "help": "drop connection ",
+        "unit": "event",
+        "zero": false,
+        "info": 20
+       },
+       {
+        "name": "UdpKeepaliveConnection",
+        "help": "udp keepalive error",
+        "unit": "event",
+        "zero": false,
+        "info": 20
+       },
+       {
+        "name": "eventNewFlow",
+        "help": "new flow ",
+        "unit": "event",
+        "zero": false,
+        "info": 18
+       },
+       {
+        "name": "delFlow",
+        "help": "del flow ",
+        "unit": "event",
+        "zero": false,
+        "info": 18
+       }
+      ]
+     }
+    },
+    "values": {},
+    "values_zero": {
+     "appsim": {
+      "DropConnection": 0,
+      "UdpKeepaliveConnection": 0,
+      "bytesRx": 0,
+      "bytesTx": 0,
+      "delFlow": 0,
+      "event Rx": 0,
+      "eventInvalidApp": 0,
+      "eventInvalidtid": 0,
+      "eventNewFlow": 0,
+      "eventTx": 0
+     }
+    }
+   }
+  },
+  "arp": {
+   "server_name": "arp",
+   "ns": {
+    "cmd": "arp_ns_cnt",
+    "meta": {
+     "arp": {
+      "name": "arp",
+      "meta": [
+       {
+        "name": "eventsChangeSrc",
+        "help": "change src ipv4 events",
+        "unit": "ops",
+        "zero": false,
+        "info": 18
+       },
+       {
+        "name": "eventsChangeDgIPv4",
+        "help": "change dgw ipv4 events",
+        "unit": "ops",
+        "zero": false,
+        "info": 18
+       },
+       {
+        "name": "timerEventLearn",
+        "help": "timer events learn",
+        "unit": "ops",
+        "zero": false,
+        "info": 18
+       },
+       {
+        "name": "timerEventIncomplete",
+        "help": "timer events incomplete",
+        "unit": "ops",
+        "zero": false,
+        "info": 18
+       },
+       {
+        "name": "timerEventComplete",
+        "help": "timer events complete",
+        "unit": "ops",
+        "zero": false,
+        "info": 18
+       },
+       {
+        "name": "timerEventRefresh",
+        "help": "timer events refresh",
+        "unit": "ops",
+        "zero": false,
+        "info": 18
+       },
+       {
+        "name": "addLearn",
+        "help": "add learn to table ",
+        "unit": "ops",
+        "zero": false,
+        "info": 18
+       },
+       {
+        "name": "addIncomplete",
+        "help": "add incomplete to table ",
+        "unit": "ops",
+        "zero": false,
+        "info": 18
+       },
+       {
+        "name": "moveIncompleteAfterRefresh",
+        "help": "move incomplete after refresh  ",
+        "unit": "ops",
+        "zero": false,
+        "info": 18
+       },
+       {
+        "name": "moveComplete",
+        "help": "move complete ",
+        "unit": "ops",
+        "zero": false,
+        "info": 18
+       },
+       {
+        "name": "moveLearned",
+        "help": "move learn ",
+        "unit": "ops",
+        "zero": false,
+        "info": 18
+       },
+       {
+        "name": "pktRxErrTooShort",
+        "help": "rx error packet is too short",
+        "unit": "pkts",
+        "zero": false,
+        "info": 20
+       },
+       {
+        "name": "pktRxErrNoBroadcast",
+        "help": "rx error packet is no broadcast",
+        "unit": "pkts",
+        "zero": false,
+        "info": 20
+       },
+       {
+        "name": "pktRxErrWrongOp",
+        "help": "rx error packet with wrong opcode",
+        "unit": "pkts",
+        "zero": false,
+        "info": 20
+       },
+       {
+        "name": "pktRxArpQuery",
+        "help": "rx arp query ",
+        "unit": "pkts",
+        "zero": false,
+        "info": 18
+       },
+       {
+        "name": "pktRxArpQueryNotForUs",
+        "help": "rx arp query not for our clients",
+        "unit": "pkts",
+        "zero": false,
+        "info": 18
+       },
+       {
+        "name": "pktRxArpReply",
+        "help": "rx arp reply",
+        "unit": "pkts",
+        "zero": false,
+        "info": 18
+       },
+       {
+        "name": "pktTxArpQuery",
+        "help": "tx arp query",
+        "unit": "pkts",
+        "zero": false,
+        "info": 18
+       },
+       {
+        "name": "pktTxGArp",
+        "help": "tx arp garp",
+        "unit": "pkts",
+        "zero": false,
+        "info": 18
+       },
+       {
+        "name": "pktTxReply",
+        "help": "tx arp reply",
+        "unit": "pkts",
+        "zero": false,
+        "info": 18
+       },
+       {
+        "name": "tblActive",
+        "help": "arp table active",
+        "unit": "entries",
+        "zero": false,
+        "info": 18
+       },
+       {
+        "name": "tblAdd",
+        "help": "arp table add",
+        "unit": "ops",
+        "zero": false,
+        "info": 18
+       },
+       {
+        "name": "tblRemove",
+        "help": "arp table remove",
+        "unit": "ops",
+        "zero": false,
+        "info": 18
+       },
+       {
+        "name": "associateWithClient",
+        "help": "associate with client",
+        "unit": "ops",
+        "zero": false,
+        "info": 18
+       },
+       {
+        "name": "disasociateWithClient",
+        "help": "disassociate with client",
+        "unit": "ops",
+        "zero": false,
+        "info": 18
+       }
+      ]
+     }
+    },
+    "values": {},
+    "values_zero": {
+     "arp": {
+      "addIncomplete": 0,
+      "addLearn": 0,
+      "associateWithClient": 0,
+      "disasociateWithClient": 0,
+      "eventsChangeDgIPv4": 0,
+      "eventsChangeSrc": 0,
+      "moveComplete": 0,
+      "moveIncompleteAfterRefresh": 0,
+      "moveLearned": 0,
+      "pktRxArpQuery": 0,
+      "pktRxArpQueryNotForUs": 0,
+      "pktRxArpReply": 0,
+      "pktRxErrNoBroadcast": 0,
+      "pktRxErrTooShort": 0,
+      "pktRxErrWrongOp": 0,
+      "pktTxArpQuery": 0,
+      "pktTxGArp": 0,
+      "pktTxReply": 0,
+      "tblActive": 0,
+      "tblAdd": 0,
+      "tblRemove": 0,
+      "timerEventComplete": 0,
+      "timerEventIncomplete": 0,
+      "timerEventLearn": 0,
+      "timerEventRefresh": 0
+     }
+    }
+   }
+  },
+  "cdp": {
+   "server_name": "cdp",
+   "client": {
+    "cmd": "cdp_client_cnt",
+    "meta": {
+     "cdp": {
+      "name": "cdp",
+      "meta": [
+       {
+        "name": "pktTx",
+        "help": "broadcast packet ",
+        "unit": "pkts",
+        "zero": false,
+        "info": 18
+       }
+      ]
+     }
+    },
+    "values": {
+     "cdp": {
+      "pktTx": 1
+     }
+    },
+    "values_zero": {
+     "cdp": {
+      "pktTx": 1
+     }
+    }
+   }
+  },
+  "dhcp": {
+   "server_name": "dhcp",
+   "client": {
+    "cmd": "dhcp_client_cnt",
+    "meta": {
+     "dhcp": {
+      "name": "dhcp",
+      "meta": [
+       {
+        "name": "pktRxBroadcast",
+        "help": "Rx broadcast L2, should be unicast ",
+        "unit": "pkts",
+        "zero": false,
+        "info": 20
+       },
+       {
+        "name": "pktTxDiscover",
+        "help": "Tx discover ",
+        "unit": "pkts",
+        "zero": false,
+        "info": 18
+       },
+       {
+        "name": "pktRxOffer",
+        "help": "rx offer ",
+        "unit": "pkts",
+        "zero": false,
+        "info": 18
+       },
+       {
+        "name": "pktTxRequest",
+        "help": "tx request",
+        "unit": "pkts",
+        "zero": false,
+        "info": 18
+       },
+       {
+        "name": "pktRxAck",
+        "help": "ack from the server",
+        "unit": "pkts",
+        "zero": false,
+        "info": 18
+       },
+       {
+        "name": "pktRxLenErr",
+        "help": "len error",
+        "unit": "pkts",
+        "zero": false,
+        "info": 20
+       },
+       {
+        "name": "pktRxParserErr",
+        "help": "parser error",
+        "unit": "pkts",
+        "zero": false,
+        "info": 20
+       },
+       {
+        "name": "pktRxUnhandled",
+        "help": "unhandled dhcp packet",
+        "unit": "pkts",
+        "zero": false,
+        "info": 20
+       },
+       {
+        "name": "pktRxNotify",
+        "help": "notify with new IPv4 addr",
+        "unit": "pkts",
+        "zero": false,
+        "info": 18
+       },
+       {
+        "name": "pktRxRenew",
+        "help": "renew",
+        "unit": "pkts",
+        "zero": false,
+        "info": 18
+       },
+       {
+        "name": "pktRxNack",
+        "help": "nack",
+        "unit": "pkts",
+        "zero": false,
+        "info": 20
+       },
+       {
+        "name": "pktRxRebind",
+        "help": "Rx rebind",
+        "unit": "pkts",
+        "zero": false,
+        "info": 20
+       },
+       {
+        "name": "pktRxWrongXid",
+        "help": "wrong xid ignore",
+        "unit": "pkts",
+        "zero": false,
+        "info": 20
+       },
+       {
+        "name": "pktRxWrongHwType",
+        "help": "wrong hw type",
+        "unit": "pkts",
+        "zero": false,
+        "info": 20
+       },
+       {
+        "name": "pktRxWrongIP",
+        "help": "rx with wrong dest ip",
+        "unit": "pkts",
+        "zero": false,
+        "info": 20
+       }
+      ]
+     }
+    },
+    "values": {
+     "dhcp": {
+      "pktTxDiscover": 1
+     }
+    },
+    "values_zero": {
+     "dhcp": {
+      "pktRxAck": 0,
+      "pktRxBroadcast": 0,
+      "pktRxLenErr": 0,
+      "pktRxNack": 0,
+      "pktRxNotify": 0,
+      "pktRxOffer": 0,
+      "pktRxParserErr": 0,
+      "pktRxRebind": 0,
+      "pktRxRenew": 0,
+      "pktRxUnhandled": 0,
+      "pktRxWrongHwType": 0,
+      "pktRxWrongIP": 0,
+      "pktRxWrongXid": 0,
+      "pktTxDiscover": 1,
+      "pktTxRequest": 0
+     }
+    }
+   }
+  },
+  "dhcpsrv": {
+   "server_name": "dhcpsrv",
+   "client": {
+    "cmd": "dhcpsrv_c_cnt",
+    "meta": {
+     "dhcpsrv": {
+      "name": "dhcpsrv",
+      "meta": [
+       {
+        "name": "invalidInitJson",
+        "help": "Error while decoding init Json",
+        "unit": "ops",
+        "zero": false,
+        "info": 20
+       },
+       {
+        "name": "mustNotOfferOpt",
+        "help": "Must NOT Offer option in Init Json",
+        "unit": "ops",
+        "zero": false,
+        "info": 20
+       },
+       {
+        "name": "mustNotAckInformOpt",
+        "help": "Must NOT Ack option to DHCPINFORM in Init Json",
+        "unit": "ops",
+        "zero": false,
+        "info": 20
+       },
+       {
+        "name": "mustNotAckReqOpt",
+        "help": "Must NOT Ack option to DHCPREQUEST in Init Json",
+        "unit": "ops",
+        "zero": false,
+        "info": 20
+       },
+       {
+        "name": "mustNotNakOpt",
+        "help": "Must NOT NAK option in Init Json",
+        "unit": "ops",
+        "zero": false,
+        "info": 20
+       },
+       {
+        "name": "activeClients",
+        "help": "Num clients that are Offered/Bound/Renewing/Rebinding.",
+        "unit": "clients",
+        "zero": true,
+        "info": 18
+       },
+       {
+        "name": "pktRx",
+        "help": "Rx packets",
+        "unit": "pkts",
+        "zero": false,
+        "info": 18
+       },
+       {
+        "name": "pktRxBroadcast",
+        "help": "Rx broadcast L2",
+        "unit": "pkts",
+        "zero": false,
+        "info": 18
+       },
+       {
+        "name": "pktRxDhcpBroadcast",
+        "help": "Rx DHCP pkt with Broadcast Flag",
+        "unit": "pkts",
+        "zero": false,
+        "info": 18
+       },
+       {
+        "name": "pktRxBadMsgType",
+        "help": "Rx invalid DHCP message type",
+        "unit": "pkts",
+        "zero": false,
+        "info": 20
+       },
+       {
+        "name": "pktRxBadChAddr",
+        "help": "Rx invalid Hardware Address type",
+        "unit": "pkts",
+        "zero": false,
+        "info": 20
+       },
+       {
+        "name": "pktRxBadDhcpReq",
+        "help": "Rx invalid DHCPREQUEST",
+        "unit": "pkts",
+        "zero": false,
+        "info": 20
+       },
+       {
+        "name": "pktRxBadDhcpInform",
+        "help": "Rx invalid DHCPINFORM",
+        "unit": "pkts",
+        "zero": false,
+        "info": 20
+       },
+       {
+        "name": "pktRxBadDhcpDecline",
+        "help": "Rx invalid DHCPDECLINE",
+        "unit": "pkts",
+        "zero": false,
+        "info": 20
+       },
+       {
+        "name": "pktRxNoClientCtx",
+        "help": "Client Identifier not found in database.",
+        "unit": "pkts",
+        "zero": false,
+        "info": 20
+       },
+       {
+        "name": "pktRxDiscover",
+        "help": "DHCPDISCOVER packets received",
+        "unit": "pkts",
+        "zero": false,
+        "info": 18
+       },
+       {
+        "name": "pktRxRequest",
+        "help": "DHCPREQUEST packets received",
+        "unit": "pkts",
+        "zero": false,
+        "info": 18
+       },
+       {
+        "name": "pktRxDecline",
+        "help": "DHCPDECLINE packets received",
+        "unit": "pkts",
+        "zero": false,
+        "info": 18
+       },
+       {
+        "name": "pktRxRelease",
+        "help": "DHCPRELEASE packets received",
+        "unit": "pkts",
+        "zero": false,
+        "info": 18
+       },
+       {
+        "name": "pktRxInform",
+        "help": "DHCPINFORM packets received",
+        "unit": "pkts",
+        "zero": false,
+        "info": 18
+       },
+       {
+        "name": "pktTx",
+        "help": "Tx packets",
+        "unit": "pkts",
+        "zero": false,
+        "info": 18
+       },
+       {
+        "name": "pktTxOffer",
+        "help": "DHCPOFFER packets sent",
+        "unit": "pkts",
+        "zero": false,
+        "info": 18
+       },
+       {
+        "name": "pktTxAck",
+        "help": "DHCPACK packets sent",
+        "unit": "pkts",
+        "zero": false,
+        "info": 18
+       },
+       {
+        "name": "pktTxNak",
+        "help": "DHCPNAK packets sent",
+        "unit": "pkts",
+        "zero": false,
+        "info": 18
+       },
+       {
+        "name": "noIpAvailable",
+        "help": "No IP available for client",
+        "unit": "ops",
+        "zero": false,
+        "info": 18
+       },
+       {
+        "name": "negatedIp",
+        "help": "Negated IP as a result of DHCPDECLINE",
+        "unit": "ops",
+        "zero": false,
+        "info": 18
+       },
+       {
+        "name": "ciaddrMismatch",
+        "help": "Client Ip Addr database mismatch",
+        "unit": "ops",
+        "zero": false,
+        "info": 20
+       }
+      ]
+     }
+    },
+    "values": {
+     "dhcpsrv": {
+      "activeClients": 0,
+      "invalidInitJson": 1
+     }
+    },
+    "values_zero": {
+     "dhcpsrv": {
+      "activeClients": 0,
+      "ciaddrMismatch": 0,
+      "invalidInitJson": 1,
+      "mustNotAckInformOpt": 0,
+      "mustNotAckReqOpt": 0,
+      "mustNotNakOpt": 0,
+      "mustNotOfferOpt": 0,
+      "negatedIp": 0,
+      "noIpAvailable": 0,
+      "pktRx": 0,
+      "pktRxBadChAddr": 0,
+      "pktRxBadDhcpDecline": 0,
+      "pktRxBadDhcpInform": 0,
+      "pktRxBadDhcpReq": 0,
+      "pktRxBadMsgType": 0,
+      "pktRxBroadcast": 0,
+      "pktRxDecline": 0,
+      "pktRxDhcpBroadcast": 0,
+      "pktRxDiscover": 0,
+      "pktRxInform": 0,
+      "pktRxNoClientCtx": 0,
+      "pktRxRelease": 0,
+      "pktRxRequest": 0,
+      "pktTx": 0,
+      "pktTxAck": 0,
+      "pktTxNak": 0,
+      "pktTxOffer": 0
+     }
+    }
+   }
+  },
+  "dhcpv6": {
+   "server_name": "dhcpv6",
+   "client": {
+    "cmd": "dhcpv6_client_cnt",
+    "meta": {
+     "dhcpv6": {
+      "name": "dhcpv6",
+      "meta": [
+       {
+        "name": "pktTxDiscover",
+        "help": "Tx discover",
+        "unit": "pkts",
+        "zero": false,
+        "info": 18
+       },
+       {
+        "name": "pktRxOffer",
+        "help": "received offer",
+        "unit": "pkts",
+        "zero": false,
+        "info": 18
+       },
+       {
+        "name": "pktTxRequest",
+        "help": "tx request",
+        "unit": "pkts",
+        "zero": false,
+        "info": 18
+       },
+       {
+        "name": "pktRxAck",
+        "help": "reply from the server",
+        "unit": "pkts",
+        "zero": false,
+        "info": 18
+       },
+       {
+        "name": "pktRxLenErr",
+        "help": "rx len error",
+        "unit": "pkts",
+        "zero": false,
+        "info": 20
+       },
+       {
+        "name": "pktRxParserErr",
+        "help": "rx parser error",
+        "unit": "pkts",
+        "zero": false,
+        "info": 20
+       },
+       {
+        "name": "pktRxUnhandled",
+        "help": "rx unhandled dhcp packet",
+        "unit": "pkts",
+        "zero": false,
+        "info": 20
+       },
+       {
+        "name": "pktRxNotify",
+        "help": "Notify with new IPv6 addr",
+        "unit": "pkts",
+        "zero": false,
+        "info": 18
+       },
+       {
+        "name": "pktRxRenew",
+        "help": "rx renew",
+        "unit": "pkts",
+        "zero": false,
+        "info": 18
+       },
+       {
+        "name": "pktRxRebind",
+        "help": "rx Rebind",
+        "unit": "pkts",
+        "zero": false,
+        "info": 20
+       },
+       {
+        "name": "pktRxMissingServerIdOption",
+        "help": "rx missing server id option",
+        "unit": "pkts",
+        "zero": false,
+        "info": 20
+       },
+       {
+        "name": "pktRxWrongXid",
+        "help": "rx wrong xid",
+        "unit": "pkts",
+        "zero": false,
+        "info": 20
+       },
+       {
+        "name": "pktRxWrongServerId",
+        "help": "rx wrong server id",
+        "unit": "pkts",
+        "zero": false,
+        "info": 20
+       },
+       {
+        "name": "pktRxWrongServerIP",
+        "help": "rx wrong server dest ip",
+        "unit": "pkts",
+        "zero": false,
+        "info": 20
+       },
+       {
+        "name": "pktRxWrongClientId",
+        "help": "rx wrong client id sent from the server",
+        "unit": "pkts",
+        "zero": false,
+        "info": 20
+       },
+       {
+        "name": "pktRxNoIANA",
+        "help": "rx no IANA server information",
+        "unit": "pkts",
+        "zero": false,
+        "info": 20
+       },
+       {
+        "name": "pktRxWrongIANAId",
+        "help": "rx no IANA server id",
+        "unit": "pkts",
+        "zero": false,
+        "info": 20
+       },
+       {
+        "name": "pktRxNoIAAddr",
+        "help": "rx no IANA new addr",
+        "unit": "pkts",
+        "zero": false,
+        "info": 20
+       },
+       {
+        "name": "pktRxWrongDstIp",
+        "help": "rx wrong destination ip",
+        "unit": "pkts",
+        "zero": false,
+        "info": 20
+       },
+       {
+        "name": "pktRxSTATUS_UnspecFail",
+        "help": "rx server status error",
+        "unit": "pkts",
+        "zero": false,
+        "info": 20
+       },
+       {
+        "name": "pktRxSTATUS_NoAddrsAvail",
+        "help": "rx server status error",
+        "unit": "pkts",
+        "zero": false,
+        "info": 20
+       },
+       {
+        "name": "pktRxSTATUS_NoBinding",
+        "help": "rx server status error",
+        "unit": "pkts",
+        "zero": false,
+        "info": 20
+       },
+       {
+        "name": "pktRxSTATUS_NotOnLink",
+        "help": "rx server status error",
+        "unit": "pkts",
+        "zero": false,
+        "info": 20
+       },
+       {
+        "name": "pktRxSTATUS_UseMulticast",
+        "help": "rx server status error",
+        "unit": "pkts",
+        "zero": false,
+        "info": 20
+       },
+       {
+        "name": "pktRxSTATUS_NoPrefixAvail",
+        "help": "rx server status error",
+        "unit": "pkts",
+        "zero": false,
+        "info": 20
+       }
+      ]
+     }
+    },
+    "values": {
+     "dhcpv6": {
+      "pktTxDiscover": 1
+     }
+    },
+    "values_zero": {
+     "dhcpv6": {
+      "pktRxAck": 0,
+      "pktRxLenErr": 0,
+      "pktRxMissingServerIdOption": 0,
+      "pktRxNoIAAddr": 0,
+      "pktRxNoIANA": 0,
+      "pktRxNotify": 0,
+      "pktRxOffer": 0,
+      "pktRxParserErr": 0,
+      "pktRxRebind": 0,
+      "pktRxRenew": 0,
+      "pktRxSTATUS_NoAddrsAvail": 0,
+      "pktRxSTATUS_NoBinding": 0,
+      "pktRxSTATUS_NoPrefixAvail": 0,
+      "pktRxSTATUS_NotOnLink": 0,
+      "pktRxSTATUS_UnspecFail": 0,
+      "pktRxSTATUS_UseMulticast": 0,
+      "pktRxUnhandled": 0,
+      "pktRxWrongClientId": 0,
+      "pktRxWrongDstIp": 0,
+      "pktRxWrongIANAId": 0,
+      "pktRxWrongServerIP": 0,
+      "pktRxWrongServerId": 0,
+      "pktRxWrongXid": 0,
+      "pktTxDiscover": 1,
+      "pktTxRequest": 0
+     }
+    }
+   }
+  },
+  "dns": {
+   "server_name": "dns",
+   "ns": {
+    "cmd": "dns_ns_cnt",
+    "meta": {
+     "dns": {
+      "name": "dns",
+      "meta": [
+       {
+        "name": "invalidInitJson",
+        "help": "Error while decoding init Json",
+        "unit": "ops",
+        "zero": false,
+        "info": 20
+       },
+       {
+        "name": "autoPlayClientNotFound",
+        "help": "AutoPlay client was not found",
+        "unit": "ops",
+        "zero": false,
+        "info": 18
+       },
+       {
+        "name": "clientNoDns",
+        "help": "AutoPlay client doesn't have Dns plugin",
+        "unit": "ops",
+        "zero": false,
+        "info": 20
+       },
+       {
+        "name": "autoPlayQueries",
+        "help": "Number of queries sent by Auto Play",
+        "unit": "query",
+        "zero": false,
+        "info": 18
+       },
+       {
+        "name": "autoPlayBadQuery",
+        "help": "Number of bad queries created by Auto Play",
+        "unit": "ops",
+        "zero": false,
+        "info": 20
+       }
+      ]
+     }
+    },
+    "values": {},
+    "values_zero": {
+     "dns": {
+      "autoPlayBadQuery": 0,
+      "autoPlayClientNotFound": 0,
+      "autoPlayQueries": 0,
+      "clientNoDns": 0,
+      "invalidInitJson": 0
+     }
+    }
+   },
+   "client": {
+    "cmd": "dns_c_cnt",
+    "meta": {
+     "dns": {
+      "name": "dns",
+      "meta": [
+       {
+        "name": "invalidInitJson",
+        "help": "Error while decoding init Json",
+        "unit": "ops",
+        "zero": false,
+        "info": 20
+       },
+       {
+        "name": "invalidSocket",
+        "help": "Error creating socket",
+        "unit": "ops",
+        "zero": false,
+        "info": 20
+       },
+       {
+        "name": "socketWriteError",
+        "help": "Error writing in socket",
+        "unit": "ops",
+        "zero": false,
+        "info": 20
+       },
+       {
+        "name": "socketCloseError",
+        "help": "Error closing socket",
+        "unit": "ops",
+        "zero": false,
+        "info": 20
+       },
+       {
+        "name": "pktRxDecodeError",
+        "help": "Num of invalid Dns packets received",
+        "unit": "ops",
+        "zero": false,
+        "info": 20
+       },
+       {
+        "name": "invalidIpInDb",
+        "help": "Invalid Ip found in Name Server Database.",
+        "unit": "ops",
+        "zero": false,
+        "info": 20
+       },
+       {
+        "name": "txBytes",
+        "help": "Number of bytes transmitted",
+        "unit": "bytes",
+        "zero": true,
+        "info": 18
+       },
+       {
+        "name": "rxBytes",
+        "help": "Number of bytes received",
+        "unit": "bytes",
+        "zero": true,
+        "info": 18
+       },
+       {
+        "name": "rxQuestions",
+        "help": "Number of questions received",
+        "unit": "ops",
+        "zero": true,
+        "info": 18
+       },
+       {
+        "name": "rxQuestionsNxDomain",
+        "help": "Number of questions received with non existant domains",
+        "unit": "ops",
+        "zero": true,
+        "info": 18
+       },
+       {
+        "name": "dnsFlowAccept",
+        "help": "Number of Dns flows accepted. Each request is a new flow.",
+        "unit": "ops",
+        "zero": true,
+        "info": 18
+       },
+       {
+        "name": "pktTxDnsQuery",
+        "help": "Num of Dns queries transmitted",
+        "unit": "pkts",
+        "zero": true,
+        "info": 18
+       },
+       {
+        "name": "pktRxDnsQuery",
+        "help": "Num of Dns queries received",
+        "unit": "pkts",
+        "zero": true,
+        "info": 18
+       },
+       {
+        "name": "pktTxDnsResponse",
+        "help": "Num of Dns responses transmitted",
+        "unit": "pkts",
+        "zero": true,
+        "info": 18
+       },
+       {
+        "name": "pktRxDnsResponse",
+        "help": "Num of Dns responses received",
+        "unit": "pkts",
+        "zero": true,
+        "info": 18
+       },
+       {
+        "name": "unsupportedDnsType",
+        "help": "Num of queries received with an unsupported type",
+        "unit": "query",
+        "zero": false,
+        "info": 18
+       }
+      ]
+     }
+    },
+    "values": {
+     "dns": {
+      "dnsFlowAccept": 0,
+      "invalidInitJson": 1,
+      "pktRxDnsQuery": 0,
+      "pktRxDnsResponse": 0,
+      "pktTxDnsQuery": 0,
+      "pktTxDnsResponse": 0,
+      "rxBytes": 0,
+      "rxQuestions": 0,
+      "rxQuestionsNxDomain": 0,
+      "txBytes": 0
+     }
+    },
+    "values_zero": {
+     "dns": {
+      "dnsFlowAccept": 0,
+      "invalidInitJson": 1,
+      "invalidIpInDb": 0,
+      "invalidSocket": 0,
+      "pktRxDecodeError": 0,
+      "pktRxDnsQuery": 0,
+      "pktRxDnsResponse": 0,
+      "pktTxDnsQuery": 0,
+      "pktTxDnsResponse": 0,
+      "rxBytes": 0,
+      "rxQuestions": 0,
+      "rxQuestionsNxDomain": 0,
+      "socketCloseError": 0,
+      "socketWriteError": 0,
+      "txBytes": 0,
+      "unsupportedDnsType": 0
+     }
+    }
+   }
+  },
+  "dot1x": {
+   "server_name": "dot1x",
+   "client": {
+    "cmd": "dot1x_client_cnt",
+    "meta": {
+     "dot1x": {
+      "name": "dot1x",
+      "meta": [
+       {
+        "name": "pktMethodFailErr",
+        "help": "rx method failed in success packet",
+        "unit": "pkts",
+        "zero": false,
+        "info": 20
+       },
+       {
+        "name": "pktMethodNoPassword",
+        "help": "rx method has no password",
+        "unit": "pkts",
+        "zero": false,
+        "info": 20
+       },
+       {
+        "name": "pktMethodWrongLen",
+        "help": "rx method wrong len",
+        "unit": "pkts",
+        "zero": false,
+        "info": 20
+       },
+       {
+        "name": "pktRxParserErr",
+        "help": "rx parse error",
+        "unit": "pkts",
+        "zero": false,
+        "info": 20
+       },
+       {
+        "name": "pktRxIvalidVersionErr",
+        "help": "rx invalid version ",
+        "unit": "pkts",
+        "zero": false,
+        "info": 20
+       },
+       {
+        "name": "pktRxIgnore",
+        "help": "rx ignore",
+        "unit": "pkts",
+        "zero": false,
+        "info": 20
+       },
+       {
+        "name": "pktRxEAPtooShortErr",
+        "help": "rx packet too short",
+        "unit": "pkts",
+        "zero": false,
+        "info": 20
+       },
+       {
+        "name": "pktRxParserInvalidCode",
+        "help": "rx parser invalid code",
+        "unit": "pkts",
+        "zero": false,
+        "info": 20
+       },
+       {
+        "name": "pktNoUserNameErr",
+        "help": "not user name provided",
+        "unit": "pkts",
+        "zero": false,
+        "info": 20
+       },
+       {
+        "name": "pktTxIdentity",
+        "help": "tx send identity",
+        "unit": "pkts",
+        "zero": false,
+        "info": 18
+       },
+       {
+        "name": "pktTxNack",
+        "help": "tx send nack",
+        "unit": "pkts",
+        "zero": false,
+        "info": 20
+       },
+       {
+        "name": "pktSuccessWrongState",
+        "help": "rx success in wrong stats",
+        "unit": "pkts",
+        "zero": false,
+        "info": 20
+       },
+       {
+        "name": "pktFaliureWrongState",
+        "help": "faliure in the wrong state ",
+        "unit": "pkts",
+        "zero": false,
+        "info": 20
+       },
+       {
+        "name": "pktMethodWrongstate",
+        "help": "getting method in the wrong state  ",
+        "unit": "pkts",
+        "zero": false,
+        "info": 20
+       }
+      ]
+     }
+    },
+    "values": {},
+    "values_zero": {
+     "dot1x": {
+      "pktFaliureWrongState": 0,
+      "pktMethodFailErr": 0,
+      "pktMethodNoPassword": 0,
+      "pktMethodWrongLen": 0,
+      "pktMethodWrongstate": 0,
+      "pktNoUserNameErr": 0,
+      "pktRxEAPtooShortErr": 0,
+      "pktRxIgnore": 0,
+      "pktRxIvalidVersionErr": 0,
+      "pktRxParserErr": 0,
+      "pktRxParserInvalidCode": 0,
+      "pktSuccessWrongState": 0,
+      "pktTxIdentity": 0,
+      "pktTxNack": 0
+     }
+    }
+   }
+  },
+  "icmp": {
+   "server_name": "icmp",
+   "ns": {
+    "cmd": "icmp_ns_cnt",
+    "meta": {
+     "icmp": {
+      "name": "icmp",
+      "meta": [
+       {
+        "name": "pktRxIcmpQuery",
+        "help": "rx query",
+        "unit": "ops",
+        "zero": false,
+        "info": 18
+       },
+       {
+        "name": "pktTxIcmpResponse",
+        "help": "tx response",
+        "unit": "ops",
+        "zero": false,
+        "info": 18
+       },
+       {
+        "name": "pktTxIcmpQuery",
+        "help": "tx query",
+        "unit": "ops",
+        "zero": false,
+        "info": 18
+       },
+       {
+        "name": "pktRxIcmpResponse",
+        "help": "rx response",
+        "unit": "ops",
+        "zero": false,
+        "info": 18
+       },
+       {
+        "name": "pktRxErrTooShort",
+        "help": "rx too short",
+        "unit": "ops",
+        "zero": false,
+        "info": 18
+       },
+       {
+        "name": "pktRxErrUnhandled",
+        "help": "rx wrong opcode",
+        "unit": "ops",
+        "zero": false,
+        "info": 18
+       },
+       {
+        "name": "pktRxNoClientUnhandled",
+        "help": "rx no client ",
+        "unit": "ops",
+        "zero": false,
+        "info": 18
+       },
+       {
+        "name": "pktRxErrMulticastB",
+        "help": "src ip is not valid ",
+        "unit": "ops",
+        "zero": false,
+        "info": 18
+       },
+       {
+        "name": "pktRxIcmpDstUnreachable",
+        "help": "rx destination unreachable",
+        "unit": "ops",
+        "zero": false,
+        "info": 18
+       }
+      ]
+     }
+    },
+    "values": {},
+    "values_zero": {
+     "icmp": {
+      "pktRxErrMulticastB": 0,
+      "pktRxErrTooShort": 0,
+      "pktRxErrUnhandled": 0,
+      "pktRxIcmpDstUnreachable": 0,
+      "pktRxIcmpQuery": 0,
+      "pktRxIcmpResponse": 0,
+      "pktRxNoClientUnhandled": 0,
+      "pktTxIcmpQuery": 0,
+      "pktTxIcmpResponse": 0
+     }
+    }
+   }
+  },
+  "igmp": {
+   "server_name": "igmp",
+   "ns": {
+    "cmd": "igmp_ns_cnt",
+    "meta": {
+     "igmp": {
+      "name": "igmp",
+      "meta": [
+       {
+        "name": "pktRxSndReportsSGQuery",
+        "help": "(s,g)- query records",
+        "unit": "pkts",
+        "zero": false,
+        "info": 18
+       },
+       {
+        "name": "pktRxSndReportsSGRemove",
+        "help": "(s,g)- remove records",
+        "unit": "pkts",
+        "zero": false,
+        "info": 18
+       },
+       {
+        "name": "pktRxSndReportsSGAdd",
+        "help": "(s,g)- add records",
+        "unit": "pkts",
+        "zero": false,
+        "info": 18
+       },
+       {
+        "name": "pktRxSndReportsSGChangeToInclude",
+        "help": "(s,g)- change to include",
+        "unit": "pkts",
+        "zero": false,
+        "info": 18
+       },
+       {
+        "name": "pktRxTotal",
+        "help": "total IGMP messages received",
+        "unit": "pkts",
+        "zero": false,
+        "info": 18
+       },
+       {
+        "name": "pktRxTooshort",
+        "help": "received with too few bytes",
+        "unit": "pkts",
+        "zero": false,
+        "info": 20
+       },
+       {
+        "name": "pktRxBadttl",
+        "help": "received with ttl other than 1",
+        "unit": "pkts",
+        "zero": false,
+        "info": 20
+       },
+       {
+        "name": "pktRxBadsum",
+        "help": "received with bad checksum",
+        "unit": "pkts",
+        "zero": false,
+        "info": 20
+       },
+       {
+        "name": "pktRxNoKey",
+        "help": "received igmp but can't find port,vlan keys",
+        "unit": "pkts",
+        "zero": false,
+        "info": 20
+       },
+       {
+        "name": "pktRxv1Queries",
+        "help": "received IGMPv1/IGMPv2 queries",
+        "unit": "pkts",
+        "zero": false,
+        "info": 18
+       },
+       {
+        "name": "pktRxv1v2Queries",
+        "help": "received IGMPv1/IGMPv2 queries",
+        "unit": "pkts",
+        "zero": false,
+        "info": 18
+       },
+       {
+        "name": "pktRxv3Queries",
+        "help": "received IGMPv3 queries",
+        "unit": "pkts",
+        "zero": false,
+        "info": 18
+       },
+       {
+        "name": "pktRxbadQueries",
+        "help": "received invalid queries",
+        "unit": "pkts",
+        "zero": false,
+        "info": 20
+       },
+       {
+        "name": "pktRxgenQueries",
+        "help": "received general queries",
+        "unit": "pkts",
+        "zero": false,
+        "info": 18
+       },
+       {
+        "name": "pktRxgroupQueries",
+        "help": "received group queries",
+        "unit": "pkts",
+        "zero": false,
+        "info": 18
+       },
+       {
+        "name": "pktRxgsrQueries",
+        "help": "received group-source queries",
+        "unit": "pkts",
+        "zero": false,
+        "info": 18
+       },
+       {
+        "name": "pktRxgsrDropQueries",
+        "help": "dropped group-source queries",
+        "unit": "pkts",
+        "zero": false,
+        "info": 18
+       },
+       {
+        "name": "pktRxquerieActiveTimer",
+        "help": "rcv querie while active timer",
+        "unit": "pkts",
+        "zero": false,
+        "info": 18
+       },
+       {
+        "name": "pktRxReports",
+        "help": "received membership reports",
+        "unit": "pkts",
+        "zero": false,
+        "info": 18
+       },
+       {
+        "name": "pktRxNora",
+        "help": "received w/o Router Alert option ",
+        "unit": "pkts",
+        "zero": false,
+        "info": 18
+       },
+       {
+        "name": "pktSndAddRemoveReports",
+        "help": "explicit reports due to add/remove command",
+        "unit": "pkts",
+        "zero": false,
+        "info": 18
+       },
+       {
+        "name": "pktRxSndReports",
+        "help": "sent membership reports",
+        "unit": "pkts",
+        "zero": false,
+        "info": 18
+       },
+       {
+        "name": "opsAddSG",
+        "help": "add mc (s,g) ",
+        "unit": "ops",
+        "zero": false,
+        "info": 18
+       },
+       {
+        "name": "opsRemoveSG",
+        "help": "remove mc (s,g) ",
+        "unit": "ops",
+        "zero": false,
+        "info": 18
+       },
+       {
+        "name": "opsAddErrSG",
+        "help": "error add mc (s,g) ",
+        "unit": "ops",
+        "zero": false,
+        "info": 20
+       },
+       {
+        "name": "opsRemoveErrSG",
+        "help": "error remove mc (s,g) ",
+        "unit": "ops",
+        "zero": false,
+        "info": 20
+       },
+       {
+        "name": "opsAdd",
+        "help": "add mc ",
+        "unit": "ops",
+        "zero": false,
+        "info": 18
+       },
+       {
+        "name": "opsRemove",
+        "help": "remove mc ",
+        "unit": "ops",
+        "zero": false,
+        "info": 18
+       },
+       {
+        "name": "opsAddErr",
+        "help": "add mc with error",
+        "unit": "ops",
+        "zero": false,
+        "info": 20
+       },
+       {
+        "name": "opsRemoveErr",
+        "help": "remove mc with error ",
+        "unit": "ops",
+        "zero": false,
+        "info": 20
+       },
+       {
+        "name": "pktNoDesignatorClient",
+        "help": "No designator client with this MAC addr, igmp won't work with one clients assigned ",
+        "unit": "pkts",
+        "zero": false,
+        "info": 20
+       },
+       {
+        "name": "pktNoDesignatorClientIPv4",
+        "help": "The designator client has no valid IPv4 addr ",
+        "unit": "pkts",
+        "zero": false,
+        "info": 20
+       },
+       {
+        "name": "opsRateIsTooHigh",
+        "help": "rate of multicast is too high, duration should be higher",
+        "unit": "opts",
+        "zero": false,
+        "info": 20
+       }
+      ]
+     }
+    },
+    "values": {},
+    "values_zero": {
+     "igmp": {
+      "opsAdd": 0,
+      "opsAddErr": 0,
+      "opsAddErrSG": 0,
+      "opsAddSG": 0,
+      "opsRateIsTooHigh": 0,
+      "opsRemove": 0,
+      "opsRemoveErr": 0,
+      "opsRemoveErrSG": 0,
+      "opsRemoveSG": 0,
+      "pktNoDesignatorClient": 0,
+      "pktNoDesignatorClientIPv4": 0,
+      "pktRxBadsum": 0,
+      "pktRxBadttl": 0,
+      "pktRxNoKey": 0,
+      "pktRxNora": 0,
+      "pktRxReports": 0,
+      "pktRxSndReports": 0,
+      "pktRxSndReportsSGAdd": 0,
+      "pktRxSndReportsSGChangeToInclude": 0,
+      "pktRxSndReportsSGQuery": 0,
+      "pktRxSndReportsSGRemove": 0,
+      "pktRxTooshort": 0,
+      "pktRxTotal": 0,
+      "pktRxbadQueries": 0,
+      "pktRxgenQueries": 0,
+      "pktRxgroupQueries": 0,
+      "pktRxgsrDropQueries": 0,
+      "pktRxgsrQueries": 0,
+      "pktRxquerieActiveTimer": 0,
+      "pktRxv1Queries": 0,
+      "pktRxv1v2Queries": 0,
+      "pktRxv3Queries": 0,
+      "pktSndAddRemoveReports": 0
+     }
+    }
+   }
+  },
+  "ipv6": {
+   "server_name": "ipv6",
+   "ns": {
+    "cmd": "ipv6_ns_cnt",
+    "meta": {
+     "ipv6nd": {
+      "name": "ipv6nd",
+      "meta": [
+       {
+        "name": "eventsChangeDHCPSrc",
+        "help": "change dhcp src ipv6 events",
+        "unit": "ops",
+        "zero": false,
+        "info": 18
+       },
+       {
+        "name": "eventsChangeSrc",
+        "help": "change src ipv6 events",
+        "unit": "ops",
+        "zero": false,
+        "info": 18
+       },
+       {
+        "name": "eventsChangeDgIPv6",
+        "help": "change dgw ipv6 events",
+        "unit": "ops",
+        "zero": false,
+        "info": 18
+       },
+       {
+        "name": "timerEventLearn",
+        "help": "timer events learn",
+        "unit": "ops",
+        "zero": false,
+        "info": 18
+       },
+       {
+        "name": "timerEventIncomplete",
+        "help": "timer events incomplete",
+        "unit": "ops",
+        "zero": false,
+        "info": 18
+       },
+       {
+        "name": "timerEventComplete",
+        "help": "timer events complete",
+        "unit": "ops",
+        "zero": false,
+        "info": 18
+       },
+       {
+        "name": "timerEventRefresh",
+        "help": "timer events refresh",
+        "unit": "ops",
+        "zero": false,
+        "info": 18
+       },
+       {
+        "name": "addLearn",
+        "help": "add learn to table ",
+        "unit": "ops",
+        "zero": false,
+        "info": 18
+       },
+       {
+        "name": "addIncomplete",
+        "help": "add incomplete to table ",
+        "unit": "ops",
+        "zero": false,
+        "info": 18
+       },
+       {
+        "name": "moveIncompleteAfterRefresh",
+        "help": "move incomplete after refresh  ",
+        "unit": "ops",
+        "zero": false,
+        "info": 18
+       },
+       {
+        "name": "moveComplete",
+        "help": "move complete ",
+        "unit": "ops",
+        "zero": false,
+        "info": 18
+       },
+       {
+        "name": "moveLearned",
+        "help": "move learn ",
+        "unit": "ops",
+        "zero": false,
+        "info": 18
+       },
+       {
+        "name": "pktRxErrTooShort",
+        "help": "rx error packet is too short",
+        "unit": "pkts",
+        "zero": false,
+        "info": 20
+       },
+       {
+        "name": "pktRxErrNoBroadcast",
+        "help": "rx error packet is no broadcast",
+        "unit": "pkts",
+        "zero": false,
+        "info": 20
+       },
+       {
+        "name": "pktRxErrWrongOp",
+        "help": "rx error packet with wrong opcode",
+        "unit": "pkts",
+        "zero": false,
+        "info": 20
+       },
+       {
+        "name": "tblActive",
+        "help": "ipv6 nd table active",
+        "unit": "entries",
+        "zero": false,
+        "info": 18
+       },
+       {
+        "name": "tblAdd",
+        "help": "ipv6 nd table add",
+        "unit": "ops",
+        "zero": false,
+        "info": 18
+       },
+       {
+        "name": "tblRemove",
+        "help": "ipv6 nd table remove",
+        "unit": "ops",
+        "zero": false,
+        "info": 18
+       },
+       {
+        "name": "associateWithClient",
+        "help": "associate with client",
+        "unit": "ops",
+        "zero": false,
+        "info": 18
+       },
+       {
+        "name": "disasociateWithClient",
+        "help": "disassociate with client",
+        "unit": "ops",
+        "zero": false,
+        "info": 18
+       },
+       {
+        "name": "pktRxNeighborSolicitation",
+        "help": "rx neighbor solicitation",
+        "unit": "pkts",
+        "zero": false,
+        "info": 18
+       },
+       {
+        "name": "pktRxNeighborAdvertisement",
+        "help": "Rx neighbor advertisement",
+        "unit": "pkts",
+        "zero": false,
+        "info": 18
+       },
+       {
+        "name": "pktRxRouterAdvertisement",
+        "help": "Rx router advertisement",
+        "unit": "pkts",
+        "zero": false,
+        "info": 18
+       },
+       {
+        "name": "pktRxRouterSolicitation",
+        "help": "Rx router solicitation",
+        "unit": "pkts",
+        "zero": false,
+        "info": 18
+       },
+       {
+        "name": "pktRxErrRouternotLinklocal",
+        "help": "router advertisement not from local link",
+        "unit": "pkts",
+        "zero": false,
+        "info": 20
+       },
+       {
+        "name": "pktRxErrRouterLifetimeTooBig",
+        "help": "router advertisement lifetime is too big",
+        "unit": "pkts",
+        "zero": false,
+        "info": 20
+       },
+       {
+        "name": "pktRxRouterLifetimeZero",
+        "help": "router advertisement lifetime is zero not selected router",
+        "unit": "pkts",
+        "zero": false,
+        "info": 18
+       },
+       {
+        "name": "pktRxErrWrongHopLimit",
+        "help": "ipv6 hop limit should be 255",
+        "unit": "pkts",
+        "zero": false,
+        "info": 20
+       },
+       {
+        "name": "pktRxNeighborSolicitationParserErr",
+        "help": "ipv6 neighbor solicitation parse error",
+        "unit": "pkts",
+        "zero": false,
+        "info": 20
+       },
+       {
+        "name": "pktRxNeighborSolicitationWrongOption",
+        "help": "ipv6 neighbor solicitation wrong option",
+        "unit": "pkts",
+        "zero": false,
+        "info": 20
+       },
+       {
+        "name": "pktRxNeighborSolicitationWrongSourceLink",
+        "help": "ipv6 neighbor solicitation wrong source link",
+        "unit": "pkts",
+        "zero": false,
+        "info": 20
+       },
+       {
+        "name": "pktRxNeighborSolicitationWrongDestination",
+        "help": "ipv6 neighbor solicitation wrong destination addr",
+        "unit": "pkts",
+        "zero": false,
+        "info": 20
+       },
+       {
+        "name": "pktRxNeighborSolicitationWrongTarget",
+        "help": "ipv6 neighbor solicitation wrong target addr",
+        "unit": "pkts",
+        "zero": false,
+        "info": 20
+       },
+       {
+        "name": "pktRxNeighborSolicitationLocalIpNotFound",
+        "help": "ipv6 neighbor solicitation not found ip",
+        "unit": "pkts",
+        "zero": false,
+        "info": 18
+       },
+       {
+        "name": "pktTxNeighborAdvUnicast",
+        "help": "ipv6 tx neighbor solicitation answer",
+        "unit": "pkts",
+        "zero": false,
+        "info": 18
+       },
+       {
+        "name": "pktTxNeighborDADError",
+        "help": "ipv6 tx neighbor solicitation DAD answer",
+        "unit": "pkts",
+        "zero": false,
+        "info": 20
+       },
+       {
+        "name": "pktRxNeighborAdvParserErr",
+        "help": "ipv6 rx neighbor advertisements parse",
+        "unit": "pkts",
+        "zero": false,
+        "info": 20
+       },
+       {
+        "name": "pktRxNeighborAdvWrongOption",
+        "help": "ipv6 rx neighbor advertisements wrong option",
+        "unit": "pkts",
+        "zero": false,
+        "info": 20
+       },
+       {
+        "name": "pktRxNeighborAdvWithOwnAddr",
+        "help": "ipv6 rx neighbor advertisements own addr",
+        "unit": "pkts",
+        "zero": false,
+        "info": 20
+       },
+       {
+        "name": "pktRxNeighborAdvLearn",
+        "help": "ipv6 rx neighbor advertisements learn",
+        "unit": "pkts",
+        "zero": false,
+        "info": 18
+       },
+       {
+        "name": "pktTxNeighborUnsolicitedNA",
+        "help": "ipv6 rx neighbor unsolicited ",
+        "unit": "pkts",
+        "zero": false,
+        "info": 18
+       },
+       {
+        "name": "pktTxNeighborUnsolicitedDAD",
+        "help": "ipv6 rx neighbor DAD ",
+        "unit": "pkts",
+        "zero": false,
+        "info": 18
+       },
+       {
+        "name": "pktTxNeighborUnsolicitedQuery",
+        "help": "ipv6 rx neighbor solicited query ",
+        "unit": "pkts",
+        "zero": false,
+        "info": 18
+       }
+      ]
+     },
+     "mld": {
+      "name": "mld",
+      "meta": [
+       {
+        "name": "opsAddSG",
+        "help": "add mc (s,g) ",
+        "unit": "ops",
+        "zero": false,
+        "info": 18
+       },
+       {
+        "name": "opsRemoveSG",
+        "help": "remove mc (s,g) ",
+        "unit": "ops",
+        "zero": false,
+        "info": 18
+       },
+       {
+        "name": "opsAddErrSG",
+        "help": "error add mc (s,g) ",
+        "unit": "ops",
+        "zero": false,
+        "info": 20
+       },
+       {
+        "name": "opsRemoveErrSG",
+        "help": "error remove mc (s,g) ",
+        "unit": "ops",
+        "zero": false,
+        "info": 20
+       },
+       {
+        "name": "pktRxSndReportsSGQuery",
+        "help": "(s,g)- query records",
+        "unit": "pkts",
+        "zero": false,
+        "info": 18
+       },
+       {
+        "name": "pktRxSndReportsSGRemove",
+        "help": "(s,g)- remove records",
+        "unit": "pkts",
+        "zero": false,
+        "info": 18
+       },
+       {
+        "name": "pktRxSndReportsSGAdd",
+        "help": "(s,g)- add records",
+        "unit": "pkts",
+        "zero": false,
+        "info": 18
+       },
+       {
+        "name": "pktRxSndReportsSGChangeToInclude",
+        "help": "(s,g)- change to include",
+        "unit": "pkts",
+        "zero": false,
+        "info": 18
+       },
+       {
+        "name": "pktRxTotal",
+        "help": "total messages received",
+        "unit": "pkts",
+        "zero": false,
+        "info": 18
+       },
+       {
+        "name": "pktRxTooshort",
+        "help": "received with too few bytes",
+        "unit": "pkts",
+        "zero": false,
+        "info": 20
+       },
+       {
+        "name": "pktRxBadttl",
+        "help": "received with ttl other than 1",
+        "unit": "pkts",
+        "zero": false,
+        "info": 20
+       },
+       {
+        "name": "pktRxBadsum",
+        "help": "received with bad checksum",
+        "unit": "pkts",
+        "zero": false,
+        "info": 20
+       },
+       {
+        "name": "pktRxNoKey",
+        "help": "received mld but can't find port,vlan keys",
+        "unit": "pkts",
+        "zero": false,
+        "info": 20
+       },
+       {
+        "name": "pktRxv1Queries",
+        "help": "received MLD queries",
+        "unit": "pkts",
+        "zero": false,
+        "info": 18
+       },
+       {
+        "name": "pktRxv2Queries",
+        "help": "received IGMPv2 queries",
+        "unit": "pkts",
+        "zero": false,
+        "info": 18
+       },
+       {
+        "name": "pktRxbadQueries",
+        "help": "received invalid queries",
+        "unit": "pkts",
+        "zero": false,
+        "info": 20
+       },
+       {
+        "name": "pktRxgenQueries",
+        "help": "received general queries",
+        "unit": "pkts",
+        "zero": false,
+        "info": 18
+       },
+       {
+        "name": "pktRxgroupQueries",
+        "help": "received group queries",
+        "unit": "pkts",
+        "zero": false,
+        "info": 18
+       },
+       {
+        "name": "pktRxgsrQueries",
+        "help": "received group-source queries",
+        "unit": "pkts",
+        "zero": false,
+        "info": 18
+       },
+       {
+        "name": "pktRxgsrDropQueries",
+        "help": "dropped group-source queries",
+        "unit": "pkts",
+        "zero": false,
+        "info": 18
+       },
+       {
+        "name": "pktRxquerieActiveTimer",
+        "help": "rcv querie while active timer",
+        "unit": "pkts",
+        "zero": false,
+        "info": 18
+       },
+       {
+        "name": "pktRxReports",
+        "help": "received membership reports",
+        "unit": "pkts",
+        "zero": false,
+        "info": 18
+       },
+       {
+        "name": "pktRxNora",
+        "help": "received w/o Router Alert option ",
+        "unit": "pkts",
+        "zero": false,
+        "info": 18
+       },
+       {
+        "name": "pktSndAddRemoveReports",
+        "help": "explicit reports due to add/remove command",
+        "unit": "pkts",
+        "zero": false,
+        "info": 18
+       },
+       {
+        "name": "pktRxSndReports",
+        "help": "sent membership reports",
+        "unit": "pkts",
+        "zero": false,
+        "info": 18
+       },
+       {
+        "name": "opsAdd",
+        "help": "add mc ",
+        "unit": "ops",
+        "zero": false,
+        "info": 18
+       },
+       {
+        "name": "opsRemove",
+        "help": "remove mc ",
+        "unit": "ops",
+        "zero": false,
+        "info": 18
+       },
+       {
+        "name": "opsAddErr",
+        "help": "add mc with error",
+        "unit": "ops",
+        "zero": false,
+        "info": 20
+       },
+       {
+        "name": "opsRemoveErr",
+        "help": "remove mc with error ",
+        "unit": "ops",
+        "zero": false,
+        "info": 20
+       },
+       {
+        "name": "pktNoDesignatorClient",
+        "help": "No designator client was defined. MLD will not work without it",
+        "unit": "pkts",
+        "zero": false,
+        "info": 20
+       },
+       {
+        "name": "pktNoDesignatorClientIPv6",
+        "help": "no designator client with this valid IPv4 addr ",
+        "unit": "pkts",
+        "zero": false,
+        "info": 20
+       },
+       {
+        "name": "opsRateIsTooHigh",
+        "help": "rate of multicast is too high, duration should be higher",
+        "unit": "opts",
+        "zero": false,
+        "info": 20
+       }
+      ]
+     },
+     "pingv6": {
+      "name": "pingv6",
+      "meta": [
+       {
+        "name": "pktRxIcmpQuery",
+        "help": "rx query",
+        "unit": "ops",
+        "zero": false,
+        "info": 18
+       },
+       {
+        "name": "pktTxIcmpResponse",
+        "help": "tx response",
+        "unit": "ops",
+        "zero": false,
+        "info": 18
+       },
+       {
+        "name": "pktTxIcmpQuery",
+        "help": "tx query",
+        "unit": "ops",
+        "zero": false,
+        "info": 18
+       },
+       {
+        "name": "pktRxIcmpResponse",
+        "help": "rx response",
+        "unit": "ops",
+        "zero": false,
+        "info": 18
+       },
+       {
+        "name": "pktRxErrTooShort",
+        "help": "rx too short",
+        "unit": "ops",
+        "zero": false,
+        "info": 18
+       },
+       {
+        "name": "pktRxErrUnhandled",
+        "help": "rx wrong opcode",
+        "unit": "ops",
+        "zero": false,
+        "info": 18
+       },
+       {
+        "name": "pktRxNoClientUnhandled",
+        "help": "rx no client ",
+        "unit": "ops",
+        "zero": false,
+        "info": 18
+       },
+       {
+        "name": "pktRxErrMulticastB",
+        "help": "src ip is not valid ",
+        "unit": "ops",
+        "zero": false,
+        "info": 18
+       },
+       {
+        "name": "pktRxIcmpDstUnreachable",
+        "help": "rx destination unreachable",
+        "unit": "ops",
+        "zero": false,
+        "info": 18
+       }
+      ]
+     }
+    },
+    "values": {},
+    "values_zero": {
+     "ipv6nd": {
+      "addIncomplete": 0,
+      "addLearn": 0,
+      "associateWithClient": 0,
+      "disasociateWithClient": 0,
+      "eventsChangeDHCPSrc": 0,
+      "eventsChangeDgIPv6": 0,
+      "eventsChangeSrc": 0,
+      "moveComplete": 0,
+      "moveIncompleteAfterRefresh": 0,
+      "moveLearned": 0,
+      "pktRxErrNoBroadcast": 0,
+      "pktRxErrRouterLifetimeTooBig": 0,
+      "pktRxErrRouternotLinklocal": 0,
+      "pktRxErrTooShort": 0,
+      "pktRxErrWrongHopLimit": 0,
+      "pktRxErrWrongOp": 0,
+      "pktRxNeighborAdvLearn": 0,
+      "pktRxNeighborAdvParserErr": 0,
+      "pktRxNeighborAdvWithOwnAddr": 0,
+      "pktRxNeighborAdvWrongOption": 0,
+      "pktRxNeighborAdvertisement": 0,
+      "pktRxNeighborSolicitation": 0,
+      "pktRxNeighborSolicitationLocalIpNotFound": 0,
+      "pktRxNeighborSolicitationParserErr": 0,
+      "pktRxNeighborSolicitationWrongDestination": 0,
+      "pktRxNeighborSolicitationWrongOption": 0,
+      "pktRxNeighborSolicitationWrongSourceLink": 0,
+      "pktRxNeighborSolicitationWrongTarget": 0,
+      "pktRxRouterAdvertisement": 0,
+      "pktRxRouterLifetimeZero": 0,
+      "pktRxRouterSolicitation": 0,
+      "pktTxNeighborAdvUnicast": 0,
+      "pktTxNeighborDADError": 0,
+      "pktTxNeighborUnsolicitedDAD": 0,
+      "pktTxNeighborUnsolicitedNA": 0,
+      "pktTxNeighborUnsolicitedQuery": 0,
+      "tblActive": 0,
+      "tblAdd": 0,
+      "tblRemove": 0,
+      "timerEventComplete": 0,
+      "timerEventIncomplete": 0,
+      "timerEventLearn": 0,
+      "timerEventRefresh": 0
+     },
+     "mld": {
+      "opsAdd": 0,
+      "opsAddErr": 0,
+      "opsAddErrSG": 0,
+      "opsAddSG": 0,
+      "opsRateIsTooHigh": 0,
+      "opsRemove": 0,
+      "opsRemoveErr": 0,
+      "opsRemoveErrSG": 0,
+      "opsRemoveSG": 0,
+      "pktNoDesignatorClient": 0,
+      "pktNoDesignatorClientIPv6": 0,
+      "pktRxBadsum": 0,
+      "pktRxBadttl": 0,
+      "pktRxNoKey": 0,
+      "pktRxNora": 0,
+      "pktRxReports": 0,
+      "pktRxSndReports": 0,
+      "pktRxSndReportsSGAdd": 0,
+      "pktRxSndReportsSGChangeToInclude": 0,
+      "pktRxSndReportsSGQuery": 0,
+      "pktRxSndReportsSGRemove": 0,
+      "pktRxTooshort": 0,
+      "pktRxTotal": 0,
+      "pktRxbadQueries": 0,
+      "pktRxgenQueries": 0,
+      "pktRxgroupQueries": 0,
+      "pktRxgsrDropQueries": 0,
+      "pktRxgsrQueries": 0,
+      "pktRxquerieActiveTimer": 0,
+      "pktRxv1Queries": 0,
+      "pktRxv2Queries": 0,
+      "pktSndAddRemoveReports": 0
+     },
+     "pingv6": {
+      "pktRxErrMulticastB": 0,
+      "pktRxErrTooShort": 0,
+      "pktRxErrUnhandled": 0,
+      "pktRxIcmpDstUnreachable": 0,
+      "pktRxIcmpQuery": 0,
+      "pktRxIcmpResponse": 0,
+      "pktRxNoClientUnhandled": 0,
+      "pktTxIcmpQuery": 0,
+      "pktTxIcmpResponse": 0
+     }
+    }
+   }
+  },
+  "lldp": {
+   "server_name": "lldp",
+   "client": {
+    "cmd": "lldp_client_cnt",
+    "meta": {
+     "lldp": {
+      "name": "lldp",
+      "meta": [
+       {
+        "name": "pktTx",
+        "help": "broadcast lldp packet ",
+        "unit": "pkts",
+        "zero": false,
+        "info": 18
+       }
+      ]
+     }
+    },
+    "values": {
+     "lldp": {
+      "pktTx": 1
+     }
+    },
+    "values_zero": {
+     "lldp": {
+      "pktTx": 1
+     }
+    }
+   }
+  },
+  "mdns": {
+   "server_name": "mdns",
+   "ns": {
+    "cmd": "mdns_ns_cnt",
+    "meta": {
+     "mdns": {
+      "name": "mdns",
+      "meta": [
+       {
+        "name": "invalidInitJson",
+        "help": "Error while decoding init Json",
+        "unit": "ops",
+        "zero": false,
+        "info": 20
+       },
+       {
+        "name": "pktRxErrTooShort",
+        "help": "Rx packet too short",
+        "unit": "ops",
+        "zero": false,
+        "info": 20
+       },
+       {
+        "name": "pktRxBadDstMac",
+        "help": "mDns packet received with invalid Dst Mac",
+        "unit": "ops",
+        "zero": false,
+        "info": 20
+       },
+       {
+        "name": "pktRxBadDstIp",
+        "help": "mDns packet received with invalid Dst Ip",
+        "unit": "ops",
+        "zero": false,
+        "info": 20
+       },
+       {
+        "name": "pktRxBadEthType",
+        "help": "mDns packet received with invalid Ethernet Type",
+        "unit": "ops",
+        "zero": false,
+        "info": 20
+       },
+       {
+        "name": "pktRxBadTTL",
+        "help": "mDns packet received with invalid TTL",
+        "unit": "ops",
+        "zero": false,
+        "info": 20
+       },
+       {
+        "name": "rxPkts",
+        "help": "Num of mDNS pkts received",
+        "unit": "pkts",
+        "zero": true,
+        "info": 18
+       },
+       {
+        "name": "rxQuestions",
+        "help": "Num of mDNS questions received in namespace",
+        "unit": "query",
+        "zero": true,
+        "info": 18
+       },
+       {
+        "name": "rxAnswers",
+        "help": "Numb of mDNS answers received in namespace",
+        "unit": "reply",
+        "zero": true,
+        "info": 18
+       },
+       {
+        "name": "rxAuthoritiesUnhandled",
+        "help": "Num of authorities unhandled in Rx packets",
+        "unit": "ops",
+        "zero": false,
+        "info": 18
+       },
+       {
+        "name": "rxAddRecordsUnhandled",
+        "help": "Num of additional records unhandled in Rx packets",
+        "unit": "ops",
+        "zero": false,
+        "info": 18
+       },
+       {
+        "name": "autoPlayClientNotFound",
+        "help": "AutoPlay client was not found",
+        "unit": "ops",
+        "zero": false,
+        "info": 18
+       },
+       {
+        "name": "clientNoMDns",
+        "help": "AutoPlay client doesn't have mDns plugin",
+        "unit": "ops",
+        "zero": false,
+        "info": 20
+       },
+       {
+        "name": "autoPlayQueries",
+        "help": "Number of queries sent by Auto Play",
+        "unit": "query",
+        "zero": false,
+        "info": 18
+       },
+       {
+        "name": "autoPlayBadQuery",
+        "help": "Number of bad queries created by Auto Play",
+        "unit": "ops",
+        "zero": false,
+        "info": 20
+       }
+      ]
+     }
+    },
+    "values": {
+     "mdns": {
+      "rxAnswers": 0,
+      "rxPkts": 0,
+      "rxQuestions": 0
+     }
+    },
+    "values_zero": {
+     "mdns": {
+      "autoPlayBadQuery": 0,
+      "autoPlayClientNotFound": 0,
+      "autoPlayQueries": 0,
+      "clientNoMDns": 0,
+      "invalidInitJson": 0,
+      "pktRxBadDstIp": 0,
+      "pktRxBadDstMac": 0,
+      "pktRxBadEthType": 0,
+      "pktRxBadTTL": 0,
+      "pktRxErrTooShort": 0,
+      "rxAddRecordsUnhandled": 0,
+      "rxAnswers": 0,
+      "rxAuthoritiesUnhandled": 0,
+      "rxPkts": 0,
+      "rxQuestions": 0
+     }
+    }
+   },
+   "client": {
+    "cmd": "mdns_c_cnt",
+    "meta": {
+     "mdns": {
+      "name": "mdns",
+      "meta": [
+       {
+        "name": "invalidInitJson",
+        "help": "Error while decoding init Json",
+        "unit": "ops",
+        "zero": false,
+        "info": 20
+       },
+       {
+        "name": "invalidSocket",
+        "help": "Error creating socket",
+        "unit": "ops",
+        "zero": false,
+        "info": 20
+       },
+       {
+        "name": "socketWriteError",
+        "help": "Error writing in socket",
+        "unit": "ops",
+        "zero": false,
+        "info": 20
+       },
+       {
+        "name": "pktTxMDnsQuery",
+        "help": "Num of mDNS queries transmitted",
+        "unit": "pkts",
+        "zero": true,
+        "info": 18
+       },
+       {
+        "name": "pktRxMDnsQuery",
+        "help": "Num of mDNS queries received",
+        "unit": "pkts",
+        "zero": true,
+        "info": 18
+       },
+       {
+        "name": "pktTxMDnsResponse",
+        "help": "Num of mDNS responses transmitted",
+        "unit": "pkts",
+        "zero": true,
+        "info": 18
+       },
+       {
+        "name": "ipv6QueryNoPlugin",
+        "help": "Num of Ipv6 queries that can't be sent because no IPv6",
+        "unit": "query",
+        "zero": false,
+        "info": 20
+       },
+       {
+        "name": "ipv6ResponseNoPlugin",
+        "help": "Num of Ipv6 queries that can't be answered because no IPv6",
+        "unit": "query",
+        "zero": false,
+        "info": 20
+       },
+       {
+        "name": "queryAAAANoIpv6",
+        "help": "Num of AAAA queries that can't be answered because of no IPv6",
+        "unit": "query",
+        "zero": false,
+        "info": 18
+       },
+       {
+        "name": "queryPTRNoDomainName",
+        "help": "Num of PTR queries that can't be answered because domain name unspecified",
+        "unit": "query",
+        "zero": false,
+        "info": 18
+       },
+       {
+        "name": "queryTXTNoTxtDefined",
+        "help": "Num of TXT queries that can't be answered because txt unspecified",
+        "unit": "query",
+        "zero": false,
+        "info": 18
+       },
+       {
+        "name": "unsupportedDnsType",
+        "help": "Num of queries received with an unsupported type",
+        "unit": "query",
+        "zero": false,
+        "info": 18
+       }
+      ]
+     }
+    },
+    "values": {
+     "mdns": {
+      "pktRxMDnsQuery": 0,
+      "pktTxMDnsQuery": 0,
+      "pktTxMDnsResponse": 0
+     }
+    },
+    "values_zero": {
+     "mdns": {
+      "invalidInitJson": 0,
+      "invalidSocket": 0,
+      "ipv6QueryNoPlugin": 0,
+      "ipv6ResponseNoPlugin": 0,
+      "pktRxMDnsQuery": 0,
+      "pktTxMDnsQuery": 0,
+      "pktTxMDnsResponse": 0,
+      "queryAAAANoIpv6": 0,
+      "queryPTRNoDomainName": 0,
+      "queryTXTNoTxtDefined": 0,
+      "socketWriteError": 0,
+      "unsupportedDnsType": 0
+     }
+    }
+   }
+  },
+  "tdl": {
+   "server_name": "tdl",
+   "client": {
+    "cmd": "tdl_c_cnt",
+    "meta": {
+     "tdl": {
+      "name": "tdl",
+      "meta": [
+       {
+        "name": "invalidDst",
+        "help": "Invalid destination address",
+        "unit": "ops",
+        "zero": false,
+        "info": 20
+       },
+       {
+        "name": "badOrNoInitJson",
+        "help": "Invalid init Json",
+        "unit": "ops",
+        "zero": false,
+        "info": 20
+       },
+       {
+        "name": "invalidMetaData",
+        "help": "Invalid meta data definition in init Json",
+        "unit": "ops",
+        "zero": false,
+        "info": 20
+       },
+       {
+        "name": "unregisteredTdlType",
+        "help": "Tdl type not registered/supported",
+        "unit": "ops",
+        "zero": false,
+        "info": 20
+       },
+       {
+        "name": "failedCreatingTdlType",
+        "help": "Failed creating Tdl type from meta definition",
+        "unit": "ops",
+        "zero": false,
+        "info": 20
+       },
+       {
+        "name": "failedBuildingTdlType",
+        "help": "Failed building Tdl type instance",
+        "unit": "ops",
+        "zero": false,
+        "info": 20
+       },
+       {
+        "name": "failedBuildingMetaDataMgr",
+        "help": "Failed building metadata manager",
+        "unit": "ops",
+        "zero": false,
+        "info": 20
+       },
+       {
+        "name": "failedBuildingEngineMgr",
+        "help": "Failed building engine manager",
+        "unit": "ops",
+        "zero": false,
+        "info": 20
+       },
+       {
+        "name": "invalidInitValues",
+        "help": "Invalid initial values",
+        "unit": "ops",
+        "zero": false,
+        "info": 20
+       },
+       {
+        "name": "invalidEnumDef",
+        "help": "Invalid Enum definition",
+        "unit": "ops",
+        "zero": false,
+        "info": 20
+       },
+       {
+        "name": "invalidFlagDef",
+        "help": "Invalid Flag definition",
+        "unit": "ops",
+        "zero": false,
+        "info": 20
+       },
+       {
+        "name": "invalidTypeDef",
+        "help": "Invalid Type definition",
+        "unit": "ops",
+        "zero": false,
+        "info": 20
+       },
+       {
+        "name": "invalidObjType",
+        "help": "The object type is invalid",
+        "unit": "ops",
+        "zero": false,
+        "info": 20
+       },
+       {
+        "name": "socketWriteError",
+        "help": "Error happened writing in socket",
+        "unit": "ops",
+        "zero": false,
+        "info": 20
+       },
+       {
+        "name": "payloadUpdateErr",
+        "help": "Error happened while updating payload",
+        "unit": "ops",
+        "zero": false,
+        "info": 20
+       },
+       {
+        "name": "duplicateLuid",
+        "help": "Duplicate LUID upon registration",
+        "unit": "ops",
+        "zero": false,
+        "info": 20
+       },
+       {
+        "name": "pktsTx",
+        "help": "Number of packets transmitted",
+        "unit": "pkts",
+        "zero": false,
+        "info": 18
+       }
+      ]
+     }
+    },
+    "values": {
+     "tdl": {
+      "badOrNoInitJson": 1
+     }
+    },
+    "values_zero": {
+     "tdl": {
+      "badOrNoInitJson": 1,
+      "duplicateLuid": 0,
+      "failedBuildingEngineMgr": 0,
+      "failedBuildingMetaDataMgr": 0,
+      "failedBuildingTdlType": 0,
+      "failedCreatingTdlType": 0,
+      "invalidDst": 0,
+      "invalidEnumDef": 0,
+      "invalidFlagDef": 0,
+      "invalidInitValues": 0,
+      "invalidMetaData": 0,
+      "invalidObjType": 0,
+      "invalidTypeDef": 0,
+      "payloadUpdateErr": 0,
+      "pktsTx": 0,
+      "socketWriteError": 0,
+      "unregisteredTdlType": 0
+     }
+    }
+   }
+  },
+  "transport": {
+   "server_name": "transport",
+   "client": {
+    "cmd": "transport_client_cnt",
+    "error": {
+     "code": -32600,
+     "text": " client does not have a transport context"
+    }
+   }
+  },
+  "transporte": {
+   "server_name": "transe",
+   "ns": {
+    "cmd": "transe_ns_cnt",
+    "meta": {
+     "transe": {
+      "name": "transe",
+      "meta": [
+       {
+        "name": "pktClient",
+        "help": "pktClient",
+        "unit": "ops",
+        "zero": false,
+        "info": 18
+       },
+       {
+        "name": "rxByteTotal",
+        "help": "rxByteTotal",
+        "unit": "bytes",
+        "zero": false,
+        "info": 18
+       },
+       {
+        "name": "txByteTotal",
+        "help": "txByteTotal",
+        "unit": "bytes",
+        "zero": false,
+        "info": 18
+       },
+       {
+        "name": "pktRxEvent",
+        "help": "pktRxEvent",
+        "unit": "ops",
+        "zero": false,
+        "info": 18
+       },
+       {
+        "name": "pktTxEvent",
+        "help": "pktTxEvent",
+        "unit": "ops",
+        "zero": false,
+        "info": 18
+       },
+       {
+        "name": "pktRxErrNotTheSame",
+        "help": "pktRxErrNotTheSame",
+        "unit": "opts",
+        "zero": false,
+        "info": 20
+       },
+       {
+        "name": "pktRxErrBigger",
+        "help": "pktRxErrBigger",
+        "unit": "opts",
+        "zero": false,
+        "info": 20
+       },
+       {
+        "name": "pktTxErrSend",
+        "help": "pktTxErrSend",
+        "unit": "opts",
+        "zero": false,
+        "info": 20
+       }
+      ]
+     }
+    },
+    "values": {},
+    "values_zero": {
+     "transe": {
+      "pktClient": 0,
+      "pktRxErrBigger": 0,
+      "pktRxErrNotTheSame": 0,
+      "pktRxEvent": 0,
+      "pktTxErrSend": 0,
+      "pktTxEvent": 0,
+      "rxByteTotal": 0,
+      "txByteTotal": 0
+     }
+    }
+   }
+  },
+  "ipfix": {
+   "server_name": "ipfix",
+   "ns": {
+    "cmd": "ipfix_ns_cnt",
+    "unsupported": "Method not found"
+   },
+   "client": {
+    "cmd": "ipfix_c_cnt",
+    "meta": {
+     "ipfix": {
+      "name": "ipfix",
+      "meta": [
+       {
+        "name": "pktTempSent",
+        "help": "Template packets sent.",
+        "unit": "pkts",
+        "zero": false,
+        "info": 18
+       },
+       {
+        "name": "pktDataSent",
+        "help": "Data packets sent.",
+        "unit": "pkts",
+        "zero": false,
+        "info": 18
+       },
+       {
+        "name": "templatePktLongerThanMTU",
+        "help": "Template packet of a generator is longer than MTU.",
+        "unit": "pkts",
+        "zero": false,
+        "info": 18
+       },
+       {
+        "name": "recordsMtuMissErr",
+        "help": "Record left out because of low MTU value.",
+        "unit": "pkts",
+        "zero": false,
+        "info": 20
+       },
+       {
+        "name": "dataIncorrectLength",
+        "help": "Field data of invalid length.",
+        "unit": "ops",
+        "zero": false,
+        "info": 20
+       },
+       {
+        "name": "invalidSocket",
+        "help": "Error creating socket.",
+        "unit": "ops",
+        "zero": false,
+        "info": 20
+       },
+       {
+        "name": "socketWriteError",
+        "help": "Error writing in socket.",
+        "unit": "ops",
+        "zero": false,
+        "info": 20
+       },
+       {
+        "name": "invalidJson",
+        "help": "JSON could not be unmarshalled or validated correctly.",
+        "unit": "ops",
+        "zero": false,
+        "info": 20
+       },
+       {
+        "name": "failedCreatingGen",
+        "help": "Failed creating a new generator from the given JSON.",
+        "unit": "ops",
+        "zero": false,
+        "info": 20
+       },
+       {
+        "name": "invalidDst",
+        "help": "Invalid destination provided.",
+        "unit": "ops",
+        "zero": false,
+        "info": 20
+       },
+       {
+        "name": "enterpriseFieldv9",
+        "help": "Enterpise fields not supported in Netflow v9.",
+        "unit": "ops",
+        "zero": false,
+        "info": 20
+       },
+       {
+        "name": "variableLengthFieldv9",
+        "help": "Variable length fields not supported in Netflow v9.",
+        "unit": "ops",
+        "zero": false,
+        "info": 20
+       },
+       {
+        "name": "variableLengthNoEngine",
+        "help": "Variable length field without engine provided.",
+        "unit": "ops",
+        "zero": false,
+        "info": 20
+       },
+       {
+        "name": "badOrNoInitJson",
+        "help": "Init JSON was either not provided or invalid.",
+        "unit": "ops",
+        "zero": false,
+        "info": 20
+       },
+       {
+        "name": "duplicateGenName",
+        "help": "Generator with the same name already registered.",
+        "unit": "ops",
+        "zero": false,
+        "info": 20
+       },
+       {
+        "name": "duplicateTemplateID",
+        "help": "Duplicate template ID. Can't have 2 generators with the same template ID.",
+        "unit": "ops",
+        "zero": false,
+        "info": 20
+       },
+       {
+        "name": "invalidTemplateID",
+        "help": "Invalid template ID. Template ID must be bigger than 255.",
+        "unit": "ops",
+        "zero": false,
+        "info": 20
+       },
+       {
+        "name": "failedBuildingEngineMgr",
+        "help": "Failed building engine manager with the provided JSON.",
+        "unit": "ops",
+        "zero": false,
+        "info": 20
+       },
+       {
+        "name": "invalidEngineName",
+        "help": "Invalid engine name. Engine name must be a field name.",
+        "unit": "ops",
+        "zero": false,
+        "info": 20
+       },
+       {
+        "name": "invalidScopeCount",
+        "help": "Invalid scope count. Options template have scope counts > 0.",
+        "unit": "ops",
+        "zero": false,
+        "info": 20
+       }
+      ]
+     }
+    },
+    "values": {
+     "ipfix": {
+      "badOrNoInitJson": 1
+     }
+    },
+    "values_zero": {
+     "ipfix": {
+      "badOrNoInitJson": 1,
+      "dataIncorrectLength": 0,
+      "duplicateGenName": 0,
+      "duplicateTemplateID": 0,
+      "enterpriseFieldv9": 0,
+      "failedBuildingEngineMgr": 0,
+      "failedCreatingGen": 0,
+      "invalidDst": 0,
+      "invalidEngineName": 0,
+      "invalidJson": 0,
+      "invalidScopeCount": 0,
+      "invalidSocket": 0,
+      "invalidTemplateID": 0,
+      "pktDataSent": 0,
+      "pktTempSent": 0,
+      "recordsMtuMissErr": 0,
+      "socketWriteError": 0,
+      "templatePktLongerThanMTU": 0,
+      "variableLengthFieldv9": 0,
+      "variableLengthNoEngine": 0
+     }
+    }
+   }
+  }
+ },
+ "ctx": {
+  "meta": {
+   "ctx": {
+    "name": "ctx",
+    "meta": [
+     {
+      "name": "addNs",
+      "help": "add ns",
+      "unit": "ops",
+      "zero": false,
+      "info": 18
+     },
+     {
+      "name": "removeNs",
+      "help": "remove ns",
+      "unit": "ops",
+      "zero": false,
+      "info": 18
+     },
+     {
+      "name": "activeNs",
+      "help": "active ns",
+      "unit": "ops",
+      "zero": false,
+      "info": 18
+     }
+    ]
+   },
+   "mbuf-1024": {
+    "name": "mbuf-1024",
+    "meta": [
+     {
+      "name": "mbufAlloc",
+      "help": "allocation of mbufs",
+      "unit": "ops",
+      "zero": false,
+      "info": 18
+     },
+     {
+      "name": "mbufFree",
+      "help": "deallocation of mbufs",
+      "unit": "ops",
+      "zero": false,
+      "info": 18
+     },
+     {
+      "name": "mbufAllocCache",
+      "help": "allocation of mbufs from cache",
+      "unit": "ops",
+      "zero": false,
+      "info": 18
+     },
+     {
+      "name": "mbufFreeCache",
+      "help": "deallocation of mbufs from cache",
+      "unit": "ops",
+      "zero": false,
+      "info": 18
+     }
+    ]
+   },
+   "mbuf-128": {
+    "name": "mbuf-128",
+    "meta": [
+     {
+      "name": "mbufAlloc",
+      "help": "allocation of mbufs",
+      "unit": "ops",
+      "zero": false,
+      "info": 18
+     },
+     {
+      "name": "mbufFree",
+      "help": "deallocation of mbufs",
+      "unit": "ops",
+      "zero": false,
+      "info": 18
+     },
+     {
+      "name": "mbufAllocCache",
+      "help": "allocation of mbufs from cache",
+      "unit": "ops",
+      "zero": false,
+      "info": 18
+     },
+     {
+      "name": "mbufFreeCache",
+      "help": "deallocation of mbufs from cache",
+      "unit": "ops",
+      "zero": false,
+      "info": 18
+     }
+    ]
+   },
+   "mbuf-2048": {
+    "name": "mbuf-2048",
+    "meta": [
+     {
+      "name": "mbufAlloc",
+      "help": "allocation of mbufs",
+      "unit": "ops",
+      "zero": false,
+      "info": 18
+     },
+     {
+      "name": "mbufFree",
+      "help": "deallocation of mbufs",
+      "unit": "ops",
+      "zero": false,
+      "info": 18
+     },
+     {
+      "name": "mbufAllocCache",
+      "help": "allocation of mbufs from cache",
+      "unit": "ops",
+      "zero": false,
+      "info": 18
+     },
+     {
+      "name": "mbufFreeCache",
+      "help": "deallocation of mbufs from cache",
+      "unit": "ops",
+      "zero": false,
+      "info": 18
+     }
+    ]
+   },
+   "mbuf-256": {
+    "name": "mbuf-256",
+    "meta": [
+     {
+      "name": "mbufAlloc",
+      "help": "allocation of mbufs",
+      "unit": "ops",
+      "zero": false,
+      "info": 18
+     },
+     {
+      "name": "mbufFree",
+      "help": "deallocation of mbufs",
+      "unit": "ops",
+      "zero": false,
+      "info": 18
+     },
+     {
+      "name": "mbufAllocCache",
+      "help": "allocation of mbufs from cache",
+      "unit": "ops",
+      "zero": false,
+      "info": 18
+     },
+     {
+      "name": "mbufFreeCache",
+      "help": "deallocation of mbufs from cache",
+      "unit": "ops",
+      "zero": false,
+      "info": 18
+     }
+    ]
+   },
+   "mbuf-4096": {
+    "name": "mbuf-4096",
+    "meta": [
+     {
+      "name": "mbufAlloc",
+      "help": "allocation of mbufs",
+      "unit": "ops",
+      "zero": false,
+      "info": 18
+     },
+     {
+      "name": "mbufFree",
+      "help": "deallocation of mbufs",
+      "unit": "ops",
+      "zero": false,
+      "info": 18
+     },
+     {
+      "name": "mbufAllocCache",
+      "help": "allocation of mbufs from cache",
+      "unit": "ops",
+      "zero": false,
+      "info": 18
+     },
+     {
+      "name": "mbufFreeCache",
+      "help": "deallocation of mbufs from cache",
+      "unit": "ops",
+      "zero": false,
+      "info": 18
+     }
+    ]
+   },
+   "mbuf-512": {
+    "name": "mbuf-512",
+    "meta": [
+     {
+      "name": "mbufAlloc",
+      "help": "allocation of mbufs",
+      "unit": "ops",
+      "zero": false,
+      "info": 18
+     },
+     {
+      "name": "mbufFree",
+      "help": "deallocation of mbufs",
+      "unit": "ops",
+      "zero": false,
+      "info": 18
+     },
+     {
+      "name": "mbufAllocCache",
+      "help": "allocation of mbufs from cache",
+      "unit": "ops",
+      "zero": false,
+      "info": 18
+     },
+     {
+      "name": "mbufFreeCache",
+      "help": "deallocation of mbufs from cache",
+      "unit": "ops",
+      "zero": false,
+      "info": 18
+     }
+    ]
+   },
+   "mbuf-9216": {
+    "name": "mbuf-9216",
+    "meta": [
+     {
+      "name": "mbufAlloc",
+      "help": "allocation of mbufs",
+      "unit": "ops",
+      "zero": false,
+      "info": 18
+     },
+     {
+      "name": "mbufFree",
+      "help": "deallocation of mbufs",
+      "unit": "ops",
+      "zero": false,
+      "info": 18
+     },
+     {
+      "name": "mbufAllocCache",
+      "help": "allocation of mbufs from cache",
+      "unit": "ops",
+      "zero": false,
+      "info": 18
+     },
+     {
+      "name": "mbufFreeCache",
+      "help": "deallocation of mbufs from cache",
+      "unit": "ops",
+      "zero": false,
+      "info": 18
+     }
+    ]
+   },
+   "mbuf-pool": {
+    "name": "mbuf-pool",
+    "meta": [
+     {
+      "name": "mbufAlloc",
+      "help": "allocation of mbufs",
+      "unit": "ops",
+      "zero": false,
+      "info": 18
+     },
+     {
+      "name": "mbufFree",
+      "help": "deallocation of mbufs",
+      "unit": "ops",
+      "zero": false,
+      "info": 18
+     },
+     {
+      "name": "mbufAllocCache",
+      "help": "allocation of mbufs from cache",
+      "unit": "ops",
+      "zero": false,
+      "info": 18
+     },
+     {
+      "name": "mbufFreeCache",
+      "help": "deallocation of mbufs from cache",
+      "unit": "ops",
+      "zero": false,
+      "info": 18
+     }
+    ]
+   },
+   "parser": {
+    "name": "parser",
+    "meta": [
+     {
+      "name": "errEAPolTooShort",
+      "help": "eap packets are too short",
+      "unit": "pkts",
+      "zero": false,
+      "info": 20
+     },
+     {
+      "name": "eapolPkts",
+      "help": "eapol packets",
+      "unit": "pkts",
+      "zero": false,
+      "info": 18
+     },
+     {
+      "name": "eapolBytes",
+      "help": "eapol bytes",
+      "unit": "bytes",
+      "zero": false,
+      "info": 18
+     },
+     {
+      "name": "errInternalHandler",
+      "help": "internal handler",
+      "unit": "pkts",
+      "zero": false,
+      "info": 20
+     },
+     {
+      "name": "errParser",
+      "help": "parser error",
+      "unit": "pkts",
+      "zero": false,
+      "info": 20
+     },
+     {
+      "name": "errArpTooShort",
+      "help": "arp too short",
+      "unit": "pkts",
+      "zero": false,
+      "info": 20
+     },
+     {
+      "name": "errIcmpv4TooShort",
+      "help": "icmpv4 too short",
+      "unit": "pkts",
+      "zero": false,
+      "info": 20
+     },
+     {
+      "name": "errIgmpv4TooShort",
+      "help": "igmpv4 too short",
+      "unit": "pkts",
+      "zero": false,
+      "info": 20
+     },
+     {
+      "name": "errTcpTooShort",
+      "help": "udp too short",
+      "unit": "pkts",
+      "zero": false,
+      "info": 20
+     },
+     {
+      "name": "errUdpTooShort",
+      "help": "udp too short",
+      "unit": "pkts",
+      "zero": false,
+      "info": 20
+     },
+     {
+      "name": "errDot1qTooShort",
+      "help": "dot1q too short",
+      "unit": "pkts",
+      "zero": false,
+      "info": 20
+     },
+     {
+      "name": "errToManyDot1q",
+      "help": "dot1q too long",
+      "unit": "pkts",
+      "zero": false,
+      "info": 20
+     },
+     {
+      "name": "errIPv4TooShort",
+      "help": "ipv4 too short",
+      "unit": "pkts",
+      "zero": false,
+      "info": 20
+     },
+     {
+      "name": "errIPv4HeaderTooShort",
+      "help": "ipv4 header too short",
+      "unit": "pkts",
+      "zero": false,
+      "info": 20
+     },
+     {
+      "name": "errIPv4cs",
+      "help": "ipv4 checksum error",
+      "unit": "pkts",
+      "zero": false,
+      "info": 20
+     },
+     {
+      "name": "errTCP",
+      "help": "tcp packets",
+      "unit": "pkts",
+      "zero": false,
+      "info": 20
+     },
+     {
+      "name": "errUDP",
+      "help": "udp packets",
+      "unit": "pkts",
+      "zero": false,
+      "info": 20
+     },
+     {
+      "name": "arpPkts",
+      "help": "arp packets",
+      "unit": "pkts",
+      "zero": false,
+      "info": 18
+     },
+     {
+      "name": "arpBytes",
+      "help": "arp bytes",
+      "unit": "bytes",
+      "zero": false,
+      "info": 18
+     },
+     {
+      "name": "icmpPkts",
+      "help": "icmp packets",
+      "unit": "pkts",
+      "zero": false,
+      "info": 18
+     },
+     {
+      "name": "icmpBytes",
+      "help": "icmp bytes",
+      "unit": "bytes",
+      "zero": false,
+      "info": 18
+     },
+     {
+      "name": "igmpPkts",
+      "help": "igmp packets",
+      "unit": "pkts",
+      "zero": false,
+      "info": 18
+     },
+     {
+      "name": "igmpBytes",
+      "help": "igmp bytes",
+      "unit": "bytes",
+      "zero": false,
+      "info": 18
+     },
+     {
+      "name": "dhcpPkts",
+      "help": "dhcp packets",
+      "unit": "pkts",
+      "zero": false,
+      "info": 18
+     },
+     {
+      "name": "dhcpBytes",
+      "help": "dhcp bytes",
+      "unit": "bytes",
+      "zero": false,
+      "info": 18
+     },
+     {
+      "name": "dhcpSrvPkts",
+      "help": "Dhcp server packets",
+      "unit": "pkts",
+      "zero": false,
+      "info": 18
+     },
+     {
+      "name": "dhcpSrvBytes",
+      "help": "Dhcp server bytes",
+      "unit": "bytes",
+      "zero": false,
+      "info": 18
+     },
+     {
+      "name": "mDnsPkts",
+      "help": "mDns packets",
+      "unit": "pkts",
+      "zero": false,
+      "info": 18
+     },
+     {
+      "name": "mDnsBytes",
+      "help": "mDns bytes",
+      "unit": "bytes",
+      "zero": false,
+      "info": 18
+     },
+     {
+      "name": "tcpPkts",
+      "help": "tcp packets",
+      "unit": "pkts",
+      "zero": false,
+      "info": 18
+     },
+     {
+      "name": "tcpBytes",
+      "help": "tcp bytes",
+      "unit": "bytes",
+      "zero": false,
+      "info": 18
+     },
+     {
+      "name": "udpPkts",
+      "help": "udp packets",
+      "unit": "pkts",
+      "zero": false,
+      "info": 18
+     },
+     {
+      "name": "udpBytes",
+      "help": "udp bytes",
+      "unit": "bytes",
+      "zero": false,
+      "info": 18
+     },
+     {
+      "name": "errIPv6TooShort",
+      "help": "ipv6 too short",
+      "unit": "pkts",
+      "zero": false,
+      "info": 20
+     },
+     {
+      "name": "errIPv6HopLimitDrop",
+      "help": "ipv6 hop limit",
+      "unit": "pkts",
+      "zero": false,
+      "info": 20
+     },
+     {
+      "name": "errIPv6Empty",
+      "help": "ipv6 no payload",
+      "unit": "pkts",
+      "zero": false,
+      "info": 20
+     },
+     {
+      "name": "errIcmpv6TooShort",
+      "help": "icmpv6 too short",
+      "unit": "pkts",
+      "zero": false,
+      "info": 20
+     },
+     {
+      "name": "errIcmpv4Cse",
+      "help": "Icmpv4 checksum error",
+      "unit": "pkts",
+      "zero": false,
+      "info": 20
+     },
+     {
+      "name": "errIcmpv6Cse",
+      "help": "Icmpv6 checksum error",
+      "unit": "pkts",
+      "zero": false,
+      "info": 20
+     },
+     {
+      "name": "errIcmpv6Unsupported",
+      "help": "Icmpv6 unsupported type/code",
+      "unit": "pkts",
+      "zero": false,
+      "info": 20
+     },
+     {
+      "name": "Icmpv6Pkt",
+      "help": "Icmpv6 pkts",
+      "unit": "pkts",
+      "zero": false,
+      "info": 18
+     },
+     {
+      "name": "Icmpv6Bytes",
+      "help": "Icmpv6 bytes",
+      "unit": "bytes",
+      "zero": false,
+      "info": 18
+     },
+     {
+      "name": "errIPv6OptJumbo",
+      "help": "Icmpv6 jumbo option is not supported ",
+      "unit": "pkt",
+      "zero": false,
+      "info": 20
+     },
+     {
+      "name": "errIPv6Fragment",
+      "help": "ipv6 fragment is not supported",
+      "unit": "pkt",
+      "zero": false,
+      "info": 20
+     },
+     {
+      "name": "errIPv4Fragment",
+      "help": "ipv4 fragment is not supported",
+      "unit": "pkt",
+      "zero": false,
+      "info": 20
+     },
+     {
+      "name": "errL3ProtoUnsupported",
+      "help": "L3 proto is not supported",
+      "unit": "pkt",
+      "zero": false,
+      "info": 20
+     },
+     {
+      "name": "errPacketIsTooShort",
+      "help": "packet is too short for parsing",
+      "unit": "pkt",
+      "zero": false,
+      "info": 20
+     }
+    ]
+   },
+   "timerw": {
+    "name": "timerw",
+    "meta": [
+     {
+      "name": "activeTimer",
+      "help": "active timers",
+      "unit": "timers",
+      "zero": false,
+      "info": 18
+     },
+     {
+      "name": "ticks",
+      "help": "ticks",
+      "unit": "ops",
+      "zero": false,
+      "info": 18
+     }
+    ]
+   },
+   "veth": {
+    "name": "veth",
+    "meta": [
+     {
+      "name": "RxZmqErr",
+      "help": "RxZmqErr",
+      "unit": "pkts",
+      "zero": false,
+      "info": 20
+     },
+     {
+      "name": "TxPkts",
+      "help": "TxPkts",
+      "unit": "pkts",
+      "zero": false,
+      "info": 18
+     },
+     {
+      "name": "TxBytes",
+      "help": "TxBytes",
+      "unit": "bytes",
+      "zero": false,
+      "info": 18
+     },
+     {
+      "name": "RxPkts",
+      "help": "RxPkts",
+      "unit": "pkts",
+      "zero": false,
+      "info": 18
+     },
+     {
+      "name": "RxBytes",
+      "help": "RxBytes",
+      "unit": "bytes",
+      "zero": false,
+      "info": 18
+     },
+     {
+      "name": "TxDropNotResolve",
+      "help": "TxDropNotResolve",
+      "unit": "pkts",
+      "zero": false,
+      "info": 20
+     },
+     {
+      "name": "RxParseErr",
+      "help": "RxParseErr",
+      "unit": "pkts",
+      "zero": false,
+      "info": 20
+     },
+     {
+      "name": "RxBatch",
+      "help": "RxBatch",
+      "unit": "pkts",
+      "zero": false,
+      "info": 20
+     },
+     {
+      "name": "TxBatch",
+      "help": "TxBatch",
+      "unit": "pkts",
+      "zero": false,
+      "info": 20
+     }
+    ]
+   }
+  },
+  "values": {
+   "ctx": {
+    "activeNs": 2,
+    "addNs": 2
+   },
+   "mbuf-128": {
+    "mbufAlloc": 6,
+    "mbufAllocCache": 6,
+    "mbufFreeCache": 12
+   },
+   "mbuf-pool": {
+    "mbufAlloc": 6,
+    "mbufAllocCache": 6,
+    "mbufFreeCache": 12
+   },
+   "timerw": {
+    "activeTimer": 14,
+    "ticks": 13
+   },
+   "veth": {
+    "TxBatch": 2,
+    "TxBytes": 504,
+    "TxPkts": 12
+   }
+  },
+  "values_zero": {
+   "ctx": {
+    "activeNs": 2,
+    "addNs": 2,
+    "removeNs": 0
+   },
+   "mbuf-1024": {
+    "mbufAlloc": 0,
+    "mbufAllocCache": 0,
+    "mbufFree": 0,
+    "mbufFreeCache": 0
+   },
+   "mbuf-128": {
+    "mbufAlloc": 6,
+    "mbufAllocCache": 6,
+    "mbufFree": 0,
+    "mbufFreeCache": 12
+   },
+   "mbuf-2048": {
+    "mbufAlloc": 0,
+    "mbufAllocCache": 0,
+    "mbufFree": 0,
+    "mbufFreeCache": 0
+   },
+   "mbuf-256": {
+    "mbufAlloc": 0,
+    "mbufAllocCache": 0,
+    "mbufFree": 0,
+    "mbufFreeCache": 0
+   },
+   "mbuf-4096": {
+    "mbufAlloc": 0,
+    "mbufAllocCache": 0,
+    "mbufFree": 0,
+    "mbufFreeCache": 0
+   },
+   "mbuf-512": {
+    "mbufAlloc": 0,
+    "mbufAllocCache": 0,
+    "mbufFree": 0,
+    "mbufFreeCache": 0
+   },
+   "mbuf-9216": {
+    "mbufAlloc": 0,
+    "mbufAllocCache": 0,
+    "mbufFree": 0,
+    "mbufFreeCache": 0
+   },
+   "mbuf-pool": {
+    "mbufAlloc": 6,
+    "mbufAllocCache": 6,
+    "mbufFree": 0,
+    "mbufFreeCache": 12
+   },
+   "parser": {
+    "Icmpv6Bytes": 0,
+    "Icmpv6Pkt": 0,
+    "arpBytes": 0,
+    "arpPkts": 0,
+    "dhcpBytes": 0,
+    "dhcpPkts": 0,
+    "dhcpSrvBytes": 0,
+    "dhcpSrvPkts": 0,
+    "eapolBytes": 0,
+    "eapolPkts": 0,
+    "errArpTooShort": 0,
+    "errDot1qTooShort": 0,
+    "errEAPolTooShort": 0,
+    "errIPv4Fragment": 0,
+    "errIPv4HeaderTooShort": 0,
+    "errIPv4TooShort": 0,
+    "errIPv4cs": 0,
+    "errIPv6Empty": 0,
+    "errIPv6Fragment": 0,
+    "errIPv6HopLimitDrop": 0,
+    "errIPv6OptJumbo": 0,
+    "errIPv6TooShort": 0,
+    "errIcmpv4Cse": 0,
+    "errIcmpv4TooShort": 0,
+    "errIcmpv6Cse": 0,
+    "errIcmpv6TooShort": 0,
+    "errIcmpv6Unsupported": 0,
+    "errIgmpv4TooShort": 0,
+    "errInternalHandler": 0,
+    "errL3ProtoUnsupported": 0,
+    "errPacketIsTooShort": 0,
+    "errParser": 0,
+    "errTCP": 0,
+    "errTcpTooShort": 0,
+    "errToManyDot1q": 0,
+    "errUDP": 0,
+    "errUdpTooShort": 0,
+    "icmpBytes": 0,
+    "icmpPkts": 0,
+    "igmpBytes": 0,
+    "igmpPkts": 0,
+    "mDnsBytes": 0,
+    "mDnsPkts": 0,
+    "tcpBytes": 0,
+    "tcpPkts": 0,
+    "udpBytes": 0,
+    "udpPkts": 0
+   },
+   "timerw": {
+    "activeTimer": 14,
+    "ticks": 13
+   },
+   "veth": {
+    "RxBatch": 0,
+    "RxBytes": 0,
+    "RxParseErr": 0,
+    "RxPkts": 0,
+    "RxZmqErr": 0,
+    "TxBatch": 2,
+    "TxBytes": 504,
+    "TxDropNotResolve": 0,
+    "TxPkts": 12
+   }
+  },
+  "masked": {
+   "ctx": {
+    "activeNs": 2,
+    "addNs": 2,
+    "removeNs": 0
+   }
+  },
+  "unknown_mask_error": null
+ }
+}

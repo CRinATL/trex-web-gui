@@ -516,3 +516,10 @@ fieldset.plain legend { padding: 0; font-weight: 600; font-size: 1.1em; margin-b
 .data-table td.data-table-empty { text-align: left; padding: .6rem .75rem; }
 .lldp-table .lldp-name { font-weight: 600; }
 .lldp-table .lldp-subtype { font-size: .85em; }
+
+/* EMU counters: the severity badge always carries its text; colour only adds to it */
+.badge.sev-warn { color: var(--warn); border-color: var(--warn); }
+.badge.sev-error { color: var(--bad); border-color: var(--bad); }
+.emu-counters details { margin: .5rem 0; }
+.emu-counters summary { cursor: pointer; }
+.emu-counters .unsupported-row { color: var(--muted); }

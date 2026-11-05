@@ -1,0 +1,80 @@
+{
+  "connected": {
+    "busy": null,
+    "error": null,
+    "generation": 0,
+    "info": {
+      "build_date": "05.05.2019",
+      "build_time": "16:00",
+      "built_by": "hhaim",
+      "mode": "emulation",
+      "version": "v0.1"
+    },
+    "loaded": null,
+    "state": "connected",
+    "target": {
+      "host": "127.0.0.1",
+      "port": 4510
+    },
+    "type": "emu"
+  },
+  "disconnected": {
+    "busy": null,
+    "error": null,
+    "generation": 0,
+    "info": null,
+    "loaded": null,
+    "state": "disconnected",
+    "target": null,
+    "type": "emu"
+  },
+  "loaded": {
+    "busy": null,
+    "error": null,
+    "generation": 1,
+    "info": {
+      "build_date": "05.05.2019",
+      "build_time": "16:00",
+      "built_by": "hhaim",
+      "mode": "emulation",
+      "version": "v0.1"
+    },
+    "loaded": {
+      "at": 1700000000.0,
+      "clients": 6,
+      "namespaces": 2,
+      "partial": false,
+      "path": "tests/fixtures/profiles/emu_two_ns.py",
+      "tunables": []
+    },
+    "state": "connected",
+    "target": {
+      "host": "127.0.0.1",
+      "port": 4510
+    },
+    "type": "emu"
+  },
+  "loading": {
+    "busy": {
+      "done": 3,
+      "kind": "loading",
+      "total": 6
+    },
+    "error": null,
+    "generation": 0,
+    "info": {
+      "build_date": "05.05.2019",
+      "build_time": "16:00",
+      "built_by": "hhaim",
+      "mode": "emulation",
+      "version": "v0.1"
+    },
+    "loaded": null,
+    "state": "connected",
+    "target": {
+      "host": "127.0.0.1",
+      "port": 4510
+    },
+    "type": "emu"
+  }
+}

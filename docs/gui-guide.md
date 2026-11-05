@@ -30,6 +30,7 @@ every button is in [`api.md`](api.md).
 9. [Studio](#9-studio): the profile library, import, the stream table, properties, the packet tab, Simulate
 10. [Packet editor](#10-packet-editor)
 11. [Monitor](#11-monitor)
+    - [11a. EMU](#11a-emu)
 12. [TRex daemon dialog](#12-trex-daemon-dialog)
 13. [Settings](#13-settings)
 14. [Why is this disabled?](#14-why-is-this-disabled-the-common-reasons)
@@ -1312,6 +1313,42 @@ capture, Studio, daemon, profile and file-browser routes.
 
 ---
 
+## 11a. EMU
+
+Route `/emu`. The page for the TRex emulation server (EMU, `trex-emu`, RPC port 4510). It has its own connection,
+independent of the Control session, and its own state in the status line. Starting TRex with EMU, what the port
+needs and the exposure of EMU's port are in the README's "EMU" and "EMU exposure" sections; the ⓘ beside the heading
+says the same in short
+([118](gui-inventory/screens/118-emu-connected.png), [119](gui-inventory/screens/119-emu-namespace-clients-counters.png)).
+
+- **Connect.** **Host** (with the hosts used before; it starts as the Control session's host), **Port** (4510),
+  **Connect**, **Disconnect**. The status line reads `EMU server <host>:<port>`, an LED and `Connected`,
+  `Connecting…`, `Connection lost` or `Disconnected`, then `version <v> · generation <n>`, the progress of a load or
+  removal, and the cause of a loss.
+- **Profile.** The path of an EMU profile (`.py`) on the backend host, **Browse…**, **Inspect** (its tunables, the
+  number of namespaces and clients, the plugins and vports, and warnings) and a **Rate limit (clients/s)**, 1 to
+  100000. **Load…** removes everything on the EMU server and loads the profile; **Remove all…** removes every
+  namespace and client. Both ask first, naming the server and what it holds now. When it holds namespaces this app
+  did not add (or the listing was interrupted by another client), a second box has to be ticked before they are
+  removed too. A load or removal that stops part-way says how far it got; a failed load leaves a partial profile on
+  the server, and the page says `A partial profile is on the server`.
+- **Namespaces.** Port, VLAN tags (tci), tag types (tpid), Clients, Plugins, Owner (whether this app added it) and
+  **Clients of …**, which selects one.
+- **Clients** of the selected namespace, paged: MAC, IPv4, gateway, gateway MAC, MTU, IPv6, plugins, and a button
+  that selects a client for the counters.
+- **Counters** for the server, the selected namespace or the selected client, per plugin: Counter, Value, Unit,
+  Severity, with **Hide zeros**, **Clear** (a baseline kept in this browser; **Show totals** returns to the raw
+  values).
+
+EMU has no ownership: every client of the server sees and changes the same namespaces, so another tool can change
+the list under this page. The shipped `trex-emu` v3.08 crashes when a namespace with the `ipfix` or `tdl` plugin
+at namespace level is removed, and when a client with `mdns` is added to a namespace without `mdns` (measured with
+empty plugin configs). The page refuses to load such a profile and asks for an acknowledgement before removing such
+a namespace it did not add; `ipfix` on a client (the stock `simple_ipfix.py`) loads and removes cleanly. Restart the
+server after a crash.
+
+---
+
 ## 12. TRex daemon dialog
 
 **TRex daemon…** in the Control toolbar, available while disconnected too, because the daemon is how a TRex is
@@ -1566,7 +1603,7 @@ context menus · `11` Start all · `12` profile row · `13`–`15` Control tab �
 lost · `34`–`42` Dashboard · `43`–`50` Capture · `52`, `95`–`99` Monitor · `53`–`58` Settings · `59`, `60`
 themes · `61`–`63`, `84` import · `64`–`82` setups · `83` backend offline · `85`–`87` state chips · `88`–`93`
 Studio · `94` library pick · `100`–`105` daemon · `106` Connect with a stateful run · `107`–`112` packet
-editor · `113` the editor in Studio · `114` a .py source. (`51` and `74` are unused.)
+editor · `113` the editor in Studio · `114` a .py source · `118`, `119` EMU. (`51` and `74` are unused.)
 
 Not in any screenshot: a read-only session, another owner's ports, a non-default profile row, the LLDP table,
 the Wireshark buttons in use, the pop-out Events window, the daemon's Logs tab, the Monitor's Templates,

@@ -7,6 +7,7 @@ import { ConnectDialog } from './components/ConnectDialog'
 import { useHotkey } from './keys'
 import { CapturePage } from './pages/CapturePage'
 import { ControlPage } from './pages/ControlPage'
+import { EmuPage } from './pages/EmuPage'
 import { EventsPage } from './pages/EventsPage'
 import { DashboardPage } from './pages/DashboardPage'
 import { MonitorPage } from './pages/MonitorPage'
@@ -89,6 +90,7 @@ export function AppShell() {
           <NavLink to="/capture">Capture</NavLink>
           <NavLink to="/studio">Studio</NavLink>
           <NavLink to="/monitor">Monitor</NavLink>
+          <NavLink to="/emu">EMU</NavLink>
           <NavLink to="/events">
             Events
             {logUnseen > 0 && <> <span className="badge badge-alert" aria-label={`${logUnseen} unseen errors and warnings`}>{logUnseen}</span></>}
@@ -111,6 +113,7 @@ export function AppShell() {
           <Route path="/studio" element={null} />
           <Route path="/studio/packet" element={null} />
           <Route path="/monitor" element={<MonitorPage />} />
+          <Route path="/emu" element={<EmuPage />} />
           <Route path="/settings" element={<SettingsPage />} />
         </Routes>
       </main>

@@ -49,6 +49,14 @@ once every PUB name the recording holds (summary.json `names`) is present. Norma
 The replay loops from the moment the fake starts and the app joins mid-loop, so the counters and the
 values inside the frames depend on where it was. The file keeps the values of the run that wrote it; the
 comparison is of the SHAPE only (keys, and the type of every leaf; a list counts as a list).
+
+P7 (Task 6). `emuMsg.json` holds the `emu` message the app publishes (by scenario: connected,
+disconnected, loading, loaded), `emuNamespaces.json`, `emuClients.json` and `emuCounters.json` the GET
+/api/emu/namespaces, /api/emu/clients and /api/emu/counters bodies (counters by scope: ctx, ns, client,
+and a `meta` read), all from the fake EMU server seeded with two namespaces of three clients and the arp,
+icmp and mdns plugins (the `loading` and `loaded` messages come from loading emu_two_ns.py at 4 clients a
+second). The fake's counters never advance, so every value is repeatable. Normalised: the fake's random port
+becomes 4510, and a loaded profile's path is relative with `at` fixed.
 """
 import asyncio
 import base64
@@ -90,6 +98,12 @@ MONITOR_STATEFUL_FILE = FIXTURE_DIR / "monitorStateful.json"
 MONITOR_TS = 1700000000.0
 P5 = FIXTURES / "p5"
 FLOW_LATENCY = str(ROOT / "tests" / "fixtures" / "profiles" / "flow_latency.py")
+EMU_MSG_FILE = FIXTURE_DIR / "emuMsg.json"
+EMU_NAMESPACES_FILE = FIXTURE_DIR / "emuNamespaces.json"
+EMU_CLIENTS_FILE = FIXTURE_DIR / "emuClients.json"
+EMU_COUNTERS_FILE = FIXTURE_DIR / "emuCounters.json"
+EMU_PORT = 4510
+EMU_PROFILE = str(ROOT / "tests" / "fixtures" / "profiles" / "emu_two_ns.py")
 STATS_S = 0.1
 LOCAL_USER = "<local-user>"
 # the session's safety poll interval here; ports are published only when they change, so wait for several
@@ -741,3 +755,71 @@ def test_packet_wire_fixtures(tmp_path):
     _compare_or_write(PACKET_DIR / "buildError.json", {"expression": failed.json()})
     _compare_or_write(PACKET_DIR / "templates.json", {"listing": listing_body})
     _compare_or_write(PACKET_DIR / "decompile.json", {"flow_var": decompiled.json()})
+
+
+def normalise_emu(msg: dict) -> dict:
+    """The `emu` message with the fake's random port replaced by 4510."""
+    out = json.loads(json.dumps(msg))
+    if out.get("target"):
+        out["target"]["port"] = EMU_PORT
+    if out.get("loaded"):
+        out["loaded"]["path"] = str(Path(out["loaded"]["path"]).relative_to(ROOT))
+        out["loaded"]["at"] = MONITOR_TS
+    return out
+
+
+def capture_emu(fake_emu, tmp_path) -> tuple[dict, dict, dict, dict]:
+    """Drive an app against a seeded fake EMU server: the `emu` messages by scenario, then the namespaces,
+    clients and counters bodies."""
+    f = fake_emu("--foreign-ns", "2", "--clients", "3", "--plugins", "arp,icmp,mdns")
+    with authed(create_app(tmp_path, token=TEST_TOKEN)) as c, c.websocket_connect(WS) as ws:
+        msgs = {"disconnected": normalise_emu(c.get("/api/emu").json())}
+        r = c.post("/api/emu/connect", json={"host": f.host, "port": f.port, "timeout_s": 2})
+        assert r.status_code == 200, r.text
+        end = time.monotonic() + 10.0
+        while "connected" not in msgs:
+            m = recv(ws, timeout=max(0.5, end - time.monotonic()))
+            if m["type"] == "emu" and m["state"] == "connected":
+                msgs["connected"] = normalise_emu(m)
+        assert normalise_emu(r.json()) == msgs["connected"]
+        got = {}
+        for name, path, params in (
+                ("namespaces", "/api/emu/namespaces", {}),
+                ("clients", "/api/emu/clients", {"vport": 1, "limit": 2}),
+                ("ctx", "/api/emu/counters", {"scope": "ctx"}),
+                ("ns", "/api/emu/counters", {"scope": "ns", "vport": 1}),
+                ("client", "/api/emu/counters", {"scope": "client", "vport": 1, "mac": "00:00:00:01:00:01"}),
+                ("meta", "/api/emu/counters", {"scope": "ctx", "meta": "true"})):
+            resp = c.get(path, params=params)
+            assert resp.status_code == 200, (path, resp.text)
+            got[name] = resp.json()
+        load = c.post("/api/emu/profile/load",
+                      json={"path": EMU_PROFILE, "confirm": True, "foreign_ack": True, "max_rate": 4})
+        assert load.status_code == 200, load.text
+        msgs["loaded"] = normalise_emu(load.json())
+        while "loading" not in msgs or msgs.get("seen_loaded") is None:
+            m = recv(ws, timeout=10.0)
+            if m["type"] != "emu":
+                continue
+            if m["busy"] and m["busy"]["kind"] == "loading" and m["busy"]["done"] and "loading" not in msgs:
+                msgs["loading"] = normalise_emu(m)
+            if m["busy"] is None and m["loaded"] and not m["loaded"]["partial"]:
+                msgs["seen_loaded"] = m
+        assert msgs.pop("seen_loaded")["generation"] == 1
+    return msgs, {"two_namespaces": got["namespaces"]}, {"vport_1_first_page": got["clients"]}, {
+        k: got[k] for k in ("ctx", "ns", "client", "meta")}
+
+
+def test_p7_emu_wire_fixtures(fake_emu, tmp_path):
+    """The EMU hub message and the namespaces, clients and counters bodies, from the fake EMU server."""
+    msgs, namespaces, clients, counters = capture_emu(fake_emu, tmp_path)
+    assert msgs["connected"]["info"]["version"] and msgs["disconnected"]["info"] is None
+    assert "truncated" not in namespaces["two_namespaces"]
+    assert counters["ctx"]["tables"] and "ipfix" in counters["ns"]["unsupported"]
+    assert "dhcp" not in counters["ns"]["unsupported"]              # ruling R17: it has no namespace counters
+    assert msgs["loading"]["busy"]["total"] == 6 and msgs["loaded"]["busy"] is None
+    assert msgs["loaded"]["loaded"]["partial"] is False and msgs["loaded"]["generation"] == 1
+    _compare_or_write(EMU_MSG_FILE, msgs)
+    _compare_or_write(EMU_NAMESPACES_FILE, namespaces)
+    _compare_or_write(EMU_CLIENTS_FILE, clients)
+    _compare_or_write(EMU_COUNTERS_FILE, counters)

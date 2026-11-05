@@ -1,0 +1,281 @@
+{
+ "note": "Hand-written wire data of tests/fixtures/profiles/emu_two_ns.py at its defaults (2 namespaces on vport 0 and 1, 3 clients each, arp+icmp), in the order the vendored EMUClient._start_profile sends it. Task 10 keeps the two equal.",
+ "requests": [
+  {
+   "method": "ctx_set_def_plugins",
+   "params": {
+    "def_plugs": {
+     "icmp": {},
+     "arp": {
+      "enable": true
+     }
+    }
+   }
+  },
+  {
+   "method": "ctx_add",
+   "params": {
+    "tunnels": [
+     {
+      "vport": 0,
+      "tci": [
+       0,
+       0
+      ],
+      "tpid": [
+       0,
+       0
+      ],
+      "plugs": {
+       "icmp": {},
+       "arp": {
+        "enable": true
+       }
+      },
+      "def_c_plugs": {
+       "icmp": {},
+       "arp": {
+        "enable": true
+       }
+      }
+     },
+     {
+      "vport": 1,
+      "tci": [
+       0,
+       0
+      ],
+      "tpid": [
+       0,
+       0
+      ],
+      "plugs": {
+       "icmp": {},
+       "arp": {
+        "enable": true
+       }
+      },
+      "def_c_plugs": {
+       "icmp": {},
+       "arp": {
+        "enable": true
+       }
+      }
+     }
+    ]
+   }
+  },
+  {
+   "method": "ctx_client_set_def_plugins",
+   "params": {
+    "def_plugs": {
+     "icmp": {},
+     "arp": {
+      "enable": true
+     }
+    },
+    "tun": {
+     "vport": 0,
+     "tci": [
+      0,
+      0
+     ],
+     "tpid": [
+      0,
+      0
+     ]
+    }
+   }
+  },
+  {
+   "method": "ctx_client_add",
+   "params": {
+    "clients": [
+     {
+      "mac": [
+       0,
+       0,
+       0,
+       112,
+       0,
+       1
+      ],
+      "ipv4": [
+       1,
+       1,
+       1,
+       3
+      ],
+      "ipv4_dg": [
+       1,
+       1,
+       1,
+       1
+      ]
+     },
+     {
+      "mac": [
+       0,
+       0,
+       0,
+       112,
+       0,
+       2
+      ],
+      "ipv4": [
+       1,
+       1,
+       1,
+       4
+      ],
+      "ipv4_dg": [
+       1,
+       1,
+       1,
+       1
+      ]
+     },
+     {
+      "mac": [
+       0,
+       0,
+       0,
+       112,
+       0,
+       3
+      ],
+      "ipv4": [
+       1,
+       1,
+       1,
+       5
+      ],
+      "ipv4_dg": [
+       1,
+       1,
+       1,
+       1
+      ]
+     }
+    ],
+    "tun": {
+     "vport": 0,
+     "tci": [
+      0,
+      0
+     ],
+     "tpid": [
+      0,
+      0
+     ]
+    }
+   }
+  },
+  {
+   "method": "ctx_client_set_def_plugins",
+   "params": {
+    "def_plugs": {
+     "icmp": {},
+     "arp": {
+      "enable": true
+     }
+    },
+    "tun": {
+     "vport": 1,
+     "tci": [
+      0,
+      0
+     ],
+     "tpid": [
+      0,
+      0
+     ]
+    }
+   }
+  },
+  {
+   "method": "ctx_client_add",
+   "params": {
+    "clients": [
+     {
+      "mac": [
+       0,
+       0,
+       0,
+       112,
+       1,
+       1
+      ],
+      "ipv4": [
+       1,
+       1,
+       2,
+       3
+      ],
+      "ipv4_dg": [
+       1,
+       1,
+       2,
+       1
+      ]
+     },
+     {
+      "mac": [
+       0,
+       0,
+       0,
+       112,
+       1,
+       2
+      ],
+      "ipv4": [
+       1,
+       1,
+       2,
+       4
+      ],
+      "ipv4_dg": [
+       1,
+       1,
+       2,
+       1
+      ]
+     },
+     {
+      "mac": [
+       0,
+       0,
+       0,
+       112,
+       1,
+       3
+      ],
+      "ipv4": [
+       1,
+       1,
+       2,
+       5
+      ],
+      "ipv4_dg": [
+       1,
+       1,
+       2,
+       1
+      ]
+     }
+    ],
+    "tun": {
+     "vport": 1,
+     "tci": [
+      0,
+      0
+     ],
+     "tpid": [
+      0,
+      0
+     ]
+    }
+   }
+  }
+ ]
+}

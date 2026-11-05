@@ -1,0 +1,44 @@
+{
+  "two_namespaces": {
+    "generation": 0,
+    "interrupted": false,
+    "namespaces": [
+      {
+        "active_clients": 3,
+        "ours": false,
+        "plug_names": [
+          "arp",
+          "icmp",
+          "mdns"
+        ],
+        "tci": [
+          0,
+          0
+        ],
+        "tpid": [
+          0,
+          0
+        ],
+        "vport": 0
+      },
+      {
+        "active_clients": 3,
+        "ours": false,
+        "plug_names": [
+          "arp",
+          "icmp",
+          "mdns"
+        ],
+        "tci": [
+          0,
+          0
+        ],
+        "tpid": [
+          0,
+          0
+        ],
+        "vport": 1
+      }
+    ]
+  }
+}

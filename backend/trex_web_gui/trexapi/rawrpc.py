@@ -16,6 +16,7 @@ from .errors import ServerUnreachable, TrexApiError
 
 RPC_REPLY_MAX_BYTES = 1024 * 1024
 MAX_PORTS = 256
+FRAMING_BYTES = 65536     # the zlib frame's magic and length, and slack, over the decoded size
 
 
 class RawRpcError(TrexApiError):
@@ -32,8 +33,12 @@ class RawRpc:
     A call that gets no reply in `timeout_s` raises ServerUnreachable and rebuilds the socket, because a REQ
     socket that has sent without receiving cannot send again."""
 
-    def __init__(self, host: str, port: int, timeout_s: float) -> None:
-        """Open the socket (the connection itself is made lazily by libzmq)."""
+    def __init__(self, host: str, port: int, timeout_s: float, *,
+                 reply_max: int = RPC_REPLY_MAX_BYTES) -> None:
+        """Open the socket (the connection itself is made lazily by libzmq). `reply_max` is the most bytes a
+        decoded reply may have; the socket's own size cap is never below it plus the framing bytes."""
+        self._reply_max = reply_max
+        self._maxmsg = max(MAXMSGSIZE, reply_max + FRAMING_BYTES)
         self._endpoint = f"tcp://{host}:{port}"
         self._timeout_ms = max(1, int(timeout_s * 1000))
         self._ctx = Context()
@@ -46,7 +51,7 @@ class RawRpc:
         """A fresh REQ socket with the size cap, the timeouts and no linger."""
         sock = self._ctx.socket(SocketType.REQ)
         sock.setsockopt(SocketOption.LINGER, 0)
-        sock.setsockopt(SocketOption.MAXMSGSIZE, MAXMSGSIZE)
+        sock.setsockopt(SocketOption.MAXMSGSIZE, self._maxmsg)
         sock.setsockopt(SocketOption.SNDTIMEO, self._timeout_ms)
         sock.setsockopt(SocketOption.RCVTIMEO, self._timeout_ms)
         try:
@@ -80,7 +85,7 @@ class RawRpc:
             self._rebuild()
             raise ServerUnreachable(f"no answer to {method} from {self._endpoint}: {exc}") from exc
         try:
-            doc = json.loads(inflate(reply, RPC_REPLY_MAX_BYTES))
+            doc = json.loads(inflate(reply, self._reply_max))
         except Undecodable as exc:
             raise RawRpcError(0, f"reply to {method} refused: {exc.reason}") from None
         except (ValueError, RecursionError):

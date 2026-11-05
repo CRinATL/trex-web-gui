@@ -1,0 +1,216 @@
+{
+ "api_sync_v2_major2": {
+  "req": {
+   "jsonrpc": "2.0",
+   "id": 1,
+   "method": "api_sync_v2",
+   "params": {
+    "name": "EMU",
+    "major": 2,
+    "minor": 0
+   }
+  },
+  "resp": {
+   "jsonrpc": "2.0",
+   "error": {
+    "code": -32600,
+    "message": "Server API EMU:(1:1) does not match the client API EMU:(2:0) "
+   },
+   "id": 1
+  }
+ },
+ "api_sync_v2_stl": {
+  "req": {
+   "jsonrpc": "2.0",
+   "id": 1,
+   "method": "api_sync_v2",
+   "params": {
+    "name": "STL",
+    "major": 5,
+    "minor": 1
+   }
+  },
+  "resp": {
+   "jsonrpc": "2.0",
+   "error": {
+    "code": -32600,
+    "message": "Server API EMU:(1:1) does not match the client API STL:(5:1) "
+   },
+   "id": 1
+  }
+ },
+ "ping_without_api_h": {
+  "req": {
+   "jsonrpc": "2.0",
+   "id": 2,
+   "method": "ping",
+   "params": {}
+  },
+  "resp": {
+   "jsonrpc": "2.0",
+   "error": {
+    "code": -32602,
+    "message": "Method with not a valid API "
+   },
+   "id": 2
+  }
+ },
+ "ping_bogus_api_h": {
+  "req": {
+   "jsonrpc": "2.0",
+   "id": 3,
+   "method": "ping",
+   "params": {
+    "api_h": "bogus"
+   }
+  },
+  "resp": {
+   "jsonrpc": "2.0",
+   "error": {
+    "code": -32602,
+    "message": "Method with not a valid API "
+   },
+   "id": 3
+  }
+ },
+ "ctx_stop_autotriggers_not_found": {
+  "req": {
+   "jsonrpc": "2.0",
+   "id": 2,
+   "method": "ctx_stop_autotriggers",
+   "params": {
+    "api_h": "zmQpvpRDCm"
+   }
+  },
+  "resp": {
+   "jsonrpc": "2.0",
+   "error": {
+    "code": -32601,
+    "message": "Method not found"
+   },
+   "id": 2
+  }
+ },
+ "ctx_resource_monitor_get_not_found": {
+  "req": {
+   "jsonrpc": "2.0",
+   "id": 3,
+   "method": "ctx_resource_monitor_get",
+   "params": {
+    "api_h": "zmQpvpRDCm"
+   }
+  },
+  "resp": {
+   "jsonrpc": "2.0",
+   "error": {
+    "code": -32601,
+    "message": "Method not found"
+   },
+   "id": 3
+  }
+ },
+ "ipfix_ns_cnt_not_found": {
+  "req": {
+   "jsonrpc": "2.0",
+   "id": 4,
+   "method": "ipfix_ns_cnt",
+   "params": {
+    "meta": true,
+    "zero": false,
+    "mask": null,
+    "clear": false,
+    "tun": {
+     "vport": 0,
+     "tci": [
+      0,
+      0
+     ],
+     "tpid": [
+      0,
+      0
+     ]
+    },
+    "api_h": "zmQpvpRDCm"
+   }
+  },
+  "resp": {
+   "jsonrpc": "2.0",
+   "error": {
+    "code": -32601,
+    "message": "Method not found"
+   },
+   "id": 4
+  }
+ },
+ "get_supported_cmds_not_found": {
+  "req": {
+   "jsonrpc": "2.0",
+   "id": 5,
+   "method": "get_supported_cmds",
+   "params": {
+    "api_h": "zmQpvpRDCm"
+   }
+  },
+  "resp": {
+   "jsonrpc": "2.0",
+   "error": {
+    "code": -32601,
+    "message": "Method not found"
+   },
+   "id": 5
+  }
+ },
+ "plugin_counters_not_loaded": {
+  "req": {
+   "jsonrpc": "2.0",
+   "id": 27,
+   "method": "igmp_ns_cnt",
+   "params": {
+    "meta": true,
+    "zero": false,
+    "mask": null,
+    "clear": false,
+    "tun": {
+     "vport": 0,
+     "tci": [
+      0,
+      0
+     ],
+     "tpid": [
+      0,
+      0
+     ]
+    },
+    "api_h": "zmQpvpRDCm"
+   }
+  },
+  "resp": {
+   "jsonrpc": "2.0",
+   "error": {
+    "code": -32600,
+    "message": " error there is no valid plugin igmp for this tunnel "
+   },
+   "id": 27
+  }
+ },
+ "ctx_iter_interrupted": {
+  "req": {
+   "jsonrpc": "2.0",
+   "id": 174,
+   "method": "ctx_iter",
+   "params": {
+    "count": 1,
+    "reset": false,
+    "api_h": "zmQpvpRDCm"
+   }
+  },
+  "resp": {
+   "jsonrpc": "2.0",
+   "error": {
+    "code": -32600,
+    "message": " iterator was interupted , reset and start again "
+   },
+   "id": 174
+  }
+ }
+}

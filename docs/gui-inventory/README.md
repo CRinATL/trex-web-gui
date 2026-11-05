@@ -13,6 +13,12 @@ screens with them. New: [117](screens/117-connection-lost-dialog.png), the Conne
 - the packet editor's Presets have a fifth tab, EVPN-VXLAN ([108](screens/108-packet-presets.png));
 - a profile's rate on the Traffic tab reads as in Studio (`1.00 kpps`, the HOWTO's shot 15).
 
+**EMU page (P7, 2026-11-05).** Shots [118](screens/118-emu-connected.png) and [119](screens/119-emu-namespace-clients-counters.png)
+were taken by `vm/shoot_inventory.py` (the `emu` step) against `tests/fake/fake_emu.py` on port 18510, seeded with three
+namespaces of four clients; 119 is a 1500 px tall window. The status bar's "Disconnected" line is the Control session: the
+step runs after the daemon step, which stopped the guest's TRex. Only these two shots were taken (`--until emu`); the
+others are those of the re-shoot below.
+
 **Re-shot for 1.1.1 (2026-11-02).** Every screen was shot again on `main` before the 1.1.1 release commit, so the
 version is still `1.1.0` (About, [57](screens/57-settings-about.png), shows that), against the same guest. The HOWTO's
 screens (`docs/howto/screens/`) were shot again in the same session. New: [116](screens/116-settings-unsaved-list.png),

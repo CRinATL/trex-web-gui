@@ -1,9 +1,10 @@
-"""The refusal codes of the three refusal families (session, daemon, bundle), the shared table of
+"""The refusal codes of the four refusal families (session, daemon, bundle, emu), the shared table of
 docs/api.md. A route that can reach the mapping site of a family declares the family
 (`answers((409, "session"))`) instead of each code.
 
 Mapping sites: `CommandRefused` is 409 (422 for `bad_request`) at `run` in api/app.py; `DaemonRefused` is 409
-at `_answer` in api/daemon.py; `BundleError` is 422 in api/bundle.py. A code raised by two families has a row
+at `_answer` in api/daemon.py; `EmuRefused` is 409 at `run_emu` in api/emu.py; `BundleError` is 422 in
+api/bundle.py. A code raised by two families has a row
 for each. Keys are (family, code). `MonitorHostRefused` (monitor/session.py) has
 no code and its route declares its own 422 `invalid`, so it is not in this table.
 
@@ -51,6 +52,18 @@ REFUSALS: dict[tuple[Family, str], tuple[int, str]] = {
     ("daemon", "owners_unknown"): (409, "who owns the ports cannot be told; acknowledge to go on"),
     ("daemon", "plan_changed"): (409, "the target or files changed since the preview"),
     ("daemon", "reserved"): (409, "the daemon is reserved"),
+    # EmuRefused (emu)
+    ("emu", "busy"): (409, "another EMU operation is in progress"),
+    ("emu", "confirm_required"): (409, "the write needs `confirm`"),
+    ("emu", "crash_risk"): (409, "removing a namespace the server holds with the ipfix or tdl plugin at "
+                               "namespace level crashes trex-emu; acknowledge to remove it anyway"),
+    ("emu", "foreign_namespaces"): (409, "the server holds namespaces this backend did not add; acknowledge "
+                                       "to replace them"),
+    ("emu", "no_client"): (409, "the namespace has no client with this MAC"),
+    ("emu", "no_namespace"): (409, "the server has no namespace with this key"),
+    ("emu", "not_connected"): (409, "not connected to an EMU server"),
+    ("emu", "unsupported"): (409, "the server does not have this counter method"),
+    ("emu", "unsupported_server"): (409, "the EMU server's API is not 1.x"),
     # BundleError (bundle)
     ("bundle", "bad_request"): (422, "a bundle import mode that is not allowed"),
     ("bundle", "invalid_bundle"): (422, "a section of the bundle does not validate"),

@@ -85,5 +85,13 @@ encryption and the authentication of the remote end.
     from anyone directly.
   - Restrict that port before using daemon control: the README's [Daemon exposure](README.md#daemon-exposure)
     section says how.
+- **The EMU server** (`trex-emu`, RPC port 4510), which the **EMU** page uses, has no authentication, so anyone who
+  can reach its port can read and change its namespaces and clients, and a profile load replaces them all. The
+  shipped server (v3.08) crashes when a namespace with the `ipfix` or `tdl` plugin at namespace level is removed, or
+  when a client with `mdns` is added to a namespace without it (measured with empty plugin configs; `ipfix` on a client loaded and removed cleanly). trex-web-gui
+  refuses to load such a profile and asks for an acknowledgement before removing such a namespace it did not add.
+  It also asks for a confirmation (and a second acknowledgement for namespaces it did not add) before a load, which
+  guards a mistake and not another client. Restrict the port: the README's [EMU exposure](README.md#emu-exposure)
+  section says how.
 - **The vendored TRex client and Scapy** are third-party code, carried with a small set of patches. What each patch
   changes, and its upstream status, is in [`backend/vendor/patches.md`](backend/vendor/patches.md).

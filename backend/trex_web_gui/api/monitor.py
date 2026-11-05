@@ -13,9 +13,9 @@ from trex_web_gui.monitor.host import check_monitor_host
 from trex_web_gui.monitor.session import MonitorHostRefused, MonitorSession
 from trex_web_gui.validation import check_host
 
-# Refused whole, with any method (spec §6.2: daemon, profiles, "captures, Wireshark, downloads", Studio;
+# Refused whole, with any method (spec §6.2: daemon, EMU, profiles, "captures, Wireshark, downloads", Studio;
 # and the host file browser, which no Monitor-only page uses).
-FAMILIES = ("/api/daemon", "/api/profiles", "/api/capture", "/api/studio", "/api/fs")
+FAMILIES = ("/api/daemon", "/api/profiles", "/api/capture", "/api/studio", "/api/fs", "/api/emu")
 WRITE_METHODS = frozenset({"POST", "PUT", "DELETE", "PATCH"})
 # A write under these answers for itself: the Monitor's own routes, and the token gate's.
 WRITE_EXEMPT = ("/api/monitor", "/api/auth")

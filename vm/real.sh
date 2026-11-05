@@ -1,17 +1,20 @@
 #!/bin/bash
-# make check-real / check-daemon-real / record-p2 / record-p3 / record-p3a / record-p3b / record-p3c / record-p5 / record-p5-stf / record-netem: restore trex_ready, step the guest clock, run the real-tier tests (or a recorder), always shut down.
-# TREX_VM_RECORD=p2|p3|p3a|p3b|p3b-v6|p3c|p5|p5-stf|netem picks the recorder (vm/record_<x>.py, `-` read as `_`) and its output dir
+# make check-real / check-daemon-real / record-p2 / record-p3 / record-p3a / record-p3b / record-p3c / record-p5 / record-p5-stf / record-p7 / record-netem: restore trex_ready, step the guest clock, run the real-tier tests (or a recorder), always shut down.
+# TREX_VM_RECORD=p2|p3|p3a|p3b|p3b-v6|p3c|p5|p5-stf|p7|netem picks the recorder (vm/record_<x>.py, `-` read as `_`) and its output dir
 # (tests/fixtures/<x>). p3b-v6 first restarts the guest's TRex on the linux_based stack (vm/stack.sh) and puts it
 # back on legacy afterwards; the snapshot itself always stays legacy. TREX_VM_STACK=linux_based does the same for the
 # real-tier tests (make check-real); the default and every other recorder run legacy.
 # p5 records the monitor/daemon fixtures, p5-stf the daemon-started STF run, file listings and upload gate; afterwards (whatever the recorder's rc) it stops the guest's daemon and puts TRex back on
 # the stateless stack (vm/daemon.sh stop, vm/mode.sh stateless), and exits with the recorder's rc.
-# TREX_VM_MARK=restarts_trex (make check-daemon-real, jammy only) runs the tests that restart the guest's TRex; the default
-# mark is `real and not restarts_trex`. The snapshot is never saved by any of this.
+# TREX_VM_MARK=restarts_trex (make check-daemon-real, jammy only) runs the tests that restart the guest's TRex, except the
+# EMU ones (`restarts_trex and not emu_real`: those run only under check-emu-real); the default mark is
+# `real and not restarts_trex`. The snapshot is never saved by any of this.
+# p7 records the EMU fixtures; afterwards (whatever the recorder's rc) it puts TRex back on the stateless stack (vm/mode.sh stateless).
+# TREX_VM_MARK=emu_real (make check-emu-real, jammy only) runs the EMU-under-TRex tests, then does the same.
 # The guest comes from TREX_VM_GUEST (vm/guests.sh; default jammy); recorders run on jammy only.
 # TREX_VM_SNAPSHOT overrides the snapshot tag (default trex_ready).
 set -u
-case "${TREX_VM_RECORD:-}" in ""|p2|p3|p3a|p3b|p3b-v6|p3c|p5|p5-stf|netem) ;; *) echo "UNAVAILABLE: TREX_VM_RECORD must be p2, p3, p3a, p3b, p3b-v6, p3c, p5, p5-stf or netem"; exit 2;; esac
+case "${TREX_VM_RECORD:-}" in ""|p2|p3|p3a|p3b|p3b-v6|p3c|p5|p5-stf|p7|netem) ;; *) echo "UNAVAILABLE: TREX_VM_RECORD must be p2, p3, p3a, p3b, p3b-v6, p3c, p5, p5-stf, p7 or netem"; exit 2;; esac
 HERE=$(cd "$(dirname "$0")" && pwd); REPO=$(dirname "$HERE")
 . "$HERE/guests.sh" || exit 2
 W=$TREX_VM_DIR
@@ -21,8 +24,11 @@ fi
 case "${TREX_VM_MARK:-}" in
   "") ;;
   restarts_trex) [ "$TREX_VM_CODENAME" = jammy ] || { echo "UNAVAILABLE: TREX_VM_MARK=restarts_trex runs on jammy only"; exit 2; } ;;
-  *) echo "UNAVAILABLE: TREX_VM_MARK must be empty or restarts_trex"; exit 2 ;;
+  emu_real) [ "$TREX_VM_CODENAME" = jammy ] || { echo "UNAVAILABLE: TREX_VM_MARK=emu_real runs on jammy only"; exit 2; } ;;
+  *) echo "UNAVAILABLE: TREX_VM_MARK must be empty, restarts_trex or emu_real"; exit 2 ;;
 esac
+MARK_EXPR=${TREX_VM_MARK:-real and not restarts_trex}
+[ "${TREX_VM_MARK:-}" = restarts_trex ] && MARK_EXPR="restarts_trex and not emu_real"
 STACK=${TREX_VM_STACK:-legacy}; [ "${TREX_VM_RECORD:-}" = p3b-v6 ] && STACK=linux_based
 case "$STACK" in legacy|linux_based) ;; *) echo "UNAVAILABLE: TREX_VM_STACK must be legacy or linux_based"; exit 2;; esac
 [ -f "$W/trex.qcow2" ] || { echo "UNAVAILABLE: no VM image at $W (see vm/README.md)"; exit 2; }
@@ -52,12 +58,14 @@ if [ -n "${TREX_VM_RECORD:-}" ]; then
     uv run --project backend python -I -B "vm/record_${TREX_VM_RECORD//-/_}.py" "tests/fixtures/${TREX_VM_RECORD}"
   rc=$?
   if [ "$TREX_VM_RECORD" = p5 ] || [ "$TREX_VM_RECORD" = p5-stf ]; then "$HERE/daemon.sh" stop; "$HERE/mode.sh" stateless; fi
+  if [ "$TREX_VM_RECORD" = p7 ]; then "$HERE/mode.sh" stateless; fi
   [ "$STACK" = linux_based ] && "$HERE/stack.sh" legacy
   exit $rc
 else
   cd "$REPO" && TREX_REAL_HOST=127.0.0.1 TREX_VM_MONITOR=$W/monitor.sock \
-    systemd-run --user --scope -q -p MemoryMax=4G -p MemorySwapMax=0 -- uv run --project backend pytest -m "${TREX_VM_MARK:-real and not restarts_trex}" -v -s
+    systemd-run --user --scope -q -p MemoryMax=4G -p MemorySwapMax=0 -- uv run --project backend pytest -m "$MARK_EXPR" -v -s
   rc=$?
+  if [ "${TREX_VM_MARK:-}" = emu_real ]; then "$HERE/mode.sh" stateless; fi
   [ "$STACK" = linux_based ] && "$HERE/stack.sh" legacy
   exit $rc
 fi

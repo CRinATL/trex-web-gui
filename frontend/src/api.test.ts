@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { acquire, ApiError, connect, getAbout } from './api'
+import * as api from './api'
 
 function stubFetch(status: number, body: unknown, statusText = 'Err') {
   vi.stubGlobal('fetch', vi.fn(async () => ({
@@ -52,5 +53,26 @@ describe('api error mapping', () => {
   it('returns the parsed body on success', async () => {
     stubFetch(200, { app_version: '1' })
     expect(await getAbout()).toEqual({ app_version: '1' })
+  })
+})
+
+describe('EMU calls', () => {
+  const ok = () => vi.fn(async () => ({ ok: true, status: 200, statusText: 'OK', json: async () => ({}) }))
+  it('macText formats six ints as colon-hex', () => {
+    expect(api.macText([0, 0, 0, 1, 0, 255])).toBe('00:00:00:01:00:ff')
+  })
+  it('the counters call sends the scope, the namespace key and the MAC as colon-hex', async () => {
+    const f = ok()
+    vi.stubGlobal('fetch', f)
+    try {
+      await api.emuCounters('client', { ns: { vport: 1, tci: [10, 20] }, mac: [170, 187, 204, 221, 238, 255], plugin: 'arp' })
+      await api.emuCounters('ctx', { meta: true })
+      await api.emuClients({ vport: 0 }, 100, 50)
+    } finally { vi.unstubAllGlobals() }
+    expect(f.mock.calls.map((c) => (c as unknown[])[0])).toEqual([
+      '/api/emu/counters?scope=client&plugin=arp&vport=1&tci=10,20&tpid=0,0&mac=aa:bb:cc:dd:ee:ff',
+      '/api/emu/counters?scope=ctx&meta=true',
+      '/api/emu/clients?vport=0&tci=0,0&tpid=0,0&offset=100&limit=50',
+    ])
   })
 })

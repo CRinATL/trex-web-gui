@@ -1,9 +1,10 @@
 // state.tsx exports the reducer and hook beside the provider by design (brief); fast refresh falls back to a full reload here
 import { createContext, useCallback, useContext, useEffect, useMemo, useReducer, type ReactNode } from 'react'
 import * as api from './api'
-import { type BusyKind, type CaptureMsg, type CaptureSaveMsg, type CapturePktsMsg, type Neighbour, type PingLine, type PingMsg, type PortLabelsMsg, type PortView, type RpcMsg, type SetupLoadError, type TestSetup, type StatsMsg, type MonitorMsg, type MonitorTarget, type DaemonMsg, type DaemonHint, type PgidMsg, type ServerMsg, type SettingsMsg, type SessionSnapshot, type UtilMsg } from './api'
+import { type BusyKind, type CaptureMsg, type CaptureSaveMsg, type CapturePktsMsg, type Neighbour, type PingLine, type PingMsg, type PortLabelsMsg, type PortView, type RpcMsg, type SetupLoadError, type TestSetup, type StatsMsg, type MonitorMsg, type MonitorTarget, type DaemonMsg, type EmuMsg, type DaemonHint, type PgidMsg, type ServerMsg, type SettingsMsg, type SessionSnapshot, type UtilMsg } from './api'
 import { captureStore } from './captureStore'
 import { dashboardPrefs } from './dashboardPrefs'
+import { emuStore } from './emuStore'
 import { publishLog } from './eventsChannel'
 import { monitorStore } from './monitorStore'
 import { pgidStore } from './pgidStats'
@@ -248,6 +249,8 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       if (t === 'util') { utilStore.push(m as UtilMsg); return }
       // The Monitor is its own connection: no connect_seq below touches this store; only a message naming another target resets it.
       if (t === 'monitor') { monitorStore.push(m as MonitorMsg); return }
+      // The EMU server's state is its own connection, like the Monitor: no Control connect_seq touches it.
+      if (t === 'emu') { emuStore.push(m as EmuMsg); return }
       // up to 50 rows every 0.5 s: outside the reducer, like stats
       if (t === 'capture_pkts') { captureStore.push(m as CapturePktsMsg); return }
       if (t === 'session') {

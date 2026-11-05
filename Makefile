@@ -26,7 +26,7 @@ PYTEST_DIST ?= worksteal
 # vmThreads keeps every vitest worker in one process, so test-js gets the same cap as pytest; CI empties it.
 VITEST_CAP ?= systemd-run --user --scope -q -p MemoryMax=8G -p MemorySwapMax=0 --
 PYTEST  := systemd-run --user --scope -q -p MemoryMax=8G -p MemorySwapMax=0 -- $(UV) pytest
-.PHONY: FORCE check check-golden lint typecheck test test-py test-js build check-py check-real check-real-all check-daemon-real record-p2 record-p3 record-p3a record-p3b record-p3b-v6 record-p3c record-p5 record-p5-stf record-netem vendor dev wire-fixtures citations deferred docstrings api-docs wheel install-smoke install-smoke-run release-rc release release-rc-publish release-build release-publish parity parity-sync
+.PHONY: FORCE check check-golden lint typecheck test test-py test-js build check-py check-real check-real-all check-daemon-real check-emu-real record-p2 record-p3 record-p3a record-p3b record-p3b-v6 record-p3c record-p5 record-p5-stf record-p7 record-netem vendor dev wire-fixtures citations deferred docstrings api-docs wheel install-smoke install-smoke-run release-rc release release-rc-publish release-build release-publish parity parity-sync
 
 # The gates below run their steps one at a time through scripts/gate.py: each step's usual time, the expected end,
 # a status file (`python3 -I scripts/gate.py status`) and a timing history in .superpowers/gate/.
@@ -125,8 +125,14 @@ record-p5:    # P5: the monitor and daemon fixtures; real.sh stops the daemon an
 record-p5-stf:    # P5: a daemon-started STF run, the file listings and the upload gate; real.sh stops the daemon and restores stateless
 	TREX_VM_RECORD=p5-stf vm/real.sh
 
-check-daemon-real:    # P5: the real tests that restart the guest's TRex (marker restarts_trex); jammy only
+check-daemon-real:    # P5: the real tests that restart the guest's TRex (restarts_trex and not emu_real: EMU's run in check-emu-real); jammy only
 	TREX_VM_MARK=restarts_trex vm/real.sh
+
+record-p7:    # P7: the EMU fixtures (standalone trex-emu, vm/emu.sh); real.sh restores stateless afterwards
+	TREX_VM_RECORD=p7 vm/real.sh
+
+check-emu-real:    # P7: the real tests of EMU under TRex --emu (marker emu_real); jammy only; real.sh restores stateless
+	TREX_VM_MARK=emu_real vm/real.sh
 
 record-netem:    # P3b follow-up 4: needs TREX_NETEM_BEFORE, a 4de803a worktree (git worktree add --detach <dir> 4de803a)
 	test -d "$$TREX_NETEM_BEFORE" || { echo "TREX_NETEM_BEFORE must name a 4de803a worktree"; exit 2; }

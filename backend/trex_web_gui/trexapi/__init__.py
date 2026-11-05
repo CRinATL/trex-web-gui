@@ -23,9 +23,12 @@ from .client import (
     unmark_pending,
 )
 from .decode import Summary
+from .emu import EMU_API, EmuInfo, EmuRpc, translate_emu
+from .emu import METHODS as EMU_METHODS
 from .errors import (
     SUPPORTED_VERSION,
     CommandRefused,
+    EmuUnsupported,
     ServerRestarted,
     ServerUnreachable,
     TrexApiError,
@@ -100,7 +103,8 @@ from .rawrpc import RawRpc, RawRpcError, port_owners
 from .stats import MAX_PGIDS, PgidView, StatsView, UtilView, read_pgid_stats, read_stats, read_util
 
 __all__ = ["AddressRange", "ArpResult", "BuildResult", "CaptureRow", "CaptureStarted", "ClientEvent",
-           "CommandRefused", "Decompiled", "Definitions", "DocFromBinary", "Fetched", "LOSS_EVENTS",
+           "CommandRefused", "Decompiled", "Definitions", "DocFromBinary", "EMU_API", "EMU_METHODS",
+           "EmuInfo", "EmuRpc", "EmuUnsupported", "Fetched", "LOSS_EVENTS",
            "LoadedProfile", "MAX_PGIDS", "MAX_RESULT_PCAP", "Neighbour", "PACKET_QUEUE_S",
            "PACKET_START_S", "PACKET_TIMEOUT_S", "PENDING_ACQUIRE_S", "PROFILE_SUFFIXES", "PacketEngine",
            "PacketError", "PcapOptions", "PcapPage", "PgidView", "PingLine", "PortView", "ProfileError",
@@ -115,4 +119,5 @@ __all__ = ["AddressRange", "ArpResult", "BuildResult", "CaptureRow", "CaptureSta
            "ping_once", "port_owners", "port_views", "ports_of", "read_pgid_stats", "read_stats",
            "read_util", "read_xstats", "round_trip", "scan_neighbours", "service_on",
            "service_restore", "service_state", "set_l2", "set_l3", "set_vlan", "streams_from_json",
-           "sync_port", "sync_ports", "template_stream", "to_python", "translate", "unmark_pending"]
+           "sync_port", "sync_ports", "template_stream", "to_python", "translate", "translate_emu",
+           "unmark_pending"]

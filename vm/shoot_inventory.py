@@ -11,7 +11,8 @@ Control tab's status chips). Ports 0 and 1 of the guest are looped back to each 
 live traffic on both while it shoots. Two steps near the end change the guest: "daemon" runs
 `vm/daemon.sh start` and `vm/mode.sh stop` (the guest's TRex is stopped for a stateful run) and always runs
 `vm/daemon.sh stop` afterwards; "monitor_stateful" starts tests/fake/fake_trex.py on ports 18501/18500 and
-stops it again. The VM is left with no TRex running, so finish with `vm/demo.sh down`.
+stops it again; "emu" starts tests/fake/fake_emu.py on port 18510 (seeded with namespaces and clients)
+and stops it again. The VM is left with no TRex running, so finish with `vm/demo.sh down`.
 
 Usage (the guest, RPC/PUB ports 4501/4500 on jammy, must be up, `vm/demo.sh up`, and frontend/dist built;
 for a guest other than jammy first run eval "$(TREX_VM_GUEST=<guest> vm/guests.sh)"):
@@ -58,6 +59,8 @@ FAKE_TREX = REPO / "tests/fake/fake_trex.py"
 FAKE_FIXTURES = REPO / "tests/fixtures"
 STATEFUL_REPLAY = REPO / "tests/fixtures/p5/pub-stateful.jsonl"     # a recorded stateful TRex's PUB frames
 FAKE_RPC_PORT, FAKE_PUB_PORT = 18501, 18500
+FAKE_EMU = REPO / "tests/fake/fake_emu.py"
+FAKE_EMU_PORT = 18510
 # The fixture profiles the shoot imports or assigns. Each is copied under the scratch dir, so the screens show
 # the scratch path, not the repo's. None imports a sibling file (only argparse and trex_stl_lib), so copying
 # the file itself is enough.
@@ -1244,6 +1247,39 @@ async def step_daemon(c):
         vm_script("daemon.sh", "stop")
 
 
+async def step_emu(c):
+    """118-119: the EMU page connected to fake_emu.py on port 18510 (three seeded namespaces of four clients
+    each): the page with its namespaces, then a namespace selected with its clients and the counters below."""
+    b = c.b
+    if port_in_use(FAKE_EMU_PORT):
+        raise RuntimeError(f"port {FAKE_EMU_PORT} is in use; the fake EMU needs it")
+    fake = subprocess.Popen([sys.executable, "-I", "-B", str(FAKE_EMU), str(FAKE_EMU_PORT),
+                             "--foreign-ns", "3", "--clients", "4"],
+                            stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
+    try:
+        ready = fake.stdout.readline() if fake.stdout else ""
+        if not ready.startswith("[fake-emu] ready"):
+            raise RuntimeError(f"fake_emu did not start: {ready!r}")
+        await b.click("EMU", "a")
+        await b.fill("Host", "127.0.0.1", ".emu-page")
+        await b.fill("Port", str(FAKE_EMU_PORT), ".emu-page")
+        await b.click("Connect", "button", ".emu-page")
+        await b.wait_for("~Clients of", "button", timeout=40)
+        await asyncio.sleep(3)
+        await b.shot("118-emu-connected")
+        await b.click("~Clients of", "button")
+        await b.wait_for("~Select client", "button", timeout=40)
+        await asyncio.sleep(3)
+        await b.tall_shot("119-emu-namespace-clients-counters", 1500)
+        await b.click("Disconnect", "button", ".emu-page")
+    finally:
+        fake.terminate()
+        try:
+            fake.wait(10)
+        except subprocess.TimeoutExpired:
+            fake.kill()
+
+
 async def step_pages(c):
     """83: the backend stopped."""
     b = c.b
@@ -1260,7 +1296,8 @@ STEPS = [("shell", step_shell), ("disconnected", step_disconnected), ("connect",
          ("capture", step_capture), ("setups", step_setups), ("themes", step_themes),
          ("settings", step_settings), ("studio", step_studio), ("packet", step_packet),
          ("monitor", step_monitor),
-         ("monitor_stateful", step_monitor_stateful), ("daemon", step_daemon), ("pages", step_pages)]
+         ("monitor_stateful", step_monitor_stateful), ("daemon", step_daemon),
+         ("emu", step_emu), ("pages", step_pages)]
 
 
 async def run(scratch, out, until, steps=None, stage=None):

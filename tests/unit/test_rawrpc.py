@@ -162,3 +162,20 @@ def test_port_owners_on_a_dead_port_raises() -> None:
     """Nothing listening is ServerUnreachable, which the daemon session reads as 'owners unknown'."""
     with pytest.raises(ServerUnreachable):
         port_owners("127.0.0.1", free_port_pair()[0], timeout_s=0.3)
+
+
+def test_reply_max_widens_the_cap(make_rep: Any) -> None:
+    """A 1.5 MiB reply is refused under the default 1 MiB cap and accepted by a client built with
+    reply_max=2 MiB, so a RawRpc that ignored `reply_max` would fail here."""
+    body = json.dumps({"result": "x" * (3 << 19), "id": 1}).encode()
+    assert rawrpc.RPC_REPLY_MAX_BYTES < len(body) < 2 << 20
+    rep = make_rep(lambda raw: body)
+    narrow = RawRpc("127.0.0.1", rep.port, 2.0)
+    wide = RawRpc("127.0.0.1", rep.port, 2.0, reply_max=2 << 20)
+    try:
+        with pytest.raises(RawRpcError, match="oversize"):
+            narrow.call("x")
+        assert len(wide.call("x")) == 3 << 19
+    finally:
+        narrow.close()
+        wide.close()

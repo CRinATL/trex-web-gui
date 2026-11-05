@@ -1,0 +1,2072 @@
+{
+  "client": {
+    "tables": {
+      "mdns": [
+        {
+          "help": "Error while decoding init Json",
+          "info": 20,
+          "name": "invalidInitJson",
+          "unit": "ops",
+          "value": 0,
+          "zero": false
+        },
+        {
+          "help": "Error creating socket",
+          "info": 20,
+          "name": "invalidSocket",
+          "unit": "ops",
+          "value": 0,
+          "zero": false
+        },
+        {
+          "help": "Error writing in socket",
+          "info": 20,
+          "name": "socketWriteError",
+          "unit": "ops",
+          "value": 0,
+          "zero": false
+        },
+        {
+          "help": "Num of mDNS queries transmitted",
+          "info": 18,
+          "name": "pktTxMDnsQuery",
+          "unit": "pkts",
+          "value": 0,
+          "zero": true
+        },
+        {
+          "help": "Num of mDNS queries received",
+          "info": 18,
+          "name": "pktRxMDnsQuery",
+          "unit": "pkts",
+          "value": 0,
+          "zero": true
+        },
+        {
+          "help": "Num of mDNS responses transmitted",
+          "info": 18,
+          "name": "pktTxMDnsResponse",
+          "unit": "pkts",
+          "value": 0,
+          "zero": true
+        },
+        {
+          "help": "Num of Ipv6 queries that can't be sent because no IPv6",
+          "info": 20,
+          "name": "ipv6QueryNoPlugin",
+          "unit": "query",
+          "value": 0,
+          "zero": false
+        },
+        {
+          "help": "Num of Ipv6 queries that can't be answered because no IPv6",
+          "info": 20,
+          "name": "ipv6ResponseNoPlugin",
+          "unit": "query",
+          "value": 0,
+          "zero": false
+        },
+        {
+          "help": "Num of AAAA queries that can't be answered because of no IPv6",
+          "info": 18,
+          "name": "queryAAAANoIpv6",
+          "unit": "query",
+          "value": 0,
+          "zero": false
+        },
+        {
+          "help": "Num of PTR queries that can't be answered because domain name unspecified",
+          "info": 18,
+          "name": "queryPTRNoDomainName",
+          "unit": "query",
+          "value": 0,
+          "zero": false
+        },
+        {
+          "help": "Num of TXT queries that can't be answered because txt unspecified",
+          "info": 18,
+          "name": "queryTXTNoTxtDefined",
+          "unit": "query",
+          "value": 0,
+          "zero": false
+        },
+        {
+          "help": "Num of queries received with an unsupported type",
+          "info": 18,
+          "name": "unsupportedDnsType",
+          "unit": "query",
+          "value": 0,
+          "zero": false
+        }
+      ]
+    },
+    "unsupported": [
+      "appsim",
+      "cdp",
+      "dhcp",
+      "dhcpsrv",
+      "dhcpv6",
+      "dns",
+      "dot1x",
+      "ipfix",
+      "lldp",
+      "tdl",
+      "transport"
+    ]
+  },
+  "ctx": {
+    "tables": {
+      "ctx": [
+        {
+          "help": "add ns",
+          "info": 18,
+          "name": "addNs",
+          "unit": "ops",
+          "value": 2,
+          "zero": false
+        },
+        {
+          "help": "remove ns",
+          "info": 18,
+          "name": "removeNs",
+          "unit": "ops",
+          "value": 0,
+          "zero": false
+        },
+        {
+          "help": "active ns",
+          "info": 18,
+          "name": "activeNs",
+          "unit": "ops",
+          "value": 2,
+          "zero": false
+        }
+      ],
+      "mbuf-1024": [
+        {
+          "help": "allocation of mbufs",
+          "info": 18,
+          "name": "mbufAlloc",
+          "unit": "ops",
+          "value": 0,
+          "zero": false
+        },
+        {
+          "help": "deallocation of mbufs",
+          "info": 18,
+          "name": "mbufFree",
+          "unit": "ops",
+          "value": 0,
+          "zero": false
+        },
+        {
+          "help": "allocation of mbufs from cache",
+          "info": 18,
+          "name": "mbufAllocCache",
+          "unit": "ops",
+          "value": 0,
+          "zero": false
+        },
+        {
+          "help": "deallocation of mbufs from cache",
+          "info": 18,
+          "name": "mbufFreeCache",
+          "unit": "ops",
+          "value": 0,
+          "zero": false
+        }
+      ],
+      "mbuf-128": [
+        {
+          "help": "allocation of mbufs",
+          "info": 18,
+          "name": "mbufAlloc",
+          "unit": "ops",
+          "value": 6,
+          "zero": false
+        },
+        {
+          "help": "deallocation of mbufs",
+          "info": 18,
+          "name": "mbufFree",
+          "unit": "ops",
+          "value": 0,
+          "zero": false
+        },
+        {
+          "help": "allocation of mbufs from cache",
+          "info": 18,
+          "name": "mbufAllocCache",
+          "unit": "ops",
+          "value": 6,
+          "zero": false
+        },
+        {
+          "help": "deallocation of mbufs from cache",
+          "info": 18,
+          "name": "mbufFreeCache",
+          "unit": "ops",
+          "value": 12,
+          "zero": false
+        }
+      ],
+      "mbuf-2048": [
+        {
+          "help": "allocation of mbufs",
+          "info": 18,
+          "name": "mbufAlloc",
+          "unit": "ops",
+          "value": 0,
+          "zero": false
+        },
+        {
+          "help": "deallocation of mbufs",
+          "info": 18,
+          "name": "mbufFree",
+          "unit": "ops",
+          "value": 0,
+          "zero": false
+        },
+        {
+          "help": "allocation of mbufs from cache",
+          "info": 18,
+          "name": "mbufAllocCache",
+          "unit": "ops",
+          "value": 0,
+          "zero": false
+        },
+        {
+          "help": "deallocation of mbufs from cache",
+          "info": 18,
+          "name": "mbufFreeCache",
+          "unit": "ops",
+          "value": 0,
+          "zero": false
+        }
+      ],
+      "mbuf-256": [
+        {
+          "help": "allocation of mbufs",
+          "info": 18,
+          "name": "mbufAlloc",
+          "unit": "ops",
+          "value": 0,
+          "zero": false
+        },
+        {
+          "help": "deallocation of mbufs",
+          "info": 18,
+          "name": "mbufFree",
+          "unit": "ops",
+          "value": 0,
+          "zero": false
+        },
+        {
+          "help": "allocation of mbufs from cache",
+          "info": 18,
+          "name": "mbufAllocCache",
+          "unit": "ops",
+          "value": 0,
+          "zero": false
+        },
+        {
+          "help": "deallocation of mbufs from cache",
+          "info": 18,
+          "name": "mbufFreeCache",
+          "unit": "ops",
+          "value": 0,
+          "zero": false
+        }
+      ],
+      "mbuf-4096": [
+        {
+          "help": "allocation of mbufs",
+          "info": 18,
+          "name": "mbufAlloc",
+          "unit": "ops",
+          "value": 0,
+          "zero": false
+        },
+        {
+          "help": "deallocation of mbufs",
+          "info": 18,
+          "name": "mbufFree",
+          "unit": "ops",
+          "value": 0,
+          "zero": false
+        },
+        {
+          "help": "allocation of mbufs from cache",
+          "info": 18,
+          "name": "mbufAllocCache",
+          "unit": "ops",
+          "value": 0,
+          "zero": false
+        },
+        {
+          "help": "deallocation of mbufs from cache",
+          "info": 18,
+          "name": "mbufFreeCache",
+          "unit": "ops",
+          "value": 0,
+          "zero": false
+        }
+      ],
+      "mbuf-512": [
+        {
+          "help": "allocation of mbufs",
+          "info": 18,
+          "name": "mbufAlloc",
+          "unit": "ops",
+          "value": 0,
+          "zero": false
+        },
+        {
+          "help": "deallocation of mbufs",
+          "info": 18,
+          "name": "mbufFree",
+          "unit": "ops",
+          "value": 0,
+          "zero": false
+        },
+        {
+          "help": "allocation of mbufs from cache",
+          "info": 18,
+          "name": "mbufAllocCache",
+          "unit": "ops",
+          "value": 0,
+          "zero": false
+        },
+        {
+          "help": "deallocation of mbufs from cache",
+          "info": 18,
+          "name": "mbufFreeCache",
+          "unit": "ops",
+          "value": 0,
+          "zero": false
+        }
+      ],
+      "mbuf-9216": [
+        {
+          "help": "allocation of mbufs",
+          "info": 18,
+          "name": "mbufAlloc",
+          "unit": "ops",
+          "value": 0,
+          "zero": false
+        },
+        {
+          "help": "deallocation of mbufs",
+          "info": 18,
+          "name": "mbufFree",
+          "unit": "ops",
+          "value": 0,
+          "zero": false
+        },
+        {
+          "help": "allocation of mbufs from cache",
+          "info": 18,
+          "name": "mbufAllocCache",
+          "unit": "ops",
+          "value": 0,
+          "zero": false
+        },
+        {
+          "help": "deallocation of mbufs from cache",
+          "info": 18,
+          "name": "mbufFreeCache",
+          "unit": "ops",
+          "value": 0,
+          "zero": false
+        }
+      ],
+      "mbuf-pool": [
+        {
+          "help": "allocation of mbufs",
+          "info": 18,
+          "name": "mbufAlloc",
+          "unit": "ops",
+          "value": 6,
+          "zero": false
+        },
+        {
+          "help": "deallocation of mbufs",
+          "info": 18,
+          "name": "mbufFree",
+          "unit": "ops",
+          "value": 0,
+          "zero": false
+        },
+        {
+          "help": "allocation of mbufs from cache",
+          "info": 18,
+          "name": "mbufAllocCache",
+          "unit": "ops",
+          "value": 6,
+          "zero": false
+        },
+        {
+          "help": "deallocation of mbufs from cache",
+          "info": 18,
+          "name": "mbufFreeCache",
+          "unit": "ops",
+          "value": 12,
+          "zero": false
+        }
+      ],
+      "parser": [
+        {
+          "help": "eap packets are too short",
+          "info": 20,
+          "name": "errEAPolTooShort",
+          "unit": "pkts",
+          "value": 0,
+          "zero": false
+        },
+        {
+          "help": "eapol packets",
+          "info": 18,
+          "name": "eapolPkts",
+          "unit": "pkts",
+          "value": 0,
+          "zero": false
+        },
+        {
+          "help": "eapol bytes",
+          "info": 18,
+          "name": "eapolBytes",
+          "unit": "bytes",
+          "value": 0,
+          "zero": false
+        },
+        {
+          "help": "internal handler",
+          "info": 20,
+          "name": "errInternalHandler",
+          "unit": "pkts",
+          "value": 0,
+          "zero": false
+        },
+        {
+          "help": "parser error",
+          "info": 20,
+          "name": "errParser",
+          "unit": "pkts",
+          "value": 0,
+          "zero": false
+        },
+        {
+          "help": "arp too short",
+          "info": 20,
+          "name": "errArpTooShort",
+          "unit": "pkts",
+          "value": 0,
+          "zero": false
+        },
+        {
+          "help": "icmpv4 too short",
+          "info": 20,
+          "name": "errIcmpv4TooShort",
+          "unit": "pkts",
+          "value": 0,
+          "zero": false
+        },
+        {
+          "help": "igmpv4 too short",
+          "info": 20,
+          "name": "errIgmpv4TooShort",
+          "unit": "pkts",
+          "value": 0,
+          "zero": false
+        },
+        {
+          "help": "udp too short",
+          "info": 20,
+          "name": "errTcpTooShort",
+          "unit": "pkts",
+          "value": 0,
+          "zero": false
+        },
+        {
+          "help": "udp too short",
+          "info": 20,
+          "name": "errUdpTooShort",
+          "unit": "pkts",
+          "value": 0,
+          "zero": false
+        },
+        {
+          "help": "dot1q too short",
+          "info": 20,
+          "name": "errDot1qTooShort",
+          "unit": "pkts",
+          "value": 0,
+          "zero": false
+        },
+        {
+          "help": "dot1q too long",
+          "info": 20,
+          "name": "errToManyDot1q",
+          "unit": "pkts",
+          "value": 0,
+          "zero": false
+        },
+        {
+          "help": "ipv4 too short",
+          "info": 20,
+          "name": "errIPv4TooShort",
+          "unit": "pkts",
+          "value": 0,
+          "zero": false
+        },
+        {
+          "help": "ipv4 header too short",
+          "info": 20,
+          "name": "errIPv4HeaderTooShort",
+          "unit": "pkts",
+          "value": 0,
+          "zero": false
+        },
+        {
+          "help": "ipv4 checksum error",
+          "info": 20,
+          "name": "errIPv4cs",
+          "unit": "pkts",
+          "value": 0,
+          "zero": false
+        },
+        {
+          "help": "tcp packets",
+          "info": 20,
+          "name": "errTCP",
+          "unit": "pkts",
+          "value": 0,
+          "zero": false
+        },
+        {
+          "help": "udp packets",
+          "info": 20,
+          "name": "errUDP",
+          "unit": "pkts",
+          "value": 0,
+          "zero": false
+        },
+        {
+          "help": "arp packets",
+          "info": 18,
+          "name": "arpPkts",
+          "unit": "pkts",
+          "value": 0,
+          "zero": false
+        },
+        {
+          "help": "arp bytes",
+          "info": 18,
+          "name": "arpBytes",
+          "unit": "bytes",
+          "value": 0,
+          "zero": false
+        },
+        {
+          "help": "icmp packets",
+          "info": 18,
+          "name": "icmpPkts",
+          "unit": "pkts",
+          "value": 0,
+          "zero": false
+        },
+        {
+          "help": "icmp bytes",
+          "info": 18,
+          "name": "icmpBytes",
+          "unit": "bytes",
+          "value": 0,
+          "zero": false
+        },
+        {
+          "help": "igmp packets",
+          "info": 18,
+          "name": "igmpPkts",
+          "unit": "pkts",
+          "value": 0,
+          "zero": false
+        },
+        {
+          "help": "igmp bytes",
+          "info": 18,
+          "name": "igmpBytes",
+          "unit": "bytes",
+          "value": 0,
+          "zero": false
+        },
+        {
+          "help": "dhcp packets",
+          "info": 18,
+          "name": "dhcpPkts",
+          "unit": "pkts",
+          "value": 0,
+          "zero": false
+        },
+        {
+          "help": "dhcp bytes",
+          "info": 18,
+          "name": "dhcpBytes",
+          "unit": "bytes",
+          "value": 0,
+          "zero": false
+        },
+        {
+          "help": "Dhcp server packets",
+          "info": 18,
+          "name": "dhcpSrvPkts",
+          "unit": "pkts",
+          "value": 0,
+          "zero": false
+        },
+        {
+          "help": "Dhcp server bytes",
+          "info": 18,
+          "name": "dhcpSrvBytes",
+          "unit": "bytes",
+          "value": 0,
+          "zero": false
+        },
+        {
+          "help": "mDns packets",
+          "info": 18,
+          "name": "mDnsPkts",
+          "unit": "pkts",
+          "value": 0,
+          "zero": false
+        },
+        {
+          "help": "mDns bytes",
+          "info": 18,
+          "name": "mDnsBytes",
+          "unit": "bytes",
+          "value": 0,
+          "zero": false
+        },
+        {
+          "help": "tcp packets",
+          "info": 18,
+          "name": "tcpPkts",
+          "unit": "pkts",
+          "value": 0,
+          "zero": false
+        },
+        {
+          "help": "tcp bytes",
+          "info": 18,
+          "name": "tcpBytes",
+          "unit": "bytes",
+          "value": 0,
+          "zero": false
+        },
+        {
+          "help": "udp packets",
+          "info": 18,
+          "name": "udpPkts",
+          "unit": "pkts",
+          "value": 0,
+          "zero": false
+        },
+        {
+          "help": "udp bytes",
+          "info": 18,
+          "name": "udpBytes",
+          "unit": "bytes",
+          "value": 0,
+          "zero": false
+        },
+        {
+          "help": "ipv6 too short",
+          "info": 20,
+          "name": "errIPv6TooShort",
+          "unit": "pkts",
+          "value": 0,
+          "zero": false
+        },
+        {
+          "help": "ipv6 hop limit",
+          "info": 20,
+          "name": "errIPv6HopLimitDrop",
+          "unit": "pkts",
+          "value": 0,
+          "zero": false
+        },
+        {
+          "help": "ipv6 no payload",
+          "info": 20,
+          "name": "errIPv6Empty",
+          "unit": "pkts",
+          "value": 0,
+          "zero": false
+        },
+        {
+          "help": "icmpv6 too short",
+          "info": 20,
+          "name": "errIcmpv6TooShort",
+          "unit": "pkts",
+          "value": 0,
+          "zero": false
+        },
+        {
+          "help": "Icmpv4 checksum error",
+          "info": 20,
+          "name": "errIcmpv4Cse",
+          "unit": "pkts",
+          "value": 0,
+          "zero": false
+        },
+        {
+          "help": "Icmpv6 checksum error",
+          "info": 20,
+          "name": "errIcmpv6Cse",
+          "unit": "pkts",
+          "value": 0,
+          "zero": false
+        },
+        {
+          "help": "Icmpv6 unsupported type/code",
+          "info": 20,
+          "name": "errIcmpv6Unsupported",
+          "unit": "pkts",
+          "value": 0,
+          "zero": false
+        },
+        {
+          "help": "Icmpv6 pkts",
+          "info": 18,
+          "name": "Icmpv6Pkt",
+          "unit": "pkts",
+          "value": 0,
+          "zero": false
+        },
+        {
+          "help": "Icmpv6 bytes",
+          "info": 18,
+          "name": "Icmpv6Bytes",
+          "unit": "bytes",
+          "value": 0,
+          "zero": false
+        },
+        {
+          "help": "Icmpv6 jumbo option is not supported ",
+          "info": 20,
+          "name": "errIPv6OptJumbo",
+          "unit": "pkt",
+          "value": 0,
+          "zero": false
+        },
+        {
+          "help": "ipv6 fragment is not supported",
+          "info": 20,
+          "name": "errIPv6Fragment",
+          "unit": "pkt",
+          "value": 0,
+          "zero": false
+        },
+        {
+          "help": "ipv4 fragment is not supported",
+          "info": 20,
+          "name": "errIPv4Fragment",
+          "unit": "pkt",
+          "value": 0,
+          "zero": false
+        },
+        {
+          "help": "L3 proto is not supported",
+          "info": 20,
+          "name": "errL3ProtoUnsupported",
+          "unit": "pkt",
+          "value": 0,
+          "zero": false
+        },
+        {
+          "help": "packet is too short for parsing",
+          "info": 20,
+          "name": "errPacketIsTooShort",
+          "unit": "pkt",
+          "value": 0,
+          "zero": false
+        }
+      ],
+      "timerw": [
+        {
+          "help": "active timers",
+          "info": 18,
+          "name": "activeTimer",
+          "unit": "timers",
+          "value": 14,
+          "zero": false
+        },
+        {
+          "help": "ticks",
+          "info": 18,
+          "name": "ticks",
+          "unit": "ops",
+          "value": 13,
+          "zero": false
+        }
+      ],
+      "veth": [
+        {
+          "help": "RxZmqErr",
+          "info": 20,
+          "name": "RxZmqErr",
+          "unit": "pkts",
+          "value": 0,
+          "zero": false
+        },
+        {
+          "help": "TxPkts",
+          "info": 18,
+          "name": "TxPkts",
+          "unit": "pkts",
+          "value": 12,
+          "zero": false
+        },
+        {
+          "help": "TxBytes",
+          "info": 18,
+          "name": "TxBytes",
+          "unit": "bytes",
+          "value": 504,
+          "zero": false
+        },
+        {
+          "help": "RxPkts",
+          "info": 18,
+          "name": "RxPkts",
+          "unit": "pkts",
+          "value": 0,
+          "zero": false
+        },
+        {
+          "help": "RxBytes",
+          "info": 18,
+          "name": "RxBytes",
+          "unit": "bytes",
+          "value": 0,
+          "zero": false
+        },
+        {
+          "help": "TxDropNotResolve",
+          "info": 20,
+          "name": "TxDropNotResolve",
+          "unit": "pkts",
+          "value": 0,
+          "zero": false
+        },
+        {
+          "help": "RxParseErr",
+          "info": 20,
+          "name": "RxParseErr",
+          "unit": "pkts",
+          "value": 0,
+          "zero": false
+        },
+        {
+          "help": "RxBatch",
+          "info": 20,
+          "name": "RxBatch",
+          "unit": "pkts",
+          "value": 0,
+          "zero": false
+        },
+        {
+          "help": "TxBatch",
+          "info": 20,
+          "name": "TxBatch",
+          "unit": "pkts",
+          "value": 2,
+          "zero": false
+        }
+      ]
+    },
+    "unsupported": []
+  },
+  "meta": {
+    "tables": {
+      "ctx": [
+        {
+          "help": "add ns",
+          "info": 18,
+          "name": "addNs",
+          "unit": "ops",
+          "value": null,
+          "zero": false
+        },
+        {
+          "help": "remove ns",
+          "info": 18,
+          "name": "removeNs",
+          "unit": "ops",
+          "value": null,
+          "zero": false
+        },
+        {
+          "help": "active ns",
+          "info": 18,
+          "name": "activeNs",
+          "unit": "ops",
+          "value": null,
+          "zero": false
+        }
+      ],
+      "mbuf-1024": [
+        {
+          "help": "allocation of mbufs",
+          "info": 18,
+          "name": "mbufAlloc",
+          "unit": "ops",
+          "value": null,
+          "zero": false
+        },
+        {
+          "help": "deallocation of mbufs",
+          "info": 18,
+          "name": "mbufFree",
+          "unit": "ops",
+          "value": null,
+          "zero": false
+        },
+        {
+          "help": "allocation of mbufs from cache",
+          "info": 18,
+          "name": "mbufAllocCache",
+          "unit": "ops",
+          "value": null,
+          "zero": false
+        },
+        {
+          "help": "deallocation of mbufs from cache",
+          "info": 18,
+          "name": "mbufFreeCache",
+          "unit": "ops",
+          "value": null,
+          "zero": false
+        }
+      ],
+      "mbuf-128": [
+        {
+          "help": "allocation of mbufs",
+          "info": 18,
+          "name": "mbufAlloc",
+          "unit": "ops",
+          "value": null,
+          "zero": false
+        },
+        {
+          "help": "deallocation of mbufs",
+          "info": 18,
+          "name": "mbufFree",
+          "unit": "ops",
+          "value": null,
+          "zero": false
+        },
+        {
+          "help": "allocation of mbufs from cache",
+          "info": 18,
+          "name": "mbufAllocCache",
+          "unit": "ops",
+          "value": null,
+          "zero": false
+        },
+        {
+          "help": "deallocation of mbufs from cache",
+          "info": 18,
+          "name": "mbufFreeCache",
+          "unit": "ops",
+          "value": null,
+          "zero": false
+        }
+      ],
+      "mbuf-2048": [
+        {
+          "help": "allocation of mbufs",
+          "info": 18,
+          "name": "mbufAlloc",
+          "unit": "ops",
+          "value": null,
+          "zero": false
+        },
+        {
+          "help": "deallocation of mbufs",
+          "info": 18,
+          "name": "mbufFree",
+          "unit": "ops",
+          "value": null,
+          "zero": false
+        },
+        {
+          "help": "allocation of mbufs from cache",
+          "info": 18,
+          "name": "mbufAllocCache",
+          "unit": "ops",
+          "value": null,
+          "zero": false
+        },
+        {
+          "help": "deallocation of mbufs from cache",
+          "info": 18,
+          "name": "mbufFreeCache",
+          "unit": "ops",
+          "value": null,
+          "zero": false
+        }
+      ],
+      "mbuf-256": [
+        {
+          "help": "allocation of mbufs",
+          "info": 18,
+          "name": "mbufAlloc",
+          "unit": "ops",
+          "value": null,
+          "zero": false
+        },
+        {
+          "help": "deallocation of mbufs",
+          "info": 18,
+          "name": "mbufFree",
+          "unit": "ops",
+          "value": null,
+          "zero": false
+        },
+        {
+          "help": "allocation of mbufs from cache",
+          "info": 18,
+          "name": "mbufAllocCache",
+          "unit": "ops",
+          "value": null,
+          "zero": false
+        },
+        {
+          "help": "deallocation of mbufs from cache",
+          "info": 18,
+          "name": "mbufFreeCache",
+          "unit": "ops",
+          "value": null,
+          "zero": false
+        }
+      ],
+      "mbuf-4096": [
+        {
+          "help": "allocation of mbufs",
+          "info": 18,
+          "name": "mbufAlloc",
+          "unit": "ops",
+          "value": null,
+          "zero": false
+        },
+        {
+          "help": "deallocation of mbufs",
+          "info": 18,
+          "name": "mbufFree",
+          "unit": "ops",
+          "value": null,
+          "zero": false
+        },
+        {
+          "help": "allocation of mbufs from cache",
+          "info": 18,
+          "name": "mbufAllocCache",
+          "unit": "ops",
+          "value": null,
+          "zero": false
+        },
+        {
+          "help": "deallocation of mbufs from cache",
+          "info": 18,
+          "name": "mbufFreeCache",
+          "unit": "ops",
+          "value": null,
+          "zero": false
+        }
+      ],
+      "mbuf-512": [
+        {
+          "help": "allocation of mbufs",
+          "info": 18,
+          "name": "mbufAlloc",
+          "unit": "ops",
+          "value": null,
+          "zero": false
+        },
+        {
+          "help": "deallocation of mbufs",
+          "info": 18,
+          "name": "mbufFree",
+          "unit": "ops",
+          "value": null,
+          "zero": false
+        },
+        {
+          "help": "allocation of mbufs from cache",
+          "info": 18,
+          "name": "mbufAllocCache",
+          "unit": "ops",
+          "value": null,
+          "zero": false
+        },
+        {
+          "help": "deallocation of mbufs from cache",
+          "info": 18,
+          "name": "mbufFreeCache",
+          "unit": "ops",
+          "value": null,
+          "zero": false
+        }
+      ],
+      "mbuf-9216": [
+        {
+          "help": "allocation of mbufs",
+          "info": 18,
+          "name": "mbufAlloc",
+          "unit": "ops",
+          "value": null,
+          "zero": false
+        },
+        {
+          "help": "deallocation of mbufs",
+          "info": 18,
+          "name": "mbufFree",
+          "unit": "ops",
+          "value": null,
+          "zero": false
+        },
+        {
+          "help": "allocation of mbufs from cache",
+          "info": 18,
+          "name": "mbufAllocCache",
+          "unit": "ops",
+          "value": null,
+          "zero": false
+        },
+        {
+          "help": "deallocation of mbufs from cache",
+          "info": 18,
+          "name": "mbufFreeCache",
+          "unit": "ops",
+          "value": null,
+          "zero": false
+        }
+      ],
+      "mbuf-pool": [
+        {
+          "help": "allocation of mbufs",
+          "info": 18,
+          "name": "mbufAlloc",
+          "unit": "ops",
+          "value": null,
+          "zero": false
+        },
+        {
+          "help": "deallocation of mbufs",
+          "info": 18,
+          "name": "mbufFree",
+          "unit": "ops",
+          "value": null,
+          "zero": false
+        },
+        {
+          "help": "allocation of mbufs from cache",
+          "info": 18,
+          "name": "mbufAllocCache",
+          "unit": "ops",
+          "value": null,
+          "zero": false
+        },
+        {
+          "help": "deallocation of mbufs from cache",
+          "info": 18,
+          "name": "mbufFreeCache",
+          "unit": "ops",
+          "value": null,
+          "zero": false
+        }
+      ],
+      "parser": [
+        {
+          "help": "eap packets are too short",
+          "info": 20,
+          "name": "errEAPolTooShort",
+          "unit": "pkts",
+          "value": null,
+          "zero": false
+        },
+        {
+          "help": "eapol packets",
+          "info": 18,
+          "name": "eapolPkts",
+          "unit": "pkts",
+          "value": null,
+          "zero": false
+        },
+        {
+          "help": "eapol bytes",
+          "info": 18,
+          "name": "eapolBytes",
+          "unit": "bytes",
+          "value": null,
+          "zero": false
+        },
+        {
+          "help": "internal handler",
+          "info": 20,
+          "name": "errInternalHandler",
+          "unit": "pkts",
+          "value": null,
+          "zero": false
+        },
+        {
+          "help": "parser error",
+          "info": 20,
+          "name": "errParser",
+          "unit": "pkts",
+          "value": null,
+          "zero": false
+        },
+        {
+          "help": "arp too short",
+          "info": 20,
+          "name": "errArpTooShort",
+          "unit": "pkts",
+          "value": null,
+          "zero": false
+        },
+        {
+          "help": "icmpv4 too short",
+          "info": 20,
+          "name": "errIcmpv4TooShort",
+          "unit": "pkts",
+          "value": null,
+          "zero": false
+        },
+        {
+          "help": "igmpv4 too short",
+          "info": 20,
+          "name": "errIgmpv4TooShort",
+          "unit": "pkts",
+          "value": null,
+          "zero": false
+        },
+        {
+          "help": "udp too short",
+          "info": 20,
+          "name": "errTcpTooShort",
+          "unit": "pkts",
+          "value": null,
+          "zero": false
+        },
+        {
+          "help": "udp too short",
+          "info": 20,
+          "name": "errUdpTooShort",
+          "unit": "pkts",
+          "value": null,
+          "zero": false
+        },
+        {
+          "help": "dot1q too short",
+          "info": 20,
+          "name": "errDot1qTooShort",
+          "unit": "pkts",
+          "value": null,
+          "zero": false
+        },
+        {
+          "help": "dot1q too long",
+          "info": 20,
+          "name": "errToManyDot1q",
+          "unit": "pkts",
+          "value": null,
+          "zero": false
+        },
+        {
+          "help": "ipv4 too short",
+          "info": 20,
+          "name": "errIPv4TooShort",
+          "unit": "pkts",
+          "value": null,
+          "zero": false
+        },
+        {
+          "help": "ipv4 header too short",
+          "info": 20,
+          "name": "errIPv4HeaderTooShort",
+          "unit": "pkts",
+          "value": null,
+          "zero": false
+        },
+        {
+          "help": "ipv4 checksum error",
+          "info": 20,
+          "name": "errIPv4cs",
+          "unit": "pkts",
+          "value": null,
+          "zero": false
+        },
+        {
+          "help": "tcp packets",
+          "info": 20,
+          "name": "errTCP",
+          "unit": "pkts",
+          "value": null,
+          "zero": false
+        },
+        {
+          "help": "udp packets",
+          "info": 20,
+          "name": "errUDP",
+          "unit": "pkts",
+          "value": null,
+          "zero": false
+        },
+        {
+          "help": "arp packets",
+          "info": 18,
+          "name": "arpPkts",
+          "unit": "pkts",
+          "value": null,
+          "zero": false
+        },
+        {
+          "help": "arp bytes",
+          "info": 18,
+          "name": "arpBytes",
+          "unit": "bytes",
+          "value": null,
+          "zero": false
+        },
+        {
+          "help": "icmp packets",
+          "info": 18,
+          "name": "icmpPkts",
+          "unit": "pkts",
+          "value": null,
+          "zero": false
+        },
+        {
+          "help": "icmp bytes",
+          "info": 18,
+          "name": "icmpBytes",
+          "unit": "bytes",
+          "value": null,
+          "zero": false
+        },
+        {
+          "help": "igmp packets",
+          "info": 18,
+          "name": "igmpPkts",
+          "unit": "pkts",
+          "value": null,
+          "zero": false
+        },
+        {
+          "help": "igmp bytes",
+          "info": 18,
+          "name": "igmpBytes",
+          "unit": "bytes",
+          "value": null,
+          "zero": false
+        },
+        {
+          "help": "dhcp packets",
+          "info": 18,
+          "name": "dhcpPkts",
+          "unit": "pkts",
+          "value": null,
+          "zero": false
+        },
+        {
+          "help": "dhcp bytes",
+          "info": 18,
+          "name": "dhcpBytes",
+          "unit": "bytes",
+          "value": null,
+          "zero": false
+        },
+        {
+          "help": "Dhcp server packets",
+          "info": 18,
+          "name": "dhcpSrvPkts",
+          "unit": "pkts",
+          "value": null,
+          "zero": false
+        },
+        {
+          "help": "Dhcp server bytes",
+          "info": 18,
+          "name": "dhcpSrvBytes",
+          "unit": "bytes",
+          "value": null,
+          "zero": false
+        },
+        {
+          "help": "mDns packets",
+          "info": 18,
+          "name": "mDnsPkts",
+          "unit": "pkts",
+          "value": null,
+          "zero": false
+        },
+        {
+          "help": "mDns bytes",
+          "info": 18,
+          "name": "mDnsBytes",
+          "unit": "bytes",
+          "value": null,
+          "zero": false
+        },
+        {
+          "help": "tcp packets",
+          "info": 18,
+          "name": "tcpPkts",
+          "unit": "pkts",
+          "value": null,
+          "zero": false
+        },
+        {
+          "help": "tcp bytes",
+          "info": 18,
+          "name": "tcpBytes",
+          "unit": "bytes",
+          "value": null,
+          "zero": false
+        },
+        {
+          "help": "udp packets",
+          "info": 18,
+          "name": "udpPkts",
+          "unit": "pkts",
+          "value": null,
+          "zero": false
+        },
+        {
+          "help": "udp bytes",
+          "info": 18,
+          "name": "udpBytes",
+          "unit": "bytes",
+          "value": null,
+          "zero": false
+        },
+        {
+          "help": "ipv6 too short",
+          "info": 20,
+          "name": "errIPv6TooShort",
+          "unit": "pkts",
+          "value": null,
+          "zero": false
+        },
+        {
+          "help": "ipv6 hop limit",
+          "info": 20,
+          "name": "errIPv6HopLimitDrop",
+          "unit": "pkts",
+          "value": null,
+          "zero": false
+        },
+        {
+          "help": "ipv6 no payload",
+          "info": 20,
+          "name": "errIPv6Empty",
+          "unit": "pkts",
+          "value": null,
+          "zero": false
+        },
+        {
+          "help": "icmpv6 too short",
+          "info": 20,
+          "name": "errIcmpv6TooShort",
+          "unit": "pkts",
+          "value": null,
+          "zero": false
+        },
+        {
+          "help": "Icmpv4 checksum error",
+          "info": 20,
+          "name": "errIcmpv4Cse",
+          "unit": "pkts",
+          "value": null,
+          "zero": false
+        },
+        {
+          "help": "Icmpv6 checksum error",
+          "info": 20,
+          "name": "errIcmpv6Cse",
+          "unit": "pkts",
+          "value": null,
+          "zero": false
+        },
+        {
+          "help": "Icmpv6 unsupported type/code",
+          "info": 20,
+          "name": "errIcmpv6Unsupported",
+          "unit": "pkts",
+          "value": null,
+          "zero": false
+        },
+        {
+          "help": "Icmpv6 pkts",
+          "info": 18,
+          "name": "Icmpv6Pkt",
+          "unit": "pkts",
+          "value": null,
+          "zero": false
+        },
+        {
+          "help": "Icmpv6 bytes",
+          "info": 18,
+          "name": "Icmpv6Bytes",
+          "unit": "bytes",
+          "value": null,
+          "zero": false
+        },
+        {
+          "help": "Icmpv6 jumbo option is not supported ",
+          "info": 20,
+          "name": "errIPv6OptJumbo",
+          "unit": "pkt",
+          "value": null,
+          "zero": false
+        },
+        {
+          "help": "ipv6 fragment is not supported",
+          "info": 20,
+          "name": "errIPv6Fragment",
+          "unit": "pkt",
+          "value": null,
+          "zero": false
+        },
+        {
+          "help": "ipv4 fragment is not supported",
+          "info": 20,
+          "name": "errIPv4Fragment",
+          "unit": "pkt",
+          "value": null,
+          "zero": false
+        },
+        {
+          "help": "L3 proto is not supported",
+          "info": 20,
+          "name": "errL3ProtoUnsupported",
+          "unit": "pkt",
+          "value": null,
+          "zero": false
+        },
+        {
+          "help": "packet is too short for parsing",
+          "info": 20,
+          "name": "errPacketIsTooShort",
+          "unit": "pkt",
+          "value": null,
+          "zero": false
+        }
+      ],
+      "timerw": [
+        {
+          "help": "active timers",
+          "info": 18,
+          "name": "activeTimer",
+          "unit": "timers",
+          "value": null,
+          "zero": false
+        },
+        {
+          "help": "ticks",
+          "info": 18,
+          "name": "ticks",
+          "unit": "ops",
+          "value": null,
+          "zero": false
+        }
+      ],
+      "veth": [
+        {
+          "help": "RxZmqErr",
+          "info": 20,
+          "name": "RxZmqErr",
+          "unit": "pkts",
+          "value": null,
+          "zero": false
+        },
+        {
+          "help": "TxPkts",
+          "info": 18,
+          "name": "TxPkts",
+          "unit": "pkts",
+          "value": null,
+          "zero": false
+        },
+        {
+          "help": "TxBytes",
+          "info": 18,
+          "name": "TxBytes",
+          "unit": "bytes",
+          "value": null,
+          "zero": false
+        },
+        {
+          "help": "RxPkts",
+          "info": 18,
+          "name": "RxPkts",
+          "unit": "pkts",
+          "value": null,
+          "zero": false
+        },
+        {
+          "help": "RxBytes",
+          "info": 18,
+          "name": "RxBytes",
+          "unit": "bytes",
+          "value": null,
+          "zero": false
+        },
+        {
+          "help": "TxDropNotResolve",
+          "info": 20,
+          "name": "TxDropNotResolve",
+          "unit": "pkts",
+          "value": null,
+          "zero": false
+        },
+        {
+          "help": "RxParseErr",
+          "info": 20,
+          "name": "RxParseErr",
+          "unit": "pkts",
+          "value": null,
+          "zero": false
+        },
+        {
+          "help": "RxBatch",
+          "info": 20,
+          "name": "RxBatch",
+          "unit": "pkts",
+          "value": null,
+          "zero": false
+        },
+        {
+          "help": "TxBatch",
+          "info": 20,
+          "name": "TxBatch",
+          "unit": "pkts",
+          "value": null,
+          "zero": false
+        }
+      ]
+    },
+    "unsupported": []
+  },
+  "ns": {
+    "tables": {
+      "arp": [
+        {
+          "help": "change src ipv4 events",
+          "info": 18,
+          "name": "eventsChangeSrc",
+          "unit": "ops",
+          "value": 0,
+          "zero": false
+        },
+        {
+          "help": "change dgw ipv4 events",
+          "info": 18,
+          "name": "eventsChangeDgIPv4",
+          "unit": "ops",
+          "value": 0,
+          "zero": false
+        },
+        {
+          "help": "timer events learn",
+          "info": 18,
+          "name": "timerEventLearn",
+          "unit": "ops",
+          "value": 0,
+          "zero": false
+        },
+        {
+          "help": "timer events incomplete",
+          "info": 18,
+          "name": "timerEventIncomplete",
+          "unit": "ops",
+          "value": 0,
+          "zero": false
+        },
+        {
+          "help": "timer events complete",
+          "info": 18,
+          "name": "timerEventComplete",
+          "unit": "ops",
+          "value": 0,
+          "zero": false
+        },
+        {
+          "help": "timer events refresh",
+          "info": 18,
+          "name": "timerEventRefresh",
+          "unit": "ops",
+          "value": 0,
+          "zero": false
+        },
+        {
+          "help": "add learn to table ",
+          "info": 18,
+          "name": "addLearn",
+          "unit": "ops",
+          "value": 0,
+          "zero": false
+        },
+        {
+          "help": "add incomplete to table ",
+          "info": 18,
+          "name": "addIncomplete",
+          "unit": "ops",
+          "value": 0,
+          "zero": false
+        },
+        {
+          "help": "move incomplete after refresh  ",
+          "info": 18,
+          "name": "moveIncompleteAfterRefresh",
+          "unit": "ops",
+          "value": 0,
+          "zero": false
+        },
+        {
+          "help": "move complete ",
+          "info": 18,
+          "name": "moveComplete",
+          "unit": "ops",
+          "value": 0,
+          "zero": false
+        },
+        {
+          "help": "move learn ",
+          "info": 18,
+          "name": "moveLearned",
+          "unit": "ops",
+          "value": 0,
+          "zero": false
+        },
+        {
+          "help": "rx error packet is too short",
+          "info": 20,
+          "name": "pktRxErrTooShort",
+          "unit": "pkts",
+          "value": 0,
+          "zero": false
+        },
+        {
+          "help": "rx error packet is no broadcast",
+          "info": 20,
+          "name": "pktRxErrNoBroadcast",
+          "unit": "pkts",
+          "value": 0,
+          "zero": false
+        },
+        {
+          "help": "rx error packet with wrong opcode",
+          "info": 20,
+          "name": "pktRxErrWrongOp",
+          "unit": "pkts",
+          "value": 0,
+          "zero": false
+        },
+        {
+          "help": "rx arp query ",
+          "info": 18,
+          "name": "pktRxArpQuery",
+          "unit": "pkts",
+          "value": 0,
+          "zero": false
+        },
+        {
+          "help": "rx arp query not for our clients",
+          "info": 18,
+          "name": "pktRxArpQueryNotForUs",
+          "unit": "pkts",
+          "value": 0,
+          "zero": false
+        },
+        {
+          "help": "rx arp reply",
+          "info": 18,
+          "name": "pktRxArpReply",
+          "unit": "pkts",
+          "value": 0,
+          "zero": false
+        },
+        {
+          "help": "tx arp query",
+          "info": 18,
+          "name": "pktTxArpQuery",
+          "unit": "pkts",
+          "value": 0,
+          "zero": false
+        },
+        {
+          "help": "tx arp garp",
+          "info": 18,
+          "name": "pktTxGArp",
+          "unit": "pkts",
+          "value": 0,
+          "zero": false
+        },
+        {
+          "help": "tx arp reply",
+          "info": 18,
+          "name": "pktTxReply",
+          "unit": "pkts",
+          "value": 0,
+          "zero": false
+        },
+        {
+          "help": "arp table active",
+          "info": 18,
+          "name": "tblActive",
+          "unit": "entries",
+          "value": 0,
+          "zero": false
+        },
+        {
+          "help": "arp table add",
+          "info": 18,
+          "name": "tblAdd",
+          "unit": "ops",
+          "value": 0,
+          "zero": false
+        },
+        {
+          "help": "arp table remove",
+          "info": 18,
+          "name": "tblRemove",
+          "unit": "ops",
+          "value": 0,
+          "zero": false
+        },
+        {
+          "help": "associate with client",
+          "info": 18,
+          "name": "associateWithClient",
+          "unit": "ops",
+          "value": 0,
+          "zero": false
+        },
+        {
+          "help": "disassociate with client",
+          "info": 18,
+          "name": "disasociateWithClient",
+          "unit": "ops",
+          "value": 0,
+          "zero": false
+        }
+      ],
+      "icmp": [
+        {
+          "help": "rx query",
+          "info": 18,
+          "name": "pktRxIcmpQuery",
+          "unit": "ops",
+          "value": 0,
+          "zero": false
+        },
+        {
+          "help": "tx response",
+          "info": 18,
+          "name": "pktTxIcmpResponse",
+          "unit": "ops",
+          "value": 0,
+          "zero": false
+        },
+        {
+          "help": "tx query",
+          "info": 18,
+          "name": "pktTxIcmpQuery",
+          "unit": "ops",
+          "value": 0,
+          "zero": false
+        },
+        {
+          "help": "rx response",
+          "info": 18,
+          "name": "pktRxIcmpResponse",
+          "unit": "ops",
+          "value": 0,
+          "zero": false
+        },
+        {
+          "help": "rx too short",
+          "info": 18,
+          "name": "pktRxErrTooShort",
+          "unit": "ops",
+          "value": 0,
+          "zero": false
+        },
+        {
+          "help": "rx wrong opcode",
+          "info": 18,
+          "name": "pktRxErrUnhandled",
+          "unit": "ops",
+          "value": 0,
+          "zero": false
+        },
+        {
+          "help": "rx no client ",
+          "info": 18,
+          "name": "pktRxNoClientUnhandled",
+          "unit": "ops",
+          "value": 0,
+          "zero": false
+        },
+        {
+          "help": "src ip is not valid ",
+          "info": 18,
+          "name": "pktRxErrMulticastB",
+          "unit": "ops",
+          "value": 0,
+          "zero": false
+        },
+        {
+          "help": "rx destination unreachable",
+          "info": 18,
+          "name": "pktRxIcmpDstUnreachable",
+          "unit": "ops",
+          "value": 0,
+          "zero": false
+        }
+      ],
+      "mdns": [
+        {
+          "help": "Error while decoding init Json",
+          "info": 20,
+          "name": "invalidInitJson",
+          "unit": "ops",
+          "value": 0,
+          "zero": false
+        },
+        {
+          "help": "Rx packet too short",
+          "info": 20,
+          "name": "pktRxErrTooShort",
+          "unit": "ops",
+          "value": 0,
+          "zero": false
+        },
+        {
+          "help": "mDns packet received with invalid Dst Mac",
+          "info": 20,
+          "name": "pktRxBadDstMac",
+          "unit": "ops",
+          "value": 0,
+          "zero": false
+        },
+        {
+          "help": "mDns packet received with invalid Dst Ip",
+          "info": 20,
+          "name": "pktRxBadDstIp",
+          "unit": "ops",
+          "value": 0,
+          "zero": false
+        },
+        {
+          "help": "mDns packet received with invalid Ethernet Type",
+          "info": 20,
+          "name": "pktRxBadEthType",
+          "unit": "ops",
+          "value": 0,
+          "zero": false
+        },
+        {
+          "help": "mDns packet received with invalid TTL",
+          "info": 20,
+          "name": "pktRxBadTTL",
+          "unit": "ops",
+          "value": 0,
+          "zero": false
+        },
+        {
+          "help": "Num of mDNS pkts received",
+          "info": 18,
+          "name": "rxPkts",
+          "unit": "pkts",
+          "value": 0,
+          "zero": true
+        },
+        {
+          "help": "Num of mDNS questions received in namespace",
+          "info": 18,
+          "name": "rxQuestions",
+          "unit": "query",
+          "value": 0,
+          "zero": true
+        },
+        {
+          "help": "Numb of mDNS answers received in namespace",
+          "info": 18,
+          "name": "rxAnswers",
+          "unit": "reply",
+          "value": 0,
+          "zero": true
+        },
+        {
+          "help": "Num of authorities unhandled in Rx packets",
+          "info": 18,
+          "name": "rxAuthoritiesUnhandled",
+          "unit": "ops",
+          "value": 0,
+          "zero": false
+        },
+        {
+          "help": "Num of additional records unhandled in Rx packets",
+          "info": 18,
+          "name": "rxAddRecordsUnhandled",
+          "unit": "ops",
+          "value": 0,
+          "zero": false
+        },
+        {
+          "help": "AutoPlay client was not found",
+          "info": 18,
+          "name": "autoPlayClientNotFound",
+          "unit": "ops",
+          "value": 0,
+          "zero": false
+        },
+        {
+          "help": "AutoPlay client doesn't have mDns plugin",
+          "info": 20,
+          "name": "clientNoMDns",
+          "unit": "ops",
+          "value": 0,
+          "zero": false
+        },
+        {
+          "help": "Number of queries sent by Auto Play",
+          "info": 18,
+          "name": "autoPlayQueries",
+          "unit": "query",
+          "value": 0,
+          "zero": false
+        },
+        {
+          "help": "Number of bad queries created by Auto Play",
+          "info": 20,
+          "name": "autoPlayBadQuery",
+          "unit": "ops",
+          "value": 0,
+          "zero": false
+        }
+      ]
+    },
+    "unsupported": [
+      "dns",
+      "igmp",
+      "ipfix",
+      "ipv6",
+      "transporte"
+    ]
+  }
+}

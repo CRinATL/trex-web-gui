@@ -2,8 +2,12 @@
 // those to string) must satisfy the api.ts types. tsc -b (npm run build)
 // type-checks this file, so a type that drifts from the recorded wire shape fails the build.
 import { describe, expect, it } from 'vitest'
-import type { BuildResult, Decompiled, Definitions, DiffReply, FeInstruction, FeParamMeta, FieldDef, LibraryList, PacketTree, SimReport, Source, SpoolListing, StreamMode, StreamPage, TemplateList } from './api'
+import type { BuildResult, EmuClientsPage, EmuCounters, EmuMsg, EmuNamespaces, Decompiled, Definitions, DiffReply, FeInstruction, FeParamMeta, FieldDef, LibraryList, PacketTree, SimReport, Source, SpoolListing, StreamMode, StreamPage, TemplateList } from './api'
 import captureFiles from './__fixtures__/captureFiles.json'
+import emuClients from './__fixtures__/emuClients.json'
+import emuCounters from './__fixtures__/emuCounters.json'
+import emuMsg from './__fixtures__/emuMsg.json'
+import emuNamespaces from './__fixtures__/emuNamespaces.json'
 import packetTree from './__fixtures__/packetTree.json'
 import packetTreeVlan from './__fixtures__/packetTreeVlan.json'
 import packetBuildError from './__fixtures__/packet/buildError.json'
@@ -62,5 +66,20 @@ describe('wire fixtures against api.ts types', () => {
     expect([defs.layerIds.length > 300, defs.etag.length, udp.error, failed.binary, list.server.length > 5, dec.instructions.length]).toEqual([true, 16, null, null, true, 2])
     // the vlan tree the viewer test uses is the recorded decode (pinned by the contract test, p3c-capture-114)
     expect(packetTreeVlan.vlan satisfies PacketTree).toBeTruthy()
+  })
+
+  // P7 Task 7. The recorded EMU bodies; only the type and state literals of the message are narrowed.
+  it('the recorded EMU fixtures satisfy their types', () => {
+    const msgs = [{ ...emuMsg.connected, type: 'emu' as const, state: emuMsg.connected.state as EmuMsg['state'] } satisfies EmuMsg,
+      { ...emuMsg.disconnected, type: 'emu' as const, state: emuMsg.disconnected.state as EmuMsg['state'] } satisfies EmuMsg,
+      // P7 Task 11: a message during a load (busy set) and after one (loaded set)
+      { ...emuMsg.loading, type: 'emu' as const, state: emuMsg.loading.state as EmuMsg['state'] } satisfies EmuMsg,
+      { ...emuMsg.loaded, type: 'emu' as const, state: emuMsg.loaded.state as EmuMsg['state'] } satisfies EmuMsg]
+    const ns = emuNamespaces.two_namespaces satisfies EmuNamespaces
+    const page = emuClients.vport_1_first_page satisfies EmuClientsPage
+    const counters = [emuCounters.ctx, emuCounters.ns, emuCounters.client, emuCounters.meta] satisfies EmuCounters[]
+    expect([msgs.length, ns.namespaces.length, page.total, counters.length]).toEqual([4, 2, 3, 4])
+    expect(Object.values(emuCounters.meta.tables)[0][0].value).toBeNull()
+    expect([emuMsg.loading.busy?.kind, emuMsg.loaded.loaded?.partial]).toEqual(['loading', false])
   })
 })

@@ -10,7 +10,7 @@ from trex_web_gui.api.app import create_app
 
 STL = str(Path(FIXTURES) / "p5" / "pub-stl.jsonl")
 WRITES = {"POST", "PUT", "DELETE", "PATCH"}
-FAMILIES = ("/api/daemon", "/api/profiles", "/api/capture", "/api/studio", "/api/fs")
+FAMILIES = ("/api/daemon", "/api/profiles", "/api/capture", "/api/studio", "/api/fs", "/api/emu")
 STATE_GETS = ("/api/session", "/api/ports", "/api/ports/0/xstats", "/api/ports/0/rate")
 
 
@@ -144,8 +144,9 @@ def under(path: str, prefix: str) -> bool:
     return path == prefix or path.startswith(prefix + "/")
 
 
-def test_monitor_only_refuses_every_family(tmp_path: Path, fake_trex) -> None:
+def test_monitor_only_refuses_every_family(tmp_path: Path, fake_trex, fake_emu) -> None:
     fake = fake_trex("--pub-replay", STL)
+    emu = fake_emu()                          # an EMU server the refused requests are aimed at
     control = fake_trex()                     # a TRex the refused requests are aimed at, with real bodies
     app = create_app(tmp_path, token=TEST_TOKEN, monitor_only=True, monitor_target=(fake.host, fake.pub_port))
     routes = [r for r in api_routes(app.routes) if r.path != "/{path:path}"]
@@ -162,6 +163,7 @@ def test_monitor_only_refuses_every_family(tmp_path: Path, fake_trex) -> None:
     assert ("PUT", "/api/settings") in must and ("PUT", "/api/test-setups/{slug}") in must
     assert ("GET", "/api/capture/files/{name}") in must          # a download is a GET, and refused
     assert ("GET", "/api/fs/list") in must                       # the host file browser is refused whole
+    assert ("GET", "/api/emu/namespaces") in must and ("POST", "/api/emu/connect") in must
     assert not any(p == "/api/monitor/connect" for _, p in must)
     with authed(app) as c:
         bad = [(m, p) for m, p in must if not refused(c.request(m, fill(p)))]
@@ -171,6 +173,7 @@ def test_monitor_only_refuses_every_family(tmp_path: Path, fake_trex) -> None:
                                                       "async_port": control.pub_port, "timeout_s": 2}),
                            ("/api/ports/acquire", {"ports": [0]}),
                            ("/api/ports/start", {"ports": [0], "mult": "1pps"}),
+                           ("/api/emu/connect", {"host": emu.host, "port": emu.port}),
                            ("/api/daemon/start", {"cfg_path": "/tmp/trex_files/a.yaml", "options": {},
                                                   "trex_args": "", "timeout": 20, "confirm": True})):
             assert refused(c.post(path, json=body)), path
@@ -181,6 +184,7 @@ def test_monitor_only_refuses_every_family(tmp_path: Path, fake_trex) -> None:
         assert live["/api/ports/0/rate"].json()["error"] == "not_connected"
     assert fake_trex_served(control) == {}        # no RPC from any refused request
     assert fake_trex_served(fake) == {}           # nor from the Monitor
+    assert emu.requests() == []                   # nor the EMU server
 
 
 def test_monitor_only_still_serves_monitor_and_settings_get(tmp_path: Path, fake_trex) -> None:
