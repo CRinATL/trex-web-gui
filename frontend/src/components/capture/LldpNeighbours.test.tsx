@@ -148,7 +148,7 @@ describe('LldpNeighbours', () => {
     const group = scoped(screen.getByRole('group', { name: 'LLDP Rx ports' }))
     for (const n of ['Port 0', 'Port 1', 'Port 2']) await userEvent.click(group.getByRole('checkbox', { name: n }))
     const off = screen.getByRole('button', { name: 'Turn service mode off for ports 0, 1' })   // port 2 is not ours
-    expect(off).toHaveAttribute('data-run', 'go')
+    expect(off).toHaveAttribute('data-run', 'hold')   // amber, beside the red Stop
     await userEvent.click(off)
     expect(set.mock.calls).toEqual([[{ ports: [0], enabled: false }], [{ ports: [1], enabled: false }]])
   })

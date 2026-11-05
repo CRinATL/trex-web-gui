@@ -257,9 +257,10 @@ Pause and Stop also cancel a pending live rate update ([4.3](#43-traffic-tab)). 
 buttons are disabled while one is in flight.
 
 Start, Stop and Pause buttons, here and on every page, are coloured by what they do: green starts or resumes,
-red stops, amber pauses. A button filled with its colour can be used, and has a thin ring of the same colour
-around it, a small gap away. Grey means it cannot. Connect (the status bar's, the Control page's and the
-dialog's) and Turn service mode on/off are green the same way.
+red stops, amber pauses or takes a port out of a mode. A button filled with its colour can be used, and has a
+thin ring of the same colour around it, a small gap away. Grey means it cannot. Connect (the status bar's, the
+Control page's and the dialog's) and Turn service mode on are green the same way; Turn service mode off is
+amber, the colour of the service-mode badge it clears.
 
 While the thing a Start began is running, that Start is lit and names the state instead of the action:
 
