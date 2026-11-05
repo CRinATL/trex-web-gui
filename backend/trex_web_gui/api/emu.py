@@ -209,8 +209,7 @@ def emu_router(emu: Callable[[], EmuSession], control: Callable[[], TrexSession]
         error."""
         async def go() -> dict[str, Any]:
             """The page; after a server error, `no_namespace` when the namespace is gone."""
-            ns = _ns_key(vport, tci, tpid)
-            assert ns is not None
+            ns = NsKey(vport, _pair(tci, "tci"), _pair(tpid, "tpid"))
             try:
                 return await emu().clients(ns, offset, limit)
             except TrexApiError as exc:
