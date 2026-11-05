@@ -285,6 +285,7 @@ class Engine:
         for layer in result[done:]:
             if isinstance(layer.get("offset"), int):
                 layer["offset"] += delta
+        _retext(result, model, data[:done])
         return result
 
     def _rebuilds(self, layers: list[dict[str, Any]], raw: bytes) -> bool:
@@ -492,6 +493,54 @@ class _Fallback(Exception):
 
 class _NotPcap(Exception):
     """The file is not a capture the worker can read; the message is the whole error."""
+
+
+IP_OPTION_ID_FIELDS = ("copy_flag", "optclass", "option", "length")   # named by the option's name instead
+
+
+def _option_text(opt: Any) -> str:
+    """One IP option as Wireshark names it: `NOP`, `Router Alert (alert=...)`, or `option 25 (value=...)` for
+    one Scapy has no class for; its fields other than the type and the length follow in parentheses."""
+    cls = type(opt).__name__
+    name = (f"option {int(opt.option)}" if cls == "IPOption"
+            else cls.removeprefix("IPOption_").replace("_", " "))
+    shown = [f"{fd.name}={fd.i2repr(opt, opt.getfieldval(fd.name))}"
+             for fd in opt.fields_desc if fd.name not in IP_OPTION_ID_FIELDS]
+    return f"{name} ({', '.join(shown)})" if shown else name
+
+
+def ip_options_text(opts: list[Any]) -> str:
+    """The IP options `opts` as one line, as Wireshark reads them. Scapy 2.4.3 parses every zero byte after
+    End of Options as one more EOL; when only such zeros follow the first EOL, they are `padding N bytes`.
+    Any other option after it is listed as Scapy read it."""
+    from scapy.layers.inet import IPOption_EOL
+    end = next((i for i, o in enumerate(opts) if type(o) is IPOption_EOL), None)
+    tail = opts[end + 1:] if end is not None else []
+    pad = len(tail) if tail and all(type(o) is IPOption_EOL for o in tail) else 0
+    parts = [_option_text(o) for o in opts[:len(opts) - pad]]
+    if pad:
+        parts.append(f"padding {pad} byte{'' if pad == 1 else 's'}")
+    return ", ".join(parts)
+
+
+def _retext(result: list[dict[str, Any]], model: list[Any], data: list[Any]) -> None:
+    """Rewrite two shown texts (`hvalue`) of the field tree `result`; values are left alone, so a tree still
+    rebuilds its bytes. A flags field with no flag set shows `0`, where Scapy's text is empty. A layer's IP
+    options show as `ip_options_text` of the options dissected from the bytes (`data`, the layers matched by
+    class), which is what the wire carries and what Wireshark shows."""
+    from scapy.fields import FlagsField
+    from scapy.layers.inet import IPOption
+    for layer, m in zip(result, model, strict=False):
+        by_id = {f["id"]: f for f in layer.get("fields", [])}
+        for fd in m.fields_desc:
+            f = by_id.get(fd.name)
+            if f is not None and isinstance(fd, FlagsField) and f.get("hvalue") == "":
+                f["hvalue"] = "0"
+    for layer, b in zip(result, data, strict=False):
+        opts = getattr(b, "options", None) if layer.get("id") == type(b).__name__ else None
+        f = next((f for f in layer.get("fields", []) if f["id"] == "options"), None)
+        if f is not None and opts and isinstance(opts, list) and all(isinstance(o, IPOption) for o in opts):
+            f["hvalue"] = ip_options_text(opts)
 
 
 def _chain(pkt: Any) -> list[Any]:
