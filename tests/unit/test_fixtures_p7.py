@@ -140,6 +140,14 @@ def _colon_mac_leaks(text: str) -> set[str]:
     }
 
 
+def _link_local_of_admitted_mac(ints: list[int]) -> bool:
+    """True for an fe80::/64 address whose interface id is the EUI-64 of an admitted MAC (u/l bit flipped,
+    ff:fe in the middle); any other interface id could carry a real host's MAC."""
+    if len(ints) != 16 or ints[:8] != [0xFE, 0x80, 0, 0, 0, 0, 0, 0] or ints[11:13] != [0xFF, 0xFE]:
+        return False
+    return _mac_admitted([ints[8] ^ 0x02, ints[9], ints[10], ints[13], ints[14], ints[15]])
+
+
 def _address_leaks(docs: list[tuple[str, object]]) -> list[str]:
     """MACs, IPv4 and IPv6 int lists in `docs` that are not the guest's or the fixture profile's."""
     leaks = []
@@ -151,9 +159,7 @@ def _address_leaks(docs: list[tuple[str, object]]) -> list[str]:
             elif len(ints) == 4:
                 ok = zero or ints[:2] == [1, 1] or ints == [127, 0, 0, 1]
             else:
-                ok = (
-                    zero or ints[:4] == [0x20, 0x01, 0x0D, 0xB8] or ints[:8] == [0xFE, 0x80, 0, 0, 0, 0, 0, 0]
-                )
+                ok = zero or ints[:4] == [0x20, 0x01, 0x0D, 0xB8] or _link_local_of_admitted_mac(ints)
             if not ok:
                 leaks.append(f"{name}: {ints}")
     return leaks
@@ -263,3 +269,14 @@ def test_ipfix_panic_is_kept_whole() -> None:
     removal = _json("summary.json")["ipfix_scratch_removal"]
     assert "RemovePlugins" in removal["guest"]
     assert removal["condition"] == "ipfix at namespace level only, empty {} config, standalone trex-emu v3.08"
+
+
+def test_a_link_local_address_is_admitted_only_for_an_admitted_mac() -> None:
+    """Negative control: fe80::/64 passes only with the EUI-64 interface id of an admitted MAC; the same
+    prefix carrying any other host's MAC, or no ff:fe, is a leak."""
+    fe80 = [0xFE, 0x80, 0, 0, 0, 0, 0, 0]
+    ours = [0x02, 0, 0, 0xFF, 0xFE, 0x70, 0x63, 0x01]          # 00:00:00:70:63:01, the fixture prefix
+    theirs = [0x50, 0x54, 0x00, 0xFF, 0xFE, 0x12, 0x34, 0x56]  # 52:54:00:12:34:56, a made-up host MAC
+    assert _address_leaks([("ok", [fe80 + ours])]) == []
+    assert _address_leaks([("bad", [fe80 + theirs])]) == [f"bad: {fe80 + theirs}"]
+    assert _address_leaks([("no-eui", [fe80 + [1, 2, 3, 4, 5, 6, 7, 8]])]) != []

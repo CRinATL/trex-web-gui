@@ -31,9 +31,8 @@ from trex_web_gui.trexapi.rawrpc import RPC_REPLY_MAX_BYTES, RawRpc, RawRpcError
 REPO = HERE.parent
 PLUGINS = REPO / "backend" / "trex_web_gui" / "_vendor" / "trex" / "emu" / "emu_plugins"
 EMU_API = ("EMU", 1, 1)
-RISKY_PLUGIN = (
-    "ipfix"  # loading it into a scratch namespace left ctx_remove unanswered: recorded last, see record_ipfix
-)
+# loading it into a scratch namespace left ctx_remove unanswered: recorded last, see record_ipfix
+RISKY_PLUGIN = "ipfix"
 SERVER_PLUGIN_NAMES = {"transporte": "transe"}  # the server's name where the vendored file name differs
 out = Path(sys.argv[1])
 t0 = time.time()
@@ -64,10 +63,15 @@ class Tap:
         self._sock.send(raw)
 
     def recv(self) -> bytes:
-        """Receive, log the decoded pair and the elapsed time, and return the bytes unchanged."""
+        """Receive, log the decoded pair and the elapsed time, and return the bytes unchanged. A reply that
+        does not decode is logged as {"undecodable": <its repr, cut at 200 bytes>} and still handed on, so
+        RawRpc's own checks refuse it as they would without the tap."""
         reply = self._sock.recv()
         row = self._row
-        row["resp"] = json.loads(inflate(reply, RPC_REPLY_MAX_BYTES))
+        try:
+            row["resp"] = json.loads(inflate(reply, RPC_REPLY_MAX_BYTES))
+        except (ValueError, TrexApiError):
+            row["resp"] = {"undecodable": repr(reply[:200])}
         row["secs"] = round(time.monotonic() - self._start, 4)
         log.append(row)
         self._row = None
@@ -113,12 +117,17 @@ def err_of(exc: RawRpcError) -> dict:
 
 
 def ask(rpc: RawRpc, method: str, params: dict | None = None, *, name: str | None = None):
-    """One call, timed into `timings`; (result, None) or (None, {code, text}) for an error reply."""
+    """One call, timed into `timings`; (result, None) or (None, {code, text}) for an error reply. A call the
+    server never answers gets its row too ({"unanswered": text}), and the ServerUnreachable propagates."""
     start = time.monotonic()
     try:
         res, e = rpc.call(method, params), None
     except RawRpcError as exc:
         res, e = None, err_of(exc)
+    except ServerUnreachable as exc:
+        timings.append({"call": name or method, "secs": round(time.monotonic() - start, 4),
+                        "error": {"unanswered": str(exc)}})
+        raise
     timings.append({"call": name or method, "secs": round(time.monotonic() - start, 4), "error": e})
     return res, e
 
@@ -246,7 +255,7 @@ def record_load(rpc: RawRpc) -> list[dict]:
     return reqs
 
 
-def record_reads(rpc: RawRpc, reqs: list[dict]) -> None:
+def record_reads(rpc: RawRpc) -> None:
     """Listings, info calls, ctx_cnt and the plugin counters against the loaded profile."""
     ns_list = must(rpc, "ctx_iter", {"count": 255, "reset": True})
     assert len(ns_list["data"]) == 2, ns_list
@@ -596,8 +605,8 @@ def main() -> None:
     try:
         record_handshake_and_errors()
         rpc = fresh("a")
-        reqs = record_load(rpc)
-        record_reads(rpc, reqs)
+        record_load(rpc)
+        record_reads(rpc)
         record_interrupted(rpc)
         rpc = record_e3(rpc)
         clear_server(rpc)

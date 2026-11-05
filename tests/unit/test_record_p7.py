@@ -155,3 +155,45 @@ def test_an_error_reply_to_a_setup_step_aborts(record_p7: ModuleType, rig: dict[
     first = StubRpc(record_p7, "a", refuse=[_step(record_p7, "e3_setup_client_add")])
     with pytest.raises(RuntimeError, match="ctx_client_add failed"):
         record_p7.record_e3(first)
+
+
+def test_an_unanswered_call_gets_a_timings_row(record_p7: ModuleType) -> None:
+    """ask() times a call the server never answers too: the row names it, marks it unanswered, and the
+    ServerUnreachable still propagates (record_e3 keeps the step as data)."""
+    params = {"tunnels": []}
+    rpc = StubRpc(record_p7, "a", hang=[("ctx_remove", params)])
+    with pytest.raises(record_p7.ServerUnreachable):
+        record_p7.ask(rpc, "ctx_remove", params, name="scratch ctx_remove")
+    row = record_p7.timings[-1]
+    assert row["call"] == "scratch ctx_remove"
+    assert row["error"] == {"unanswered": "ctx_remove: no reply within 10.0 s"}
+    assert isinstance(row["secs"], float)
+
+
+class FakeSock:
+    """A REQ socket stand-in for Tap: records what is sent, answers `reply`."""
+
+    def __init__(self, reply: bytes) -> None:
+        """Answer every recv with `reply`."""
+        self.reply, self.sent = reply, []
+
+    def send(self, raw: bytes) -> None:
+        """Record the request."""
+        self.sent.append(raw)
+
+    def recv(self) -> bytes:
+        """The canned reply."""
+        return self.reply
+
+
+def test_the_tap_logs_a_reply_it_cannot_decode_and_hands_it_on(record_p7: ModuleType) -> None:
+    """A reply that is not JSON is logged as undecodable and returned unchanged, so RawRpc's own checks
+    refuse it as they would without the tap; a JSON reply is logged decoded."""
+    tap = record_p7.Tap(FakeSock(b"not json"), "a")
+    tap.send(b'{"id": 1, "method": "ping"}')
+    assert tap.recv() == b"not json"
+    assert record_p7.log[-1]["resp"] == {"undecodable": "b'not json'"}
+    tap = record_p7.Tap(FakeSock(b'{"id": 1, "result": {}}'), "b")
+    tap.send(b'{"id": 1, "method": "ping"}')
+    tap.recv()
+    assert record_p7.log[-1]["resp"] == {"id": 1, "result": {}} and record_p7.log[-1]["client"] == "b"

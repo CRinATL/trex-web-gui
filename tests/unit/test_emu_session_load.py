@@ -5,6 +5,7 @@ generation, and the cleanup after a cancelled write or connect. Profiles run in 
 import asyncio
 import json
 import threading
+import time
 from collections.abc import Awaitable, Callable
 from typing import Any
 
@@ -579,16 +580,20 @@ def test_connection_lost_between_chunks_is_a_loss_with_progress(fake_emu: Factor
     f = fake_emu()
     fc = FakeClock()
     first = []
+    session: list[Any] = []
 
     async def sleep(_s: float) -> None:
-        """The first pacing sleep restarts the fake and waits for a ping to notice."""
+        """The first pacing sleep restarts the fake and waits (at most 5 s) until a ping marked it lost."""
         if not first:
             first.append(1)
             f.restart()
-        await asyncio.sleep(0.6)
+        end = time.monotonic() + 5
+        while session[0].snapshot()["state"] != "lost" and time.monotonic() < end:
+            await asyncio.sleep(0.01)
 
     async def body() -> None:
         s = await connected(f, ping_s=0.05, clock=fc.clock, sleep=sleep)
+        session.append(s)
         try:
             with pytest.raises(ServerUnreachable) as ei:
                 await s.load_profile(PROFILE, [], max_rate=1, **CONFIRMED)

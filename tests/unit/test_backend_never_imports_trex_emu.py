@@ -38,9 +38,12 @@ def test_a_loaded_backend_holds_only_the_validator_modules_of_trex_emu() -> None
                        timeout=120, env={"PATH": "/usr/bin:/bin", "HOME": "/tmp"})
     assert r.returncode == 0, r.stderr
     held, profile_module = r.stdout.strip().splitlines()
-    extra = sorted(set(ast.literal_eval(held)) - ALLOWED)       # a list of str printed by CODE above
-    assert extra == [], (f"the backend process imported {extra}; only {sorted(ALLOWED)} may be there "
-                         "(the vendored parsing_opts imports the validator with trex.stl.api)")
+    got = set(ast.literal_eval(held))                            # a list of str printed by CODE above
+    assert sorted(got - ALLOWED) == [], (f"the backend process imported {sorted(got - ALLOWED)}; only "
+                                         f"{sorted(ALLOWED)} may be there (the vendored parsing_opts imports "
+                                         "the validator with trex.stl.api)")
+    # and all of them: a vendor update that stops importing one leaves ALLOWED stale, which this catches
+    assert got == ALLOWED, f"ALLOWED names {sorted(ALLOWED - got)}, which the backend no longer imports"
     assert profile_module == "False"
 
 
