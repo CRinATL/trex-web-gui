@@ -49,12 +49,15 @@ def _docstring_node(tree: ast.Module) -> ast.Constant | None:
 
 def _section(src: str) -> tuple[int, list[str]] | None:
     """(line number of the docstring's first line, the docstring's raw lines), or None for a module without a
-    docstring."""
+    docstring. The lines are cut from the source between the quotes, not from the string's value, so an escape
+    such as `\\n` cannot shift them off their line numbers."""
     node = _docstring_node(ast.parse(src))
     if node is None:
         return None
-    assert isinstance(node.value, str)
-    return node.lineno, node.value.split("\n")
+    seg = ast.get_source_segment(src, node)
+    opening = re.match(r"(?i)[rbu]*(\"\"\"|'''|\"|')", seg or "")
+    assert seg is not None and opening is not None and seg.endswith(opening.group(1)), "one string literal"
+    return node.lineno, seg[opening.end():len(seg) - len(opening.group(1))].split("\n")
 
 
 def _section_span(lines: list[str]) -> tuple[int, int] | None:
@@ -260,6 +263,14 @@ def test_scanner_flags_an_untagged_divergence_item() -> None:
     assert [n for n, _ in divergence_items(src)] == [4, 5]
 
 
+def test_scanner_reads_docstring_lines_from_the_source() -> None:
+    """A `\\n` escape adds a line to the docstring's value but not to the source: an item keeps its source
+    line, and a marker on the line after the docstring is still outside the section."""
+    src = '"""Intro \\n escape.\n\n' + HEADER + '\n- item. [U:emu-a]\n"""\nX = 1  # made up\n'
+    assert [n for n, _ in divergence_items(src)] == [4]
+    assert untagged_markers(src) == [6]
+
+
 def test_scanner_finds_the_three_literal_forms() -> None:
     """A message value, a ValueError argument (f-string fields as `{}`) and an UPPER_CASE constant."""
     src = 'E = {"message": " x "}\nraise_it = ValueError(f"n={n} max")\nTEXT = "y"\nlower = "z"\n'
@@ -373,11 +384,9 @@ def _mine(fake: str) -> dict[str, Entry]:
     return {k: e for k, e in REGISTER.items() if e.fake == fake}
 
 
-@pytest.mark.parametrize("fake", FAKES)
-def test_every_reply_literal_is_recorded_or_registered(fake: str) -> None:
-    """A reply literal is recorded or covered by an entry's text, and has constant text; an entry's text
-    matches a literal and is not recorded."""
-    src, name, reg, values = FAKES[fake].read_text(), FAKES[fake].name, _mine(fake), fixture_strings()
+def literal_problems(src: str, name: str, reg: dict[str, Entry], values: list[str]) -> list[str]:
+    """One message per reply literal of `src` with no constant text or neither recorded nor registered, and
+    per entry of `reg` whose text matches no literal or is now recorded."""
     problems = [
         f"line {n}: {sk!r} has no constant text, so it cannot be recorded"
         for n, sk in unrecordable_literals(src)
@@ -393,22 +402,64 @@ def test_every_reply_literal_is_recorded_or_registered(fake: str) -> None:
         f"{k}: text {reg[k].text!r} is now recorded; remove the entry and its tags"
         for k in recorded_texts(src, reg, values)
     ]
+    return problems
+
+
+@pytest.mark.parametrize("fake", FAKES)
+def test_every_reply_literal_is_recorded_or_registered(fake: str) -> None:
+    """A reply literal is recorded or covered by an entry's text, and has constant text; an entry's text
+    matches a literal and is not recorded."""
+    problems = literal_problems(FAKES[fake].read_text(), FAKES[fake].name, _mine(fake), fixture_strings())
     assert not problems, "\n".join(problems)
+
+
+def test_literal_problems_reports_each_kind() -> None:
+    """Control for the check's wiring: each of its four problems shows once."""
+    src = 'A = ValueError(f"{x}")\nE = {"message": " y "}\nG = {"message": " z "}\n'
+    reg = {
+        "emu-a": Entry("fake_emu", "text", "x", "open: y", text=" nope "),
+        "emu-b": Entry("fake_emu", "text", "x", "open: y", text=" y "),
+    }
+    assert literal_problems(src, "f.py", reg, [" y "]) == [
+        "line 1: '{}' has no constant text, so it cannot be recorded",
+        f"line 1: '{{}}' is neither recorded nor registered: {HOW}",
+        f"line 3: ' z ' is neither recorded nor registered: {HOW}",
+        "emu-a: text ' nope ' matches no reply literal of f.py",
+        "emu-b: text ' y ' is now recorded; remove the entry and its tags",
+    ]
+
+
+def tag_problems(src: str, name: str, fake: str, reg: dict[str, Entry]) -> list[str]:
+    """One message for the tags of `src` that name no entry of `reg`, and one for the entries no tag names."""
+    problems: list[str] = []
+    if unknown := unknown_tags(src, reg):
+        problems.append(f"{name} tags (line, id) {unknown} name no entry of {fake}: {HOW}")
+    if untagged := untagged_entries(src, reg):
+        problems.append(f"entries {untagged} of {fake} are tagged nowhere in {name}")
+    return problems
 
 
 @pytest.mark.parametrize("fake", FAKES)
 def test_tags_and_entries_match(fake: str) -> None:
     """Every tag in the source names an entry of this fake, and every entry of this fake is tagged."""
-    src, name, reg = FAKES[fake].read_text(), FAKES[fake].name, _mine(fake)
-    unknown, untagged = unknown_tags(src, reg), untagged_entries(src, reg)
-    assert not unknown, f"{name} tags (line, id) {unknown} name no entry of {fake}: {HOW}"
-    assert not untagged, f"entries {untagged} of {fake} are tagged nowhere in {name}"
+    problems = tag_problems(FAKES[fake].read_text(), FAKES[fake].name, fake, _mine(fake))
+    assert not problems, "\n".join(problems)
 
 
-def test_every_settlement_is_well_formed_and_exists() -> None:
-    """Ids, kinds, `text` by kind and the three settle forms are well formed, and each `real:` test exists."""
+def test_tag_problems_reports_each_kind() -> None:
+    """Control for the check's wiring: an unknown tag and an untagged entry each give their message."""
+    reg = {"emu-a": Entry("fake_emu", "behaviour", "x", "open: y")}
+    assert tag_problems("X = 1  # [U:emu-bogus]\n", "f.py", "fake_emu", reg) == [
+        f"f.py tags (line, id) [(1, 'emu-bogus')] name no entry of fake_emu: {HOW}",
+        "entries ['emu-a'] of fake_emu are tagged nowhere in f.py",
+    ]
+
+
+def register_problems(register: dict[str, Entry], root: Path) -> list[str]:
+    """One message per malformed id, fake, kind, `assumes`, `text` or settle of an entry of `register`, and
+    per `real:` settle naming a test that does not exist under `root`."""
     problems: list[str] = []
-    for key, e in REGISTER.items():
+    for key, e in register.items():
         if not ID.match(key):
             problems.append(f"{key}: id does not match {ID.pattern}")
         elif key.split("-", 1)[0] != e.fake.removeprefix("fake_"):
@@ -427,8 +478,46 @@ def test_every_settlement_is_well_formed_and_exists() -> None:
             problems.append(f"{key}: settle {e.settle!r} is not real:<test>, open: <why> or hook: <flag>")
         if e.kind == "hook" and not e.settle.startswith("hook: "):
             problems.append(f"{key}: a hook entry settles with 'hook: '")
-    problems += missing_settlements(REGISTER, ROOT)
+    problems += missing_settlements(register, root)
+    return problems
+
+
+def test_every_settlement_is_well_formed_and_exists() -> None:
+    """Ids, kinds, `text` by kind and the three settle forms are well formed, and each `real:` test exists."""
+    problems = register_problems(REGISTER, ROOT)
     assert not problems, "\n".join(problems)
+
+
+def test_register_problems_reports_each_rule() -> None:
+    """Control for the check's wiring: one entry breaking each rule gives that rule's message, and a
+    well-formed entry gives none."""
+    gone = "real:tests/real/test_emu_real.py::test_does_not_exist"
+    bad = {
+        "Bad_id": Entry("fake_emu", "behaviour", "x", "open: y"),
+        "trex-a": Entry("fake_emu", "behaviour", "x", "open: y"),
+        "emu-b": Entry("fake_other", "behaviour", "x", "open: y"),
+        "emu-c": Entry("fake_emu", "guess", "x", "open: y"),
+        "emu-d": Entry("fake_emu", "behaviour", " ", "open: y"),
+        "emu-e": Entry("fake_emu", "text", "x", "open: y"),
+        "emu-f": Entry("fake_emu", "model", "x", "open: y", text=" t "),
+        "emu-g": Entry("fake_emu", "behaviour", "x", "later"),
+        "emu-h": Entry("fake_emu", "hook", "x", "open: y"),
+        "emu-i": Entry("fake_emu", "behaviour", "x", gone),
+        "emu-ok": Entry("fake_emu", "hook", "x", "hook: --flag"),
+    }
+    assert register_problems(bad, ROOT) == [
+        f"Bad_id: id does not match {ID.pattern}",
+        "trex-a: id prefix does not match fake 'fake_emu'",
+        "emu-b: id prefix does not match fake 'fake_other'",
+        "emu-b: fake 'fake_other' is neither fake_emu nor fake_trex",
+        f"emu-c: kind 'guess' is not one of {sorted(KINDS)}",
+        "emu-d: assumes is empty",
+        "emu-e: a text entry needs text",
+        "emu-f: a model entry carries no text",
+        "emu-g: settle 'later' is not real:<test>, open: <why> or hook: <flag>",
+        "emu-h: a hook entry settles with 'hook: '",
+        f"emu-i: {gone} names no test that exists",
+    ]
 
 
 SUMMARY = ROOT / "tests" / "fixtures" / "p7" / "summary.json"

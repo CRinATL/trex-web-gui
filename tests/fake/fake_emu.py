@@ -52,7 +52,8 @@ the last item already sent (-1: every walk), as a server whose list changed unde
 which the fake_emu fixture reads back as FakeEmu.requests().
 Flags: --fail METHOD=N (a made-up -32600 error for the Nth request of METHOD) [U:emu-hook-injected-failure],
 --hang METHOD (never answer it), --huge-plain METHOD (a 9 MiB plain reply, over any client's
-MAXMSGSIZE, which libzmq drops), --huge-zip METHOD (a small zlib frame whose length field claims 9 MiB).
+MAXMSGSIZE, which libzmq drops), --huge-zip METHOD (a zlib bomb: a 9 KiB frame that inflates to 9 MiB, its
+length field saying so).
 A `shutdown` request is never answered: the fake prints `[fake-emu] FORBIDDEN shutdown` (the fake_emu fixture
 fails the test at teardown when it saw that line).
 The first line is `[fake-emu] ready port=N`."""
@@ -529,7 +530,7 @@ def main() -> None:
         elif method in a.huge_plain:
             out = json.dumps(reply(req.get("id"), result="x" * HUGE_BYTES)).encode()
         elif method in a.huge_zip:
-            out = struct.pack(">II", MAGIC, HUGE_BYTES) + zlib.compress(b"x")
+            out = struct.pack(">II", MAGIC, HUGE_BYTES) + zlib.compress(bytes(HUGE_BYTES))
         else:
             out = json.dumps(handle(req)).encode()
         sock.send_multipart([ident, b"", out])
