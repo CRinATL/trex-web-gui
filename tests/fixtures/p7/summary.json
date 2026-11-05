@@ -20,7 +20,7 @@
   "mode": "emulation"
  },
  "ping": {
-  "ts": 30
+  "ts": 41
  },
  "get_version_without_api_h": {
   "version": "v0.1",
@@ -165,6 +165,1079 @@
    }
   }
  },
+ "e3": {
+  "condition": "standalone trex-emu v3.08 (vm/emu.sh, -p 4510, no -d), empty server, namespace 213 with arp at namespace level, client [0, 0, 0, 112, 99, 1] with no plugins",
+  "steps": [
+   {
+    "name": "e3_setup_ctx_add",
+    "method": "ctx_add",
+    "params": {
+     "tunnels": [
+      {
+       "vport": 213,
+       "tci": [
+        0,
+        0
+       ],
+       "tpid": [
+        0,
+        0
+       ],
+       "plugs": {
+        "arp": {}
+       },
+       "def_c_plugs": {}
+      }
+     ]
+    },
+    "outcome": {
+     "result": true
+    }
+   },
+   {
+    "name": "e3_setup_client_add",
+    "method": "ctx_client_add",
+    "params": {
+     "clients": [
+      {
+       "mac": [
+        0,
+        0,
+        0,
+        112,
+        99,
+        1
+       ],
+       "ipv4": [
+        1,
+        1,
+        213,
+        1
+       ],
+       "ipv4_dg": [
+        1,
+        1,
+        213,
+        254
+       ]
+      }
+     ],
+     "tun": {
+      "vport": 213,
+      "tci": [
+       0,
+       0
+      ],
+      "tpid": [
+       0,
+       0
+      ]
+     }
+    },
+    "outcome": {
+     "result": true
+    }
+   },
+   {
+    "name": "e3_ctx_add_duplicate",
+    "method": "ctx_add",
+    "params": {
+     "tunnels": [
+      {
+       "vport": 213,
+       "tci": [
+        0,
+        0
+       ],
+       "tpid": [
+        0,
+        0
+       ],
+       "plugs": {
+        "arp": {}
+       },
+       "def_c_plugs": {}
+      }
+     ]
+    },
+    "outcome": {
+     "error": {
+      "code": -32600,
+      "text": " error there is a valid namespace for this tunnel: 213,{0000:0000},{0000:0000}\n, can't add it "
+     }
+    }
+   },
+   {
+    "name": "e3_ctx_add_duplicate_in_request",
+    "method": "ctx_add",
+    "params": {
+     "tunnels": [
+      {
+       "vport": 214,
+       "tci": [
+        0,
+        0
+       ],
+       "tpid": [
+        0,
+        0
+       ],
+       "plugs": {},
+       "def_c_plugs": {}
+      },
+      {
+       "vport": 214,
+       "tci": [
+        0,
+        0
+       ],
+       "tpid": [
+        0,
+        0
+       ],
+       "plugs": {},
+       "def_c_plugs": {}
+      }
+     ]
+    },
+    "outcome": {
+     "error": {
+      "code": -32600,
+      "text": " error there is a valid namespace for this tunnel: 214,{0000:0000},{0000:0000}\n, can't add it "
+     }
+    }
+   },
+   {
+    "name": "e3_ctx_iter_after_duplicate_in_request",
+    "method": "ctx_iter",
+    "params": {
+     "count": 255,
+     "reset": true
+    },
+    "outcome": {
+     "result": {
+      "empty": false,
+      "stopped": false,
+      "data": [
+       {
+        "vport": 213,
+        "tpid": [
+         0,
+         0
+        ],
+        "tci": [
+         0,
+         0
+        ],
+        "plugs": null
+       },
+       {
+        "vport": 214,
+        "tpid": [
+         0,
+         0
+        ],
+        "tci": [
+         0,
+         0
+        ],
+        "plugs": null
+       }
+      ]
+     }
+    }
+   },
+   {
+    "name": "e3_ctx_add_new_and_existing",
+    "method": "ctx_add",
+    "params": {
+     "tunnels": [
+      {
+       "vport": 215,
+       "tci": [
+        0,
+        0
+       ],
+       "tpid": [
+        0,
+        0
+       ],
+       "plugs": {},
+       "def_c_plugs": {}
+      },
+      {
+       "vport": 213,
+       "tci": [
+        0,
+        0
+       ],
+       "tpid": [
+        0,
+        0
+       ],
+       "plugs": {
+        "arp": {}
+       },
+       "def_c_plugs": {}
+      }
+     ]
+    },
+    "outcome": {
+     "error": {
+      "code": -32600,
+      "text": " error there is a valid namespace for this tunnel: 213,{0000:0000},{0000:0000}\n, can't add it "
+     }
+    }
+   },
+   {
+    "name": "e3_ctx_iter_after_new_and_existing",
+    "method": "ctx_iter",
+    "params": {
+     "count": 255,
+     "reset": true
+    },
+    "outcome": {
+     "result": {
+      "empty": false,
+      "stopped": false,
+      "data": [
+       {
+        "vport": 213,
+        "tpid": [
+         0,
+         0
+        ],
+        "tci": [
+         0,
+         0
+        ],
+        "plugs": null
+       },
+       {
+        "vport": 214,
+        "tpid": [
+         0,
+         0
+        ],
+        "tci": [
+         0,
+         0
+        ],
+        "plugs": null
+       },
+       {
+        "vport": 215,
+        "tpid": [
+         0,
+         0
+        ],
+        "tci": [
+         0,
+         0
+        ],
+        "plugs": null
+       }
+      ]
+     }
+    }
+   },
+   {
+    "name": "e3_ctx_client_add_duplicate",
+    "method": "ctx_client_add",
+    "params": {
+     "clients": [
+      {
+       "mac": [
+        0,
+        0,
+        0,
+        112,
+        99,
+        1
+       ],
+       "ipv4": [
+        1,
+        1,
+        213,
+        1
+       ],
+       "ipv4_dg": [
+        1,
+        1,
+        213,
+        254
+       ]
+      }
+     ],
+     "tun": {
+      "vport": 213,
+      "tci": [
+       0,
+       0
+      ],
+      "tpid": [
+       0,
+       0
+      ]
+     }
+    },
+    "outcome": {
+     "error": {
+      "code": -32600,
+      "text": " client with the same MAC 00:00:00:70:63:01 already exist"
+     }
+    }
+   },
+   {
+    "name": "e3_ctx_client_add_duplicate_in_request",
+    "method": "ctx_client_add",
+    "params": {
+     "clients": [
+      {
+       "mac": [
+        0,
+        0,
+        0,
+        112,
+        99,
+        3
+       ],
+       "ipv4": [
+        1,
+        1,
+        213,
+        3
+       ],
+       "ipv4_dg": [
+        1,
+        1,
+        213,
+        254
+       ]
+      },
+      {
+       "mac": [
+        0,
+        0,
+        0,
+        112,
+        99,
+        3
+       ],
+       "ipv4": [
+        1,
+        1,
+        213,
+        3
+       ],
+       "ipv4_dg": [
+        1,
+        1,
+        213,
+        254
+       ]
+      }
+     ],
+     "tun": {
+      "vport": 213,
+      "tci": [
+       0,
+       0
+      ],
+      "tpid": [
+       0,
+       0
+      ]
+     }
+    },
+    "outcome": {
+     "error": {
+      "code": -32600,
+      "text": " client with the same MAC 00:00:00:70:63:03 already exist"
+     }
+    }
+   },
+   {
+    "name": "e3_ctx_client_iter_after_duplicate_in_request",
+    "method": "ctx_client_iter",
+    "params": {
+     "count": 255,
+     "reset": true,
+     "tun": {
+      "vport": 213,
+      "tci": [
+       0,
+       0
+      ],
+      "tpid": [
+       0,
+       0
+      ]
+     }
+    },
+    "outcome": {
+     "result": {
+      "empty": false,
+      "stopped": false,
+      "data": [
+       [
+        0,
+        0,
+        0,
+        112,
+        99,
+        1
+       ],
+       [
+        0,
+        0,
+        0,
+        112,
+        99,
+        3
+       ]
+      ]
+     }
+    }
+   },
+   {
+    "name": "e3_ctx_client_add_unknown_tunnel",
+    "method": "ctx_client_add",
+    "params": {
+     "clients": [
+      {
+       "mac": [
+        0,
+        0,
+        0,
+        112,
+        99,
+        2
+       ],
+       "ipv4": [
+        1,
+        1,
+        213,
+        2
+       ],
+       "ipv4_dg": [
+        1,
+        1,
+        213,
+        254
+       ]
+      }
+     ],
+     "tun": {
+      "vport": 299,
+      "tci": [
+       0,
+       0
+      ],
+      "tpid": [
+       0,
+       0
+      ]
+     }
+    },
+    "outcome": {
+     "error": {
+      "code": -32600,
+      "text": " error there is no valid namespace for this tunnel "
+     }
+    }
+   },
+   {
+    "name": "e3_ctx_client_set_def_plugins_unknown_tunnel",
+    "method": "ctx_client_set_def_plugins",
+    "params": {
+     "def_plugs": {},
+     "tun": {
+      "vport": 299,
+      "tci": [
+       0,
+       0
+      ],
+      "tpid": [
+       0,
+       0
+      ]
+     }
+    },
+    "outcome": {
+     "error": {
+      "code": -32600,
+      "text": " error there is no valid namespace for this tunnel "
+     }
+    }
+   },
+   {
+    "name": "e3_ctx_client_remove_unknown_mac",
+    "method": "ctx_client_remove",
+    "params": {
+     "macs": [
+      [
+       0,
+       0,
+       0,
+       112,
+       99,
+       2
+      ]
+     ],
+     "tun": {
+      "vport": 213,
+      "tci": [
+       0,
+       0
+      ],
+      "tpid": [
+       0,
+       0
+      ]
+     }
+    },
+    "outcome": {
+     "error": {
+      "code": -32600,
+      "text": "client does exits "
+     }
+    }
+   },
+   {
+    "name": "e3_ctx_client_remove_unknown_tunnel",
+    "method": "ctx_client_remove",
+    "params": {
+     "macs": [
+      [
+       0,
+       0,
+       0,
+       112,
+       99,
+       1
+      ]
+     ],
+     "tun": {
+      "vport": 299,
+      "tci": [
+       0,
+       0
+      ],
+      "tpid": [
+       0,
+       0
+      ]
+     }
+    },
+    "outcome": {
+     "error": {
+      "code": -32600,
+      "text": " error there is no valid namespace for this tunnel "
+     }
+    }
+   },
+   {
+    "name": "e3_ctx_client_iter_unknown_tunnel",
+    "method": "ctx_client_iter",
+    "params": {
+     "count": 255,
+     "reset": true,
+     "tun": {
+      "vport": 299,
+      "tci": [
+       0,
+       0
+      ],
+      "tpid": [
+       0,
+       0
+      ]
+     }
+    },
+    "outcome": {
+     "error": {
+      "code": -32600,
+      "text": " error there is no valid namespace for this tunnel "
+     }
+    }
+   },
+   {
+    "name": "e3_ctx_get_info_unknown_tunnel",
+    "method": "ctx_get_info",
+    "params": {
+     "tunnels": [
+      {
+       "vport": 299,
+       "tci": [
+        0,
+        0
+       ],
+       "tpid": [
+        0,
+        0
+       ]
+      }
+     ]
+    },
+    "outcome": {
+     "error": {
+      "code": -32600,
+      "text": "error can't find a valid namespace for this tunnel"
+     }
+    }
+   },
+   {
+    "name": "e3_ctx_get_info_known_and_unknown",
+    "method": "ctx_get_info",
+    "params": {
+     "tunnels": [
+      {
+       "vport": 213,
+       "tci": [
+        0,
+        0
+       ],
+       "tpid": [
+        0,
+        0
+       ]
+      },
+      {
+       "vport": 299,
+       "tci": [
+        0,
+        0
+       ],
+       "tpid": [
+        0,
+        0
+       ]
+      }
+     ]
+    },
+    "outcome": {
+     "error": {
+      "code": -32600,
+      "text": "error can't find a valid namespace for this tunnel"
+     }
+    }
+   },
+   {
+    "name": "e3_ctx_client_get_info_unknown_tunnel",
+    "method": "ctx_client_get_info",
+    "params": {
+     "macs": [
+      [
+       0,
+       0,
+       0,
+       112,
+       99,
+       1
+      ]
+     ],
+     "tun": {
+      "vport": 299,
+      "tci": [
+       0,
+       0
+      ],
+      "tpid": [
+       0,
+       0
+      ]
+     }
+    },
+    "outcome": {
+     "error": {
+      "code": -32600,
+      "text": " error there is no valid namespace for this tunnel "
+     }
+    }
+   },
+   {
+    "name": "e3_ctx_client_get_info_unknown_mac",
+    "method": "ctx_client_get_info",
+    "params": {
+     "macs": [
+      [
+       0,
+       0,
+       0,
+       112,
+       99,
+       2
+      ]
+     ],
+     "tun": {
+      "vport": 213,
+      "tci": [
+       0,
+       0
+      ],
+      "tpid": [
+       0,
+       0
+      ]
+     }
+    },
+    "outcome": {
+     "error": {
+      "code": -32600,
+      "text": "client with mac: 00:00:00:70:63:02 doesn't exists"
+     }
+    }
+   },
+   {
+    "name": "e3_ns_counter_unknown_tunnel",
+    "method": "arp_ns_cnt",
+    "params": {
+     "meta": true,
+     "zero": false,
+     "mask": null,
+     "clear": false,
+     "tun": {
+      "vport": 299,
+      "tci": [
+       0,
+       0
+      ],
+      "tpid": [
+       0,
+       0
+      ]
+     }
+    },
+    "outcome": {
+     "error": {
+      "code": -32600,
+      "text": " error there is no valid namespace for this tunnel "
+     }
+    }
+   },
+   {
+    "name": "e3_client_counter_unknown_mac",
+    "method": "dhcp_client_cnt",
+    "params": {
+     "meta": true,
+     "zero": false,
+     "mask": null,
+     "clear": false,
+     "tun": {
+      "vport": 213,
+      "tci": [
+       0,
+       0
+      ],
+      "tpid": [
+       0,
+       0
+      ]
+     },
+     "mac": [
+      0,
+      0,
+      0,
+      112,
+      99,
+      2
+     ]
+    },
+    "outcome": {
+     "error": {
+      "code": -32600,
+      "text": "Error there is no valid client 00:00:00:70:63:02 for this MAC "
+     }
+    }
+   },
+   {
+    "name": "e3_client_counter_unknown_tunnel",
+    "method": "dhcp_client_cnt",
+    "params": {
+     "meta": true,
+     "zero": false,
+     "mask": null,
+     "clear": false,
+     "tun": {
+      "vport": 299,
+      "tci": [
+       0,
+       0
+      ],
+      "tpid": [
+       0,
+       0
+      ]
+     },
+     "mac": [
+      0,
+      0,
+      0,
+      112,
+      99,
+      1
+     ]
+    },
+    "outcome": {
+     "error": {
+      "code": -32600,
+      "text": " error there is no valid namespace for this tunnel "
+     }
+    }
+   },
+   {
+    "name": "e3_client_counter_plugin_not_loaded",
+    "method": "dhcp_client_cnt",
+    "params": {
+     "meta": true,
+     "zero": false,
+     "mask": null,
+     "clear": false,
+     "tun": {
+      "vport": 213,
+      "tci": [
+       0,
+       0
+      ],
+      "tpid": [
+       0,
+       0
+      ]
+     },
+     "mac": [
+      0,
+      0,
+      0,
+      112,
+      99,
+      1
+     ]
+    },
+    "outcome": {
+     "error": {
+      "code": -32600,
+      "text": "Error there is no valid plugin dhcp for this client "
+     }
+    }
+   },
+   {
+    "name": "e3_ctx_remove_unknown_tunnel",
+    "method": "ctx_remove",
+    "params": {
+     "tunnels": [
+      {
+       "vport": 299,
+       "tci": [
+        0,
+        0
+       ],
+       "tpid": [
+        0,
+        0
+       ]
+      }
+     ]
+    },
+    "outcome": {
+     "error": {
+      "code": -32600,
+      "text": " error can't find a valid namespace for this tunnel"
+     }
+    }
+   },
+   {
+    "name": "e3_setup_ctx_add_empty",
+    "method": "ctx_add",
+    "params": {
+     "tunnels": [
+      {
+       "vport": 216,
+       "tci": [
+        0,
+        0
+       ],
+       "tpid": [
+        0,
+        0
+       ],
+       "plugs": {},
+       "def_c_plugs": {}
+      }
+     ]
+    },
+    "outcome": {
+     "result": true
+    }
+   },
+   {
+    "name": "e3_ctx_remove_known_and_unknown",
+    "method": "ctx_remove",
+    "params": {
+     "tunnels": [
+      {
+       "vport": 216,
+       "tci": [
+        0,
+        0
+       ],
+       "tpid": [
+        0,
+        0
+       ]
+      },
+      {
+       "vport": 299,
+       "tci": [
+        0,
+        0
+       ],
+       "tpid": [
+        0,
+        0
+       ]
+      }
+     ]
+    },
+    "outcome": {
+     "error": {
+      "code": -32600,
+      "text": " error can't find a valid namespace for this tunnel"
+     }
+    }
+   },
+   {
+    "name": "e3_ctx_iter_after_remove_known_and_unknown",
+    "method": "ctx_iter",
+    "params": {
+     "count": 255,
+     "reset": true
+    },
+    "outcome": {
+     "result": {
+      "empty": false,
+      "stopped": false,
+      "data": [
+       {
+        "vport": 213,
+        "tpid": [
+         0,
+         0
+        ],
+        "tci": [
+         0,
+         0
+        ],
+        "plugs": null
+       },
+       {
+        "vport": 214,
+        "tpid": [
+         0,
+         0
+        ],
+        "tci": [
+         0,
+         0
+        ],
+        "plugs": null
+       },
+       {
+        "vport": 215,
+        "tpid": [
+         0,
+         0
+        ],
+        "tci": [
+         0,
+         0
+        ],
+        "plugs": null
+       }
+      ]
+     }
+    }
+   },
+   {
+    "name": "e3_ctx_remove_with_clients",
+    "method": "ctx_remove",
+    "params": {
+     "tunnels": [
+      {
+       "vport": 213,
+       "tci": [
+        0,
+        0
+       ],
+       "tpid": [
+        0,
+        0
+       ]
+      }
+     ]
+    },
+    "outcome": {
+     "error": {
+      "code": -32600,
+      "text": "ns with tunnel 213,{0000:0000},{0000:0000}\n still has active clients, remove them"
+     }
+    }
+   },
+   {
+    "name": "e3_ctx_iter_after_remove_with_clients",
+    "method": "ctx_iter",
+    "params": {
+     "count": 255,
+     "reset": true
+    },
+    "outcome": {
+     "result": {
+      "empty": false,
+      "stopped": false,
+      "data": [
+       {
+        "vport": 213,
+        "tpid": [
+         0,
+         0
+        ],
+        "tci": [
+         0,
+         0
+        ],
+        "plugs": null
+       },
+       {
+        "vport": 214,
+        "tpid": [
+         0,
+         0
+        ],
+        "tci": [
+         0,
+         0
+        ],
+        "plugs": null
+       },
+       {
+        "vport": 215,
+        "tpid": [
+         0,
+         0
+        ],
+        "tci": [
+         0,
+         0
+        ],
+        "plugs": null
+       }
+      ]
+     }
+    }
+   }
+  ],
+  "resetup": []
+ },
  "after_removal_listing": {
   "empty": true,
   "stopped": false,
@@ -172,7 +1245,8 @@
  },
  "ipfix_scratch_removal": {
   "error": "ServerUnreachable: no answer to ctx_remove from tcp://127.0.0.1:4510: Resource temporarily unavailable",
-  "guest": "trex-emu is gone\npanic: runtime error: invalid memory address or nil pointer dereference\n[signal SIGSEGV: segmentation violation code=0x1 addr=0x18 pc=0x783ad3]\n\ngoroutine 1 [running]:\n"
+  "guest": "trex-emu is gone\npanic: runtime error: invalid memory address or nil pointer dereference\n[signal SIGSEGV: segmentation violation code=0x1 addr=0x18 pc=0x783ad3]\n\ngoroutine 1 [running]:\nemu/core.(*PluginCtx).RemovePlugins(0xc0004923f0, {0xc00040f038, 0x5})\n\t/scratch/hhaim/trex-emu/src/emu/core/plugin_ctx.go:224 +0x73\nemu/core.(*PluginCtx).OnRemove(0xc0004923f0)\n\t/scratch/hhaim/trex-emu/src/emu/core/plugin_ctx.go:171 +0x7b\nemu/core.(*CNSCtx).OnRemove(...)\n\t/scratch/hhaim/trex-emu/src/emu/core/ns_ctx.go:231\nemu/core.(*CThreadCtx).RemoveNs(0xc0002b4400, 0xc00058fb24)\n\t/scratch/hhaim/trex-emu/src/emu/core/thread_ctx.go:760 +0x10c\nemu/core.(*CThreadCtx).RemoveNsRpcSlice(0xc0002b4400, 0x53)\n\t/scratch/hhaim/trex-emu/src/emu/core/thread_ctx.go:561 +0xde\nemu/core.ApiNsRemoveHandler.ServeJSONRPC({}, {0x9984e0, 0xc0002b4400}, 0xc0000672d0)\n\t/scratch/hhaim/trex-emu/src/emu/core/rpc_base_cmds.go:203 +0x3d\nexternal/osamingo/jsonrpc.(*MethodRepository).InvokeMethod(0xc00033e200, {0x94, 0x94}, 0xc000532630)\n\t/scratch/hhaim/trex-emu/src/external/osamingo/jsonrpc/handler.go:135 +0x202\nexternal/osamingo/jsonrpc.(*MethodRepository).ServeBytes(0xc00033e200, {0xc0005700a0, 0xc00058fdb8, 0x94})\n\t/scratch/hhaim/trex-emu/src/external/osamingo/jsonrpc/handler.go:53 +0x3d1\nexternal/osamingo/jsonrpc.(*MethodRepository).ServeBytesCompress(0xc00058fe00, {0xc0005700a0, 0xc000342c30, 0x0})\n\t/scratch/hhaim/trex-emu/src/external/osamingo/jsonrpc/handler.go:79 +0x31\nemu/core.(*CZmqJsonRPC2).HandleReqToChan(...)\n\t/scratch/hhaim/trex-emu/src/emu/core/rpc.go:117\nemu/core.(*CThreadCtx).MainLoop(0xc0002b4400)\n\t/scratch/hhaim/trex-emu/src/emu/core/thread_ctx.go:379 +0x157\nmain.RunCoreZmq(0xc00007d680)\n\t/scratch/hhaim/trex-emu/src/cmd/trex-emu.go:176 +0x47f\nmain.main()\n\t/scratch/hhaim/trex-emu/src/cmd/trex-emu.go:184 +0x1e\n",
+  "condition": "ipfix at namespace level only, empty {} config, standalone trex-emu v3.08"
  },
  "port_prerequisite": "none on the AF_PACKET guest (all four port-0 states answered; spike-0.md Step 5)",
  "emu_api": [
@@ -184,7 +1258,7 @@
  "timings": [
   {
    "call": "api_sync_v2 EMU_1_1",
-   "secs": 0.0015,
+   "secs": 0.0009,
    "error": null
   },
   {
@@ -204,17 +1278,17 @@
   },
   {
    "call": "get_version",
-   "secs": 0.0002,
+   "secs": 0.0004,
    "error": null
   },
   {
    "call": "ping",
-   "secs": 0.0002,
+   "secs": 0.0004,
    "error": null
   },
   {
    "call": "api_sync_v2_major2",
-   "secs": 0.0006,
+   "secs": 0.0008,
    "error": {
     "code": -32600,
     "text": "Server API EMU:(1:1) does not match the client API EMU:(2:0) "
@@ -222,7 +1296,7 @@
   },
   {
    "call": "api_sync_v2_stl",
-   "secs": 0.0005,
+   "secs": 0.0007,
    "error": {
     "code": -32600,
     "text": "Server API EMU:(1:1) does not match the client API STL:(5:1) "
@@ -230,7 +1304,7 @@
   },
   {
    "call": "get_version",
-   "secs": 0.0005,
+   "secs": 0.0007,
    "error": null
   },
   {
@@ -259,7 +1333,7 @@
   },
   {
    "call": "ctx_resource_monitor_get",
-   "secs": 0.0004,
+   "secs": 0.0003,
    "error": {
     "code": -32601,
     "text": "Method not found"
@@ -267,7 +1341,7 @@
   },
   {
    "call": "ipfix_ns_cnt",
-   "secs": 0.0003,
+   "secs": 0.0002,
    "error": {
     "code": -32601,
     "text": "Method not found"
@@ -283,17 +1357,17 @@
   },
   {
    "call": "clear_ctx_iter",
-   "secs": 0.0004,
+   "secs": 0.0003,
    "error": null
   },
   {
    "call": "load ctx_set_def_plugins",
-   "secs": 0.0004,
+   "secs": 0.0003,
    "error": null
   },
   {
    "call": "load ctx_add",
-   "secs": 0.0005,
+   "secs": 0.0003,
    "error": null
   },
   {
@@ -303,22 +1377,22 @@
   },
   {
    "call": "load ctx_client_add",
-   "secs": 0.0006,
-   "error": null
-  },
-  {
-   "call": "load ctx_client_set_def_plugins",
    "secs": 0.0004,
    "error": null
   },
   {
+   "call": "load ctx_client_set_def_plugins",
+   "secs": 0.0003,
+   "error": null
+  },
+  {
    "call": "load ctx_client_add",
-   "secs": 0.0005,
+   "secs": 0.0004,
    "error": null
   },
   {
    "call": "ctx_iter",
-   "secs": 0.0004,
+   "secs": 0.0003,
    "error": null
   },
   {
@@ -333,12 +1407,32 @@
   },
   {
    "call": "ctx_iter count 1 past the end",
-   "secs": 0.0004,
+   "secs": 0.0003,
    "error": null
   },
   {
    "call": "ctx_get_info",
-   "secs": 0.0004,
+   "secs": 0.0003,
+   "error": null
+  },
+  {
+   "call": "ctx_client_iter",
+   "secs": 0.0003,
+   "error": null
+  },
+  {
+   "call": "ctx_client_iter count 2",
+   "secs": 0.0002,
+   "error": null
+  },
+  {
+   "call": "ctx_client_iter count 2 continued",
+   "secs": 0.0002,
+   "error": null
+  },
+  {
+   "call": "ctx_client_get_info",
+   "secs": 0.0003,
    "error": null
   },
   {
@@ -353,37 +1447,17 @@
   },
   {
    "call": "ctx_client_iter count 2 continued",
-   "secs": 0.0003,
+   "secs": 0.0002,
    "error": null
   },
   {
    "call": "ctx_client_get_info",
-   "secs": 0.0006,
-   "error": null
-  },
-  {
-   "call": "ctx_client_iter",
-   "secs": 0.0003,
-   "error": null
-  },
-  {
-   "call": "ctx_client_iter count 2",
    "secs": 0.0004,
    "error": null
   },
   {
-   "call": "ctx_client_iter count 2 continued",
-   "secs": 0.0004,
-   "error": null
-  },
-  {
-   "call": "ctx_client_get_info",
-   "secs": 0.0003,
-   "error": null
-  },
-  {
    "call": "ctx_cnt",
-   "secs": 0.0006,
+   "secs": 0.0007,
    "error": null
   },
   {
@@ -393,22 +1467,22 @@
   },
   {
    "call": "ctx_cnt",
-   "secs": 0.0006,
+   "secs": 0.0005,
    "error": null
   },
   {
    "call": "ctx_cnt mask ctx",
-   "secs": 0.0004,
+   "secs": 0.0002,
    "error": null
   },
   {
    "call": "ctx_cnt mask unknown",
-   "secs": 0.0004,
+   "secs": 0.0002,
    "error": null
   },
   {
    "call": "igmp_ns_cnt not loaded",
-   "secs": 0.0004,
+   "secs": 0.0003,
    "error": {
     "code": -32600,
     "text": " error there is no valid plugin igmp for this tunnel "
@@ -426,17 +1500,17 @@
   },
   {
    "call": "scratch ctx_client_add appsim",
-   "secs": 0.0011,
+   "secs": 0.001,
    "error": null
   },
   {
    "call": "appsim_client_cnt meta",
-   "secs": 0.0005,
+   "secs": 0.0006,
    "error": null
   },
   {
    "call": "appsim_client_cnt values",
-   "secs": 0.0004,
+   "secs": 0.0003,
    "error": null
   },
   {
@@ -446,42 +1520,42 @@
   },
   {
    "call": "scratch client_iter",
-   "secs": 0.0003,
+   "secs": 0.0004,
    "error": null
   },
   {
    "call": "scratch ctx_client_remove",
-   "secs": 0.0003,
+   "secs": 0.0004,
    "error": null
   },
   {
    "call": "scratch ctx_remove",
-   "secs": 0.0004,
+   "secs": 0.0003,
    "error": null
   },
   {
    "call": "scratch ctx_add arp",
-   "secs": 0.0004,
+   "secs": 0.0003,
    "error": null
   },
   {
    "call": "scratch ctx_client_add arp",
-   "secs": 0.0004,
+   "secs": 0.0003,
    "error": null
   },
   {
    "call": "arp_ns_cnt meta",
-   "secs": 0.0005,
+   "secs": 0.0004,
    "error": null
   },
   {
    "call": "arp_ns_cnt values",
-   "secs": 0.0004,
+   "secs": 0.0003,
    "error": null
   },
   {
    "call": "arp_ns_cnt zero values",
-   "secs": 0.0004,
+   "secs": 0.0003,
    "error": null
   },
   {
@@ -521,12 +1595,12 @@
   },
   {
    "call": "cdp_client_cnt values",
-   "secs": 0.0003,
+   "secs": 0.0002,
    "error": null
   },
   {
    "call": "cdp_client_cnt zero values",
-   "secs": 0.0004,
+   "secs": 0.0002,
    "error": null
   },
   {
@@ -536,7 +1610,7 @@
   },
   {
    "call": "scratch ctx_client_remove",
-   "secs": 0.0003,
+   "secs": 0.0002,
    "error": null
   },
   {
@@ -546,7 +1620,7 @@
   },
   {
    "call": "scratch ctx_add dhcp",
-   "secs": 0.0003,
+   "secs": 0.0002,
    "error": null
   },
   {
@@ -561,12 +1635,12 @@
   },
   {
    "call": "dhcp_client_cnt meta",
-   "secs": 0.0005,
+   "secs": 0.0003,
    "error": null
   },
   {
    "call": "dhcp_client_cnt values",
-   "secs": 0.0004,
+   "secs": 0.0003,
    "error": null
   },
   {
@@ -586,12 +1660,12 @@
   },
   {
    "call": "scratch ctx_remove",
-   "secs": 0.0003,
+   "secs": 0.0002,
    "error": null
   },
   {
    "call": "scratch ctx_add dhcpsrv",
-   "secs": 0.0002,
+   "secs": 0.0003,
    "error": null
   },
   {
@@ -601,22 +1675,22 @@
   },
   {
    "call": "scratch ctx_client_add dhcpsrv",
-   "secs": 0.0003,
+   "secs": 0.0005,
    "error": null
   },
   {
    "call": "dhcpsrv_c_cnt meta",
-   "secs": 0.0004,
-   "error": null
-  },
-  {
-   "call": "dhcpsrv_c_cnt values",
    "secs": 0.0003,
    "error": null
   },
   {
+   "call": "dhcpsrv_c_cnt values",
+   "secs": 0.0002,
+   "error": null
+  },
+  {
    "call": "dhcpsrv_c_cnt zero values",
-   "secs": 0.0004,
+   "secs": 0.0006,
    "error": null
   },
   {
@@ -631,27 +1705,27 @@
   },
   {
    "call": "scratch ctx_remove",
-   "secs": 0.0003,
+   "secs": 0.0004,
    "error": null
   },
   {
    "call": "scratch ctx_add dhcpv6",
-   "secs": 0.0003,
+   "secs": 0.0002,
    "error": null
   },
   {
    "call": "scratch set_def_plugins dhcpv6",
-   "secs": 0.0003,
+   "secs": 0.0002,
    "error": null
   },
   {
    "call": "scratch ctx_client_add dhcpv6",
-   "secs": 0.0004,
+   "secs": 0.0005,
    "error": null
   },
   {
    "call": "dhcpv6_client_cnt meta",
-   "secs": 0.0004,
+   "secs": 0.0005,
    "error": null
   },
   {
@@ -661,17 +1735,17 @@
   },
   {
    "call": "dhcpv6_client_cnt zero values",
-   "secs": 0.0003,
+   "secs": 0.0004,
    "error": null
   },
   {
    "call": "scratch client_iter",
-   "secs": 0.0003,
+   "secs": 0.0004,
    "error": null
   },
   {
    "call": "scratch ctx_client_remove",
-   "secs": 0.0003,
+   "secs": 0.0004,
    "error": null
   },
   {
@@ -681,12 +1755,12 @@
   },
   {
    "call": "scratch ctx_add dns",
-   "secs": 0.0003,
+   "secs": 0.0004,
    "error": null
   },
   {
    "call": "scratch set_def_plugins dns",
-   "secs": 0.0003,
+   "secs": 0.0004,
    "error": null
   },
   {
@@ -696,7 +1770,7 @@
   },
   {
    "call": "dns_ns_cnt meta",
-   "secs": 0.0003,
+   "secs": 0.0004,
    "error": null
   },
   {
@@ -706,22 +1780,22 @@
   },
   {
    "call": "dns_ns_cnt zero values",
-   "secs": 0.0002,
+   "secs": 0.0004,
    "error": null
   },
   {
    "call": "dns_c_cnt meta",
-   "secs": 0.0009,
+   "secs": 0.0005,
    "error": null
   },
   {
    "call": "dns_c_cnt values",
-   "secs": 0.0003,
+   "secs": 0.0004,
    "error": null
   },
   {
    "call": "dns_c_cnt zero values",
-   "secs": 0.0008,
+   "secs": 0.0003,
    "error": null
   },
   {
@@ -731,12 +1805,12 @@
   },
   {
    "call": "scratch ctx_client_remove",
-   "secs": 0.0003,
+   "secs": 0.0002,
    "error": null
   },
   {
    "call": "scratch ctx_remove",
-   "secs": 0.0004,
+   "secs": 0.0003,
    "error": null
   },
   {
@@ -746,67 +1820,67 @@
   },
   {
    "call": "scratch set_def_plugins dot1x",
-   "secs": 0.0002,
-   "error": null
-  },
-  {
-   "call": "scratch ctx_client_add dot1x",
    "secs": 0.0003,
    "error": null
   },
   {
+   "call": "scratch ctx_client_add dot1x",
+   "secs": 0.0004,
+   "error": null
+  },
+  {
    "call": "dot1x_client_cnt meta",
-   "secs": 0.0002,
+   "secs": 0.0004,
    "error": null
   },
   {
    "call": "dot1x_client_cnt values",
-   "secs": 0.0002,
+   "secs": 0.0003,
    "error": null
   },
   {
    "call": "dot1x_client_cnt zero values",
-   "secs": 0.0002,
+   "secs": 0.0003,
    "error": null
   },
   {
    "call": "scratch client_iter",
-   "secs": 0.0002,
+   "secs": 0.0003,
    "error": null
   },
   {
    "call": "scratch ctx_client_remove",
-   "secs": 0.0002,
+   "secs": 0.0003,
    "error": null
   },
   {
    "call": "scratch ctx_remove",
-   "secs": 0.0002,
+   "secs": 0.0003,
    "error": null
   },
   {
    "call": "scratch ctx_add icmp",
-   "secs": 0.0002,
+   "secs": 0.0003,
    "error": null
   },
   {
    "call": "scratch ctx_client_add icmp",
-   "secs": 0.0002,
+   "secs": 0.0003,
    "error": null
   },
   {
    "call": "icmp_ns_cnt meta",
-   "secs": 0.0002,
+   "secs": 0.0003,
    "error": null
   },
   {
    "call": "icmp_ns_cnt values",
-   "secs": 0.0002,
+   "secs": 0.0003,
    "error": null
   },
   {
    "call": "icmp_ns_cnt zero values",
-   "secs": 0.0002,
+   "secs": 0.0003,
    "error": null
   },
   {
@@ -826,7 +1900,7 @@
   },
   {
    "call": "scratch ctx_add igmp",
-   "secs": 0.0002,
+   "secs": 0.0003,
    "error": null
   },
   {
@@ -846,12 +1920,12 @@
   },
   {
    "call": "igmp_ns_cnt zero values",
-   "secs": 0.0002,
+   "secs": 0.0003,
    "error": null
   },
   {
    "call": "scratch client_iter",
-   "secs": 0.0002,
+   "secs": 0.0003,
    "error": null
   },
   {
@@ -861,7 +1935,7 @@
   },
   {
    "call": "scratch ctx_remove",
-   "secs": 0.0001,
+   "secs": 0.0002,
    "error": null
   },
   {
@@ -871,32 +1945,32 @@
   },
   {
    "call": "scratch ctx_client_add ipv6",
-   "secs": 0.0001,
+   "secs": 0.0002,
    "error": null
   },
   {
    "call": "ipv6_ns_cnt meta",
-   "secs": 0.0005,
+   "secs": 0.0006,
    "error": null
   },
   {
    "call": "ipv6_ns_cnt values",
-   "secs": 0.0004,
+   "secs": 0.0002,
    "error": null
   },
   {
    "call": "ipv6_ns_cnt zero values",
-   "secs": 0.0005,
+   "secs": 0.0003,
    "error": null
   },
   {
    "call": "scratch client_iter",
-   "secs": 0.0003,
+   "secs": 0.0002,
    "error": null
   },
   {
    "call": "scratch ctx_client_remove",
-   "secs": 0.0003,
+   "secs": 0.0002,
    "error": null
   },
   {
@@ -921,7 +1995,7 @@
   },
   {
    "call": "lldp_client_cnt meta",
-   "secs": 0.0002,
+   "secs": 0.0003,
    "error": null
   },
   {
@@ -946,7 +2020,7 @@
   },
   {
    "call": "scratch ctx_remove",
-   "secs": 0.0001,
+   "secs": 0.0002,
    "error": null
   },
   {
@@ -981,7 +2055,7 @@
   },
   {
    "call": "mdns_c_cnt meta",
-   "secs": 0.0002,
+   "secs": 0.0003,
    "error": null
   },
   {
@@ -991,7 +2065,7 @@
   },
   {
    "call": "mdns_c_cnt zero values",
-   "secs": 0.0002,
+   "secs": 0.0003,
    "error": null
   },
   {
@@ -1021,17 +2095,17 @@
   },
   {
    "call": "scratch ctx_client_add tdl",
-   "secs": 0.0002,
+   "secs": 0.0004,
    "error": null
   },
   {
    "call": "tdl_c_cnt meta",
-   "secs": 0.0003,
+   "secs": 0.0002,
    "error": null
   },
   {
    "call": "tdl_c_cnt values",
-   "secs": 0.0002,
+   "secs": 0.0004,
    "error": null
   },
   {
@@ -1041,7 +2115,7 @@
   },
   {
    "call": "scratch client_iter",
-   "secs": 0.0001,
+   "secs": 0.0002,
    "error": null
   },
   {
@@ -1084,82 +2158,82 @@
   },
   {
    "call": "scratch ctx_client_remove",
-   "secs": 0.0002,
+   "secs": 0.0003,
    "error": null
   },
   {
    "call": "scratch ctx_remove",
-   "secs": 0.0002,
+   "secs": 0.0075,
    "error": null
   },
   {
    "call": "scratch ctx_add transporte",
-   "secs": 0.0002,
+   "secs": 0.0005,
    "error": null
   },
   {
    "call": "scratch ctx_client_add transporte",
-   "secs": 0.0002,
+   "secs": 0.0004,
    "error": null
   },
   {
    "call": "transe_ns_cnt meta",
-   "secs": 0.0002,
+   "secs": 0.0007,
    "error": null
   },
   {
    "call": "transe_ns_cnt values",
-   "secs": 0.0002,
+   "secs": 0.0012,
    "error": null
   },
   {
    "call": "transe_ns_cnt zero values",
-   "secs": 0.0002,
+   "secs": 0.0005,
    "error": null
   },
   {
    "call": "scratch client_iter",
-   "secs": 0.0002,
+   "secs": 0.0011,
    "error": null
   },
   {
    "call": "scratch ctx_client_remove",
-   "secs": 0.0002,
+   "secs": 0.0008,
    "error": null
   },
   {
    "call": "scratch ctx_remove",
-   "secs": 0.0002,
+   "secs": 0.0005,
    "error": null
   },
   {
    "call": "interrupt A first",
-   "secs": 0.0003,
+   "secs": 0.0005,
    "error": null
   },
   {
    "call": "interrupt B reset",
-   "secs": 0.0003,
+   "secs": 0.0007,
    "error": null
   },
   {
    "call": "interrupt A after B reset",
-   "secs": 0.0004,
+   "secs": 0.0025,
    "error": null
   },
   {
    "call": "interrupt A restart",
-   "secs": 0.0004,
+   "secs": 0.0006,
    "error": null
   },
   {
    "call": "interrupt B ctx_add",
-   "secs": 0.0003,
+   "secs": 0.0009,
    "error": null
   },
   {
    "call": "interrupt A after B ctx_add",
-   "secs": 0.0003,
+   "secs": 0.0008,
    "error": {
     "code": -32600,
     "text": " iterator was interupted , reset and start again "
@@ -1167,22 +2241,22 @@
   },
   {
    "call": "interrupt A restart all",
-   "secs": 0.0004,
+   "secs": 0.0006,
    "error": null
   },
   {
    "call": "interrupt A restart again",
-   "secs": 0.0004,
+   "secs": 0.0006,
    "error": null
   },
   {
    "call": "interrupt B ctx_remove",
-   "secs": 0.0004,
+   "secs": 0.0005,
    "error": null
   },
   {
    "call": "interrupt A after B ctx_remove",
-   "secs": 0.0003,
+   "secs": 0.0004,
    "error": {
     "code": -32600,
     "text": " iterator was interupted , reset and start again "
@@ -1195,12 +2269,12 @@
   },
   {
    "call": "interrupt clients B ctx_client_add",
-   "secs": 0.0005,
+   "secs": 0.0003,
    "error": null
   },
   {
    "call": "interrupt clients A after B add",
-   "secs": 0.0004,
+   "secs": 0.0002,
    "error": {
     "code": -32600,
     "text": " iterator was interupted , reset and start again "
@@ -1208,17 +2282,17 @@
   },
   {
    "call": "interrupt clients A restart",
-   "secs": 0.0005,
+   "secs": 0.0002,
    "error": null
   },
   {
    "call": "interrupt clients B remove",
-   "secs": 0.0004,
+   "secs": 0.0002,
    "error": null
   },
   {
    "call": "interrupt clients A after B remove",
-   "secs": 0.0004,
+   "secs": 0.0003,
    "error": {
     "code": -32600,
     "text": " iterator was interupted , reset and start again "
@@ -1226,17 +2300,270 @@
   },
   {
    "call": "clear_ctx_iter",
+   "secs": 0.0005,
+   "error": null
+  },
+  {
+   "call": "clear_client_iter",
+   "secs": 0.0003,
+   "error": null
+  },
+  {
+   "call": "clear_client_remove",
+   "secs": 0.0003,
+   "error": null
+  },
+  {
+   "call": "clear_ctx_remove",
+   "secs": 0.0003,
+   "error": null
+  },
+  {
+   "call": "clear_client_iter",
+   "secs": 0.0002,
+   "error": null
+  },
+  {
+   "call": "clear_client_remove",
+   "secs": 0.0002,
+   "error": null
+  },
+  {
+   "call": "clear_ctx_remove",
+   "secs": 0.0002,
+   "error": null
+  },
+  {
+   "call": "e3_setup_ctx_add",
+   "secs": 0.0003,
+   "error": null
+  },
+  {
+   "call": "e3_setup_client_add",
+   "secs": 0.0002,
+   "error": null
+  },
+  {
+   "call": "e3_ctx_add_duplicate",
+   "secs": 0.0003,
+   "error": {
+    "code": -32600,
+    "text": " error there is a valid namespace for this tunnel: 213,{0000:0000},{0000:0000}\n, can't add it "
+   }
+  },
+  {
+   "call": "e3_ctx_add_duplicate_in_request",
+   "secs": 0.0003,
+   "error": {
+    "code": -32600,
+    "text": " error there is a valid namespace for this tunnel: 214,{0000:0000},{0000:0000}\n, can't add it "
+   }
+  },
+  {
+   "call": "e3_ctx_iter_after_duplicate_in_request",
+   "secs": 0.0002,
+   "error": null
+  },
+  {
+   "call": "e3_ctx_add_new_and_existing",
+   "secs": 0.0002,
+   "error": {
+    "code": -32600,
+    "text": " error there is a valid namespace for this tunnel: 213,{0000:0000},{0000:0000}\n, can't add it "
+   }
+  },
+  {
+   "call": "e3_ctx_iter_after_new_and_existing",
+   "secs": 0.0002,
+   "error": null
+  },
+  {
+   "call": "e3_ctx_client_add_duplicate",
+   "secs": 0.0003,
+   "error": {
+    "code": -32600,
+    "text": " client with the same MAC 00:00:00:70:63:01 already exist"
+   }
+  },
+  {
+   "call": "e3_ctx_client_add_duplicate_in_request",
    "secs": 0.0004,
+   "error": {
+    "code": -32600,
+    "text": " client with the same MAC 00:00:00:70:63:03 already exist"
+   }
+  },
+  {
+   "call": "e3_ctx_client_iter_after_duplicate_in_request",
+   "secs": 0.0002,
+   "error": null
+  },
+  {
+   "call": "e3_ctx_client_add_unknown_tunnel",
+   "secs": 0.0002,
+   "error": {
+    "code": -32600,
+    "text": " error there is no valid namespace for this tunnel "
+   }
+  },
+  {
+   "call": "e3_ctx_client_set_def_plugins_unknown_tunnel",
+   "secs": 0.0002,
+   "error": {
+    "code": -32600,
+    "text": " error there is no valid namespace for this tunnel "
+   }
+  },
+  {
+   "call": "e3_ctx_client_remove_unknown_mac",
+   "secs": 0.0002,
+   "error": {
+    "code": -32600,
+    "text": "client does exits "
+   }
+  },
+  {
+   "call": "e3_ctx_client_remove_unknown_tunnel",
+   "secs": 0.0002,
+   "error": {
+    "code": -32600,
+    "text": " error there is no valid namespace for this tunnel "
+   }
+  },
+  {
+   "call": "e3_ctx_client_iter_unknown_tunnel",
+   "secs": 0.0002,
+   "error": {
+    "code": -32600,
+    "text": " error there is no valid namespace for this tunnel "
+   }
+  },
+  {
+   "call": "e3_ctx_get_info_unknown_tunnel",
+   "secs": 0.0002,
+   "error": {
+    "code": -32600,
+    "text": "error can't find a valid namespace for this tunnel"
+   }
+  },
+  {
+   "call": "e3_ctx_get_info_known_and_unknown",
+   "secs": 0.0002,
+   "error": {
+    "code": -32600,
+    "text": "error can't find a valid namespace for this tunnel"
+   }
+  },
+  {
+   "call": "e3_ctx_client_get_info_unknown_tunnel",
+   "secs": 0.0002,
+   "error": {
+    "code": -32600,
+    "text": " error there is no valid namespace for this tunnel "
+   }
+  },
+  {
+   "call": "e3_ctx_client_get_info_unknown_mac",
+   "secs": 0.0002,
+   "error": {
+    "code": -32600,
+    "text": "client with mac: 00:00:00:70:63:02 doesn't exists"
+   }
+  },
+  {
+   "call": "e3_ns_counter_unknown_tunnel",
+   "secs": 0.0003,
+   "error": {
+    "code": -32600,
+    "text": " error there is no valid namespace for this tunnel "
+   }
+  },
+  {
+   "call": "e3_client_counter_unknown_mac",
+   "secs": 0.0003,
+   "error": {
+    "code": -32600,
+    "text": "Error there is no valid client 00:00:00:70:63:02 for this MAC "
+   }
+  },
+  {
+   "call": "e3_client_counter_unknown_tunnel",
+   "secs": 0.0003,
+   "error": {
+    "code": -32600,
+    "text": " error there is no valid namespace for this tunnel "
+   }
+  },
+  {
+   "call": "e3_client_counter_plugin_not_loaded",
+   "secs": 0.0002,
+   "error": {
+    "code": -32600,
+    "text": "Error there is no valid plugin dhcp for this client "
+   }
+  },
+  {
+   "call": "e3_ctx_remove_unknown_tunnel",
+   "secs": 0.0002,
+   "error": {
+    "code": -32600,
+    "text": " error can't find a valid namespace for this tunnel"
+   }
+  },
+  {
+   "call": "e3_setup_ctx_add_empty",
+   "secs": 0.0002,
+   "error": null
+  },
+  {
+   "call": "e3_ctx_remove_known_and_unknown",
+   "secs": 0.0002,
+   "error": {
+    "code": -32600,
+    "text": " error can't find a valid namespace for this tunnel"
+   }
+  },
+  {
+   "call": "e3_ctx_iter_after_remove_known_and_unknown",
+   "secs": 0.0003,
+   "error": null
+  },
+  {
+   "call": "e3_ctx_remove_with_clients",
+   "secs": 0.0002,
+   "error": {
+    "code": -32600,
+    "text": "ns with tunnel 213,{0000:0000},{0000:0000}\n still has active clients, remove them"
+   }
+  },
+  {
+   "call": "e3_ctx_iter_after_remove_with_clients",
+   "secs": 0.0003,
+   "error": null
+  },
+  {
+   "call": "clear_ctx_iter",
+   "secs": 0.0003,
    "error": null
   },
   {
    "call": "clear_client_iter",
-   "secs": 0.0003,
+   "secs": 0.0002,
    "error": null
   },
   {
    "call": "clear_client_remove",
+   "secs": 0.0002,
+   "error": null
+  },
+  {
+   "call": "clear_ctx_remove",
    "secs": 0.0003,
+   "error": null
+  },
+  {
+   "call": "clear_client_iter",
+   "secs": 0.0002,
    "error": null
   },
   {
@@ -1250,12 +2577,12 @@
    "error": null
   },
   {
-   "call": "clear_client_remove",
-   "secs": 0.0003,
+   "call": "clear_ctx_remove",
+   "secs": 0.0002,
    "error": null
   },
   {
-   "call": "clear_ctx_remove",
+   "call": "clear_ctx_iter",
    "secs": 0.0002,
    "error": null
   },
@@ -1266,7 +2593,7 @@
   },
   {
    "call": "scratch ctx_add ipfix",
-   "secs": 0.0004,
+   "secs": 0.0002,
    "error": null
   },
   {
@@ -1289,33 +2616,33 @@
   },
   {
    "call": "ipfix_c_cnt meta",
-   "secs": 0.0003,
+   "secs": 0.0005,
    "error": null
   },
   {
    "call": "ipfix_c_cnt values",
-   "secs": 0.0004,
+   "secs": 0.0003,
    "error": null
   },
   {
    "call": "ipfix_c_cnt zero values",
-   "secs": 0.0004,
+   "secs": 0.0003,
    "error": null
   },
   {
    "call": "scratch client_iter",
-   "secs": 0.0003,
+   "secs": 0.0002,
    "error": null
   },
   {
    "call": "scratch ctx_client_remove",
-   "secs": 0.0003,
+   "secs": 0.0002,
    "error": null
   }
  ],
  "slowest_call": {
-  "call": "api_sync_v2 EMU_1_1",
-  "secs": 0.0015,
+  "call": "scratch ctx_remove",
+  "secs": 0.0075,
   "error": null
  }
 }

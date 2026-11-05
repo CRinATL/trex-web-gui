@@ -6,26 +6,40 @@ unknown method -32601) and the reads: ctx_iter and ctx_client_iter (cursors with
 `stopped`/`empty` and the epoch error), ctx_get_info, ctx_client_get_info, ctx_cnt and every plugin's
 counters, answered from tests/fixtures/p7/counters.json (meta, sparse values, zero-filled values, the
 mask on value requests; a meta request ignores mask, as the shipped server does, ruling R29).
-The texts are read from those files, never retyped here, except the client-scope 'no valid plugin' wording
-(ruling R11: only the tunnel-scope text is in the committed fixture; the client-scope text was recorded in the
-031136Z run).
+The texts are read from those files, never retyped here: the unknown-key, duplicate and client-scope 'no
+valid plugin' errors are the e3_* entries of negatives.json, and the writes' partial effects follow the E3
+steps of summary.json.
 
 The writes of a profile load and removal (ctx_set_def_plugins, ctx_add, ctx_client_set_def_plugins,
 ctx_client_add, ctx_client_remove, ctx_remove) change the state the reads serve, and each one bumps the epoch
 (ruling R10: another client's add or remove interrupts an open cursor).
 
-Known divergences: no packets, so counters never advance; a counter table is the recorded one whatever the
-namespace; a request naming a namespace or client that does not exist, and an add of one that already
-exists, answers a -32600 whose text is made up (it was not recorded); removing a namespace that loaded the
-ipfix plugin does not panic the way trex-emu does (use --hang ctx_remove to model the unanswered request);
-ctx_stop_autotriggers still answers method-not-found; ctx_remove accepts a namespace that still holds
-clients (whether the real server does was not recorded: the recorded removal empties it first).
+Known divergences from the real server:
+- No packets, so counters never advance; a counter table is the recorded one whatever the namespace.
+  [U:emu-counters-static]
+- An error text that names the key it failed on (a vport, a MAC) is the recorded text with that key
+  swapped for the asked one; only the vport (and the colon-form MAC) is substituted, so the VLAN part of the
+  recorded key rendering stays as recorded. [U:emu-key-rendering]
+- A ctx_add, ctx_remove or ctx_client_add that answers an error after part of it took effect bumps the epoch
+  once, and one that changed nothing bumps none. [U:emu-partial-write-epoch]
+- ctx_remove with a tunnel repeated in the request answers the unknown-tunnel error for the repeat, and a
+  namespace holding clients that is not the first tunnel leaves the removals before it done.
+  [U:emu-remove-repeat-error] [U:emu-remove-keeps-before-refusal]
+- ctx_client_remove with several MACs removes none when one is unknown: E3 sent one MAC at a time.
+  [U:emu-client-remove-atomic]
+- ctx_client_get_info for a MAC copies the recorded client record and synthesises its ipv4 from the MAC, not
+  the address the client was added with. [U:emu-client-info-synth]
+- Removing a namespace that loaded the ipfix plugin does not panic the way trex-emu does (use --hang
+  ctx_remove to model the unanswered request). [U:emu-ipfix-no-panic]
+- Its texts were recorded from standalone trex-emu, and the app talks to the EMU that TRex --emu hosts.
+  [U:emu-standalone-recording]
 
 The socket is a ROUTER, so a request that is not answered (--hang) does not block the next one: the client
 rebuilds its REQ socket after a timeout, as the real server's would let it.
 
 A SIGUSR2 restart is applied before the next message: a new api_h and empty state. A request
-carrying the old api_h then answers -32602.
+carrying the old api_h then answers -32602, as the real server does (pinned under TRex
+[U:emu-restart-model]).
 
 Seeding: --foreign-ns K starts with K namespaces (vport 0..K-1), --clients C gives each C clients,
 --plugins a,b names the plugins loaded in every namespace and client (default arp,icmp; the server's own
@@ -36,8 +50,8 @@ next page of any open cursor answers the recorded "interupted" error (a reset st
 the last item already sent (-1: every walk), as a server whose list changed under the cursor might.
 --log PATH appends one JSON line per request (method and params without api_h),
 which the fake_emu fixture reads back as FakeEmu.requests().
-Flags: --fail METHOD=N (answer the Nth request of METHOD with a made-up -32600 error), --hang METHOD (never
-answer it), --huge-plain METHOD (a 9 MiB plain reply, over any client's
+Flags: --fail METHOD=N (a made-up -32600 error for the Nth request of METHOD) [U:emu-hook-injected-failure],
+--hang METHOD (never answer it), --huge-plain METHOD (a 9 MiB plain reply, over any client's
 MAXMSGSIZE, which libzmq drops), --huge-zip METHOD (a small zlib frame whose length field claims 9 MiB).
 A `shutdown` request is never answered: the fake prints `[fake-emu] FORBIDDEN shutdown` (the fake_emu fixture
 fails the test at teardown when it saw that line).
@@ -45,6 +59,7 @@ The first line is `[fake-emu] ready port=N`."""
 import argparse
 import copy
 import json
+import re
 import secrets
 import signal
 import struct
@@ -79,9 +94,9 @@ _I = SUM["interrupted_iteration"]["after_add_by_other"]["error"]
 INTERRUPTED = {"code": _I["code"], "message": _I["text"]}
 NO_PLUGIN_TUNNEL = NEG["plugin_counters_not_loaded"]["resp"]["error"]["message"].replace("igmp", "{plugin}")
 assert "{plugin}" in NO_PLUGIN_TUNNEL
-# recorded (031136Z run), not in the committed fixture
-NO_PLUGIN_CLIENT = "Error there is no valid plugin {plugin} for this client "
-NO_TUNNEL = {"code": -32600, "message": " tunnel not found "}       # made up: not recorded
+NO_PLUGIN_CLIENT = NEG["e3_client_counter_plugin_not_loaded"]["resp"]["error"]["message"].replace(
+    "dhcp", "{plugin}")
+assert "{plugin}" in NO_PLUGIN_CLIENT
 CODE_INVALID = -32600
 
 # command -> (plugin key, scope, recorded entry) for every plugin counter in counters.json
@@ -90,14 +105,94 @@ PLUGIN_CMDS: dict[str, tuple[str, str, dict[str, Any]]] = {
     for scope, entry in plug.items() if isinstance(entry, dict)}
 SERVER_NAME = {name: plug["server_name"] for name, plug in CNT["plugins"].items()}
 
-EXISTS = {"code": -32600, "message": " already exists "}                # made up: not recorded
-NO_CLIENT = {"code": -32600, "message": " client not found "}           # made up: not recorded
 WRITES = {"ctx_set_def_plugins", "ctx_add", "ctx_client_set_def_plugins", "ctx_client_add",
           "ctx_client_remove", "ctx_remove"}
 
 state: dict[str, Any] = {"api_h": secrets.token_urlsafe(8), "restart": False, "ns": [], "epoch": 0,
                          "reads": 0, "bumps": 0, "cursors": {}, "cleared": set(), "plugins": ["arp", "icmp"]}
 opts = argparse.Namespace(interrupt_iter=0, interrupt_limit=None, repeat_iter=0)
+
+
+def colon(mac: Any) -> str:
+    """A MAC as the server renders it in a text: lowercase hex pairs joined by colons."""
+    return ":".join(f"{b:02x}" for b in mac)
+
+
+def recorded_error(name: str, params: dict[str, Any]) -> dict[str, Any]:
+    """{"code", "message"} of the recorded error `name` (a negatives.json key), naming the key that failed.
+    `params` is the failing item: {"vport": v} and/or {"mac": [..]}; a key that is absent or None (a request
+    that omitted it) substitutes nothing, and the recorded text is answered as recorded. A recorded vport that
+    occurs once in the text as a whole number is replaced with the asked one, and so is a recorded MAC in
+    colon form; a text that names neither is answered as recorded.
+    Never str.format: the recorded key rendering holds braces."""
+    rec = NEG[name]
+    text = rec["resp"]["error"]["message"]
+    asked = rec["req"]["params"]
+    tuns = [*(asked.get("tunnels") or []), *([asked["tun"]] if asked.get("tun") else [])]
+    vports = {t["vport"] for t in tuns if len(re.findall(rf"\b{t['vport']}\b", text)) == 1}
+    if len(vports) == 1 and params.get("vport") is not None:
+        text = re.sub(rf"\b{vports.pop()}\b", str(params["vport"]), text)      # [U:emu-key-rendering]
+    macs = [*(c["mac"] for c in asked.get("clients") or []), *(asked.get("macs") or []),
+            *([asked["mac"]] if asked.get("mac") else [])]
+    named = {colon(m) for m in macs if text.count(colon(m)) == 1}
+    if len(named) == 1 and params.get("mac") is not None:
+        text = text.replace(named.pop(), colon(params["mac"]))
+    return {"code": rec["resp"]["error"]["code"], "message": text}
+
+
+def decided(step: str) -> dict[str, Any] | None:
+    """The recorded outcome of E3 step `step`, or None when that step or an earlier one went unanswered (a
+    step after a crash was recorded against a restarted server and decides nothing)."""
+    for st in SUM["e3"]["steps"]:
+        if "unanswered" in st["outcome"]:
+            return None
+        if st["name"] == step:
+            return dict(st["outcome"])
+    return None
+
+
+def listing(step: str) -> list[Any] | None:
+    """The items a recorded E3 listing step showed, or None when it decides nothing (see `decided`)."""
+    out = decided(step)
+    return None if out is None else list((out.get("result") or {}).get("data") or [])
+
+
+def _recorded_params(step: str) -> dict[str, Any]:
+    """The params the recorder sent in E3 step `step` (summary.json is the one source of the scratch keys)."""
+    return next(st for st in SUM["e3"]["steps"] if st["name"] == step)["params"]
+
+
+SCRATCH_ADDED = _recorded_params("e3_ctx_add_duplicate_in_request")["tunnels"][0]["vport"]
+SCRATCH_KEPT = _recorded_params("e3_ctx_add_new_and_existing")["tunnels"][0]["vport"]
+SCRATCH_REMOVED = _recorded_params("e3_setup_ctx_add_empty")["tunnels"][0]["vport"]
+REPEATED_MAC = _recorded_params("e3_ctx_client_add_duplicate_in_request")["clients"][0]["mac"]
+
+
+def _ns_listed(step: str, vport: int) -> bool:
+    """False only when the decided listing `step` shows no namespace `vport`."""
+    items = listing(step)
+    return items is None or any(i["vport"] == vport for i in items)
+
+
+_RM_LISTED = listing("e3_ctx_iter_after_remove_known_and_unknown")
+_CLIENT_ITER = listing("e3_ctx_client_iter_after_duplicate_in_request")
+_REMOVE_OUT = decided("e3_ctx_remove_with_clients")
+_INFO_OUT = decided("e3_ctx_get_info_known_and_unknown")
+_MAC_OUT = decided("e3_ctx_client_get_info_unknown_mac")
+# ctx_add keeps the namespaces added before the failing one, unless a decided listing lacks them
+ADD_KEEPS = (_ns_listed("e3_ctx_iter_after_duplicate_in_request", SCRATCH_ADDED)
+             and _ns_listed("e3_ctx_iter_after_new_and_existing", SCRATCH_KEPT))
+# ctx_remove removes in order up to the first unknown tunnel when the removed scratch namespace is gone
+# from the listing after it
+REMOVE_IN_ORDER = _RM_LISTED is not None and not any(i["vport"] == SCRATCH_REMOVED for i in _RM_LISTED)
+# a namespace that still holds clients is refused when the recorded removal is an error
+REMOVE_REFUSES_CLIENTS = _REMOVE_OUT is not None and "error" in _REMOVE_OUT
+# ctx_client_add keeps the clients added before a repeated MAC when the decided listing shows the repeat's MAC
+CLIENT_ADD_KEEPS = _CLIENT_ITER is not None and REPEATED_MAC in _CLIENT_ITER
+# ctx_get_info fails the whole request unless the recorded known-and-unknown request answered a result
+GET_INFO_FAILS = _INFO_OUT is None or "error" in _INFO_OUT
+# ctx_client_get_info refuses an unheld MAC when the recorded request is an error, else it skips the MAC
+CLIENT_INFO_REFUSES = _MAC_OUT is not None and "error" in _MAC_OUT
 
 
 def seed(count: int, clients: int) -> None:
@@ -134,37 +229,90 @@ def write(method: str, params: dict[str, Any]) -> dict[str, Any]:
         state["def_ns_plugs"] = params.get("def_plugs") or {}
         return {"result": True}
     if method == "ctx_add":
-        for t in params.get("tunnels") or []:
-            if find_ns({"tun": t}):
-                return {"error": EXISTS}
-            state["ns"].append({"key": key_of(t), "macs": [], "plugs": list(t.get("plugs") or {})})
-        state["epoch"] += 1
-        return {"result": True}
+        return add_namespaces(params.get("tunnels") or [])
     if method == "ctx_remove":
-        keys = [key_of(t) for t in params.get("tunnels") or []]
-        if any(not find_ns({"tun": t}) for t in params.get("tunnels") or []):
-            return {"error": NO_TUNNEL}
-        state["ns"] = [n for n in state["ns"] if n["key"] not in keys]
-        state["epoch"] += 1
-        return {"result": True}
+        return remove_namespaces(params.get("tunnels") or [])
     ns = find_ns(params)
     if ns is None:
-        return {"error": NO_TUNNEL}
+        unknown = {"ctx_client_set_def_plugins": "e3_ctx_client_set_def_plugins_unknown_tunnel",
+                   "ctx_client_add": "e3_ctx_client_add_unknown_tunnel",
+                   "ctx_client_remove": "e3_ctx_client_remove_unknown_tunnel"}[method]
+        return {"error": recorded_error(unknown, {"vport": (params.get("tun") or {}).get("vport")})}
     if method == "ctx_client_set_def_plugins":
         ns["def_c_plugs"] = params.get("def_plugs") or {}
         return {"result": True}
     if method == "ctx_client_add":
-        macs = [tuple(c.get("mac") or ()) for c in params.get("clients") or []]
-        if any(m in ns["macs"] for m in macs) or len(set(macs)) != len(macs):
-            return {"error": EXISTS}
-        ns["macs"].extend(macs)
-    else:       # ctx_client_remove
-        macs = [tuple(m) for m in params.get("macs") or []]
-        if any(m not in ns["macs"] for m in macs):
-            return {"error": NO_CLIENT}
-        ns["macs"] = [m for m in ns["macs"] if m not in macs]
+        return add_clients(ns, [tuple(c.get("mac") or ()) for c in params.get("clients") or []])
+    macs = [tuple(m) for m in params.get("macs") or []]      # ctx_client_remove
+    for m in macs:
+        if m not in ns["macs"]:      # [U:emu-client-remove-atomic] none is removed when one is unknown
+            return {"error": recorded_error("e3_ctx_client_remove_unknown_mac", {"mac": m})}
+    ns["macs"] = [m for m in ns["macs"] if m not in macs]
     state["epoch"] += 1
     return {"result": True}
+
+
+def add_namespaces(tunnels: list[dict[str, Any]]) -> dict[str, Any]:
+    """ctx_add: a tunnel that exists, or repeats within the request, answers the recorded duplicate error. The
+    tunnels before it stay added when the E3 listings show they do (ADD_KEEPS); either way an add bumps the
+    epoch once, if it added any."""
+    new: list[dict[str, Any]] = []
+    error = None
+    for t in tunnels:
+        in_request = any(n["key"] == key_of(t) for n in new)
+        if in_request or find_ns({"tun": t}):
+            name = "e3_ctx_add_duplicate_in_request" if in_request else "e3_ctx_add_duplicate"
+            error = {"error": recorded_error(name, {"vport": t.get("vport")})}
+            break
+        new.append({"key": key_of(t), "macs": [], "plugs": list(t.get("plugs") or {})})
+    if error and not ADD_KEEPS:
+        new = []
+    state["ns"].extend(new)
+    state["epoch"] += bool(new)      # [U:emu-partial-write-epoch]
+    return error or {"result": True}
+
+
+def remove_namespaces(tunnels: list[dict[str, Any]]) -> dict[str, Any]:
+    """ctx_remove: an unknown tunnel, or one that still holds clients when the E3 removal refused it, answers
+    its recorded error. The tunnels before it are removed when the E3 listing shows the scratch namespace gone
+    (REMOVE_IN_ORDER), else none is."""
+    gone: list[Any] = []
+    error = None
+    for t in tunnels:
+        ns = find_ns({"tun": t})
+        repeated = ns is not None and ns["key"] in gone
+        if ns is None or (repeated and REMOVE_IN_ORDER):      # [U:emu-remove-repeat-error]
+            error = {"error": recorded_error("e3_ctx_remove_unknown_tunnel", {"vport": t.get("vport")})}
+            break
+        if ns["macs"] and REMOVE_REFUSES_CLIENTS:      # [U:emu-remove-keeps-before-refusal] earlier ones go
+            error = {"error": recorded_error("e3_ctx_remove_with_clients", {"vport": t.get("vport")})}
+            break
+        gone.append(ns["key"])
+    if error and not REMOVE_IN_ORDER:
+        gone = []
+    state["ns"] = [n for n in state["ns"] if n["key"] not in gone]
+    state["epoch"] += bool(gone)      # [U:emu-partial-write-epoch]
+    return error or {"result": True}
+
+
+def add_clients(ns: dict[str, Any], macs: list[tuple[Any, ...]]) -> dict[str, Any]:
+    """ctx_client_add: a MAC the namespace holds, or repeated within the request, answers the recorded
+    duplicate error. The MACs before it stay added when the E3 client listing shows the repeat's MAC
+    (CLIENT_ADD_KEEPS)."""
+    new: list[tuple[Any, ...]] = []
+    error = None
+    for m in macs:
+        in_request = m in new
+        if in_request or m in ns["macs"]:
+            name = "e3_ctx_client_add_duplicate_in_request" if in_request else "e3_ctx_client_add_duplicate"
+            error = {"error": recorded_error(name, {"mac": m})}
+            break
+        new.append(m)
+    if error and not CLIENT_ADD_KEEPS:
+        new = []
+    ns["macs"].extend(new)
+    state["epoch"] += bool(new)      # [U:emu-partial-write-epoch]
+    return error or {"result": True}
 
 
 def find_ns(params: dict[str, Any]) -> dict[str, Any] | None:
@@ -224,7 +372,7 @@ def counters(rec: dict[str, Any], params: dict[str, Any], cmd: str) -> dict[str,
     if params.get("clear"):
         state["cleared"].add(cmd)
     if params.get("meta"):
-        return dict(rec["meta"])    # the shipped server ignores mask on a meta request (R29)
+        return dict(rec["meta"])    # R29: the server ignores mask [U:emu-meta-ignores-mask]
     if params.get("zero"):
         tables = rec["values_zero"]
         if cmd in state["cleared"]:
@@ -241,10 +389,12 @@ def plugin_counters(cmd: str, params: dict[str, Any]) -> dict[str, Any]:
     if "unsupported" in rec:
         return {"error": NOT_FOUND}
     ns = find_ns(params)
+    vport = (params.get("tun") or {}).get("vport")
     if ns is None:
-        return {"error": NO_TUNNEL}
+        unknown = "e3_client_counter_unknown_tunnel" if scope == "client" else "e3_ns_counter_unknown_tunnel"
+        return {"error": recorded_error(unknown, {"vport": vport})}
     if scope == "client" and tuple(params.get("mac") or ()) not in ns["macs"]:
-        return {"error": {"code": CODE_INVALID, "message": " client not found "}}      # made up: not recorded
+        return {"error": recorded_error("e3_client_counter_unknown_mac", {"mac": params.get("mac")})}
     if SERVER_NAME[name] not in state["plugins"]:
         text = (NO_PLUGIN_CLIENT if scope == "client" else NO_PLUGIN_TUNNEL).format(plugin=SERVER_NAME[name])
         return {"error": {"code": CODE_INVALID, "message": text}}
@@ -263,13 +413,16 @@ def run(method: str, params: dict[str, Any]) -> dict[str, Any]:
     if method == "ctx_client_iter":
         ns = find_ns(params)
         if ns is None:
-            return {"error": NO_TUNNEL}
+            vport = (params.get("tun") or {}).get("vport")
+            return {"error": recorded_error("e3_ctx_client_iter_unknown_tunnel", {"vport": vport})}
         out = iterate(params, ns["key"], [list(m) for m in ns["macs"]])
         return out if "error" in out else {"result": out}
     if method == "ctx_get_info":
         found = [(t, find_ns({"tun": t})) for t in params.get("tunnels") or []]
-        if any(n is None for _, n in found):
-            return {"error": NO_TUNNEL}
+        unknown = next((t for t, n in found if n is None), None)
+        if unknown is not None and GET_INFO_FAILS:      # one unknown tunnel fails the whole request
+            err = recorded_error("e3_ctx_get_info_unknown_tunnel", {"vport": unknown.get("vport")})
+            return {"error": err}
         return {"result": [{"vport": n["key"][0], "tci": list(n["key"][1]), "tpid": list(n["key"][2]),
                             "active_clients": len(n["macs"]),
                             "plug_names": list(n.get("plugs", state["plugins"]))}
@@ -277,10 +430,16 @@ def run(method: str, params: dict[str, Any]) -> dict[str, Any]:
     if method == "ctx_client_get_info":
         ns = find_ns(params)
         if ns is None:
-            return {"error": NO_TUNNEL}
+            vport = (params.get("tun") or {}).get("vport")
+            return {"error": recorded_error("e3_ctx_client_get_info_unknown_tunnel", {"vport": vport})}
+        held = [m for m in params.get("macs") or [] if tuple(m) in ns["macs"]]
+        missing = next((m for m in params.get("macs") or [] if tuple(m) not in ns["macs"]), None)
+        if missing is not None and CLIENT_INFO_REFUSES:
+            return {"error": recorded_error("e3_ctx_client_get_info_unknown_mac", {"mac": missing})}
         infos = []
-        for mac in params.get("macs") or []:
+        for mac in held:
             info = copy.deepcopy(CLIENT_INFO)
+            # [U:emu-client-info-synth] the recorded record with an ipv4 made from the MAC
             info.update(mac=list(mac), ipv4=[1, 1, mac[4], mac[5]], plug_names=list(state["plugins"]))
             infos.append(info)
         return {"result": infos}
@@ -349,7 +508,7 @@ def main() -> None:
         if not sock.poll(50):
             continue
         ident, _empty, raw = sock.recv_multipart()
-        if state["restart"]:
+        if state["restart"]:      # [U:emu-restart-model] a SIGUSR2 restart: new api_h, empty state
             state["restart"] = False
             state.update(api_h=secrets.token_urlsafe(8), ns=[], epoch=0, cursors={}, cleared=set(),
                          def_ns_plugs={})
@@ -365,8 +524,8 @@ def main() -> None:
             continue
         seen[method] = seen.get(method, 0) + 1
         if fail_nth.get(method) == seen[method]:
-            injected = {"code": CODE_INVALID, "message": " injected failure "}      # made up
-            out = json.dumps(reply(req.get("id"), error=injected)).encode()
+            err = {"code": CODE_INVALID, "message": " injected failure "}  # [U:emu-hook-injected-failure]
+            out = json.dumps(reply(req.get("id"), error=err)).encode()
         elif method in a.huge_plain:
             out = json.dumps(reply(req.get("id"), result="x" * HUGE_BYTES)).encode()
         elif method in a.huge_zip:

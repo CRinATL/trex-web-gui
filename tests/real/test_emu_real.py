@@ -15,12 +15,12 @@ from typing import Any
 
 import pytest
 from daemon_vm import sh
-from support import FIXTURES, ROOT, guestenv, real_ports
+from support import FIXTURES, ROOT, e3_mismatches, guestenv, real_ports
 from trex_web_gui import trexapi
 from trex_web_gui.sessions import ConnectParams, EmuRefused, EmuSession, TrexSession
 from trex_web_gui.sessions.port_config import LayerRequest
 from trex_web_gui.trexapi.emu import EmuInfo, EmuRpc, NsKey, translate_emu
-from trex_web_gui.trexapi.errors import UnsupportedServerVersion
+from trex_web_gui.trexapi.errors import ServerUnreachable, UnsupportedServerVersion
 from trex_web_gui.trexapi.rawrpc import RawRpc, RawRpcError
 
 pytestmark = [pytest.mark.real, pytest.mark.restarts_trex, pytest.mark.emu_real]
@@ -321,16 +321,76 @@ def test_stl_port_pings_an_emu_client_and_its_counters_advance() -> None:
     asyncio.run(run())
 
 
+@pytest.mark.timeout(120)
+def test_the_recorded_negatives_hold_under_trex() -> None:
+    """The fake's texts were recorded from standalone trex-emu; replay the E3 steps (summary.json "e3")
+    against the EMU that TRex --emu hosts and compare each outcome with the recording, stopping at the first
+    unanswered step. Afterwards the server still answers a ping and is emptied again."""
+    async def run() -> None:
+        s = await connect_emu()
+        await finish(s)
+        rpc = RawRpc("127.0.0.1", emu_port(), 3.0)
+        dead = failed = False
+        try:
+            await asyncio.to_thread(rpc.api_sync, "EMU", 1, 1)
+            steps = RECORDED["e3"]["steps"]
+            try:
+                mismatches, not_compared = await asyncio.to_thread(e3_mismatches, rpc.call, steps)
+            except ServerUnreachable:
+                dead = True      # the step-named error is the failure; there is nothing to empty
+                raise
+            print(f"e3 replay: {len(steps) - not_compared} of {len(steps)} steps replayed, "
+                  f"{not_compared} not compared, {len(mismatches)} mismatches")
+            try:
+                await asyncio.to_thread(rpc.call, "ping")
+            except ServerUnreachable as e:
+                dead = True
+                pytest.fail(f"hosted trex-emu stopped answering after the E3 replay: {e}")
+        except BaseException:
+            failed = True
+            raise
+        finally:
+            rpc.close()
+            if not dead:
+                try:
+                    await finish(await connect_emu())
+                except Exception as e:      # a cleanup failure must not hide the error being raised
+                    if not failed:
+                        raise
+                    print(f"cleanup after the E3 replay failed too: {e!r}")
+        assert len(steps) - not_compared > 0, "the E3 replay compared no step"
+        assert mismatches == []
+    asyncio.run(run())
+
+
 @pytest.mark.timeout(240)
 def test_restart_of_trex_is_detected_and_a_new_connection_sees_an_empty_server() -> None:
     """Item 5 (last in the file: it restarts TRex): with a profile loaded, stop TRex in the guest; the EMU
     session goes `lost` with a restart or unreachable text within ping_s + timeout_s + 1 s of the stop
-    returning; after `vm/mode.sh emu` a new connection works and the server holds nothing."""
+    returning; after `vm/mode.sh emu` a new connection works and the server holds nothing, a request that
+    carries the old api_h answers the recorded -32602 `ping_bogus_api_h` error, and a new handshake gives a
+    different api_h."""
     bound = PING_S + TIMEOUT_S + 1.0
+    refusal = NEGATIVES["ping_bogus_api_h"]["resp"]["error"]
+
+    async def old_ping(old: RawRpc) -> RawRpcError:
+        """The error `old.call("ping")` raises once TRex is back; zmq may still be reconnecting, so a call
+        that gets no answer is retried up to 5 times."""
+        for _ in range(5):
+            try:
+                await asyncio.to_thread(old.call, "ping")
+            except ServerUnreachable:
+                continue
+            except RawRpcError as e:
+                return e
+            pytest.fail("ping with the old api_h was answered")
+        pytest.fail("the old connection got no answer in 5 tries after the restart")
 
     async def run() -> None:
+        old = RawRpc("127.0.0.1", emu_port(), 3.0)
         s = EmuSession(lambda _m: None, ping_s=PING_S)
         try:
+            old_h = await asyncio.to_thread(old.api_sync, "EMU", 1, 1)
             await s.connect("127.0.0.1", emu_port(), TIMEOUT_S)
             await emptied(s)
             await s.load_profile(PROFILE, [], **CONFIRMED)
@@ -343,14 +403,24 @@ def test_restart_of_trex_is_detected_and_a_new_connection_sees_an_empty_server()
             error = s.snapshot()["error"] or ""
             print(f"lost_after_s={took:.2f} (bound {bound}) error={error!r}")
             assert "restarted" in error or "no answer" in error or "Cannot reach" in error, error
-        finally:
             await s.close()
-        await asyncio.to_thread(sh, "vm/mode.sh", "emu")
-        again = EmuSession(lambda _m: None, ping_s=60)
-        try:
-            snap = await again.connect("127.0.0.1", emu_port(), 3.0)
-            assert snap["state"] == "connected"
-            assert (await again.namespaces())["namespaces"] == []
+            await asyncio.to_thread(sh, "vm/mode.sh", "emu")
+            again = EmuSession(lambda _m: None, ping_s=60)
+            try:
+                snap = await again.connect("127.0.0.1", emu_port(), 3.0)
+                assert snap["state"] == "connected"
+                assert (await again.namespaces())["namespaces"] == []
+            finally:
+                await again.close()
+            err = await old_ping(old)
+            assert (err.code, err.message) == (refusal["code"], refusal["message"]), err
+            fresh = RawRpc("127.0.0.1", emu_port(), 3.0)
+            try:
+                new_h = await asyncio.to_thread(fresh.api_sync, "EMU", 1, 1)
+            finally:
+                fresh.close()
+            assert new_h != old_h, "the restart kept the api_h"
         finally:
-            await again.close()
+            old.close()
+            await s.close()
     asyncio.run(run())

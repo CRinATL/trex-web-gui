@@ -5,8 +5,9 @@ R5), and in a `finally` stops it again. Every request and reply goes through Raw
 request as sent, the decoded reply), so rpc.jsonl is the wire, not the vendored client's view of it.
 Steps: the handshake and version, the error texts (negatives.json, summary.json "drift"), the fixture
 profile from profile_wire.json, the listings and info calls, ctx_cnt and every plugin counter (meta and
-values; counters.json), an interrupted iteration with two RawRpc clients, the per-namespace removal and
-timings.
+values; counters.json), an interrupted iteration with two RawRpc clients, the E3 unknown-key and duplicate
+steps (summary.json "e3", the error ones also in negatives.json; a request the server never answers is logged
+with resp null and the guest's panic text kept), the per-namespace removal and timings.
 Fixture files are written only after every step has run; a UTC-stamped copy of each goes to /var/tmp
 (canon:OUT-1)."""
 
@@ -24,7 +25,7 @@ import guestenv
 
 EMU_PORT = guestenv.emu_port()  # refuses before connecting if the guest is not selected
 from trex_web_gui.monitor.wire import inflate
-from trex_web_gui.trexapi.errors import TrexApiError
+from trex_web_gui.trexapi.errors import ServerUnreachable, TrexApiError
 from trex_web_gui.trexapi.rawrpc import RPC_REPLY_MAX_BYTES, RawRpc, RawRpcError
 
 REPO = HERE.parent
@@ -48,8 +49,16 @@ class Tap:
         """Wrap `sock`; rows go to the module's `log` under the client `name`."""
         self._sock, self._name, self._row = sock, name, None
 
+    def _log_unanswered(self) -> None:
+        """Log a remembered request that never got a reply as `resp: None, secs: None`."""
+        if self._row is not None:
+            self._row["resp"], self._row["secs"] = None, None
+            log.append(self._row)
+            self._row = None
+
     def send(self, raw: bytes) -> None:
-        """Send and remember the request."""
+        """Send and remember the request; a previous request still without a reply is logged unanswered."""
+        self._log_unanswered()
         self._row = {"t": round(time.time() - t0, 3), "client": self._name, "req": json.loads(raw)}
         self._start = time.monotonic()
         self._sock.send(raw)
@@ -61,10 +70,12 @@ class Tap:
         row["resp"] = json.loads(inflate(reply, RPC_REPLY_MAX_BYTES))
         row["secs"] = round(time.monotonic() - self._start, 4)
         log.append(row)
+        self._row = None
         return reply
 
     def close(self, linger: int = 0) -> None:
-        """Close the wrapped socket."""
+        """Log a request without a reply as unanswered, then close the wrapped socket."""
+        self._log_unanswered()
         self._sock.close(linger)
 
     def __getattr__(self, attr):
@@ -329,6 +340,28 @@ def record_plugin(rpc: RawRpc, plugin: str, cmds: dict[str, str], vport: int) ->
     return entry
 
 
+IPFIX_CONDITION = "ipfix at namespace level only, empty {} config, standalone trex-emu v3.08"
+E3_CONDITION = (
+    "standalone trex-emu v3.08 (vm/emu.sh, -p 4510, no -d), empty server, namespace 213 with arp at "
+    "namespace level, client [0, 0, 0, 112, 99, 1] with no plugins"
+)
+
+
+def panic_block() -> str:
+    """The guest's trex-emu process line (or that it is gone) and the whole panic text of its log."""
+    diag = subprocess.run(
+        [
+            str(HERE / "ssh.sh"),
+            "pgrep -x trex-emu || echo 'trex-emu is gone'; sed -n '/^panic/,$p' /tmp/trex-emu.log",
+        ],
+        cwd=REPO,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    return diag.stdout
+
+
 def record_ipfix(rpc: RawRpc) -> None:
     """The ipfix plugin last, on an empty server: load it as the others are loaded, read its counters, then
     remove the namespace. The run that found this saw `ctx_remove` go unanswered, so what the server does is
@@ -340,17 +373,11 @@ def record_ipfix(rpc: RawRpc) -> None:
         )
         summary["ipfix_scratch_removal"] = "answered"
     except TrexApiError as exc:
-        diag = subprocess.run(
-            [
-                str(HERE / "ssh.sh"),
-                "pgrep -x trex-emu || echo 'trex-emu is gone'; grep -a -m1 -A3 '^panic' /tmp/trex-emu.log",
-            ],
-            cwd=REPO,
-            capture_output=True,
-            text=True,
-            check=False,
-        )
-        summary["ipfix_scratch_removal"] = {"error": f"{type(exc).__name__}: {exc}", "guest": diag.stdout}
+        summary["ipfix_scratch_removal"] = {
+            "error": f"{type(exc).__name__}: {exc}",
+            "guest": panic_block(),
+            "condition": IPFIX_CONDITION,
+        }
         counters["plugins"].setdefault(RISKY_PLUGIN, {"not_recorded": "see summary.ipfix_scratch_removal"})
 
 
@@ -366,6 +393,138 @@ def outcome(rpc: RawRpc, method: str, params: dict, *, name: str) -> dict:
     """A call whose error reply is data: {"result": ...} or {"error": {code, text}}."""
     res, e = ask(rpc, method, params, name=name)
     return {"error": e} if e else {"result": res}
+
+
+M1, M2, M3 = ([0, 0, 0, 112, 99, n] for n in (1, 2, 3))
+
+
+def e3_ns(vport: int, plugs: dict | None = None) -> dict:
+    """A ctx_add tunnel entry on `vport` with `plugs` at namespace level and no default client plugins."""
+    return {"vport": vport, "tci": [0, 0], "tpid": [0, 0], "plugs": plugs or {}, "def_c_plugs": {}}
+
+
+def e3_client(mac: list[int]) -> dict:
+    """The client body of an E3 add: `mac`, with its address inside 1.1.213.0."""
+    return {"mac": mac, "ipv4": [1, 1, 213, mac[5]], "ipv4_dg": [1, 1, 213, 254]}
+
+
+def e3_steps() -> list[tuple[str, str, dict, bool]]:
+    """The 29 named E3 steps as (name, method, params, must): `must` marks the three setup steps."""
+    walk = {"count": 255, "reset": True}
+    t213, t299 = tun(213), tun(299)
+    arp = {"arp": {}}
+    return [
+        ("e3_setup_ctx_add", "ctx_add", {"tunnels": [e3_ns(213, arp)]}, True),
+        ("e3_setup_client_add", "ctx_client_add", {"clients": [e3_client(M1)], **t213}, True),
+        ("e3_ctx_add_duplicate", "ctx_add", {"tunnels": [e3_ns(213, arp)]}, False),
+        ("e3_ctx_add_duplicate_in_request", "ctx_add", {"tunnels": [e3_ns(214), e3_ns(214)]}, False),
+        ("e3_ctx_iter_after_duplicate_in_request", "ctx_iter", walk, False),
+        ("e3_ctx_add_new_and_existing", "ctx_add", {"tunnels": [e3_ns(215), e3_ns(213, arp)]}, False),
+        ("e3_ctx_iter_after_new_and_existing", "ctx_iter", walk, False),
+        ("e3_ctx_client_add_duplicate", "ctx_client_add", {"clients": [e3_client(M1)], **t213}, False),
+        (
+            "e3_ctx_client_add_duplicate_in_request",
+            "ctx_client_add",
+            {"clients": [e3_client(M3), e3_client(M3)], **t213},
+            False,
+        ),
+        ("e3_ctx_client_iter_after_duplicate_in_request", "ctx_client_iter", {**walk, **t213}, False),
+        ("e3_ctx_client_add_unknown_tunnel", "ctx_client_add", {"clients": [e3_client(M2)], **t299}, False),
+        (
+            "e3_ctx_client_set_def_plugins_unknown_tunnel",
+            "ctx_client_set_def_plugins",
+            {"def_plugs": {}, **t299},
+            False,
+        ),
+        ("e3_ctx_client_remove_unknown_mac", "ctx_client_remove", {"macs": [M2], **t213}, False),
+        ("e3_ctx_client_remove_unknown_tunnel", "ctx_client_remove", {"macs": [M1], **t299}, False),
+        ("e3_ctx_client_iter_unknown_tunnel", "ctx_client_iter", {**walk, **t299}, False),
+        ("e3_ctx_get_info_unknown_tunnel", "ctx_get_info", {"tunnels": [t299["tun"]]}, False),
+        (
+            "e3_ctx_get_info_known_and_unknown",
+            "ctx_get_info",
+            {"tunnels": [t213["tun"], t299["tun"]]},
+            False,
+        ),
+        ("e3_ctx_client_get_info_unknown_tunnel", "ctx_client_get_info", {"macs": [M1], **t299}, False),
+        ("e3_ctx_client_get_info_unknown_mac", "ctx_client_get_info", {"macs": [M2], **t213}, False),
+        ("e3_ns_counter_unknown_tunnel", "arp_ns_cnt", cnt_params(True, False, None, t299), False),
+        (
+            "e3_client_counter_unknown_mac",
+            "dhcp_client_cnt",
+            cnt_params(True, False, None, {**t213, "mac": M2}),
+            False,
+        ),
+        (
+            "e3_client_counter_unknown_tunnel",
+            "dhcp_client_cnt",
+            cnt_params(True, False, None, {**t299, "mac": M1}),
+            False,
+        ),
+        (
+            "e3_client_counter_plugin_not_loaded",
+            "dhcp_client_cnt",
+            cnt_params(True, False, None, {**t213, "mac": M1}),
+            False,
+        ),
+        ("e3_ctx_remove_unknown_tunnel", "ctx_remove", {"tunnels": [t299["tun"]]}, False),
+        ("e3_setup_ctx_add_empty", "ctx_add", {"tunnels": [e3_ns(216)]}, True),
+        (
+            "e3_ctx_remove_known_and_unknown",
+            "ctx_remove",
+            {"tunnels": [tun(216)["tun"], t299["tun"]]},
+            False,
+        ),
+        ("e3_ctx_iter_after_remove_known_and_unknown", "ctx_iter", walk, False),
+        ("e3_ctx_remove_with_clients", "ctx_remove", {"tunnels": [t213["tun"]]}, False),
+        ("e3_ctx_iter_after_remove_with_clients", "ctx_iter", walk, False),
+    ]
+
+
+def e3_run(rpc: Rpc, name: str, method: str, params: dict, must_work: bool) -> dict:
+    """One E3 step's outcome: {"result"}, {"error"} or {"unanswered", "guest"}; a `must_work` step that gets
+    an error reply raises. An error reply is also kept in negatives under `name`."""
+    try:
+        if must_work:
+            return {"result": must(rpc, method, params, name=name)}
+        out = outcome(rpc, method, params, name=name)
+    except ServerUnreachable as exc:
+        return {"unanswered": str(exc), "guest": panic_block()}
+    if "error" in out:
+        negatives[name] = pair(rpc.last())
+    return out
+
+
+def record_e3(rpc: Rpc) -> Rpc:
+    """The E3 steps against an empty server (clear_server first and last). A step the server never answers is
+    kept as data; EMU is then restarted, a new client opened and the two setup steps re-run (`resetup`).
+    Returns the client in use at the end, which after a crash is a new one."""
+    clear_server(rpc)
+    steps: list[dict] = []
+    resetup: list[dict] = []
+    summary["e3"] = {"condition": E3_CONDITION, "steps": steps, "resetup": resetup}
+    setup = e3_steps()[:2]
+    for name, method, params, must_work in e3_steps():
+        out = e3_run(rpc, name, method, params, must_work)
+        steps.append({"name": name, "method": method, "params": params, "outcome": out})
+        if "unanswered" in out:
+            rpc.close()
+            sh("vm/emu.sh", "stop")
+            sh("vm/emu.sh", "start")
+            rpc = fresh("e3")
+            for s_name, s_method, s_params, _ in setup:
+                res = must(rpc, s_method, s_params, name=f"{s_name} after {name}")
+                resetup.append(
+                    {
+                        "after": name,
+                        "name": s_name,
+                        "method": s_method,
+                        "params": s_params,
+                        "outcome": {"result": res},
+                    }
+                )
+    clear_server(rpc)
+    return rpc
 
 
 def record_interrupted(rpc: RawRpc) -> None:
@@ -440,6 +599,7 @@ def main() -> None:
         reqs = record_load(rpc)
         record_reads(rpc, reqs)
         record_interrupted(rpc)
+        rpc = record_e3(rpc)
         clear_server(rpc)
         empty = must(rpc, "ctx_iter", {"count": 255, "reset": True}, name="ctx_iter after removal")
         assert empty["empty"] is True, empty
