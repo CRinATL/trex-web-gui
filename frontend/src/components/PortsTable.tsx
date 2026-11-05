@@ -75,7 +75,7 @@ export function ServiceModeBanner({ ports, canAct = false }: { ports: PortView[]
   return (
     <p role="status" aria-label="Service mode" className="banner alert">
       <strong>Service mode is on for {plural(service.map((p) => p.id))}.</strong>{' '}
-      {mine.length > 0 && <button type="button" data-run="go" disabled={busy} onClick={() => void turnOff()}>Turn service mode off for {plural(mine)}</button>}
+      {mine.length > 0 && <button type="button" data-run="hold" disabled={busy} onClick={() => void turnOff()}>Turn service mode off for {plural(mine)}</button>}
       {others.length > 0 && (mine.length > 0 ? <> For {plural(others)}, acquire the port on the Control page, then its Control tab, Service mode Off.</> : SERVICE_HOW)}
       {error && <> <span role="alert" className="error">{error}</span></>}
     </p>

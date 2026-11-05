@@ -60,7 +60,7 @@ describe('PortsTable', () => {
     const mine = [wirePort('tx_owned', { id: 0, service: true }), wirePort('tx_owned', { id: 2, service_filtered: true })]
     render(<ServiceModeBanner ports={mine} canAct />)
     const button = screen.getByRole('button', { name: 'Turn service mode off for ports 0, 2' })
-    expect(button).toHaveAttribute('data-run', 'go')
+    expect(button).toHaveAttribute('data-run', 'hold')   // amber: it changes a port's mode, it stops nothing
     expect(screen.getByRole('status', { name: 'Service mode' })).not.toHaveTextContent(SERVICE_HOW)
     await userEvent.click(button)
     expect(spy.mock.calls).toEqual([[{ ports: [0], enabled: false }], [{ ports: [2], enabled: false }]])

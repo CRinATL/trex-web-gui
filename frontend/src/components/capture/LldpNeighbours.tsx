@@ -140,7 +140,7 @@ export function LldpNeighbours({ active = true }: { active?: boolean }) {
           </button>
         )}
         {!monitorActive && ctl && offable.length > 0 && (
-          <button type="button" data-run="go" disabled={busy} onClick={() => void command(() => turnServiceOff(offable))}>
+          <button type="button" data-run="hold" disabled={busy} onClick={() => void command(() => turnServiceOff(offable))}>
             Turn service mode off for port{offable.length > 1 ? 's' : ''} {offable.join(', ')}
           </button>
         )}
