@@ -1,6 +1,7 @@
 """EmuRpc against tests/fake/fake_emu.py, whose handshake and error texts are the recorded ones."""
 import json
 import time
+import tracemalloc
 from collections.abc import Callable, Iterator
 from pathlib import Path
 from typing import Any
@@ -92,12 +93,20 @@ def test_huge_plain_reply_is_unreachable(emu_rpc: Callable[..., EmuRpc]) -> None
 
 
 def test_huge_zipped_reply_refused_with_bounded_memory(emu_rpc: Callable[..., EmuRpc]) -> None:
-    """A small zlib frame claiming 9 MiB is refused by inflate on its length field alone."""
+    """A 9 KiB zlib bomb whose length field says 9 MiB is refused on that field alone: the call's peak
+    allocation stays under 1 MiB. With the length check deleted, inflate runs to its 4 MiB cap
+    (EMU_REPLY_MAX_BYTES) before refusing, and the peak measured 8.4 MB."""
     rpc = emu_rpc("--huge-zip", "get_version")
     rpc._rpc.api_sync(*emu.EMU_API)
-    with pytest.raises(RawRpcError, match="refused: oversize") as e:
-        rpc.call("get_version")
+    tracemalloc.start()
+    try:
+        with pytest.raises(RawRpcError, match="refused: oversize") as e:
+            rpc.call("get_version")
+        peak = tracemalloc.get_traced_memory()[1]
+    finally:
+        tracemalloc.stop()
     assert e.value.code == 0
+    assert peak < 1024 * 1024, f"peak {peak} bytes"
 
 
 def test_fixture_fails_the_test_when_shutdown_was_sent(fake_emu: Callable[..., Any]) -> None:
