@@ -79,7 +79,7 @@
    "id": 2,
    "method": "ctx_stop_autotriggers",
    "params": {
-    "api_h": "zmQpvpRDCm"
+    "api_h": "cdUWGNbAVh"
    }
   },
   "resp": {
@@ -97,7 +97,7 @@
    "id": 3,
    "method": "ctx_resource_monitor_get",
    "params": {
-    "api_h": "zmQpvpRDCm"
+    "api_h": "cdUWGNbAVh"
    }
   },
   "resp": {
@@ -130,7 +130,7 @@
       0
      ]
     },
-    "api_h": "zmQpvpRDCm"
+    "api_h": "cdUWGNbAVh"
    }
   },
   "resp": {
@@ -148,7 +148,7 @@
    "id": 5,
    "method": "get_supported_cmds",
    "params": {
-    "api_h": "zmQpvpRDCm"
+    "api_h": "cdUWGNbAVh"
    }
   },
   "resp": {
@@ -181,7 +181,7 @@
       0
      ]
     },
-    "api_h": "zmQpvpRDCm"
+    "api_h": "cdUWGNbAVh"
    }
   },
   "resp": {
@@ -201,7 +201,7 @@
    "params": {
     "count": 1,
     "reset": false,
-    "api_h": "zmQpvpRDCm"
+    "api_h": "cdUWGNbAVh"
    }
   },
   "resp": {
@@ -211,6 +211,866 @@
     "message": " iterator was interupted , reset and start again "
    },
    "id": 174
+  }
+ },
+ "e3_ctx_add_duplicate": {
+  "req": {
+   "jsonrpc": "2.0",
+   "id": 191,
+   "method": "ctx_add",
+   "params": {
+    "tunnels": [
+     {
+      "vport": 213,
+      "tci": [
+       0,
+       0
+      ],
+      "tpid": [
+       0,
+       0
+      ],
+      "plugs": {
+       "arp": {}
+      },
+      "def_c_plugs": {}
+     }
+    ],
+    "api_h": "cdUWGNbAVh"
+   }
+  },
+  "resp": {
+   "jsonrpc": "2.0",
+   "error": {
+    "code": -32600,
+    "message": " error there is a valid namespace for this tunnel: 213,{0000:0000},{0000:0000}\n, can't add it "
+   },
+   "id": 191
+  }
+ },
+ "e3_ctx_add_duplicate_in_request": {
+  "req": {
+   "jsonrpc": "2.0",
+   "id": 192,
+   "method": "ctx_add",
+   "params": {
+    "tunnels": [
+     {
+      "vport": 214,
+      "tci": [
+       0,
+       0
+      ],
+      "tpid": [
+       0,
+       0
+      ],
+      "plugs": {},
+      "def_c_plugs": {}
+     },
+     {
+      "vport": 214,
+      "tci": [
+       0,
+       0
+      ],
+      "tpid": [
+       0,
+       0
+      ],
+      "plugs": {},
+      "def_c_plugs": {}
+     }
+    ],
+    "api_h": "cdUWGNbAVh"
+   }
+  },
+  "resp": {
+   "jsonrpc": "2.0",
+   "error": {
+    "code": -32600,
+    "message": " error there is a valid namespace for this tunnel: 214,{0000:0000},{0000:0000}\n, can't add it "
+   },
+   "id": 192
+  }
+ },
+ "e3_ctx_add_new_and_existing": {
+  "req": {
+   "jsonrpc": "2.0",
+   "id": 194,
+   "method": "ctx_add",
+   "params": {
+    "tunnels": [
+     {
+      "vport": 215,
+      "tci": [
+       0,
+       0
+      ],
+      "tpid": [
+       0,
+       0
+      ],
+      "plugs": {},
+      "def_c_plugs": {}
+     },
+     {
+      "vport": 213,
+      "tci": [
+       0,
+       0
+      ],
+      "tpid": [
+       0,
+       0
+      ],
+      "plugs": {
+       "arp": {}
+      },
+      "def_c_plugs": {}
+     }
+    ],
+    "api_h": "cdUWGNbAVh"
+   }
+  },
+  "resp": {
+   "jsonrpc": "2.0",
+   "error": {
+    "code": -32600,
+    "message": " error there is a valid namespace for this tunnel: 213,{0000:0000},{0000:0000}\n, can't add it "
+   },
+   "id": 194
+  }
+ },
+ "e3_ctx_client_add_duplicate": {
+  "req": {
+   "jsonrpc": "2.0",
+   "id": 196,
+   "method": "ctx_client_add",
+   "params": {
+    "clients": [
+     {
+      "mac": [
+       0,
+       0,
+       0,
+       112,
+       99,
+       1
+      ],
+      "ipv4": [
+       1,
+       1,
+       213,
+       1
+      ],
+      "ipv4_dg": [
+       1,
+       1,
+       213,
+       254
+      ]
+     }
+    ],
+    "tun": {
+     "vport": 213,
+     "tci": [
+      0,
+      0
+     ],
+     "tpid": [
+      0,
+      0
+     ]
+    },
+    "api_h": "cdUWGNbAVh"
+   }
+  },
+  "resp": {
+   "jsonrpc": "2.0",
+   "error": {
+    "code": -32600,
+    "message": " client with the same MAC 00:00:00:70:63:01 already exist"
+   },
+   "id": 196
+  }
+ },
+ "e3_ctx_client_add_duplicate_in_request": {
+  "req": {
+   "jsonrpc": "2.0",
+   "id": 197,
+   "method": "ctx_client_add",
+   "params": {
+    "clients": [
+     {
+      "mac": [
+       0,
+       0,
+       0,
+       112,
+       99,
+       3
+      ],
+      "ipv4": [
+       1,
+       1,
+       213,
+       3
+      ],
+      "ipv4_dg": [
+       1,
+       1,
+       213,
+       254
+      ]
+     },
+     {
+      "mac": [
+       0,
+       0,
+       0,
+       112,
+       99,
+       3
+      ],
+      "ipv4": [
+       1,
+       1,
+       213,
+       3
+      ],
+      "ipv4_dg": [
+       1,
+       1,
+       213,
+       254
+      ]
+     }
+    ],
+    "tun": {
+     "vport": 213,
+     "tci": [
+      0,
+      0
+     ],
+     "tpid": [
+      0,
+      0
+     ]
+    },
+    "api_h": "cdUWGNbAVh"
+   }
+  },
+  "resp": {
+   "jsonrpc": "2.0",
+   "error": {
+    "code": -32600,
+    "message": " client with the same MAC 00:00:00:70:63:03 already exist"
+   },
+   "id": 197
+  }
+ },
+ "e3_ctx_client_add_unknown_tunnel": {
+  "req": {
+   "jsonrpc": "2.0",
+   "id": 199,
+   "method": "ctx_client_add",
+   "params": {
+    "clients": [
+     {
+      "mac": [
+       0,
+       0,
+       0,
+       112,
+       99,
+       2
+      ],
+      "ipv4": [
+       1,
+       1,
+       213,
+       2
+      ],
+      "ipv4_dg": [
+       1,
+       1,
+       213,
+       254
+      ]
+     }
+    ],
+    "tun": {
+     "vport": 299,
+     "tci": [
+      0,
+      0
+     ],
+     "tpid": [
+      0,
+      0
+     ]
+    },
+    "api_h": "cdUWGNbAVh"
+   }
+  },
+  "resp": {
+   "jsonrpc": "2.0",
+   "error": {
+    "code": -32600,
+    "message": " error there is no valid namespace for this tunnel "
+   },
+   "id": 199
+  }
+ },
+ "e3_ctx_client_set_def_plugins_unknown_tunnel": {
+  "req": {
+   "jsonrpc": "2.0",
+   "id": 200,
+   "method": "ctx_client_set_def_plugins",
+   "params": {
+    "def_plugs": {},
+    "tun": {
+     "vport": 299,
+     "tci": [
+      0,
+      0
+     ],
+     "tpid": [
+      0,
+      0
+     ]
+    },
+    "api_h": "cdUWGNbAVh"
+   }
+  },
+  "resp": {
+   "jsonrpc": "2.0",
+   "error": {
+    "code": -32600,
+    "message": " error there is no valid namespace for this tunnel "
+   },
+   "id": 200
+  }
+ },
+ "e3_ctx_client_remove_unknown_mac": {
+  "req": {
+   "jsonrpc": "2.0",
+   "id": 201,
+   "method": "ctx_client_remove",
+   "params": {
+    "macs": [
+     [
+      0,
+      0,
+      0,
+      112,
+      99,
+      2
+     ]
+    ],
+    "tun": {
+     "vport": 213,
+     "tci": [
+      0,
+      0
+     ],
+     "tpid": [
+      0,
+      0
+     ]
+    },
+    "api_h": "cdUWGNbAVh"
+   }
+  },
+  "resp": {
+   "jsonrpc": "2.0",
+   "error": {
+    "code": -32600,
+    "message": "client does exits "
+   },
+   "id": 201
+  }
+ },
+ "e3_ctx_client_remove_unknown_tunnel": {
+  "req": {
+   "jsonrpc": "2.0",
+   "id": 202,
+   "method": "ctx_client_remove",
+   "params": {
+    "macs": [
+     [
+      0,
+      0,
+      0,
+      112,
+      99,
+      1
+     ]
+    ],
+    "tun": {
+     "vport": 299,
+     "tci": [
+      0,
+      0
+     ],
+     "tpid": [
+      0,
+      0
+     ]
+    },
+    "api_h": "cdUWGNbAVh"
+   }
+  },
+  "resp": {
+   "jsonrpc": "2.0",
+   "error": {
+    "code": -32600,
+    "message": " error there is no valid namespace for this tunnel "
+   },
+   "id": 202
+  }
+ },
+ "e3_ctx_client_iter_unknown_tunnel": {
+  "req": {
+   "jsonrpc": "2.0",
+   "id": 203,
+   "method": "ctx_client_iter",
+   "params": {
+    "count": 255,
+    "reset": true,
+    "tun": {
+     "vport": 299,
+     "tci": [
+      0,
+      0
+     ],
+     "tpid": [
+      0,
+      0
+     ]
+    },
+    "api_h": "cdUWGNbAVh"
+   }
+  },
+  "resp": {
+   "jsonrpc": "2.0",
+   "error": {
+    "code": -32600,
+    "message": " error there is no valid namespace for this tunnel "
+   },
+   "id": 203
+  }
+ },
+ "e3_ctx_get_info_unknown_tunnel": {
+  "req": {
+   "jsonrpc": "2.0",
+   "id": 204,
+   "method": "ctx_get_info",
+   "params": {
+    "tunnels": [
+     {
+      "vport": 299,
+      "tci": [
+       0,
+       0
+      ],
+      "tpid": [
+       0,
+       0
+      ]
+     }
+    ],
+    "api_h": "cdUWGNbAVh"
+   }
+  },
+  "resp": {
+   "jsonrpc": "2.0",
+   "error": {
+    "code": -32600,
+    "message": "error can't find a valid namespace for this tunnel"
+   },
+   "id": 204
+  }
+ },
+ "e3_ctx_get_info_known_and_unknown": {
+  "req": {
+   "jsonrpc": "2.0",
+   "id": 205,
+   "method": "ctx_get_info",
+   "params": {
+    "tunnels": [
+     {
+      "vport": 213,
+      "tci": [
+       0,
+       0
+      ],
+      "tpid": [
+       0,
+       0
+      ]
+     },
+     {
+      "vport": 299,
+      "tci": [
+       0,
+       0
+      ],
+      "tpid": [
+       0,
+       0
+      ]
+     }
+    ],
+    "api_h": "cdUWGNbAVh"
+   }
+  },
+  "resp": {
+   "jsonrpc": "2.0",
+   "error": {
+    "code": -32600,
+    "message": "error can't find a valid namespace for this tunnel"
+   },
+   "id": 205
+  }
+ },
+ "e3_ctx_client_get_info_unknown_tunnel": {
+  "req": {
+   "jsonrpc": "2.0",
+   "id": 206,
+   "method": "ctx_client_get_info",
+   "params": {
+    "macs": [
+     [
+      0,
+      0,
+      0,
+      112,
+      99,
+      1
+     ]
+    ],
+    "tun": {
+     "vport": 299,
+     "tci": [
+      0,
+      0
+     ],
+     "tpid": [
+      0,
+      0
+     ]
+    },
+    "api_h": "cdUWGNbAVh"
+   }
+  },
+  "resp": {
+   "jsonrpc": "2.0",
+   "error": {
+    "code": -32600,
+    "message": " error there is no valid namespace for this tunnel "
+   },
+   "id": 206
+  }
+ },
+ "e3_ctx_client_get_info_unknown_mac": {
+  "req": {
+   "jsonrpc": "2.0",
+   "id": 207,
+   "method": "ctx_client_get_info",
+   "params": {
+    "macs": [
+     [
+      0,
+      0,
+      0,
+      112,
+      99,
+      2
+     ]
+    ],
+    "tun": {
+     "vport": 213,
+     "tci": [
+      0,
+      0
+     ],
+     "tpid": [
+      0,
+      0
+     ]
+    },
+    "api_h": "cdUWGNbAVh"
+   }
+  },
+  "resp": {
+   "jsonrpc": "2.0",
+   "error": {
+    "code": -32600,
+    "message": "client with mac: 00:00:00:70:63:02 doesn't exists"
+   },
+   "id": 207
+  }
+ },
+ "e3_ns_counter_unknown_tunnel": {
+  "req": {
+   "jsonrpc": "2.0",
+   "id": 208,
+   "method": "arp_ns_cnt",
+   "params": {
+    "meta": true,
+    "zero": false,
+    "mask": null,
+    "clear": false,
+    "tun": {
+     "vport": 299,
+     "tci": [
+      0,
+      0
+     ],
+     "tpid": [
+      0,
+      0
+     ]
+    },
+    "api_h": "cdUWGNbAVh"
+   }
+  },
+  "resp": {
+   "jsonrpc": "2.0",
+   "error": {
+    "code": -32600,
+    "message": " error there is no valid namespace for this tunnel "
+   },
+   "id": 208
+  }
+ },
+ "e3_client_counter_unknown_mac": {
+  "req": {
+   "jsonrpc": "2.0",
+   "id": 209,
+   "method": "dhcp_client_cnt",
+   "params": {
+    "meta": true,
+    "zero": false,
+    "mask": null,
+    "clear": false,
+    "tun": {
+     "vport": 213,
+     "tci": [
+      0,
+      0
+     ],
+     "tpid": [
+      0,
+      0
+     ]
+    },
+    "mac": [
+     0,
+     0,
+     0,
+     112,
+     99,
+     2
+    ],
+    "api_h": "cdUWGNbAVh"
+   }
+  },
+  "resp": {
+   "jsonrpc": "2.0",
+   "error": {
+    "code": -32600,
+    "message": "Error there is no valid client 00:00:00:70:63:02 for this MAC "
+   },
+   "id": 209
+  }
+ },
+ "e3_client_counter_unknown_tunnel": {
+  "req": {
+   "jsonrpc": "2.0",
+   "id": 210,
+   "method": "dhcp_client_cnt",
+   "params": {
+    "meta": true,
+    "zero": false,
+    "mask": null,
+    "clear": false,
+    "tun": {
+     "vport": 299,
+     "tci": [
+      0,
+      0
+     ],
+     "tpid": [
+      0,
+      0
+     ]
+    },
+    "mac": [
+     0,
+     0,
+     0,
+     112,
+     99,
+     1
+    ],
+    "api_h": "cdUWGNbAVh"
+   }
+  },
+  "resp": {
+   "jsonrpc": "2.0",
+   "error": {
+    "code": -32600,
+    "message": " error there is no valid namespace for this tunnel "
+   },
+   "id": 210
+  }
+ },
+ "e3_client_counter_plugin_not_loaded": {
+  "req": {
+   "jsonrpc": "2.0",
+   "id": 211,
+   "method": "dhcp_client_cnt",
+   "params": {
+    "meta": true,
+    "zero": false,
+    "mask": null,
+    "clear": false,
+    "tun": {
+     "vport": 213,
+     "tci": [
+      0,
+      0
+     ],
+     "tpid": [
+      0,
+      0
+     ]
+    },
+    "mac": [
+     0,
+     0,
+     0,
+     112,
+     99,
+     1
+    ],
+    "api_h": "cdUWGNbAVh"
+   }
+  },
+  "resp": {
+   "jsonrpc": "2.0",
+   "error": {
+    "code": -32600,
+    "message": "Error there is no valid plugin dhcp for this client "
+   },
+   "id": 211
+  }
+ },
+ "e3_ctx_remove_unknown_tunnel": {
+  "req": {
+   "jsonrpc": "2.0",
+   "id": 212,
+   "method": "ctx_remove",
+   "params": {
+    "tunnels": [
+     {
+      "vport": 299,
+      "tci": [
+       0,
+       0
+      ],
+      "tpid": [
+       0,
+       0
+      ]
+     }
+    ],
+    "api_h": "cdUWGNbAVh"
+   }
+  },
+  "resp": {
+   "jsonrpc": "2.0",
+   "error": {
+    "code": -32600,
+    "message": " error can't find a valid namespace for this tunnel"
+   },
+   "id": 212
+  }
+ },
+ "e3_ctx_remove_known_and_unknown": {
+  "req": {
+   "jsonrpc": "2.0",
+   "id": 214,
+   "method": "ctx_remove",
+   "params": {
+    "tunnels": [
+     {
+      "vport": 216,
+      "tci": [
+       0,
+       0
+      ],
+      "tpid": [
+       0,
+       0
+      ]
+     },
+     {
+      "vport": 299,
+      "tci": [
+       0,
+       0
+      ],
+      "tpid": [
+       0,
+       0
+      ]
+     }
+    ],
+    "api_h": "cdUWGNbAVh"
+   }
+  },
+  "resp": {
+   "jsonrpc": "2.0",
+   "error": {
+    "code": -32600,
+    "message": " error can't find a valid namespace for this tunnel"
+   },
+   "id": 214
+  }
+ },
+ "e3_ctx_remove_with_clients": {
+  "req": {
+   "jsonrpc": "2.0",
+   "id": 216,
+   "method": "ctx_remove",
+   "params": {
+    "tunnels": [
+     {
+      "vport": 213,
+      "tci": [
+       0,
+       0
+      ],
+      "tpid": [
+       0,
+       0
+      ]
+     }
+    ],
+    "api_h": "cdUWGNbAVh"
+   }
+  },
+  "resp": {
+   "jsonrpc": "2.0",
+   "error": {
+    "code": -32600,
+    "message": "ns with tunnel 213,{0000:0000},{0000:0000}\n still has active clients, remove them"
+   },
+   "id": 216
   }
  }
 }

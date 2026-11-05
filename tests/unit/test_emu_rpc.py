@@ -32,6 +32,15 @@ EXPECTED: dict[str, type[TrexApiError]] = {
     "plugin_counters_not_loaded": EmuUnsupported,
     "ctx_iter_interrupted": RawRpcError,
 }
+# the E3 negatives (recorded by vm/record_p7.py) are read from the fixture: a plugin that is not loaded is
+# EmuUnsupported, every other -32600 text stays the server's own RawRpcError
+EXPECTED.update(
+    {
+        name: EmuUnsupported if "no valid plugin" in pair["resp"]["error"]["message"] else RawRpcError
+        for name, pair in NEGATIVES.items()
+        if name.startswith("e3_")
+    }
+)
 
 
 class Spy:
@@ -87,6 +96,11 @@ def test_no_request_carries_clear() -> None:
     rpc.ping()
     assert [m for m, _ in spy.calls] == ["api_sync_v2", "get_version", "ping"]
     assert all("clear" not in (p or {}) for _, p in spy.calls)
+
+
+def test_e3_plugin_not_loaded_is_pinned_as_unsupported() -> None:
+    """The client-scope 'no valid plugin' error is EmuUnsupported, named here and not only derived above."""
+    assert EXPECTED["e3_client_counter_plugin_not_loaded"] is EmuUnsupported
 
 
 def test_negatives_are_all_covered() -> None:

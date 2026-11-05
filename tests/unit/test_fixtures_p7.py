@@ -120,6 +120,26 @@ def _int_lists(value: object) -> list[list[int]]:
     return found
 
 
+GUEST_MAC = "52:52:18:89:91:ea"
+FIXTURE_MAC_PREFIX = [0, 0, 0, 0x70]  # the MACs this suite's own scratch clients use (00:00:00:70:xx:xx)
+
+
+def _mac_admitted(ints: list[int]) -> bool:
+    """Whether a 6-byte MAC is all zeros or has the fixture prefix; the int and colon checks share it."""
+    return not any(ints) or ints[:4] == FIXTURE_MAC_PREFIX
+
+
+def _colon_mac_leaks(text: str) -> set[str]:
+    """Colon-form MACs in `text` other than the guest's and the fixture prefix's.
+
+    The server's own error texts render a client's MAC in colon form, so the scratch MACs the recorder adds
+    appear that way; any other colon MAC is still a leak."""
+    macs = set(re.findall(r"\b[0-9a-f]{2}(?::[0-9a-f]{2}){5}\b", text, re.I))
+    return {
+        m for m in macs if m.lower() != GUEST_MAC and not _mac_admitted([int(b, 16) for b in m.split(":")])
+    }
+
+
 def _address_leaks(docs: list[tuple[str, object]]) -> list[str]:
     """MACs, IPv4 and IPv6 int lists in `docs` that are not the guest's or the fixture profile's."""
     leaks = []
@@ -127,7 +147,7 @@ def _address_leaks(docs: list[tuple[str, object]]) -> list[str]:
         for ints in _int_lists(doc):
             zero = not any(ints)
             if len(ints) == 6:
-                ok = zero or ints[:4] == [0, 0, 0, 0x70]
+                ok = _mac_admitted(ints)
             elif len(ints) == 4:
                 ok = zero or ints[:2] == [1, 1] or ints == [127, 0, 0, 1]
             else:
@@ -139,13 +159,107 @@ def _address_leaks(docs: list[tuple[str, object]]) -> list[str]:
     return leaks
 
 
+def test_colon_mac_outside_the_fixture_prefix_is_a_leak() -> None:
+    """Negative control: only the guest's MAC and the fixture prefix pass the colon-form check."""
+    assert (
+        _colon_mac_leaks("client with the same MAC 00:00:00:70:63:01 already exist, guest 52:52:18:89:91:ea")
+        == set()
+    )
+    assert _colon_mac_leaks("client with the same MAC 00:00:00:71:63:01 already exist") == {
+        "00:00:00:71:63:01"
+    }
+    assert _colon_mac_leaks("aa:bb:cc:dd:ee:ff") == {"aa:bb:cc:dd:ee:ff"}
+
+
 def test_no_employer_host_details() -> None:
     text = "\n".join(
         (P7 / n).read_text()
         for n in ("rpc.jsonl", "negatives.json", "counters.json", "summary.json", "profile_wire.json")
     )
-    macs = set(re.findall(r"\b[0-9a-f]{2}(?::[0-9a-f]{2}){5}\b", text, re.I))
-    assert macs <= {"52:52:18:89:91:ea"}, macs
+    # The server's error texts print a client's MAC in colon form, so the fixture-prefix MACs (00:00:00:70:..)
+    # are admitted beside the guest's, as they are in int form; any other colon MAC fails.
+    assert _colon_mac_leaks(text) == set()
     for ip in set(re.findall(r"\b\d{1,3}(?:\.\d{1,3}){3}\b", text)):
         assert ip.startswith(("1.1.", "127.0.0.", "0.0.0.")) or ip in {"05.05.2019"}, ip
     assert _address_leaks(_fixture_documents()) == []
+
+
+E3_NAMES = [
+    "e3_setup_ctx_add",
+    "e3_setup_client_add",
+    "e3_ctx_add_duplicate",
+    "e3_ctx_add_duplicate_in_request",
+    "e3_ctx_iter_after_duplicate_in_request",
+    "e3_ctx_add_new_and_existing",
+    "e3_ctx_iter_after_new_and_existing",
+    "e3_ctx_client_add_duplicate",
+    "e3_ctx_client_add_duplicate_in_request",
+    "e3_ctx_client_iter_after_duplicate_in_request",
+    "e3_ctx_client_add_unknown_tunnel",
+    "e3_ctx_client_set_def_plugins_unknown_tunnel",
+    "e3_ctx_client_remove_unknown_mac",
+    "e3_ctx_client_remove_unknown_tunnel",
+    "e3_ctx_client_iter_unknown_tunnel",
+    "e3_ctx_get_info_unknown_tunnel",
+    "e3_ctx_get_info_known_and_unknown",
+    "e3_ctx_client_get_info_unknown_tunnel",
+    "e3_ctx_client_get_info_unknown_mac",
+    "e3_ns_counter_unknown_tunnel",
+    "e3_client_counter_unknown_mac",
+    "e3_client_counter_unknown_tunnel",
+    "e3_client_counter_plugin_not_loaded",
+    "e3_ctx_remove_unknown_tunnel",
+    "e3_setup_ctx_add_empty",
+    "e3_ctx_remove_known_and_unknown",
+    "e3_ctx_iter_after_remove_known_and_unknown",
+    "e3_ctx_remove_with_clients",
+    "e3_ctx_iter_after_remove_with_clients",
+]
+
+
+def test_e3_steps_are_recorded_in_order_with_their_condition() -> None:
+    e3 = _json("summary.json")["e3"]
+    assert [s["name"] for s in e3["steps"]] == E3_NAMES
+    assert "standalone" in e3["condition"] and "v3.08" in e3["condition"]
+    by_name = {s["name"]: s for s in e3["steps"]}
+    for row in e3["resetup"]:
+        assert "unanswered" in by_name[row["after"]]["outcome"], row["after"]
+    for step in e3["steps"] + e3["resetup"]:
+        assert "api_h" not in step["params"], step["name"]
+        forms = [k for k in ("result", "error", "unanswered") if k in step["outcome"]]
+        assert len(forms) == 1 and len(step["outcome"]) == (2 if forms == ["unanswered"] else 1), step["name"]
+        if forms == ["unanswered"]:
+            assert set(step["outcome"]) == {"unanswered", "guest"}, step["name"]
+
+
+def test_e3_error_steps_are_in_negatives() -> None:
+    neg = _json("negatives.json")
+    errors = [s for s in _json("summary.json")["e3"]["steps"] if "error" in s["outcome"]]
+    assert errors
+    for step in errors:
+        got = neg[step["name"]]["resp"]["error"]
+        assert got["code"] == step["outcome"]["error"]["code"], step["name"]
+        assert got["message"] == step["outcome"]["error"]["text"], step["name"]
+
+
+def test_client_scope_no_valid_plugin_is_recorded() -> None:
+    got = _json("negatives.json")["e3_client_counter_plugin_not_loaded"]["resp"]["error"]["message"]
+    assert got == "Error there is no valid plugin dhcp for this client "
+
+
+def test_unanswered_requests_are_logged() -> None:
+    rows = [json.loads(line) for line in (P7 / "rpc.jsonl").read_text().splitlines()]
+    assert any(r["req"]["method"] == "ctx_remove" and r["resp"] is None for r in rows)
+    # only the ipfix scratch removal went unanswered (no E3 step did); a close never re-logs an answered row
+    nulls = [r for r in rows if r["resp"] is None]
+    assert [r["req"]["method"] for r in nulls] == ["ctx_remove"]
+    answered = [
+        (r["t"], r["client"], json.dumps(r["req"], sort_keys=True)) for r in rows if r["resp"] is not None
+    ]
+    assert len(answered) == len(set(answered))
+
+
+def test_ipfix_panic_is_kept_whole() -> None:
+    removal = _json("summary.json")["ipfix_scratch_removal"]
+    assert "RemovePlugins" in removal["guest"]
+    assert removal["condition"] == "ipfix at namespace level only, empty {} config, standalone trex-emu v3.08"

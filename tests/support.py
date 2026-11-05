@@ -12,13 +12,15 @@ import sys
 import tempfile
 import time
 import warnings
-from collections.abc import Iterator, Sequence
+from collections.abc import Callable, Iterator, Sequence
 from pathlib import Path
 from typing import Any
 
 import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
+from trex_web_gui.trexapi.errors import ServerUnreachable
+from trex_web_gui.trexapi.rawrpc import RawRpcError
 
 ROOT = Path(__file__).resolve().parent.parent
 VENDOR = ROOT / "backend" / "trex_web_gui" / "_vendor"
@@ -186,3 +188,42 @@ def authed(app: FastAPI, **kw: Any) -> TestClient:
     r = c.get("/api/auth/login?token=" + app.state.token, follow_redirects=False)
     assert r.status_code == 303, r.text
     return c
+
+
+LISTINGS = ("ctx_iter", "ctx_client_iter")
+
+
+def _as_compared(method: str, outcome: dict[str, Any]) -> Any:
+    """What `e3_mismatches` compares of an outcome: a listing as `empty`, `stopped` and the set of its items
+    (one `json.dumps(item, sort_keys=True)` each), anything else as it is."""
+    res = outcome.get("result")
+    if method in LISTINGS and isinstance(res, dict):
+        data = res.get("data") or []
+        return {"empty": res.get("empty"), "stopped": res.get("stopped"),
+                "data": {json.dumps(item, sort_keys=True) for item in data}}
+    return outcome
+
+
+def e3_mismatches(call: Callable[[str, dict[str, Any]], Any],
+                  steps: list[dict[str, Any]]) -> tuple[list[str], int]:
+    """Replay the recorded E3 `steps` through `call` and list what differs from each step's `outcome`.
+
+    A RawRpcError is read as `{"error": {"code", "text"}}`. A listing matches on `empty`, `stopped` and its
+    items as a set; every other result must be equal. The replay stops at the first `unanswered` step and
+    sends neither it nor a later one, because every later step was recorded against a restarted server.
+    ServerUnreachable propagates, re-raised with the name of the step that got no answer. Returns the
+    mismatches (`"<name>: expected <x>, got <y>"`) and the number of steps not compared."""
+    mismatches: list[str] = []
+    for i, step in enumerate(steps):
+        name, method, expected = step["name"], step["method"], step["outcome"]
+        if "unanswered" in expected:
+            return mismatches, len(steps) - i
+        try:
+            got: dict[str, Any] = {"result": call(method, step["params"])}
+        except RawRpcError as e:
+            got = {"error": {"code": e.code, "text": e.message}}
+        except ServerUnreachable as e:
+            raise ServerUnreachable(f"{name}: {e}") from e
+        if _as_compared(method, got) != _as_compared(method, expected):
+            mismatches.append(f"{name}: expected {expected}, got {got}")
+    return mismatches, 0

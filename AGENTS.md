@@ -36,7 +36,10 @@ do not "fix" them.
 - A test proves the behaviour it names: it fails when the line it protects is deleted, not only when the module
   is missing. Each error, retry, interrupt or bound branch has such a test; when a fake cannot reach a branch,
   give the fake a flag for it (as `fake_emu.py`'s `--interrupt-iter` does). A test body shaped like a server
-  reply comes from a recorded fixture (`tests/fixtures/`, `frontend/src/__fixtures__/`), or says why not.
+  reply comes from a recorded fixture (`tests/fixtures/`, `frontend/src/__fixtures__/`), or says why not. A fake in
+  `tests/fake/` answers a server text only from a recorded fixture; whatever else it assumes is an entry in
+  `tests/fake/unrecorded.py`, tagged `[U:<id>]` where the fake relies on it, that names the real test settling it or
+  says why none does (`make check` fails on an untagged one).
 - Data that depends on a context is tied to it. A poll or cached value that belongs to a connection, a page, a
   request path or a server generation is dropped when that changes, and its tests cover the change, a reconnect
   and a backend restart. A partial or interrupted listing never decides a destructive action or an "it does not

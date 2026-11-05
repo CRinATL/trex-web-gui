@@ -16,23 +16,27 @@ loop iteration, as before.
 
 Known divergences from the real server:
 - link, LED and flow-control changes are accepted; the measured net_af_packet port reports them
-  unsupported (is_link_supported, is_led_supported, is_fc_supported are false).
-- rx_filter_mode is not mapped to a status key (P2 never sends it).
+  unsupported (is_link_supported, is_led_supported, is_fc_supported are false). [U:trex-link-led-fc-accepted]
+- rx_filter_mode is not mapped to a status key (P2 never sends it). [U:trex-rx-filter-mode]
 - the class name in the api_h_mismatch text is always 'common' (recorded on a common-class method);
-  the fake answers the same text on any method.
+  the fake answers the same text on any method. [U:trex-api-h-class-common]
 - validate_result and the stream shapes come from an inline 1 pps UDP stream; rates are not representative.
+  [U:trex-inline-stream]
 - the injected seq gap (--seq-gap-at-start, SIGUSR1) is served to every get_async_events session_id: each one
   seen since start or restart when SIGUSR1 arms it, plus any that subscribes later while it stays armed, so
   the control client and the reader both see seqs 5 then 7. A restart (SIGUSR2) clears and disarms it. A dead
   session's share is never consumed. An armed gap stays armed until a restart: a reconnect to the same fake (a
   new session_id) is served 5 then 7 again and so is LOST at once. A second SIGUSR1 does not refill a
-  subscriber that was already served (its deque exists, even if emptied).
+  subscriber that was already served (its deque exists, even if emptied). [U:trex-hook-seq-gap]
 - SIGUSR2 restart is applied by the request loop before the next message, not instantly.
+  [U:trex-restart-applied-late]
 - start_traffic/update_traffic echo the requested mul value (only pps/abs was recorded) and ts is wall-clock.
+  [U:trex-mul-echo]
 - state preconditions the real server refuses are accepted: start while TX, pause unless TX, resume unless
   PAUSE, update while not active. No error text was recorded for them, so none is invented.
+  [U:trex-state-preconditions]
 - filtered service mode (service_filtered true, with a mask) is accepted; the real server refuses it unless it
-  runs with --software, and that error text was not recorded, so none is invented.
+  runs with --software, and that error text was not recorded, so none is invented. [U:trex-filtered-service]
 - stats (P3, mirrors tests/fixtures/p3/): the batch shape is the recorded idle answer; counters and rates come
   from the fake's port state. The recorded server's rates ramp over several seconds (tx_pps 5787, 7790, 8855
   at 10kpps); the fake's rates jump to the started pps at once and fall to 0 on stop or pause, with no ramp,
@@ -43,9 +47,10 @@ Known divergences from the real server:
   "stop after N packets" end are not modelled: a started profile transmits until stopped. A multiplier other
   than pps/kpps/mpps (wire type pps) or x (wire type raw), or an update op other than abs, is accepted by
   start/update (echoed as before) but makes the fake raise when stats are asked while that profile transmits
-  (a test bug, not a protocol text).
+  (a test bug, not a protocol text). [U:trex-stats-model]
 - cpu_util, bw_per_core and rx_cpu_util stay at the recorded idle values in every state. The reverse direction
   (port 1 to port 0 Rx) is assumed by pid ^ 1; only port 0 transmitting was recorded.
+  [U:trex-cpu-idle] [U:trex-reverse-direction]
 - PGID and utilization stats (P3a, mirrors tests/fixtures/p3a/): get_active_pgids lists the pg_ids of the
   streams the fake holds (each stream's flow_stats.stream_id, by rule_type; a "tpg" rule is a test bug and
   raises). get_pgid_stats answers in the server's wire shape (flow_stats rb/rbs/rp/rps/tb/tbs/tp/tps per port,
@@ -59,19 +64,23 @@ Known divergences from the real server:
   requested id is active the answer is the recorded empty one (the server's dump_json skips ids it does not
   hold, `if (user_id_info == NULL) continue`, and sends null flow_stats and ver_id). More than 1152 ids
   requested, or [] with more than 1152 active, answers the server's error text (trex_stl_fs.cpp, dump_json).
-  The fake accepts any number of streams.
+  The fake accepts any number of streams. [U:trex-pgid-model]
 - get_utilization replays one recorded answer in every state: the first sample taken while port 0 transmitted,
   shape and history as recorded (history[0] is the newest CPU sample). It does not follow the fake's state.
+  [U:trex-utilization-replay]
 - --manual-clock (test hook): counters integrate a clock that moves only on the fake_advance_clock RPC (params
   {"seconds": n}), so a wire fixture holds real, repeatable counters. Not a TRex method.
+  [U:trex-hook-manual-clock]
 - --server-version overrides get_version's version string (test hook for the version refusal).
+  [U:trex-hook-server-version]
 - link changes are accepted but the link-change event (type 8) is never emitted; the real server sends it
-  only on a polled link change, never on a set_port_attr RPC (main_dpdk.cpp:5078-5108).
+  only on a polled link change, never on a set_port_attr RPC (main_dpdk.cpp:5078-5108). [U:trex-link-event]
 - stop_traffic, pause_traffic and resume_traffic of an UNKNOWN named profile answer {} (no state change, no
   event); the real server throws via valide_profile (trex_stl_port.cpp:1024-1025). No error text was recorded,
   so none is invented. Unreachable through the client: "N.*" expands only to profiles it has cached.
+  [U:trex-unknown-profile]
 - port-level events (types 0-3) use the method's type id from emits.json; the real server picks the type from
-  the (old, new) aggregate-state transition map (trex_stl_port.cpp:1482-1493).
+  the (old, new) aggregate-state transition map (trex_stl_port.cpp:1482-1493). [U:trex-port-event-type]
 
 - port configuration (P3b, mirrors tests/fixtures/p3b/, recorded from a v3.08 guest on the "legacy" stack):
   each port keeps its own recorded attr. set_l2, set_l3, set_vlan and conf_ipv6 change that port's attr as
@@ -79,27 +88,35 @@ Known divergences from the real server:
   (the legacy stack answers synchronously). The refusals are the server's verify_state text
   (trex_port.cpp:377-413, 482-484) outside IDLE, STREAMS and ASTF_LOADED, and "Maximal number of stacked VLANs
   is 2, got: N". Only the set_l2_mode text was recorded; the other three commands' texts imitate the same
-  source line with their own command names (set_l3_mode, conf_ipv6, set_vlan_cfg). The other validation errors
-  of those handlers (a malformed MAC or address, "invalid VLAN tag") are not modelled: the fake accepts what
-  it is sent. A set_l3 without resolved_mac leaves ether.dst and sets ether.state "unconfigured" (recorded).
+  source line with their own command names (set_l3_mode, conf_ipv6, set_vlan_cfg).
+  [U:trex-p3b-imitated-texts]
+  The other validation errors of those handlers (a malformed MAC or address, "invalid VLAN tag") are not
+  modelled: the fake accepts what it is sent. [U:trex-p3b-validation]
+  A set_l3 without resolved_mac leaves ether.dst and sets ether.state "unconfigured" (recorded).
   conf_ipv6 enabled is refused on the legacy stack with the recorded text; --stack linux_based makes
   get_system_info report that stack and conf_ipv6 set ipv6.enabled and ipv6.src (the given address, "" for
   auto), the shapes tests/fixtures/p3b-v6 recorded from a linux_based guest. Not modelled: on linux_based the
   real server answers set_l2, set_l3, set_vlan and conf_ipv6 with a WIP ticket that the client polls once with
-  get_async_results (about 0.3 s, recorded); the fake answers them at once. `push_pkts` answers the
-  unknown-method error (not run against the fake); resolve, ping and scan are not run either.
+  get_async_results (about 0.3 s, recorded); the fake answers them at once.
+  [U:trex-p3b-linux-wip]
+  `push_pkts` answers the unknown-method error (not run against the fake); resolve, ping and scan are not run
+  either.
+  [U:trex-push-pkts]
 
 - capture (P3c, mirrors tests/fixtures/p3c/): `capture` status, start, fetch, stop and remove answer the
   recorded shapes and texts ("capture limit has reached" at 10 captures, stopped ones counted; "capture ID not
   found"; the one recorded invalid-filter error). A capture needs no port ownership and belongs to no client:
   it survives a disconnect and a restart (SIGUSR2) clears it. `remove` has no state check. Ids count up from 1
   and are not reused. The fake evaluates no BPF: every filter text except the recorded invalid one ("not a
-  filter((") is accepted and matches everything. Packets are synthesised, not captured: while a profile
-  transmits, each of its packets is `packet.binary` of the profile's streams taken round-robin (per-stream
-  rate ratios are ignored), at the profile's started pps on the fake's clock (--manual-clock aware, folded in
-  by Port.settle), `origin` "TX" on a captured Tx port and "RX" on the peer (pid ^ 1) when its Rx is captured;
-  `ts` is the fake's clock, `wirelen` the length of `binary`. `index` is 1-based and bumped for every match,
-  dropped or not. A fixed capture drops the newest past `limit`, a cyclic one the oldest; `matched` counts
+  filter((") is accepted and matches everything.
+  [U:trex-capture-no-bpf]
+  Packets are synthesised, not captured: while a profile transmits, each of its packets is `packet.binary`
+  of the profile's streams taken round-robin (per-stream rate ratios are ignored), at the profile's started
+  pps on the fake's clock (--manual-clock aware, folded in by Port.settle), `origin` "TX" on a captured Tx
+  port and "RX" on the peer (pid ^ 1) when its Rx is captured; `ts` is the fake's clock, `wirelen` the
+  length of `binary`. `index` is 1-based and bumped for every match,
+  dropped or not. [U:trex-capture-synth]
+  A fixed capture drops the newest past `limit`, a cyclic one the oldest; `matched` counts
   every match, `fetched` every packet handed out; `fetch` drains up to `pkt_limit` (required, as are `mode`
   and `limit` of a start; `snaplen` is ignored; a `pkt_limit` of 0 takes nothing and reports `pending` = count
   and the start_ts, as recorded in summary.json `fetch_peek`) and reports `pending` and the capture's
@@ -107,13 +124,15 @@ Known divergences from the real server:
   mode follows what af_packet measured on the guest (tx_capture_probe, summary.json: the arms differ only in
   service mode, port 0 transmitted the same in both): a Tx capture of stream traffic records nothing while the
   Tx port's service mode is off and an Rx capture records without it. That is an af_packet measurement only;
-  hardware is unverified in both directions. The filter is checked before the limit, as the server does
+  hardware is unverified in both directions. [U:trex-capture-service-af-packet]
+  The filter is checked before the limit, as the server does
   (bpf_verify, trex_rpc_cmds_common.cpp:1416-1418, then the manager's limit check, trex_capture.cpp:875). An
   unknown or missing `command`, or a missing required parameter, raises. Not modelled: endpoint captures (an
-  `endpoint` start parameter is a test bug and raises), the global unset_capture_feature() on stop. The
-  recorded P3b status row is never replayed. xstats follow the port counters (tx_good_*/tx_q0_* the port's
+  `endpoint` start parameter is a test bug and raises), the global unset_capture_feature() on stop.
+  [U:trex-capture-unrecorded-refusals]
+  The recorded P3b status row is never replayed. xstats follow the port counters (tx_good_*/tx_q0_* the port's
   own, rx_good_*/rx_q0_* the peer's, pid ^ 1); the recorded values count 60 bytes per 64-byte-counted packet,
-  so bytes are obytes minus the fake's 4 per packet. The other names stay as recorded.
+  so bytes are obytes minus the fake's 4 per packet. The other names stay as recorded. [U:trex-capture-xstats]
 
 Ports: a port of 0 means "bind any free port"; the fake binds it itself and the ready line reports the bound
 ports (rpc=<port> pub=<port>), so a caller never chooses a port and loses it to another process before the
@@ -614,13 +633,13 @@ def pgid_stats_answer(pgids):
     active = active_pgids()
     if pgids:
         if len(pgids) > MAX_PGIDS_QUERY:
-            raise ValueError(
+            raise ValueError(  # [U:trex-text-pgid-too-many]
                 f"Asking information for too many packet group IDs. Max allowed is {MAX_PGIDS_QUERY}"
             )
         wanted = [pg for pg in pgids if pg in active]
     else:
         if len(active) > MAX_PGIDS_QUERY:
-            raise ValueError(
+            raise ValueError(  # [U:trex-text-pgid-all-too-many]
                 "Asking information for all packet group IDs. "
                 f"There are currently {len(active)} active IDs . "
                 f"Max allowed is {MAX_PGIDS_QUERY}. Need to limit query size."
@@ -664,7 +683,8 @@ capture_next_id = 1
 
 def _recorded_p3c_errors():
     """The recorded `capture` errors of p3c/rpc.jsonl by specific_err ("BPF" for any invalid-filter text);
-    HarnessError if the invalid-filter, limit or unknown-ID error was not recorded."""
+    HarnessError if the invalid-filter, limit or unknown-ID error was not
+    recorded. [U:trex-capture-unrecorded-refusals]"""
     out = {}
     for line in Path(f"{a.fixtures}/p3c/rpc.jsonl").read_text().splitlines():
         r = json.loads(line)
@@ -773,7 +793,7 @@ def capture_rpc(p, rid):
         return {"error": json.loads(json.dumps(P3C_ERRORS[key])), "id": rid, "jsonrpc": "2.0"}
     if cmd not in ("status", "start", "fetch", "stop", "remove"):
         # the server refuses at parse_choice(params, "command", ...) (trex_rpc_cmds_common.cpp:1373) with a
-        # text that is not recorded
+        # text that is not recorded [U:trex-capture-unrecorded-refusals]
         raise HarnessError(
             f"HARNESS ERROR: capture command {cmd!r} is not one of status, start, fetch, stop, remove"
         )
@@ -925,7 +945,7 @@ def stateful(m, p, rid):
         return {"id": rid, "jsonrpc": "2.0", "result": REC_UTIL}
     if m == "capture":
         return capture_rpc(p, rid)
-    if port is None:
+    if port is None:  # [U:trex-bad-port-raises]
         return None
     if m == "get_port_status":
         return {"id": rid, "jsonrpc": "2.0", "result": port.status()}
@@ -1060,7 +1080,7 @@ def stateful(m, p, rid):
                 "dst": p["dst_addr"],
                 "state": "resolved" if p.get("resolved_mac") else "unresolved",
             }
-        elif m == "set_vlan":
+        elif m == "set_vlan":  # [U:trex-set-vlan-check-order]
             if len(p["vlan"]) > 2:
                 return p3b_error(
                     "set_vlan", "Maximal number of stacked VLANs", rid, **{"got: 3": f"got: {len(p['vlan'])}"}
