@@ -15,6 +15,8 @@ from support import (
     FAKE,
     FAKE_DAEMON,
     FAKE_DAEMON_READY,
+    FAKE_EMU,
+    FAKE_EMU_READY,
     FAKE_READY,
     FIXTURES,
     ROOT,
@@ -133,6 +135,66 @@ def foreign_client(fake_trex) -> Iterator[Callable[..., Any]]:
     for c in made:
         with contextlib.suppress(Exception):    # teardown: the fake may already be restarted or gone
             c.disconnect(stop_traffic=False, release_ports=False)
+
+
+@dataclass
+class FakeEmu:
+    """A running tests/fake/fake_emu.py: its host, bound port and process."""
+    host: str
+    port: int
+    proc: subprocess.Popen[str]
+    log: Path
+    _tail: str = field(default="", repr=False)
+
+    def requests(self) -> list[dict[str, Any]]:
+        """Every request the fake has received so far, in order, as {"method", "params"} (no api_h)."""
+        text = self.log.read_text() if self.log.exists() else ""
+        return [json.loads(line) for line in text.splitlines()]
+
+    def restart(self) -> None:
+        """Send SIGUSR2: the fake applies a restart before its next message (new api_h, empty state).
+        Asynchronous: nothing waits for it."""
+        self.proc.send_signal(signal.SIGUSR2)
+
+    def stop(self) -> None:
+        """SIGTERM the fake (SIGKILL after 5 s) and keep its output for assert_clean(); does nothing once it
+        has exited."""
+        if self.proc.poll() is None:
+            self.proc.terminate()
+            try:
+                self._tail = self.proc.communicate(timeout=5)[0]
+            except subprocess.TimeoutExpired:
+                self.proc.kill()
+                self._tail = self.proc.communicate()[0]
+
+    def assert_clean(self) -> None:
+        """AssertionError when the fake printed `FORBIDDEN shutdown` (a client sent `shutdown`, ruling R12);
+        reads what stop() kept, so call it after stop()."""
+        assert "[fake-emu] FORBIDDEN shutdown" not in self._tail, "a client sent shutdown to the fake EMU"
+
+
+@pytest.fixture
+def fake_emu(tmp_path: Path) -> Iterator[Callable[..., FakeEmu]]:
+    """A factory that starts a fake_emu.py process with `flags` (--hang METHOD, --huge-plain METHOD, ...) on a
+    port it binds itself (0), read from its ready line, logging its requests under tmp_path; every fake it
+    started is stopped at teardown."""
+    started: list[FakeEmu] = []
+
+    def start(*flags: str) -> FakeEmu:
+        """Spawn the fake; RuntimeError (the fake killed, its output appended) when its first line is not
+        the ready line."""
+        log = tmp_path / f"fake-emu-{len(started)}.jsonl"
+        proc, m = spawn_ready([sys.executable, "-I", "-B", str(FAKE_EMU), "0", "--log", str(log), *flags],
+                              FAKE_EMU_READY, "fake emu")
+        f = FakeEmu("127.0.0.1", int(m[1]), proc, log)
+        started.append(f)
+        return f
+
+    yield start
+    for f in started:
+        f.stop()
+    for f in started:
+        f.assert_clean()
 
 
 @dataclass

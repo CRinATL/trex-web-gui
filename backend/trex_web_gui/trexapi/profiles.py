@@ -25,6 +25,10 @@ MAX_RESULT_PCAP = 96 * 1024 * 1024
 WORKER_AS_LIMIT = 4 * 1024**3        # the worker's RLIMIT_AS, set before it reads anything
 # Twice the slowest Studio operation at STREAMS_MAX (dump_to_code, 6.1-6.4 s measured by P4a Task 1).
 STUDIO_TIMEOUT_S = 13.0
+# An EMU profile load. Measured 2026-11-05 on this machine: a 10000-client profile loads in 0.37 s through
+# load_emu_profile, interpreter start included (test_ten_thousand_clients_load_within_the_timeout). The
+# constant is the Studio figure, kept because it is far over twice that.
+EMU_LOAD_TIMEOUT_S = 13.0
 ROUND_TRIP_DIFFS = 20                # difference lines a RoundTrip keeps
 DIFF_TEXT = 80                       # characters of a value shown in a difference line
 U32 = 4294967295
@@ -87,6 +91,42 @@ async def load_profile(path: str, ports: list[int], tunables: list[str],
     return LoadedProfile(path=os.path.abspath(path), kind=res["kind"], tunables=res["tunables"],
                          streams_by_port={int(k): v for k, v in res["streams_by_port"].items()},
                          summary=res["summary"], stream_count=res["stream_count"])
+
+
+@dataclass(frozen=True)
+class LoadedEmuProfile:
+    path: str
+    tunables: list[Tunable]
+    profile: dict[str, Any]            # validated by emu_profile.validate_emu_profile
+    namespaces: int
+    clients: int
+    plugins: list[str]                 # every plugin name the profile uses, sorted
+    vports: list[int]                  # the distinct vports of its namespaces, sorted
+
+
+async def load_emu_profile(path: str, tunables: list[str],
+                           timeout_s: float = EMU_LOAD_TIMEOUT_S) -> LoadedEmuProfile:
+    """Load an EMU profile in a worker subprocess (the same containment as `load_profile`) and validate what
+    it returned before anything uses it. ProfileError: a suffix other than .py, a missing file, a timeout, a
+    result over MAX_RESULT bytes or none, running out of memory, the profile's own error, or a result that
+    fails `validate_emu_profile`. The profile is arbitrary code; its output is untrusted data."""
+    from .emu_profile import validate_emu_profile
+
+    path = os.path.expanduser(path)
+    if os.path.splitext(path)[1].lower() != ".py":
+        raise ProfileError(f"{os.path.basename(path)}: only .py EMU profiles load here.")
+    if not os.path.isfile(path):
+        raise ProfileError(f"{path} does not exist or is not a file.")
+    req = {"op": "emu_load", "path": os.path.abspath(path), "tunables": tunables}
+    res = await _run_worker(req, os.path.dirname(os.path.abspath(path)), MAX_RESULT, timeout_s,
+                            os.path.basename(path))
+    shown = res.get("tunables")        # untrusted like the profile: a profile can write a forged result line
+    if not (isinstance(shown, list) and all(isinstance(t, dict) for t in shown)):
+        raise ProfileError(f"{os.path.basename(path)}: the loader's tunables are not a list of objects.")
+    facts = validate_emu_profile(res.get("profile"))
+    return LoadedEmuProfile(path=os.path.abspath(path), tunables=res["tunables"], profile=res["profile"],
+                            namespaces=facts.namespaces, clients=facts.clients, plugins=facts.plugins,
+                            vports=facts.vports)
 
 
 class AddressRange(TypedDict):

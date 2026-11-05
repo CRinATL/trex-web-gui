@@ -40,6 +40,14 @@ class ServerRestarted(TrexApiError):
     pass
 
 
+class EmuUnsupported(TrexApiError):
+    """The EMU server does not offer `method` (method not found, or a plugin it has not loaded)."""
+    def __init__(self, method: str, message: str | None = None) -> None:
+        """Keep the method name as .method; the default message names it."""
+        super().__init__(message or f"The EMU server does not support {method}.")
+        self.method = method
+
+
 # A server that does not answer is most often one that is not running (its SSH session ended, say): RC1-19.
 NOT_RUNNING_HINT = "Is TRex running on that host, with its RPC on that port? trex-web-gui does not start it."
 

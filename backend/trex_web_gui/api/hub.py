@@ -5,8 +5,8 @@ place, so it keeps that older one's position and is not pushed behind a log back
 drops them. Only log/event/rpc/ping and capture_pkts/capture_save messages are dropped, oldest first. A
 slow browser tab therefore always ends up with the current session and ports state (P1 parked item, moved
 to P2).
-At most 12 state entries are ever queued, so for maxsize >= 1 the queue can exceed maxsize by up to 12, and
-only when maxsize < 13. `ping` messages are not state: none is coalesced, but like log lines they are
+At most 13 state entries are ever queued, so for maxsize >= 1 the queue can exceed maxsize by up to 13, and
+only when maxsize < 14. `ping` messages are not state: none is coalesced, but like log lines they are
 droppable when a subscriber's queue overflows. A BULK_TYPES kind (`capture_pkts`) is also capped on its
 own: a subscriber keeps at most BULK_TYPES[kind] queued of it, dropping the oldest of that kind (counted in
 `dropped`), so a stalled tab holds 20 batches however large maxsize is and the `capture` state still arrives.
@@ -16,7 +16,7 @@ import asyncio
 import collections
 
 STATE_TYPES = frozenset({"session", "ports", "stats", "pgid", "util", "port_labels", "busy", "capture",
-                         "test_setups", "settings", "monitor", "daemon"})
+                         "test_setups", "settings", "monitor", "daemon", "emu"})
 # Bulk messages are droppable and never coalesced; each subscriber keeps at most this many queued of a kind.
 BULK_TYPES = {"capture_pkts": 20}
 

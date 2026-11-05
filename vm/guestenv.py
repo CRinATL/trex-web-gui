@@ -73,3 +73,13 @@ def vm_dir(env: Mapping[str, str] = os.environ) -> Path:
 def hostname(env: Mapping[str, str] = os.environ) -> str:
     """The guest's hostname (TREX_VM_HOSTNAME), trex-vm for jammy."""
     return _pick(env, "TREX_VM_HOSTNAME", "trex-vm")
+
+
+def emu_port(env: Mapping[str, str] = os.environ) -> int:
+    """The host port forwarded to the guest's EMU server (TREX_VM_EMU_PORT), 4510 for jammy."""
+    value = _pick(env, "TREX_VM_EMU_PORT", "4510")
+    try:
+        return int(value)
+    except ValueError:
+        raise GuestEnvError(f"TREX_VM_EMU_PORT={value!r} must be a port number: "
+                            f're-run eval "$(TREX_VM_GUEST={_guest(env) or "jammy"} vm/guests.sh)"') from None

@@ -35,8 +35,9 @@ do not "fix" them.
 - A change in behaviour comes with a test that fails without it.
 - `make check` runs pytest on every core (`--dist worksteal`). A test that binds or probes a fixed port (the
   guest VM's, 8765/8865/8965) holds `demo_ports_lock()` from `tests/support.py`, never nested. A test that starts
-  the fake TRex uses the `fake_trex` fixture (it binds port 0 itself); a test that needs its own port binds port 0
-  and reads the port back, rather than choosing one and binding it later.
+  the fake TRex uses the `fake_trex` fixture (it binds port 0 itself); a test that talks to EMU uses the `fake_emu`
+  fixture (`tests/fake/fake_emu.py`; it binds port 0 too, and fails a test that sends `shutdown`); a test that
+  needs its own port binds port 0 and reads the port back, rather than choosing one and binding it later.
 
 ## Authorship
 

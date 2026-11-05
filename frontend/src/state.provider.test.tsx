@@ -7,6 +7,7 @@ import { captureStore } from './captureStore'
 import { clearAll } from './clearStats'
 import { DEFAULT_INTERVAL, DEFAULT_LAYOUT } from './chartSeries'
 import { dashboardPrefs } from './dashboardPrefs'
+import { emuStore } from './emuStore'
 import { pgidStore } from './pgidStats'
 import { statsStore } from './stats'
 import { DEFAULT_FORM, trafficStore } from './trafficStore'
@@ -14,6 +15,7 @@ import { statsFromSample } from './testStats'
 import { wirePgid, wireUtil } from './testPgid'
 import { wirePing } from './testWire'
 import capturePkts from './__fixtures__/capturePkts.json'
+import emuMsg from './__fixtures__/emuMsg.json'
 import { utilStore } from './utilStats'
 import { xstatsStore } from './xstatsStore'
 import * as ws from './ws'
@@ -23,6 +25,13 @@ function Show() { const s = useAppState(); return <span data-testid="st">{s.sess
 afterEach(() => { vi.restoreAllMocks() })
 
 describe('AppStateProvider', () => {
+  it('routes an emu message to emuStore, outside the reducer', () => {
+    let onMsg: (m: unknown) => void = () => undefined
+    vi.spyOn(ws, 'connectSocket').mockImplementation((_url, m) => { onMsg = m; return () => undefined })
+    render(<AppStateProvider><Show /></AppStateProvider>)
+    act(() => onMsg(emuMsg.connected))
+    expect(emuStore.get()).toMatchObject({ type: 'emu', state: 'connected', target: { host: '127.0.0.1', port: 4510 } })
+  })
   it('trusts the server-pushed snapshot: no GET on socket open, so a stale reply cannot overwrite a newer push', async () => {
     // The backend sends hello then the session snapshot on every WebSocket accept (api/app.py ws handler).
     let resolveGet: (v: api.SessionSnapshot) => void = () => undefined

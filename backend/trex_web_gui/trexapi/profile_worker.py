@@ -4,8 +4,9 @@ Run by profiles.py as: python -I -B -c <bootstrap: an address-space limit, then 
 and pcap, YAML and JSON input is untrusted.
 
 The request's `op` picks the operation: `load` (the default: load a profile file for each requested port),
-`pcap` (import a capture), `to_python` (`dump_to_code` of the given streams), `round_trip` (the given
-streams through `from_json` and `to_json`) and `template` (the default new stream).
+`emu_load` (run an EMU profile, return its namespaces and clients), `pcap` (import a capture), `to_python`
+(`dump_to_code` of the given streams), `round_trip` (the given streams through `from_json` and `to_json`)
+and `template` (the default new stream).
 
 The result goes to a DUP of the original stdout fd, taken before any operation runs; fds 1 and 2 are then
 pointed at /dev/null, so nothing the profile does (os.write(1), sys.__stdout__, C extensions, child
@@ -61,6 +62,8 @@ def main() -> int:
         op = req.get("op", "load")
         if op == "load":
             res = _op_load(req, noise, tunable_error)
+        elif op == "emu_load":
+            res = _op_emu_load(req, noise, tunable_error)
         elif op == "pcap":
             res = _op_pcap(req)
         elif op == "to_python":
@@ -109,14 +112,11 @@ def _caused_by_memory(e: BaseException) -> bool:
     return type(e) is TRexError and isinstance(e.__context__, MemoryError)
 
 
-def _op_load(req: dict[str, Any], noise: io.StringIO, tunable_error: list[str]) -> dict[str, Any]:
-    """The `load` operation: load req["path"] for each of req["ports"] with req["tunables"], patching
-    ArgumentParser.parse_args to record the profile's tunables. An argparse error is appended to
-    `tunable_error` before it is raised."""
-    from scapy.layers.l2 import Ether
-    from trex.stl.api import STLProfile
-
-    captured: list[list[dict[str, Any]]] = []
+def _patch_parse_args(noise: io.StringIO, tunable_error: list[str],
+                      captured: list[list[dict[str, Any]]]) -> None:
+    """Patch ArgumentParser.parse_args (both profile ops use it) to record the profile's tunables, one list
+    of options per parse, in `captured`. An argparse error is appended to `tunable_error` before it is
+    raised as a ValueError."""
     orig = argparse.ArgumentParser.parse_args
 
     def capture(self: argparse.ArgumentParser, args: Any = None, namespace: Any = None) -> Any:
@@ -157,6 +157,17 @@ def _op_load(req: dict[str, Any], noise: io.StringIO, tunable_error: list[str]) 
             raise ValueError(tunable_error[-1]) from None
 
     argparse.ArgumentParser.parse_args = capture  # type: ignore[method-assign]
+
+
+def _op_load(req: dict[str, Any], noise: io.StringIO, tunable_error: list[str]) -> dict[str, Any]:
+    """The `load` operation: load req["path"] for each of req["ports"] with req["tunables"], patching
+    ArgumentParser.parse_args to record the profile's tunables. An argparse error is appended to
+    `tunable_error` before it is raised."""
+    from scapy.layers.l2 import Ether
+    from trex.stl.api import STLProfile
+
+    captured: list[list[dict[str, Any]]] = []
+    _patch_parse_args(noise, tunable_error, captured)
     path, ports, tunables = req["path"], req["ports"], req["tunables"]
     suffix = os.path.splitext(path)[1].lower()
     by_port, kind = {}, {"py": "py", "yaml": "yaml", "yml": "yaml", "json": "json"}[suffix[1:]]
@@ -174,6 +185,35 @@ def _op_load(req: dict[str, Any], noise: io.StringIO, tunable_error: list[str]) 
     summary = [_summary(i, s, Ether) for i, s in enumerate(first[:SUMMARY_CAP])]
     return {"ok": True, "kind": kind, "tunables": captured[0] if captured else [],
             "streams_by_port": by_port, "summary": summary, "stream_count": len(first)}
+
+
+def _op_emu_load(req: dict[str, Any], noise: io.StringIO, tunable_error: list[str]) -> dict[str, Any]:
+    """The `emu_load` operation: run the EMU profile req["path"] with req["tunables"] (`EMUProfile.load_py`)
+    and return its wire data: {tunables, profile: {def_ns_plugs, namespaces: [{key, fields, def_c_plugs,
+    clients}]}, counts: {namespaces, clients}, plugins}. `fields` is the namespace as ctx_add sends it, a
+    client is its fields with to_bytes=True (MAC and addresses as byte lists). The backend validates all of
+    this before use (emu_profile.validate_emu_profile)."""
+    from trex.emu.trex_emu_profile import EMUProfile
+
+    captured: list[list[dict[str, Any]]] = []
+    _patch_parse_args(noise, tunable_error, captured)
+    prof = EMUProfile.load_py(req["path"], req["tunables"])
+    if prof is None:
+        raise RuntimeError("the profile asked for --help; remove it from the tunables")
+    plugins: set[str] = set(prof.def_ns_plugs)
+    namespaces, clients = [], 0
+    for ns in prof.ns_list:
+        plugins.update(ns.plugs, ns.def_c_plugs)
+        rows = []
+        for c in ns.c_map.values():
+            rows.append(c.get_fields(to_bytes=True))
+            plugins.update(c.plugs or {})
+        clients += len(rows)
+        namespaces.append({"key": ns.key.conv_to_dict(), "fields": ns.get_fields(),
+                           "def_c_plugs": ns.def_c_plugs, "clients": rows})
+    return {"ok": True, "tunables": captured[0] if captured else [],
+            "profile": {"def_ns_plugs": prof.def_ns_plugs, "namespaces": namespaces},
+            "counts": {"namespaces": len(namespaces), "clients": clients}, "plugins": sorted(plugins)}
 
 
 def _op_pcap(req: dict[str, Any]) -> dict[str, Any]:

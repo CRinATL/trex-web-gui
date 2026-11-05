@@ -126,10 +126,13 @@ def test_refusal_sites_reads_positional_keyword_and_attribute_calls(tmp_path: Pa
         'def h():\n'
         '    raise DaemonRefused(x, "m")\n'
         'def i():\n'
-        '    raise BundleError()\n')
+        '    raise BundleError()\n'
+        'def j():\n'
+        '    raise sessions.EmuRefused("e", "m")\n')
     sites = load_checker().refusal_sites(tmp_path)
     assert sites == {("session", "a"): ["m.py:2"], ("session", "b"): ["m.py:4"],
-                     ("daemon", "<non-literal>"): ["m.py:6"], ("bundle", "<non-literal>"): ["m.py:8"]}
+                     ("daemon", "<non-literal>"): ["m.py:6"], ("bundle", "<non-literal>"): ["m.py:8"],
+                     ("emu", "e"): ["m.py:10"]}
 
 
 def test_refusal_sites_skips_vendored_code(tmp_path: Path) -> None:
@@ -140,7 +143,7 @@ def test_refusal_sites_skips_vendored_code(tmp_path: Path) -> None:
 
 def test_refusal_table_statuses_follow_the_mapping_sites() -> None:
     for (family, code), (status, meaning) in REFUSALS.items():
-        assert family in ("session", "daemon", "bundle") and meaning, code
+        assert family in ("session", "daemon", "bundle", "emu") and meaning, code
         want = 422 if family == "bundle" or code == "bad_request" else 409
         assert status == want, code
 
@@ -154,7 +157,7 @@ def test_api_md_errors_section_lists_every_refusal() -> None:
 
 def test_generator_family_text_matches_declared_family_line() -> None:
     gen = load_generator()
-    for family in ("session", "daemon", "bundle"):
+    for family in ("session", "daemon", "bundle", "emu"):
         assert gen.FAMILY_TEXT[family] == family_line(family)
 
 

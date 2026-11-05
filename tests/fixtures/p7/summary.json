@@ -1,0 +1,1321 @@
+{
+ "handshake": {
+  "EMU_1_1": {
+   "ok": true,
+   "error": null,
+   "has_api_h": true
+  },
+  "EMU_1_0": {
+   "ok": true,
+   "error": null,
+   "has_api_h": true
+  },
+  "api_h_stable_per_server": true
+ },
+ "version": {
+  "version": "v0.1",
+  "build_date": "05.05.2019",
+  "build_time": "16:00",
+  "built_by": "hhaim",
+  "mode": "emulation"
+ },
+ "ping": {
+  "ts": 30
+ },
+ "get_version_without_api_h": {
+  "version": "v0.1",
+  "build_date": "05.05.2019",
+  "build_time": "16:00",
+  "built_by": "hhaim",
+  "mode": "emulation"
+ },
+ "drift": {
+  "ctx_stop_autotriggers": {
+   "code": -32601,
+   "text": "Method not found"
+  },
+  "ctx_resource_monitor_get": {
+   "code": -32601,
+   "text": "Method not found"
+  },
+  "ipfix_ns_cnt": {
+   "code": -32601,
+   "text": "Method not found"
+  }
+ },
+ "interrupted_iteration": {
+  "first": {
+   "empty": false,
+   "stopped": false,
+   "data": [
+    {
+     "vport": 0,
+     "tpid": [
+      0,
+      0
+     ],
+     "tci": [
+      0,
+      0
+     ],
+     "plugs": null
+    }
+   ]
+  },
+  "after_reset_by_other": {
+   "result": {
+    "empty": false,
+    "stopped": false,
+    "data": [
+     {
+      "vport": 1,
+      "tpid": [
+       0,
+       0
+      ],
+      "tci": [
+       0,
+       0
+      ],
+      "plugs": null
+     }
+    ]
+   }
+  },
+  "after_add_by_other": {
+   "error": {
+    "code": -32600,
+    "text": " iterator was interupted , reset and start again "
+   }
+  },
+  "all_after_add": {
+   "empty": false,
+   "stopped": false,
+   "data": [
+    {
+     "vport": 0,
+     "tpid": [
+      0,
+      0
+     ],
+     "tci": [
+      0,
+      0
+     ],
+     "plugs": null
+    },
+    {
+     "vport": 1,
+     "tpid": [
+      0,
+      0
+     ],
+     "tci": [
+      0,
+      0
+     ],
+     "plugs": null
+    },
+    {
+     "vport": 50,
+     "tpid": [
+      0,
+      0
+     ],
+     "tci": [
+      0,
+      0
+     ],
+     "plugs": null
+    }
+   ]
+  },
+  "after_remove_by_other": {
+   "error": {
+    "code": -32600,
+    "text": " iterator was interupted , reset and start again "
+   }
+  }
+ },
+ "interrupted_client_iteration": {
+  "first": {
+   "empty": false,
+   "stopped": false,
+   "data": [
+    [
+     0,
+     0,
+     0,
+     112,
+     0,
+     1
+    ]
+   ]
+  },
+  "after_add_by_other": {
+   "error": {
+    "code": -32600,
+    "text": " iterator was interupted , reset and start again "
+   }
+  },
+  "after_remove_by_other": {
+   "error": {
+    "code": -32600,
+    "text": " iterator was interupted , reset and start again "
+   }
+  }
+ },
+ "after_removal_listing": {
+  "empty": true,
+  "stopped": false,
+  "data": null
+ },
+ "ipfix_scratch_removal": {
+  "error": "ServerUnreachable: no answer to ctx_remove from tcp://127.0.0.1:4510: Resource temporarily unavailable",
+  "guest": "trex-emu is gone\npanic: runtime error: invalid memory address or nil pointer dereference\n[signal SIGSEGV: segmentation violation code=0x1 addr=0x18 pc=0x783ad3]\n\ngoroutine 1 [running]:\n"
+ },
+ "port_prerequisite": "none on the AF_PACKET guest (all four port-0 states answered; spike-0.md Step 5)",
+ "emu_api": [
+  "EMU",
+  1,
+  1
+ ],
+ "server": "standalone trex-emu -p 4510 (no -d), no TRex, jammy guest",
+ "timings": [
+  {
+   "call": "api_sync_v2 EMU_1_1",
+   "secs": 0.0015,
+   "error": null
+  },
+  {
+   "call": "api_sync_v2 EMU_1_0",
+   "secs": 0.0007,
+   "error": null
+  },
+  {
+   "call": "api_sync_v2",
+   "secs": 0.0007,
+   "error": null
+  },
+  {
+   "call": "api_sync_v2",
+   "secs": 0.0002,
+   "error": null
+  },
+  {
+   "call": "get_version",
+   "secs": 0.0002,
+   "error": null
+  },
+  {
+   "call": "ping",
+   "secs": 0.0002,
+   "error": null
+  },
+  {
+   "call": "api_sync_v2_major2",
+   "secs": 0.0006,
+   "error": {
+    "code": -32600,
+    "text": "Server API EMU:(1:1) does not match the client API EMU:(2:0) "
+   }
+  },
+  {
+   "call": "api_sync_v2_stl",
+   "secs": 0.0005,
+   "error": {
+    "code": -32600,
+    "text": "Server API EMU:(1:1) does not match the client API STL:(5:1) "
+   }
+  },
+  {
+   "call": "get_version",
+   "secs": 0.0005,
+   "error": null
+  },
+  {
+   "call": "ping_without_api_h",
+   "secs": 0.0002,
+   "error": {
+    "code": -32602,
+    "text": "Method with not a valid API "
+   }
+  },
+  {
+   "call": "ping_bogus_api_h",
+   "secs": 0.0002,
+   "error": {
+    "code": -32602,
+    "text": "Method with not a valid API "
+   }
+  },
+  {
+   "call": "ctx_stop_autotriggers",
+   "secs": 0.0002,
+   "error": {
+    "code": -32601,
+    "text": "Method not found"
+   }
+  },
+  {
+   "call": "ctx_resource_monitor_get",
+   "secs": 0.0004,
+   "error": {
+    "code": -32601,
+    "text": "Method not found"
+   }
+  },
+  {
+   "call": "ipfix_ns_cnt",
+   "secs": 0.0003,
+   "error": {
+    "code": -32601,
+    "text": "Method not found"
+   }
+  },
+  {
+   "call": "get_supported_cmds",
+   "secs": 0.0002,
+   "error": {
+    "code": -32601,
+    "text": "Method not found"
+   }
+  },
+  {
+   "call": "clear_ctx_iter",
+   "secs": 0.0004,
+   "error": null
+  },
+  {
+   "call": "load ctx_set_def_plugins",
+   "secs": 0.0004,
+   "error": null
+  },
+  {
+   "call": "load ctx_add",
+   "secs": 0.0005,
+   "error": null
+  },
+  {
+   "call": "load ctx_client_set_def_plugins",
+   "secs": 0.0004,
+   "error": null
+  },
+  {
+   "call": "load ctx_client_add",
+   "secs": 0.0006,
+   "error": null
+  },
+  {
+   "call": "load ctx_client_set_def_plugins",
+   "secs": 0.0004,
+   "error": null
+  },
+  {
+   "call": "load ctx_client_add",
+   "secs": 0.0005,
+   "error": null
+  },
+  {
+   "call": "ctx_iter",
+   "secs": 0.0004,
+   "error": null
+  },
+  {
+   "call": "ctx_iter count 1",
+   "secs": 0.0003,
+   "error": null
+  },
+  {
+   "call": "ctx_iter count 1 continued",
+   "secs": 0.0003,
+   "error": null
+  },
+  {
+   "call": "ctx_iter count 1 past the end",
+   "secs": 0.0004,
+   "error": null
+  },
+  {
+   "call": "ctx_get_info",
+   "secs": 0.0004,
+   "error": null
+  },
+  {
+   "call": "ctx_client_iter",
+   "secs": 0.0003,
+   "error": null
+  },
+  {
+   "call": "ctx_client_iter count 2",
+   "secs": 0.0003,
+   "error": null
+  },
+  {
+   "call": "ctx_client_iter count 2 continued",
+   "secs": 0.0003,
+   "error": null
+  },
+  {
+   "call": "ctx_client_get_info",
+   "secs": 0.0006,
+   "error": null
+  },
+  {
+   "call": "ctx_client_iter",
+   "secs": 0.0003,
+   "error": null
+  },
+  {
+   "call": "ctx_client_iter count 2",
+   "secs": 0.0004,
+   "error": null
+  },
+  {
+   "call": "ctx_client_iter count 2 continued",
+   "secs": 0.0004,
+   "error": null
+  },
+  {
+   "call": "ctx_client_get_info",
+   "secs": 0.0003,
+   "error": null
+  },
+  {
+   "call": "ctx_cnt",
+   "secs": 0.0006,
+   "error": null
+  },
+  {
+   "call": "ctx_cnt",
+   "secs": 0.0003,
+   "error": null
+  },
+  {
+   "call": "ctx_cnt",
+   "secs": 0.0006,
+   "error": null
+  },
+  {
+   "call": "ctx_cnt mask ctx",
+   "secs": 0.0004,
+   "error": null
+  },
+  {
+   "call": "ctx_cnt mask unknown",
+   "secs": 0.0004,
+   "error": null
+  },
+  {
+   "call": "igmp_ns_cnt not loaded",
+   "secs": 0.0004,
+   "error": {
+    "code": -32600,
+    "text": " error there is no valid plugin igmp for this tunnel "
+   }
+  },
+  {
+   "call": "scratch ctx_add appsim",
+   "secs": 0.0004,
+   "error": null
+  },
+  {
+   "call": "scratch set_def_plugins appsim",
+   "secs": 0.0004,
+   "error": null
+  },
+  {
+   "call": "scratch ctx_client_add appsim",
+   "secs": 0.0011,
+   "error": null
+  },
+  {
+   "call": "appsim_client_cnt meta",
+   "secs": 0.0005,
+   "error": null
+  },
+  {
+   "call": "appsim_client_cnt values",
+   "secs": 0.0004,
+   "error": null
+  },
+  {
+   "call": "appsim_client_cnt zero values",
+   "secs": 0.0004,
+   "error": null
+  },
+  {
+   "call": "scratch client_iter",
+   "secs": 0.0003,
+   "error": null
+  },
+  {
+   "call": "scratch ctx_client_remove",
+   "secs": 0.0003,
+   "error": null
+  },
+  {
+   "call": "scratch ctx_remove",
+   "secs": 0.0004,
+   "error": null
+  },
+  {
+   "call": "scratch ctx_add arp",
+   "secs": 0.0004,
+   "error": null
+  },
+  {
+   "call": "scratch ctx_client_add arp",
+   "secs": 0.0004,
+   "error": null
+  },
+  {
+   "call": "arp_ns_cnt meta",
+   "secs": 0.0005,
+   "error": null
+  },
+  {
+   "call": "arp_ns_cnt values",
+   "secs": 0.0004,
+   "error": null
+  },
+  {
+   "call": "arp_ns_cnt zero values",
+   "secs": 0.0004,
+   "error": null
+  },
+  {
+   "call": "scratch client_iter",
+   "secs": 0.0003,
+   "error": null
+  },
+  {
+   "call": "scratch ctx_client_remove",
+   "secs": 0.0003,
+   "error": null
+  },
+  {
+   "call": "scratch ctx_remove",
+   "secs": 0.0003,
+   "error": null
+  },
+  {
+   "call": "scratch ctx_add cdp",
+   "secs": 0.0003,
+   "error": null
+  },
+  {
+   "call": "scratch set_def_plugins cdp",
+   "secs": 0.0003,
+   "error": null
+  },
+  {
+   "call": "scratch ctx_client_add cdp",
+   "secs": 0.0003,
+   "error": null
+  },
+  {
+   "call": "cdp_client_cnt meta",
+   "secs": 0.0003,
+   "error": null
+  },
+  {
+   "call": "cdp_client_cnt values",
+   "secs": 0.0003,
+   "error": null
+  },
+  {
+   "call": "cdp_client_cnt zero values",
+   "secs": 0.0004,
+   "error": null
+  },
+  {
+   "call": "scratch client_iter",
+   "secs": 0.0002,
+   "error": null
+  },
+  {
+   "call": "scratch ctx_client_remove",
+   "secs": 0.0003,
+   "error": null
+  },
+  {
+   "call": "scratch ctx_remove",
+   "secs": 0.0003,
+   "error": null
+  },
+  {
+   "call": "scratch ctx_add dhcp",
+   "secs": 0.0003,
+   "error": null
+  },
+  {
+   "call": "scratch set_def_plugins dhcp",
+   "secs": 0.0003,
+   "error": null
+  },
+  {
+   "call": "scratch ctx_client_add dhcp",
+   "secs": 0.0003,
+   "error": null
+  },
+  {
+   "call": "dhcp_client_cnt meta",
+   "secs": 0.0005,
+   "error": null
+  },
+  {
+   "call": "dhcp_client_cnt values",
+   "secs": 0.0004,
+   "error": null
+  },
+  {
+   "call": "dhcp_client_cnt zero values",
+   "secs": 0.0003,
+   "error": null
+  },
+  {
+   "call": "scratch client_iter",
+   "secs": 0.0003,
+   "error": null
+  },
+  {
+   "call": "scratch ctx_client_remove",
+   "secs": 0.0003,
+   "error": null
+  },
+  {
+   "call": "scratch ctx_remove",
+   "secs": 0.0003,
+   "error": null
+  },
+  {
+   "call": "scratch ctx_add dhcpsrv",
+   "secs": 0.0002,
+   "error": null
+  },
+  {
+   "call": "scratch set_def_plugins dhcpsrv",
+   "secs": 0.0002,
+   "error": null
+  },
+  {
+   "call": "scratch ctx_client_add dhcpsrv",
+   "secs": 0.0003,
+   "error": null
+  },
+  {
+   "call": "dhcpsrv_c_cnt meta",
+   "secs": 0.0004,
+   "error": null
+  },
+  {
+   "call": "dhcpsrv_c_cnt values",
+   "secs": 0.0003,
+   "error": null
+  },
+  {
+   "call": "dhcpsrv_c_cnt zero values",
+   "secs": 0.0004,
+   "error": null
+  },
+  {
+   "call": "scratch client_iter",
+   "secs": 0.0003,
+   "error": null
+  },
+  {
+   "call": "scratch ctx_client_remove",
+   "secs": 0.0003,
+   "error": null
+  },
+  {
+   "call": "scratch ctx_remove",
+   "secs": 0.0003,
+   "error": null
+  },
+  {
+   "call": "scratch ctx_add dhcpv6",
+   "secs": 0.0003,
+   "error": null
+  },
+  {
+   "call": "scratch set_def_plugins dhcpv6",
+   "secs": 0.0003,
+   "error": null
+  },
+  {
+   "call": "scratch ctx_client_add dhcpv6",
+   "secs": 0.0004,
+   "error": null
+  },
+  {
+   "call": "dhcpv6_client_cnt meta",
+   "secs": 0.0004,
+   "error": null
+  },
+  {
+   "call": "dhcpv6_client_cnt values",
+   "secs": 0.0003,
+   "error": null
+  },
+  {
+   "call": "dhcpv6_client_cnt zero values",
+   "secs": 0.0003,
+   "error": null
+  },
+  {
+   "call": "scratch client_iter",
+   "secs": 0.0003,
+   "error": null
+  },
+  {
+   "call": "scratch ctx_client_remove",
+   "secs": 0.0003,
+   "error": null
+  },
+  {
+   "call": "scratch ctx_remove",
+   "secs": 0.0003,
+   "error": null
+  },
+  {
+   "call": "scratch ctx_add dns",
+   "secs": 0.0003,
+   "error": null
+  },
+  {
+   "call": "scratch set_def_plugins dns",
+   "secs": 0.0003,
+   "error": null
+  },
+  {
+   "call": "scratch ctx_client_add dns",
+   "secs": 0.0003,
+   "error": null
+  },
+  {
+   "call": "dns_ns_cnt meta",
+   "secs": 0.0003,
+   "error": null
+  },
+  {
+   "call": "dns_ns_cnt values",
+   "secs": 0.0003,
+   "error": null
+  },
+  {
+   "call": "dns_ns_cnt zero values",
+   "secs": 0.0002,
+   "error": null
+  },
+  {
+   "call": "dns_c_cnt meta",
+   "secs": 0.0009,
+   "error": null
+  },
+  {
+   "call": "dns_c_cnt values",
+   "secs": 0.0003,
+   "error": null
+  },
+  {
+   "call": "dns_c_cnt zero values",
+   "secs": 0.0008,
+   "error": null
+  },
+  {
+   "call": "scratch client_iter",
+   "secs": 0.0003,
+   "error": null
+  },
+  {
+   "call": "scratch ctx_client_remove",
+   "secs": 0.0003,
+   "error": null
+  },
+  {
+   "call": "scratch ctx_remove",
+   "secs": 0.0004,
+   "error": null
+  },
+  {
+   "call": "scratch ctx_add dot1x",
+   "secs": 0.0003,
+   "error": null
+  },
+  {
+   "call": "scratch set_def_plugins dot1x",
+   "secs": 0.0002,
+   "error": null
+  },
+  {
+   "call": "scratch ctx_client_add dot1x",
+   "secs": 0.0003,
+   "error": null
+  },
+  {
+   "call": "dot1x_client_cnt meta",
+   "secs": 0.0002,
+   "error": null
+  },
+  {
+   "call": "dot1x_client_cnt values",
+   "secs": 0.0002,
+   "error": null
+  },
+  {
+   "call": "dot1x_client_cnt zero values",
+   "secs": 0.0002,
+   "error": null
+  },
+  {
+   "call": "scratch client_iter",
+   "secs": 0.0002,
+   "error": null
+  },
+  {
+   "call": "scratch ctx_client_remove",
+   "secs": 0.0002,
+   "error": null
+  },
+  {
+   "call": "scratch ctx_remove",
+   "secs": 0.0002,
+   "error": null
+  },
+  {
+   "call": "scratch ctx_add icmp",
+   "secs": 0.0002,
+   "error": null
+  },
+  {
+   "call": "scratch ctx_client_add icmp",
+   "secs": 0.0002,
+   "error": null
+  },
+  {
+   "call": "icmp_ns_cnt meta",
+   "secs": 0.0002,
+   "error": null
+  },
+  {
+   "call": "icmp_ns_cnt values",
+   "secs": 0.0002,
+   "error": null
+  },
+  {
+   "call": "icmp_ns_cnt zero values",
+   "secs": 0.0002,
+   "error": null
+  },
+  {
+   "call": "scratch client_iter",
+   "secs": 0.0002,
+   "error": null
+  },
+  {
+   "call": "scratch ctx_client_remove",
+   "secs": 0.0002,
+   "error": null
+  },
+  {
+   "call": "scratch ctx_remove",
+   "secs": 0.0002,
+   "error": null
+  },
+  {
+   "call": "scratch ctx_add igmp",
+   "secs": 0.0002,
+   "error": null
+  },
+  {
+   "call": "scratch ctx_client_add igmp",
+   "secs": 0.0002,
+   "error": null
+  },
+  {
+   "call": "igmp_ns_cnt meta",
+   "secs": 0.0003,
+   "error": null
+  },
+  {
+   "call": "igmp_ns_cnt values",
+   "secs": 0.0002,
+   "error": null
+  },
+  {
+   "call": "igmp_ns_cnt zero values",
+   "secs": 0.0002,
+   "error": null
+  },
+  {
+   "call": "scratch client_iter",
+   "secs": 0.0002,
+   "error": null
+  },
+  {
+   "call": "scratch ctx_client_remove",
+   "secs": 0.0002,
+   "error": null
+  },
+  {
+   "call": "scratch ctx_remove",
+   "secs": 0.0001,
+   "error": null
+  },
+  {
+   "call": "scratch ctx_add ipv6",
+   "secs": 0.0003,
+   "error": null
+  },
+  {
+   "call": "scratch ctx_client_add ipv6",
+   "secs": 0.0001,
+   "error": null
+  },
+  {
+   "call": "ipv6_ns_cnt meta",
+   "secs": 0.0005,
+   "error": null
+  },
+  {
+   "call": "ipv6_ns_cnt values",
+   "secs": 0.0004,
+   "error": null
+  },
+  {
+   "call": "ipv6_ns_cnt zero values",
+   "secs": 0.0005,
+   "error": null
+  },
+  {
+   "call": "scratch client_iter",
+   "secs": 0.0003,
+   "error": null
+  },
+  {
+   "call": "scratch ctx_client_remove",
+   "secs": 0.0003,
+   "error": null
+  },
+  {
+   "call": "scratch ctx_remove",
+   "secs": 0.0002,
+   "error": null
+  },
+  {
+   "call": "scratch ctx_add lldp",
+   "secs": 0.0002,
+   "error": null
+  },
+  {
+   "call": "scratch set_def_plugins lldp",
+   "secs": 0.0002,
+   "error": null
+  },
+  {
+   "call": "scratch ctx_client_add lldp",
+   "secs": 0.0002,
+   "error": null
+  },
+  {
+   "call": "lldp_client_cnt meta",
+   "secs": 0.0002,
+   "error": null
+  },
+  {
+   "call": "lldp_client_cnt values",
+   "secs": 0.0002,
+   "error": null
+  },
+  {
+   "call": "lldp_client_cnt zero values",
+   "secs": 0.0002,
+   "error": null
+  },
+  {
+   "call": "scratch client_iter",
+   "secs": 0.0002,
+   "error": null
+  },
+  {
+   "call": "scratch ctx_client_remove",
+   "secs": 0.0002,
+   "error": null
+  },
+  {
+   "call": "scratch ctx_remove",
+   "secs": 0.0001,
+   "error": null
+  },
+  {
+   "call": "scratch ctx_add mdns",
+   "secs": 0.0002,
+   "error": null
+  },
+  {
+   "call": "scratch set_def_plugins mdns",
+   "secs": 0.0002,
+   "error": null
+  },
+  {
+   "call": "scratch ctx_client_add mdns",
+   "secs": 0.0003,
+   "error": null
+  },
+  {
+   "call": "mdns_ns_cnt meta",
+   "secs": 0.0002,
+   "error": null
+  },
+  {
+   "call": "mdns_ns_cnt values",
+   "secs": 0.0002,
+   "error": null
+  },
+  {
+   "call": "mdns_ns_cnt zero values",
+   "secs": 0.0002,
+   "error": null
+  },
+  {
+   "call": "mdns_c_cnt meta",
+   "secs": 0.0002,
+   "error": null
+  },
+  {
+   "call": "mdns_c_cnt values",
+   "secs": 0.0002,
+   "error": null
+  },
+  {
+   "call": "mdns_c_cnt zero values",
+   "secs": 0.0002,
+   "error": null
+  },
+  {
+   "call": "scratch client_iter",
+   "secs": 0.0002,
+   "error": null
+  },
+  {
+   "call": "scratch ctx_client_remove",
+   "secs": 0.0002,
+   "error": null
+  },
+  {
+   "call": "scratch ctx_remove",
+   "secs": 0.0002,
+   "error": null
+  },
+  {
+   "call": "scratch ctx_add tdl",
+   "secs": 0.0002,
+   "error": null
+  },
+  {
+   "call": "scratch set_def_plugins tdl",
+   "secs": 0.0002,
+   "error": null
+  },
+  {
+   "call": "scratch ctx_client_add tdl",
+   "secs": 0.0002,
+   "error": null
+  },
+  {
+   "call": "tdl_c_cnt meta",
+   "secs": 0.0003,
+   "error": null
+  },
+  {
+   "call": "tdl_c_cnt values",
+   "secs": 0.0002,
+   "error": null
+  },
+  {
+   "call": "tdl_c_cnt zero values",
+   "secs": 0.0002,
+   "error": null
+  },
+  {
+   "call": "scratch client_iter",
+   "secs": 0.0001,
+   "error": null
+  },
+  {
+   "call": "scratch ctx_client_remove",
+   "secs": 0.0002,
+   "error": null
+  },
+  {
+   "call": "scratch ctx_remove",
+   "secs": 0.0002,
+   "error": null
+  },
+  {
+   "call": "scratch ctx_add transport",
+   "secs": 0.0002,
+   "error": null
+  },
+  {
+   "call": "scratch set_def_plugins transport",
+   "secs": 0.0002,
+   "error": null
+  },
+  {
+   "call": "scratch ctx_client_add transport",
+   "secs": 0.0002,
+   "error": null
+  },
+  {
+   "call": "transport_client_cnt meta",
+   "secs": 0.0002,
+   "error": {
+    "code": -32600,
+    "text": " client does not have a transport context"
+   }
+  },
+  {
+   "call": "scratch client_iter",
+   "secs": 0.0002,
+   "error": null
+  },
+  {
+   "call": "scratch ctx_client_remove",
+   "secs": 0.0002,
+   "error": null
+  },
+  {
+   "call": "scratch ctx_remove",
+   "secs": 0.0002,
+   "error": null
+  },
+  {
+   "call": "scratch ctx_add transporte",
+   "secs": 0.0002,
+   "error": null
+  },
+  {
+   "call": "scratch ctx_client_add transporte",
+   "secs": 0.0002,
+   "error": null
+  },
+  {
+   "call": "transe_ns_cnt meta",
+   "secs": 0.0002,
+   "error": null
+  },
+  {
+   "call": "transe_ns_cnt values",
+   "secs": 0.0002,
+   "error": null
+  },
+  {
+   "call": "transe_ns_cnt zero values",
+   "secs": 0.0002,
+   "error": null
+  },
+  {
+   "call": "scratch client_iter",
+   "secs": 0.0002,
+   "error": null
+  },
+  {
+   "call": "scratch ctx_client_remove",
+   "secs": 0.0002,
+   "error": null
+  },
+  {
+   "call": "scratch ctx_remove",
+   "secs": 0.0002,
+   "error": null
+  },
+  {
+   "call": "interrupt A first",
+   "secs": 0.0003,
+   "error": null
+  },
+  {
+   "call": "interrupt B reset",
+   "secs": 0.0003,
+   "error": null
+  },
+  {
+   "call": "interrupt A after B reset",
+   "secs": 0.0004,
+   "error": null
+  },
+  {
+   "call": "interrupt A restart",
+   "secs": 0.0004,
+   "error": null
+  },
+  {
+   "call": "interrupt B ctx_add",
+   "secs": 0.0003,
+   "error": null
+  },
+  {
+   "call": "interrupt A after B ctx_add",
+   "secs": 0.0003,
+   "error": {
+    "code": -32600,
+    "text": " iterator was interupted , reset and start again "
+   }
+  },
+  {
+   "call": "interrupt A restart all",
+   "secs": 0.0004,
+   "error": null
+  },
+  {
+   "call": "interrupt A restart again",
+   "secs": 0.0004,
+   "error": null
+  },
+  {
+   "call": "interrupt B ctx_remove",
+   "secs": 0.0004,
+   "error": null
+  },
+  {
+   "call": "interrupt A after B ctx_remove",
+   "secs": 0.0003,
+   "error": {
+    "code": -32600,
+    "text": " iterator was interupted , reset and start again "
+   }
+  },
+  {
+   "call": "interrupt clients A first",
+   "secs": 0.0003,
+   "error": null
+  },
+  {
+   "call": "interrupt clients B ctx_client_add",
+   "secs": 0.0005,
+   "error": null
+  },
+  {
+   "call": "interrupt clients A after B add",
+   "secs": 0.0004,
+   "error": {
+    "code": -32600,
+    "text": " iterator was interupted , reset and start again "
+   }
+  },
+  {
+   "call": "interrupt clients A restart",
+   "secs": 0.0005,
+   "error": null
+  },
+  {
+   "call": "interrupt clients B remove",
+   "secs": 0.0004,
+   "error": null
+  },
+  {
+   "call": "interrupt clients A after B remove",
+   "secs": 0.0004,
+   "error": {
+    "code": -32600,
+    "text": " iterator was interupted , reset and start again "
+   }
+  },
+  {
+   "call": "clear_ctx_iter",
+   "secs": 0.0004,
+   "error": null
+  },
+  {
+   "call": "clear_client_iter",
+   "secs": 0.0003,
+   "error": null
+  },
+  {
+   "call": "clear_client_remove",
+   "secs": 0.0003,
+   "error": null
+  },
+  {
+   "call": "clear_ctx_remove",
+   "secs": 0.0002,
+   "error": null
+  },
+  {
+   "call": "clear_client_iter",
+   "secs": 0.0002,
+   "error": null
+  },
+  {
+   "call": "clear_client_remove",
+   "secs": 0.0003,
+   "error": null
+  },
+  {
+   "call": "clear_ctx_remove",
+   "secs": 0.0002,
+   "error": null
+  },
+  {
+   "call": "ctx_iter after removal",
+   "secs": 0.0002,
+   "error": null
+  },
+  {
+   "call": "scratch ctx_add ipfix",
+   "secs": 0.0004,
+   "error": null
+  },
+  {
+   "call": "scratch set_def_plugins ipfix",
+   "secs": 0.0003,
+   "error": null
+  },
+  {
+   "call": "scratch ctx_client_add ipfix",
+   "secs": 0.0004,
+   "error": null
+  },
+  {
+   "call": "ipfix_ns_cnt meta",
+   "secs": 0.0003,
+   "error": {
+    "code": -32601,
+    "text": "Method not found"
+   }
+  },
+  {
+   "call": "ipfix_c_cnt meta",
+   "secs": 0.0003,
+   "error": null
+  },
+  {
+   "call": "ipfix_c_cnt values",
+   "secs": 0.0004,
+   "error": null
+  },
+  {
+   "call": "ipfix_c_cnt zero values",
+   "secs": 0.0004,
+   "error": null
+  },
+  {
+   "call": "scratch client_iter",
+   "secs": 0.0003,
+   "error": null
+  },
+  {
+   "call": "scratch ctx_client_remove",
+   "secs": 0.0003,
+   "error": null
+  }
+ ],
+ "slowest_call": {
+  "call": "api_sync_v2 EMU_1_1",
+  "secs": 0.0015,
+  "error": null
+ }
+}

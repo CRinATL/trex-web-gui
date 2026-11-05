@@ -132,7 +132,8 @@ def parameter_rows(params: list[dict[str, Any]]) -> list[tuple[str, str, str, st
 
 
 FAMILY_TEXT = {"session": "a session refusal, see Errors", "daemon": "a daemon refusal, see Errors",
-               "bundle": "a bundle refusal, see Errors"}  # test_api_errors.py ties it to declared.family_line
+               "bundle": "a bundle refusal, see Errors",
+               "emu": "an EMU refusal, see Errors"}  # test_api_errors.py ties it to declared.family_line
 # The descriptions FastAPI writes itself; a route that declares none of its own prints the generic line.
 DEFAULT_DESCRIPTIONS = {"Successful Response", "Validation Error"}
 
@@ -235,8 +236,8 @@ status of the refusal (a browser navigation gets an HTML page with the same stat
 
 ### Refusals
 
-A route marked "a session refusal", "a daemon refusal" or "a bundle refusal" can answer any code of that
-family. Sorted by family, then code.
+A route marked "a session refusal", "a daemon refusal", "a bundle refusal" or "an EMU refusal" can answer any
+code of that family. Sorted by family, then code.
 
 {refusals}
 

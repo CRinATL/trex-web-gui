@@ -16,7 +16,7 @@ function ipv4(text: string): number | null {
 }
 
 // The first problem with `o`, in the words of the form, or null. It mirrors check_pcap_options
-// (backend/trex_web_gui/trexapi/profiles.py:116 "def check_pcap_options"); the backend is the authority.
+// (backend/trex_web_gui/trexapi/profiles.py:156 "def check_pcap_options"); the backend is the authority.
 export function pcapError(o: PcapOptions): string | null {
   if (!(Number.isFinite(o.speedup) && o.speedup > 0)) return 'Speedup: a number above 0.'
   // load_pcap refuses a gap below 0.001 µs after the speedup, which a fixed gap leaves at 1

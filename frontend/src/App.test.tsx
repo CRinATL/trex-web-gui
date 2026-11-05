@@ -24,9 +24,9 @@ describe('shell', () => {
       expect(screen.queryByRole('link', { name: 'Control' })).toBeNull()      // the shell is not rendered
     } finally { vi.unstubAllGlobals() }
   })
-  it('the nav is Control, Dashboard, Capture, Studio, Monitor, Events, Settings', async () => {
+  it('the nav is Control, Dashboard, Capture, Studio, Monitor, EMU, Events, Settings', async () => {
     render(<MemoryRouter initialEntries={['/monitor']}><AppShell /></MemoryRouter>)
-    expect(within(screen.getByRole('navigation')).getAllByRole('link').map((a) => a.textContent)).toEqual(['Control', 'Dashboard', 'Capture', 'Studio', 'Monitor', 'Events', 'Settings'])
+    expect(within(screen.getByRole('navigation')).getAllByRole('link').map((a) => a.textContent)).toEqual(['Control', 'Dashboard', 'Capture', 'Studio', 'Monitor', 'EMU', 'Events', 'Settings'])
     expect(screen.getByRole('heading', { name: 'Monitor' })).toBeInTheDocument()   // routes stay reachable by URL
   })
   it('the top bar links to Studio, between Capture and Monitor', async () => {
@@ -38,6 +38,15 @@ describe('shell', () => {
     await userEvent.click(screen.getByRole('link', { name: 'Studio' }))
     expect(screen.getByTestId('where')).toHaveTextContent('/studio')
     expect(screen.getByRole('heading', { name: 'Studio' })).toBeVisible()
+  })
+  it('the top bar links to EMU, after Monitor, and the page answers', async () => {
+    vi.spyOn(api, 'getEmu').mockResolvedValue({ type: 'emu', state: 'disconnected', target: null, info: null, error: null, busy: null, generation: 0, loaded: null })
+    render(<MemoryRouter initialEntries={['/dashboard']}><AppShell /><Where /></MemoryRouter>)
+    const links = within(screen.getByRole('navigation')).getAllByRole('link').map((a) => a.textContent)
+    expect(links.indexOf('EMU')).toBe(links.indexOf('Monitor') + 1)
+    await userEvent.click(screen.getByRole('link', { name: 'EMU' }))
+    expect(screen.getByTestId('where')).toHaveTextContent('/emu')
+    expect(screen.getByRole('heading', { name: 'EMU', level: 1 })).toBeVisible()
   })
   it('top bar links to Monitor', async () => {
     render(<MemoryRouter initialEntries={['/dashboard']}><AppShell /><Where /></MemoryRouter>)
@@ -56,6 +65,7 @@ describe('shell', () => {
         render(<MemoryRouter initialEntries={['/control']}><AppShell /><Where /></MemoryRouter>)
         expect(screen.getByTestId('where')).toHaveTextContent('/monitor')                 // /control lands on Monitor
         expect(within(screen.getByRole('navigation')).getAllByRole('link').map((a) => a.textContent)).toEqual(['Monitor', 'Settings'])
+        expect(screen.queryByRole('link', { name: 'EMU' })).toBeNull()                      // no EMU link: its routes are refused in this mode
         expect(screen.getByRole('heading', { name: 'Monitor', level: 1 })).toBeVisible()
         expect(screen.queryByRole('button', { name: /^Connect…/ })).toBeNull()             // no Control connect in the status bar
         const key = new KeyboardEvent('keydown', { key: 'c', ctrlKey: true, shiftKey: true, bubbles: true, cancelable: true })
@@ -110,7 +120,7 @@ describe('shell', () => {
       await act(async () => { await Promise.resolve() })
       expect(files).toHaveBeenCalled()
     })
-    it.each(['/dashboard', '/capture', '/studio', '/events', '/'])('%s redirects to the Monitor', (path) => {
+    it.each(['/dashboard', '/capture', '/studio', '/events', '/emu', '/'])('%s redirects to the Monitor', (path) => {
       only()
       render(<MemoryRouter initialEntries={[path]}><AppShell /><Where /></MemoryRouter>)
       expect(screen.getByTestId('where')).toHaveTextContent('/monitor')

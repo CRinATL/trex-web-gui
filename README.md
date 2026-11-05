@@ -412,6 +412,37 @@ Restrict port
 `--trex-host 127.0.0.1` and reach it through an SSH tunnel. The project's own test VM is already safe: QEMU forwards its
 daemon port on `127.0.0.1` only (`vm/launch.sh`).
 
+## EMU
+
+The **EMU** page drives the TRex emulation server (`trex-emu`, RPC port 4510) beside the stateless session: it shows
+its namespaces, their clients and counters, and loads or removes an EMU profile.
+
+- **Starting TRex with EMU.** On the project's test guest, `./t-rex-64 -i --emu` was enough. Upstream's tutorial
+  uses `./t-rex-64 -i --software --emu`, and the TRex server refuses `--emu` where its DPDK mode needs a drop RX
+  queue, asking for `--software`, so hardware NICs may need that flag. You can also add `--emu` to the extra
+  arguments of the **TRex daemon…** dialog.
+- **Port prerequisite.** None on the AF_PACKET test guest. On hardware NICs, EMU may need the TRex port in filtered
+  service mode with mask 29 (DHCP, MDNS, NO_TCP_UDP, TRANSPORT): the Control page's service control can set it, and
+  there is no EMU preset.
+- **Connecting.** Open the **EMU** page, give the host and port (4510), and press **Connect**. The page's guide is
+  [`docs/gui-guide.md`](docs/gui-guide.md#11a-emu).
+
+### EMU exposure
+
+EMU's RPC port (4510) has no authentication and no owner: anyone who can reach it can read and change every
+namespace and client, whatever trex-web-gui does. Firewall it to the GUI host, or reach it through an SSH tunnel.
+Within trex-web-gui:
+
+- A profile load replaces everything on the EMU server, so it asks for a confirmation, and for a second
+  acknowledgement when the server holds namespaces this app did not add.
+- The shipped `trex-emu` v3.08 crashes (the server is gone until it is restarted) when a namespace that has the
+  `ipfix` or `tdl` plugin at namespace level is removed, and when a client with `mdns` is added to a namespace that
+  lacks `mdns` (measured with empty plugin configs). trex-web-gui refuses to load such a profile, and asks for an acknowledgement before it
+  removes such a namespace it did not add. `ipfix` on a client, as in the stock `simple_ipfix.py`, loads and removes
+  cleanly.
+- A load that fails part-way (a 400 or 502) leaves a partial profile on the server; the page says so, and the profile can
+  be loaded again.
+
 ## Documentation
 
 - [`docs/howto-first-stream.md`](docs/howto-first-stream.md): a walk-through that sends a first stream and watches it

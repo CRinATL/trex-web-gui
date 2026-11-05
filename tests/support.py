@@ -81,6 +81,7 @@ def run_vendor_python(vendor: Path, code: str, *, system_libs: bool = True,
 
 FAKE = ROOT / "tests" / "fake" / "fake_trex.py"
 FAKE_DAEMON = ROOT / "tests" / "fake" / "fake_daemon.py"
+FAKE_EMU = ROOT / "tests" / "fake" / "fake_emu.py"
 FIXTURES = ROOT / "tests" / "fixtures"
 
 
@@ -106,6 +107,7 @@ def free_port() -> int:
 
 FAKE_READY = re.compile(r"\[fake\] ready rpc=(\d+) pub=(\d+) ")       # fake_trex.py's first line
 FAKE_DAEMON_READY = re.compile(r"\[fake-daemon\] ready port=(\d+)$")   # fake_daemon.py's first line
+FAKE_EMU_READY = re.compile(r"\[fake-emu\] ready port=(\d+)$")           # fake_emu.py's first line
 
 
 def spawn_ready(argv: Sequence[str], ready: re.Pattern[str],

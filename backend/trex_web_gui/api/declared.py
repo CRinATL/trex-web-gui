@@ -7,11 +7,11 @@ carries `description` and the extension keys `x-codes` and `x-families`, which F
 `openapi()` unchanged; scripts/gen_api_docs.py renders them."""
 from typing import Any, Literal
 
-Family = Literal["session", "daemon", "bundle"]
+Family = Literal["session", "daemon", "bundle", "emu"]
 
 Item = tuple[int, str, str] | tuple[int, Family]       # one argument of `answers`
 
-ARTICLE = {"session": "a session", "daemon": "a daemon", "bundle": "a bundle"}
+ARTICLE = {"session": "a session", "daemon": "a daemon", "bundle": "a bundle", "emu": "an EMU"}
 
 
 def family_line(family: str) -> str:

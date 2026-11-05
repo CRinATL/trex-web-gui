@@ -67,7 +67,7 @@ export interface PingMsg extends PingLine { type: 'ping'; port: number; run: num
 // What holds a port's executor: a ping, a scan, or an Apply. Published whole: the ports that are busy now, {} when none.
 export type BusyKind = 'ping' | 'scan' | 'apply'
 export interface BusyMsg { type: 'busy'; ports: Record<number, BusyKind> }
-export type ServerMsg = SessionSnapshot | ClientEventMsg | HelloMsg | PortsMsg | LogMsg | RpcMsg | PortLabelsMsg | PingMsg | BusyMsg | CaptureMsg | CaptureSaveMsg | SetupsMsg | SettingsMsg | MonitorMsg | DaemonMsg
+export type ServerMsg = SessionSnapshot | ClientEventMsg | HelloMsg | PortsMsg | LogMsg | RpcMsg | PortLabelsMsg | PingMsg | BusyMsg | CaptureMsg | CaptureSaveMsg | SetupsMsg | SettingsMsg | MonitorMsg | DaemonMsg | EmuMsg
 export interface Tunable { dest: string; flag: string; kind: 'int' | 'float' | 'str' | 'bool_true' | 'bool_false' | 'choice' | 'raw'; default: unknown; choices: unknown[] | null; help: string }
 export interface StreamSummary { index: number; name: string | null; enabled: boolean; self_start: boolean; mode: string; rate: string; packet: string; length: number; next: string | null; has_vm: boolean }
 export interface Inspected { path: string; kind: 'py' | 'yaml' | 'json'; tunables: Tunable[]; summary: StreamSummary[]; stream_count: number }
@@ -484,6 +484,56 @@ export interface MonitorMsg {
 }
 export const monitorConnect = (host: string, port: number) => call<MonitorMsg>('POST', '/api/monitor/connect', { host, port })
 export const monitorDisconnect = () => call<MonitorMsg>('POST', '/api/monitor/disconnect')
+
+// P7 EMU. The `emu` message is EmuSession.snapshot() (backend sessions/emu_session.py; recorded in __fixtures__/emuMsg.json); the
+// bodies below are the recorded emuNamespaces.json, emuClients.json and emuCounters.json. Data never rides the hub: the pages pull it.
+export type EmuConnState = 'disconnected' | 'connecting' | 'connected' | 'lost'
+export interface EmuInfo { build_date: string; build_time: string; built_by: string; mode: string; version: string }
+export interface EmuTarget { host: string; port: number }
+export interface EmuMsg {
+  type: 'emu'; state: EmuConnState; target: EmuTarget | null; info: EmuInfo | null; error: string | null
+  busy: { kind: string; done: number; total: number } | null; generation: number
+  loaded: { path: string; tunables: string[]; namespaces: number; clients: number; at: number; partial: boolean } | null
+}
+export interface EmuNamespace { vport: number; tci: number[]; tpid: number[]; active_clients: number; plug_names: string[]; ours: boolean }
+export interface EmuNamespaces { generation: number; namespaces: EmuNamespace[]; interrupted: boolean }
+// A client as the server reports it; the addresses are byte lists (the MAC is six ints, see macText).
+export interface EmuClient {
+  mac: number[]; ipv4: number[]; ipv4_dg: number[]; ipv4_mtu: number; ipv4_force_dg: boolean; ipv4_force_mac: number[]
+  ipv6: number[]; ipv6_local: number[]; ipv6_slaac: number[]; dhcp_ipv6: number[]; dg_ipv6: number[]
+  ipv6_dgw: number[] | null; ipv6_router: number[] | null; ipv6_force_dg: boolean; ipv6_force_mac: number[]
+  dgw: { resolve: boolean; rmac: number[] }; plug_names: string[]
+}
+export interface EmuClientsPage { total: number; clients: EmuClient[]; interrupted: boolean }
+export interface EmuCounterRow { name: string; value: number | null; unit: string; help: string; info: number | null; zero: boolean }
+export interface EmuCounters { tables: Record<string, EmuCounterRow[]>; unsupported: string[] }
+export type EmuScope = 'ctx' | 'ns' | 'client'
+export interface EmuNsKey { vport: number; tci?: readonly number[]; tpid?: readonly number[] }
+// Six ints as the colon-hex text the counters route takes for `mac` (aa:bb:cc:dd:ee:ff).
+export const macText = (mac: readonly number[]): string => mac.map((b) => b.toString(16).padStart(2, '0')).join(':')
+const pairText = (p: readonly number[] | undefined): string => (p ? `${p[0]},${p[1]}` : '0,0')
+const nsQuery = (k: EmuNsKey) => `vport=${k.vport}&tci=${pairText(k.tci)}&tpid=${pairText(k.tpid)}`
+export const getEmu = () => call<EmuMsg>('GET', '/api/emu')
+export const emuConnect = (host: string, port: number) => call<EmuMsg>('POST', '/api/emu/connect', { host, port })
+export const emuDisconnect = () => call<EmuMsg>('POST', '/api/emu/disconnect')
+// POST /api/emu/profile/inspect: what a `.py` EMU profile holds (nothing is sent to the server). `warnings` name a vport the Control session lacks.
+export interface EmuProfileInspected { tunables: Tunable[]; counts: { namespaces: number; clients: number }; plugins: string[]; vports: number[]; warnings: string[] }
+// The write bodies: `confirm`, `foreign_ack` and `crash_ack` must be the booleans true (anything else is refused; `crash_ack` is sent only when the user ticked it); `max_rate` is clients per second, omitted for the default.
+export interface EmuWriteOpts { max_rate?: number; confirm: boolean; foreign_ack?: boolean; crash_ack?: boolean }
+export const emuProfileInspect = (path: string, tunables: string[]) => call<EmuProfileInspected>('POST', '/api/emu/profile/inspect', { path, tunables })
+export const emuProfileLoad = (path: string, tunables: string[], o: EmuWriteOpts) => call<EmuMsg>('POST', '/api/emu/profile/load', { path, tunables, ...o })
+export const emuProfileRemove = (o: EmuWriteOpts) => call<EmuMsg>('POST', '/api/emu/profile/remove', o)
+export const emuNamespaces = () => call<EmuNamespaces>('GET', '/api/emu/namespaces')
+export const emuClients = (ns: EmuNsKey, offset = 0, limit = 100) => call<EmuClientsPage>('GET', `/api/emu/clients?${nsQuery(ns)}&offset=${offset}&limit=${limit}`)
+// ctx takes no key, ns takes the namespace, client also its MAC (six ints, sent as colon-hex).
+export const emuCounters = (scope: EmuScope, opts: { ns?: EmuNsKey; mac?: readonly number[]; plugin?: string; meta?: boolean } = {}) => {
+  const q = [`scope=${scope}`]
+  if (opts.plugin) q.push(`plugin=${encodeURIComponent(opts.plugin)}`)
+  if (opts.ns) q.push(nsQuery(opts.ns))
+  if (opts.mac) q.push(`mac=${macText(opts.mac)}`)
+  if (opts.meta) q.push('meta=true')
+  return call<EmuCounters>('GET', `/api/emu/counters?${q.join('&')}`)
+}
 
 // P5 Daemon. The `daemon` message is DaemonSession.snapshot() (backend daemon/session.py; recorded values in
 // __fixtures__/daemonMsg.json and daemonMsgStf.json). `run` is the record of the run this backend started.

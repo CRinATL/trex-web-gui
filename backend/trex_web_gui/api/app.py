@@ -25,6 +25,7 @@ from trex_web_gui.api.bundle import bundle_router
 from trex_web_gui.api.capture import MonitorBody, PacketBody, RecorderBody
 from trex_web_gui.api.daemon import daemon_router
 from trex_web_gui.api.declared import Item, answers
+from trex_web_gui.api.emu import emu_router
 from trex_web_gui.api.hub import Hub
 from trex_web_gui.api.monitor import MONITOR_ONLY_MESSAGE, MonitorOnly, monitor_router, require_full_mode
 from trex_web_gui.api.origin import LoopbackHostMiddleware, LoopbackOriginMiddleware
@@ -36,7 +37,7 @@ from trex_web_gui.api.test_setups import test_setups_router
 from trex_web_gui.daemon.session import START_TIMEOUT_MAX_S, DaemonSession
 from trex_web_gui.install import install_kind
 from trex_web_gui.monitor.session import MonitorSession
-from trex_web_gui.sessions import ConnectParams, SessionBusy, TrexSession, wireshark
+from trex_web_gui.sessions import ConnectParams, EmuSession, SessionBusy, TrexSession, wireshark
 from trex_web_gui.store.bundle import Stores
 from trex_web_gui.store.port_labels import LabelError, PortLabelStore
 from trex_web_gui.store.settings import SettingsError, SettingsStore, parse_settings
@@ -156,7 +157,7 @@ class ConsoleBody(BaseModel):
     include_polling: bool | None = None      # omitted keeps the session's current value
 
 
-async def close_to_completion(s: TrexSession | MonitorSession | DaemonSession) -> None:
+async def close_to_completion(s: TrexSession | MonitorSession | DaemonSession | EmuSession) -> None:
     """Run s.close() to completion even if we are cancelled meanwhile. TrexSession.close() sets _closed
     first, so a cancelled close() cannot be retried, and a cancelled disconnect can leave the client
     connected (an unclosed LOST client then blocks interpreter exit in ZMQ's context.term). So: shield,
@@ -227,8 +228,9 @@ def create_app(data_dir: Path, server_hint: str | None = None, static_dir: Path 
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         """Startup builds the TrexSession (app.state.session), loads the settings and warms up the scapy
         executor, and removes expired Studio uploads; it builds the MonitorSession (app.state.monitor) and
-        connects it when there is a monitor_target, and builds the DaemonSession (app.state.daemon). Shutdown,
-        also after a cancelled lifespan, closes the Daemon session, then the Monitor, then logs the wait if a
+        connects it when there is a monitor_target, and builds the DaemonSession (app.state.daemon) and the
+        EmuSession (app.state.emu). Shutdown, also after a cancelled lifespan, closes the EMU session,
+        then the Daemon session, then the Monitor, then logs the wait if a
         session is live, closes the session to completion (kills every Wireshark it launched, releases ports
         per the release_on_exit preference) and shuts the scapy executor down."""
         state["session"] = app.state.session = TrexSession(
@@ -236,6 +238,7 @@ def create_app(data_dir: Path, server_hint: str | None = None, static_dir: Path 
             trex_cfg_path=lambda: store.load().preferences.trex_cfg_path, spool_dir=data_dir / "captures")
         state["monitor"] = app.state.monitor = MonitorSession(hub.publish)
         state["daemon"] = app.state.daemon = DaemonSession(hub.publish, session_owned)
+        state["emu"] = app.state.emu = EmuSession(hub.publish)
         store.load()
         scapy_exec.warm_up()      # before any session connects: construction swaps sys.stdout
         remove_expired_uploads(data_dir)
@@ -253,6 +256,12 @@ def create_app(data_dir: Path, server_hint: str | None = None, static_dir: Path 
             # uvicorn logs as an error. This is a normal shutdown: clean up below, then end quietly.
             log.debug("lifespan cancelled before the shutdown message; closing the session")
         finally:
+            try:
+                await close_to_completion(state["emu"])      # no cleanup duty: it only drops its own socket
+            except asyncio.CancelledError:
+                log.debug("lifespan shutdown was cancelled; EMU close had completed")
+            except Exception:       # the packet engine, Daemon, Monitor and session below must still close
+                log.exception("closing the EMU session failed; closing the rest anyway")
             try:
                 await packet_engine.close()      # kills the packet worker's process group; never respawns
             except asyncio.CancelledError:
@@ -489,6 +498,7 @@ def create_app(data_dir: Path, server_hint: str | None = None, static_dir: Path 
                                      data_dir))
     app.include_router(monitor_router(lambda: state["monitor"]))
     app.include_router(daemon_router(lambda: state["daemon"]))
+    app.include_router(emu_router(lambda: state["emu"], lambda: state["session"]))
 
     @app.get("/api/session")
     def get_session() -> dict[str, object]:

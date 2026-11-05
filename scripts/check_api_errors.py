@@ -11,7 +11,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-FAMILIES = {"CommandRefused": "session", "DaemonRefused": "daemon", "BundleError": "bundle"}
+FAMILIES = {"CommandRefused": "session", "DaemonRefused": "daemon", "BundleError": "bundle",
+            "EmuRefused": "emu"}
 NON_LITERAL = "<non-literal>"
 
 

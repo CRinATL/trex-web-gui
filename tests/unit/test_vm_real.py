@@ -320,3 +320,61 @@ def test_demo_ports_lock_is_freed_when_its_holder_dies(tmp_path: Path) -> None:
             p.stdout.close()
     with demo_ports_lock(lock, wait_s=5):
         pass
+
+
+def test_real_accepts_mark_emu_real_on_jammy_only(tmp_path: Path, stubs: Path, row: Path) -> None:
+    """emu_real is a known TREX_VM_MARK, refused before any boot off jammy; p7 is a known recorder."""
+    r = run("real.sh", make_env(tmp_path, stubs, TREX_VM_MARK="emu_real"))   # the guest is resolute
+    assert r.returncode == 2
+    assert r.stdout.strip() == "UNAVAILABLE: TREX_VM_MARK=emu_real runs on jammy only"
+    assert "systemd-run" not in calls(tmp_path)
+    r = run("real.sh", make_env(tmp_path, stubs, TREX_VM_MARK="bogus"))
+    assert "emu_real" in r.stdout
+    r = run("real.sh", make_env(tmp_path, stubs, TREX_VM_RECORD="p7"))
+    assert r.stdout.strip() == "UNAVAILABLE: TREX_VM_RECORD records from jammy only"
+
+
+def _failing_run(tmp_path: Path, stubs: Path, **extra: str) -> tuple[subprocess.CompletedProcess[str], str]:
+    """Runs real.sh on jammy with a booting stub guest whose recorder or pytest (systemd-run) exits 3."""
+    if taken(2222):
+        pytest.skip("127.0.0.1:2222 is in use")
+    jammy = tmp_path / "base" / "trex-vm"
+    jammy.mkdir(parents=True)
+    (jammy / "trex.qcow2").write_bytes(b"")
+    log = tmp_path / "calls.log"
+    pidfile = tmp_path / "sleeper.pid"
+    (stubs / "systemd-run").write_text(
+        f'#!/bin/bash\necho "systemd-run $*" >> "{log}"\n'
+        f'case "$*" in *qemu-system-x86_64*) echo $$ > "{pidfile}"; exec sleep 30;; esac\nexit 3\n')
+    (stubs / "socat").write_text(
+        f'#!/bin/bash\necho "socat $*" >> "{log}"\nkill $(cat "{pidfile}")\nexit 0\n')
+    for tool in ("ssh", "uv", "curl"):
+        (stubs / tool).write_text(f'#!/bin/bash\necho "{tool} $*" >> "{log}"\nexit 0\n')
+    t0 = time.monotonic()
+    r = run("real.sh", make_env(tmp_path, stubs, TREX_VM_GUEST="jammy", **extra))
+    assert time.monotonic() - t0 < 10
+    return r, calls(tmp_path)
+
+
+def test_real_restores_stateless_after_the_p7_recorder(tmp_path: Path, stubs: Path) -> None:
+    """A failing p7 recorder (rc 3) still puts the guest back on legacy and keeps rc 3."""
+    r, text = _failing_run(tmp_path, stubs, TREX_VM_RECORD="p7")
+    assert r.returncode == 3, r
+    rec = text.index("record_p7.py")
+    assert rec < text.index("--cfg /etc/trex_cfg_legacy.yaml", rec)
+
+
+def test_check_emu_real_restores_stateless(tmp_path: Path, stubs: Path) -> None:
+    """A failing emu_real run (pytest rc 3) still puts the guest back on legacy and keeps rc 3."""
+    r, text = _failing_run(tmp_path, stubs, TREX_VM_MARK="emu_real")
+    assert r.returncode == 3, r
+    run_at = text.index("-m emu_real")
+    assert run_at < text.index("--cfg /etc/trex_cfg_legacy.yaml", run_at)
+
+
+def test_check_daemon_real_leaves_the_emu_tests_to_check_emu_real(tmp_path: Path, stubs: Path) -> None:
+    """TREX_VM_MARK=restarts_trex selects `restarts_trex and not emu_real` (R9): the EMU tests restart the
+    guest's TRex too, but they run only under check-emu-real."""
+    r, text = _failing_run(tmp_path, stubs, TREX_VM_MARK="restarts_trex")
+    assert r.returncode == 3, r
+    assert "-m restarts_trex and not emu_real -v -s" in text

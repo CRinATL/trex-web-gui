@@ -23,7 +23,7 @@ a built UI's fallback may answer those paths with its `index.html`): this file i
   same status instead of the JSON body; it names the code and never carries the query string. A fetch or
   XHR, curl and a script get the JSON.
 - **`--monitor-only`.** A backend started with `--monitor-only` answers 409 `monitor_only` to every request,
-  of any method, under `/api/daemon`, `/api/profiles`, `/api/capture`, `/api/studio`, `/api/fs`, and to every DELETE, PATCH, POST, PUT outside `/api/monitor`, `/api/auth`. Reads of the other routes
+  of any method, under `/api/daemon`, `/api/profiles`, `/api/capture`, `/api/studio`, `/api/fs`, `/api/emu`, and to every DELETE, PATCH, POST, PUT outside `/api/monitor`, `/api/auth`. Reads of the other routes
   stay live.
 
 ## Errors
@@ -46,8 +46,8 @@ status of the refusal (a browser navigation gets an HTML page with the same stat
 
 ### Refusals
 
-A route marked "a session refusal", "a daemon refusal" or "a bundle refusal" can answer any code of that
-family. Sorted by family, then code.
+A route marked "a session refusal", "a daemon refusal", "a bundle refusal" or "an EMU refusal" can answer any
+code of that family. Sorted by family, then code.
 
 | code | family | status | meaning |
 |---|---|---|---|
@@ -66,6 +66,15 @@ family. Sorted by family, then code.
 | `owners_unknown` | daemon | 409 | who owns the ports cannot be told; acknowledge to go on |
 | `plan_changed` | daemon | 409 | the target or files changed since the preview |
 | `reserved` | daemon | 409 | the daemon is reserved |
+| `busy` | emu | 409 | another EMU operation is in progress |
+| `confirm_required` | emu | 409 | the write needs `confirm` |
+| `crash_risk` | emu | 409 | removing a namespace the server holds with the ipfix or tdl plugin at namespace level crashes trex-emu; acknowledge to remove it anyway |
+| `foreign_namespaces` | emu | 409 | the server holds namespaces this backend did not add; acknowledge to replace them |
+| `no_client` | emu | 409 | the namespace has no client with this MAC |
+| `no_namespace` | emu | 409 | the server has no namespace with this key |
+| `not_connected` | emu | 409 | not connected to an EMU server |
+| `unsupported` | emu | 409 | the server does not have this counter method |
+| `unsupported_server` | emu | 409 | the EMU server's API is not 1.x |
 | `bad_port` | session | 409 | a port the server does not have, or a profile not loaded for a port |
 | `bad_request` | session | 422 | no attribute to change |
 | `capture_busy` | session | 409 | the capture is being saved, is the live monitor's, or belongs to a TRex service |
@@ -90,7 +99,7 @@ family. Sorted by family, then code.
 
 `/api/ws` is a WebSocket, which OpenAPI does not describe. It needs the cookie, sends a `hello` first and then
 the current state, then forwards the hub's JSON messages, each with a `type`. State messages are coalesced (a
-newer message replaces the queued older one of its type): `busy`, `capture`, `daemon`, `monitor`, `pgid`, `port_labels`, `ports`, `session`, `settings`, `stats`, `test_setups`, `util`. Bulk messages are never coalesced but are
+newer message replaces the queued older one of its type): `busy`, `capture`, `daemon`, `emu`, `monitor`, `pgid`, `port_labels`, `ports`, `session`, `settings`, `stats`, `test_setups`, `util`. Bulk messages are never coalesced but are
 capped: `capture_pkts` (at most 20 queued per subscriber). For a subscriber whose queue overflows, the hub drops the oldest queued message whose type
 is not a state type (the list above); state messages are never dropped.
 
@@ -696,6 +705,204 @@ flight), `not_ours` (Stop when this backend holds no run, or a stateful run it d
 - `422` `bad_request`: an argument breaks a rule the session checks; the message names it
 - `502` `daemon_fault`: the daemon answered with an error
 - `502` `daemon_unreachable`: the daemon cannot be reached
+
+## /api/emu
+
+### GET /api/emu
+
+The EMU session's snapshot (the `emu` hub message).
+
+**Responses**
+
+- `200`: `object`
+
+### GET /api/emu/clients
+
+{total, clients, interrupted}: clients `offset`..`offset+limit` of the namespace named by `vport`,
+`tci` and `tpid` (pairs `a,b`; omitted = `0,0`). 409 `not_connected`, or `no_namespace` when the
+server answered an error and no longer lists the namespace. 422 `bad_request` for a bad `tci` or
+`tpid`. 502 `unreachable` when the server cannot be reached, 400 `emu_error` when it answers an
+error.
+
+**Query parameters**
+
+| name | type | required | default | constraints |
+|---|---|---|---|---|
+| `limit` | `integer` | no | `100` | minimum=1, maximum=255 |
+| `offset` | `integer` | no | `0` | minimum=0 |
+| `tci` | `string` | no | `"0,0"` | - |
+| `tpid` | `string` | no | `"0,0"` | - |
+| `vport` | `integer` | yes | - | minimum=0, maximum=65535 |
+
+**Responses**
+
+- `200`: the body is described above
+- `400` `emu_error`: the EMU server answered with an error
+- `409`: an EMU refusal, see Errors
+- `422` `bad_request`: the body or query failed validation (`{"error": "bad_request", "message": <text>}`)
+- `422` `bad_request`: an argument breaks a rule; the message names it
+- `502` `unreachable`: the EMU server cannot be reached
+
+### POST /api/emu/connect
+
+Connect to the EMU server at host:port; returns the snapshot. 409 with `busy` (a connect or write
+is in flight), `unsupported_server` (the server's API is not 1.x), or `not_connected` (a disconnect
+arrived while connecting). 502 `unreachable` when the server cannot be reached, 400 `emu_error` when
+it answers an error.
+
+**Request body** (`application/json`, schema `EmuConnectBody`)
+
+| field | type | required | default | constraints |
+|---|---|---|---|---|
+| `host` | `string` | yes | - | - |
+| `port` | `integer` | no | `4510` | minimum=1, maximum=65535 |
+| `timeout_s` | `number \| integer` | no | `3.0` | - |
+
+**Responses**
+
+- `200`: the body is described above
+- `400` `emu_error`: the EMU server answered with an error
+- `409`: an EMU refusal, see Errors
+- `422` `bad_request`: the body or query failed validation (`{"error": "bad_request", "message": <text>}`)
+- `422` `bad_request`: an argument breaks a rule; the message names it
+- `502` `unreachable`: the EMU server cannot be reached
+
+### GET /api/emu/counters
+
+{tables: {table: [{name, value, unit, help, info, zero}]}, unsupported: [plugin]}. `scope` ctx
+takes no key, ns takes `vport` (with `tci`, `tpid`), client also `mac` (`aa:bb:cc:dd:ee:ff`).
+`plugin` limits the read to one plugin; left out, every plugin with counters in the scope is read and
+those the server lacks are listed in `unsupported`. `meta=true` answers every counter with value
+null. 409 `not_connected`; `unsupported` when the named plugin's counters are not available;
+`no_namespace` or `no_client` when the server answered an error and no longer lists the key. 422
+`bad_request` for a key that does not fit the scope or an unknown plugin. 502
+`unreachable` when the server cannot be reached, 400 `emu_error` when it answers an error.
+
+**Query parameters**
+
+| name | type | required | default | constraints |
+|---|---|---|---|---|
+| `mac` | `string \| null` | no | - | - |
+| `meta` | `boolean` | no | `false` | - |
+| `plugin` | `string \| null` | no | - | - |
+| `scope` | `"ctx" \| "ns" \| "client"` | yes | - | one of "ctx", "ns", "client" |
+| `tci` | `string` | no | `"0,0"` | - |
+| `tpid` | `string` | no | `"0,0"` | - |
+| `vport` | `integer \| null` | no | - | minimum=0, maximum=65535 |
+
+**Responses**
+
+- `200`: the body is described above
+- `400` `emu_error`: the EMU server answered with an error
+- `409`: an EMU refusal, see Errors
+- `422` `bad_request`: the body or query failed validation (`{"error": "bad_request", "message": <text>}`)
+- `422` `bad_request`: an argument breaks a rule; the message names it
+- `502` `unreachable`: the EMU server cannot be reached
+
+### POST /api/emu/disconnect
+
+Drop the connection; returns the snapshot. 409 `busy` during a write.
+
+**Responses**
+
+- `200`: the body is described above
+- `400` `emu_error`: the EMU server answered with an error
+- `409`: an EMU refusal, see Errors
+- `422` `bad_request`: an argument breaks a rule; the message names it
+- `502` `unreachable`: the EMU server cannot be reached
+
+### GET /api/emu/namespaces
+
+{generation, namespaces: [{vport, tci, tpid, active_clients, plug_names, ours}], interrupted}.
+409 `not_connected`. 502 `unreachable` when the server cannot be reached, 400 `emu_error` when it
+answers an error.
+
+**Responses**
+
+- `200`: the body is described above
+- `400` `emu_error`: the EMU server answered with an error
+- `409`: an EMU refusal, see Errors
+- `422` `bad_request`: an argument breaks a rule; the message names it
+- `502` `unreachable`: the EMU server cannot be reached
+
+### POST /api/emu/profile/inspect
+
+Run the `.py` EMU profile at `path` with `tunables` in the profile worker and summarise it:
+{tunables, counts: {namespaces, clients}, plugins, vports, warnings}. Touches no server. A `warnings`
+entry names a vport the connected Control session does not have as a port (a warning, never a
+refusal). 422 `profile_error` when the profile does not load or breaks a limit.
+
+**Request body** (`application/json`, schema `EmuProfileBody`)
+
+| field | type | required | default | constraints |
+|---|---|---|---|---|
+| `path` | `string` | yes | - | minLength=1 |
+| `tunables` | `array<string>` | no | - | maxItems=100, items maxLength=1000 |
+
+**Responses**
+
+- `200`: the body is described above
+- `422` `bad_request`: the body or query failed validation (`{"error": "bad_request", "message": <text>}`)
+- `422` `profile_error`: the profile cannot be loaded
+
+### POST /api/emu/profile/load
+
+Replace everything on the EMU server with the `.py` profile at `path` (run with `tunables`): every
+namespace there is removed, then the profile's are added, at most `max_rate` clients per second.
+Returns the snapshot. 409 `confirm_required` without `confirm: true`, `foreign_namespaces` when the
+server holds namespaces this backend did not add and `foreign_ack` is not true (checked after one
+listing), `crash_risk` when one of those has the ipfix or tdl plugin at namespace level (removing it
+crashes trex-emu v3.08) and `crash_ack` is not true, `busy`, `not_connected`. 422 `profile_error`, or
+`bad_request` for a `max_rate` outside 1..100000. 502 `unreachable` (a lost connection names how far
+the load got), 400 `emu_error` with the
+server's text and how far it got.
+
+**Request body** (`application/json`, schema `EmuLoadBody`)
+
+| field | type | required | default | constraints |
+|---|---|---|---|---|
+| `max_rate` | `integer \| number \| null` | no | - | - |
+| `confirm` | `boolean` | no | `false` | - |
+| `foreign_ack` | `boolean` | no | `false` | - |
+| `crash_ack` | `boolean` | no | `false` | - |
+| `path` | `string` | yes | - | minLength=1 |
+| `tunables` | `array<string>` | no | - | maxItems=100, items maxLength=1000 |
+
+**Responses**
+
+- `200`: the body is described above
+- `400` `emu_error`: the EMU server answered with an error
+- `409`: an EMU refusal, see Errors
+- `422` `bad_request`: the body or query failed validation (`{"error": "bad_request", "message": <text>}`)
+- `422` `bad_request`: an argument breaks a rule; the message names it
+- `422` `profile_error`: the profile cannot be loaded
+- `502` `unreachable`: the EMU server cannot be reached
+
+### POST /api/emu/profile/remove
+
+Remove every namespace and client from the EMU server, at most `max_rate` clients per second.
+Returns the snapshot. 409 `confirm_required`, `foreign_namespaces`, `crash_risk`, `busy`,
+`not_connected` as for the load; `bad_request` for a `max_rate` outside 1..100000. 502 `unreachable`
+(trex-emu v3.08 crashes when a namespace with the ipfix or tdl plugin at namespace level is removed,
+which is reported as a lost connection; a client-level ipfix removes cleanly), 400 `emu_error`.
+
+**Request body** (`application/json`, schema `EmuWriteBody`)
+
+| field | type | required | default | constraints |
+|---|---|---|---|---|
+| `max_rate` | `integer \| number \| null` | no | - | - |
+| `confirm` | `boolean` | no | `false` | - |
+| `foreign_ack` | `boolean` | no | `false` | - |
+| `crash_ack` | `boolean` | no | `false` | - |
+
+**Responses**
+
+- `200`: the body is described above
+- `400` `emu_error`: the EMU server answered with an error
+- `409`: an EMU refusal, see Errors
+- `422` `bad_request`: the body or query failed validation (`{"error": "bad_request", "message": <text>}`)
+- `422` `bad_request`: an argument breaks a rule; the message names it
+- `502` `unreachable`: the EMU server cannot be reached
 
 ## /api/fs
 
@@ -2266,6 +2473,50 @@ POST /api/daemon/connect.
 |---|---|---|---|---|
 | `host` | `string` | yes | - | - |
 | `port` | `integer` | yes | - | minimum=1, maximum=65535 |
+
+### EmuConnectBody
+
+POST /api/emu/connect.
+
+| field | type | required | default | constraints |
+|---|---|---|---|---|
+| `host` | `string` | yes | - | - |
+| `port` | `integer` | no | `4510` | minimum=1, maximum=65535 |
+| `timeout_s` | `number \| integer` | no | `3.0` | - |
+
+### EmuLoadBody
+
+POST /api/emu/profile/load: the write body and the profile.
+
+| field | type | required | default | constraints |
+|---|---|---|---|---|
+| `max_rate` | `integer \| number \| null` | no | - | - |
+| `confirm` | `boolean` | no | `false` | - |
+| `foreign_ack` | `boolean` | no | `false` | - |
+| `crash_ack` | `boolean` | no | `false` | - |
+| `path` | `string` | yes | - | minLength=1 |
+| `tunables` | `array<string>` | no | - | maxItems=100, items maxLength=1000 |
+
+### EmuProfileBody
+
+POST /api/emu/profile/inspect: a `.py` EMU profile and the tunables to run it with.
+
+| field | type | required | default | constraints |
+|---|---|---|---|---|
+| `path` | `string` | yes | - | minLength=1 |
+| `tunables` | `array<string>` | no | - | maxItems=100, items maxLength=1000 |
+
+### EmuWriteBody
+
+The body of the writes: `confirm`, `foreign_ack` and `crash_ack` default to false (and a write refuses
+without `confirm`), `max_rate` is clients per second.
+
+| field | type | required | default | constraints |
+|---|---|---|---|---|
+| `max_rate` | `integer \| number \| null` | no | - | - |
+| `confirm` | `boolean` | no | `false` | - |
+| `foreign_ack` | `boolean` | no | `false` | - |
+| `crash_ack` | `boolean` | no | `false` | - |
 
 ### ImportBody
 

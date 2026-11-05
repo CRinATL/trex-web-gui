@@ -95,16 +95,31 @@ def test_pgid_and_util_coalesce() -> None:
     asyncio.run(run())
 
 
-def test_all_twelve_state_types_can_be_queued_past_maxsize() -> None:
+def test_all_thirteen_state_types_can_be_queued_past_maxsize() -> None:
     async def run() -> None:
         hub = Hub(maxsize=1)
         sub = hub.subscribe()
         kinds = ("session", "ports", "stats", "pgid", "util", "port_labels", "busy", "capture",
-                 "test_setups", "settings", "monitor", "daemon")
+                 "test_setups", "settings", "monitor", "daemon", "emu")
         assert frozenset(kinds) == STATE_TYPES
         for kind in kinds:
             hub.publish({"type": kind})
-        assert sub.qsize() == 12 and hub.dropped == 0
+        assert sub.qsize() == 13 and hub.dropped == 0
+    asyncio.run(run())
+
+
+def test_hub_coalesces_emu() -> None:
+    """Only the newest `emu` message stays queued, in the place of the first, behind no log backlog."""
+    async def run() -> None:
+        hub = Hub(maxsize=3)
+        sub = hub.subscribe()
+        hub.publish({"type": "emu", "state": "connecting"})
+        for i in range(10):
+            hub.publish({"type": "log", "message": f"l{i}"})
+        hub.publish({"type": "emu", "state": "connected"})
+        hub.publish({"type": "emu", "state": "lost"})
+        got = [await sub.get() for _ in range(sub.qsize())]
+        assert [m for m in got if m["type"] == "emu"] == [{"type": "emu", "state": "lost"}]
     asyncio.run(run())
 
 
