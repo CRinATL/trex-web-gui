@@ -274,3 +274,15 @@ def test_tcp_options_text_and_padded() -> None:
     assert po.options_text("TCP", po.decode("TCP", bytes.fromhex("1e01"))) == "option 30 (value=)"
     ts = po.decode("TCP", bytes.fromhex("080a0000000100000002"))
     assert po.options_text("TCP", ts) == "Timestamp (value=(1, 2))"
+
+
+def test_an_unparsed_text_also_says_padded() -> None:
+    d = po.decode("IP", bytes.fromhex("070900"))
+    d["padded"] = 1
+    assert po.options_text("IP", d) == (
+        "unparsed: 070900 (option 7 at byte 0 claims 9 bytes, 3 remain), padded to 4 bytes")
+
+
+def test_decode_of_parsing_bytes_has_exactly_the_documented_keys() -> None:
+    assert set(po.decode("IP", RA)) == {"layer", "rows", "padding", "length", "padded", "problem"}
+    assert "raw" in po.decode("IP", bytes.fromhex("070900"))

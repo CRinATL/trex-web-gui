@@ -377,7 +377,7 @@ def _decode_row(layer: OptionLayer, span: bytes) -> OptionRow:
             fields = _decode_fields(kind["fields"], span[2:])
             if _encode_named(kind, fields, kind["name"]) == span:
                 return {"name": kind["name"], "number": t, "fields": fields, "raw": raw}
-        except (ValueError, struct.error):      # BadOption is a ValueError: a value the table cannot hold
+        except ValueError:      # BadOption is a ValueError: a value the table cannot hold
             pass
     return {"name": None, "number": t, "fields": {"value": span[2:].hex()}, "raw": raw}
 
@@ -436,7 +436,10 @@ def options_text(layer: OptionLayer, decoded: DecodedOptions) -> str:
     bytes`; `[]` when there is nothing; `unparsed: <hex> (<problem>)` when the bytes did not parse."""
     if decoded["problem"] is not None:
         shown = base64.b64decode(decoded.get("raw", "")).hex()
-        return f"unparsed: {shown} ({decoded['problem']})"
+        text = f"unparsed: {shown} ({decoded['problem']})"
+        if decoded["padded"]:
+            text += f", padded to {decoded['length'] + decoded['padding'] + decoded['padded']} bytes"
+        return text
     parts = [_row_text(layer, row) for row in decoded["rows"]]
     pad = decoded["padding"]
     if pad:
