@@ -678,6 +678,7 @@ def test_reconstruct_edit_emits_no_code() -> None:
         assert not [n for n in walk(res["doc"]["packet"]) if isinstance(n, dict) and "expr" in n]
         again = bytearray(await rebuilt(e, res["doc"]))             # the document computes a new IP checksum
         assert again[:24] + again[26:] == raw[:24] + raw[26:]
+        assert inet_sum(bytes(again[14:38])) == 0                   # and it is valid
     with_engine(body)
 
 
@@ -1482,7 +1483,7 @@ def test_a_document_over_40_bytes_does_not_build() -> None:
 
 def test_options_that_are_not_base64_do_not_build() -> None:
     async def body(e: PacketEngine) -> None:
-        for bad in ("a!b", "AAA", 7):                               # junk, bad padding, not a string
+        for bad in ("a!b", "AAA", "QUJD!REVG", 7):     # junk, bad padding, lenient-decodable junk, not text
             model = with_options("IP", b"")
             model[1]["fields"][0]["value"] = {"vtype": "MACHINE", "base64": bad}
             r = await e.build(model, None)
@@ -1649,4 +1650,16 @@ def test_header_lengths_follow_an_options_edit() -> None:
         assert segment[12] >> 4 == 8
         pseudo = tcp[26:34] + struct.pack("!BBH", 0, 6, len(segment))
         assert inet_sum(pseudo + segment) == 0
+    with_engine(body)
+
+
+def test_a_bytes_expression_for_ip_options_still_builds() -> None:
+    """An EXPRESSION that evaluates to bytes (or a list of them) is no Packet item: the service builds it, so
+    does the worker, and the tree shows the wire bytes as MACHINE."""
+    async def body(e: PacketEngine) -> None:
+        for expr in ("b'\\x01\\x01\\x01\\x01'", "[b'\\x01\\x01\\x01\\x01']"):
+            r = await built(e, options_model(expr))
+            frame = base64.b64decode(r["binary"])
+            assert frame[14] == 0x46 and frame[34:38] == b"\1\1\1\1"
+            assert field_of(r, "IP", "options")["value"] == machine(b"\1\1\1\1")
     with_engine(body)

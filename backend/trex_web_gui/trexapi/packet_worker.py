@@ -364,7 +364,7 @@ class Engine:
     def _reconstruct(self, packet: list[dict[str, Any]], binary: str, edited: dict[str, Any]
                      ) -> list[dict[str, Any]]:
         """The packet with `edited["field"]` of layer `edited["layer"]` set from the edited bytes; _Fallback
-        when `reconstruct_pkt` cannot keep the packet."""
+        when `_reconstructed` fails or the bytes dissect to a different layer stack than the document."""
         from scapy.layers.l2 import Ether
         at, name = edited["layer"], edited["field"]
         if type(at) is not int or not 0 <= at < len(packet) or type(name) is not str:
@@ -391,7 +391,7 @@ class Engine:
             raise _Fallback
         kind = _option_layer(stack[at]) if name == "options" else None
         if kind is not None:
-            # The edited bytes as they are, dissected and never rebuilt: `res["binary"]` is Scapy's rebuild
+            # The edited bytes as they are, dissected and never rebuilt: `built` is Scapy's rebuild
             # of its reading, which rewrites a lossy TCP option (`1e 01` becomes `1e 02`).
             head = base64.b64decode(binary)
             value = _machine(option_bytes(kind, bytes(_chain(Ether(head))[at])))
@@ -411,8 +411,8 @@ class Engine:
         dissected, each model layer's fields are set on the layer of the same position, and layers the frame
         lacks are appended from the model. The layers are walked with `_chain`: the service indexes with
         `pkt[depth]`, which Scapy's `getlayer` counts through an IP layer's option packets, so any frame
-        with IP options raised "Protocol id inconsistent" and fell back. ScapyException (a stack that
-        differs) is _Fallback."""
+        with IP options raised "Protocol id inconsistent" and fell back. A model layer whose id differs
+        from the frame's layer at its position is _Fallback."""
         from scapy.layers.l2 import Ether
         pkt = Ether(base64.b64decode(binary))
         layers = _chain(pkt)
@@ -552,7 +552,7 @@ class Engine:
 
 
 class _Fallback(Exception):
-    """`reconstruct_pkt` cannot keep the document; the caller re-derives the packet from its bytes."""
+    """`_reconstruct` cannot keep the document field by field; the caller re-derives it from the bytes."""
 
 
 class _NotPcap(Exception):
@@ -590,9 +590,12 @@ def _machine(data: bytes) -> dict[str, str]:
 
 def _document_options(layer: Any, kind: str) -> OptionBytes | None:
     """The bytes a document's MACHINE options gave the model `layer` (`OptionBytes`), else None."""
+    from scapy.packet import Packet
     held = layer.fields.get("options")
     if kind == "IP":
-        one = isinstance(held, list) and len(held) == 1 and "load" in held[0].fields
+        # An EXPRESSION may leave bytes, or a list of them, where the field holds packets.
+        one = isinstance(held, list) and len(held) == 1 and isinstance(held[0], Packet) \
+            and "load" in held[0].fields
         held = held[0].load if one else None
     return held if isinstance(held, OptionBytes) else None
 

@@ -45,7 +45,7 @@ Rules:
 ## Authorship
 
 All fifteen patches were written by Claude (Claude Code agents running the trex-web-gui plans: implementer
-subagents for 01-13, the session running the plan for 14 and 15). Each was reviewed by a separate reviewer agent, then
+subagents for 01-13 and 15, the session running the plan for 14). Each was reviewed by a separate reviewer agent, then
 committed under Charles Menser's git identity with a `Co-Authored-By: Claude Opus 5.5` trailer. None came from
 upstream, and none has been submitted there.
 
