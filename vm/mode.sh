@@ -1,12 +1,13 @@
 #!/bin/bash
 # Usage: vm/mode.sh stateful|stateless|emu|stop
-# Switch the running guest's TRex between its two stacks (P5). `stateless` is vm/stack.sh legacy; `stateful` stops
-# TRex and starts `t-rex-64 -f cap2/sfr2.yaml` (the spec §8 command) detached, then waits for a `trex-global` PUB
-# message (vm/pub_ready.py, one attempt of 60 s); `stop` stops _t-rex-64 (SIGINT, then SIGKILL after 15 s).
+# Switch the running guest's TRex between its two stacks (P5). `stateless` stops TRex and any trex-emu, then runs
+# vm/stack.sh legacy; `stateful` stops TRex and starts `t-rex-64 -f cap2/sfr2.yaml` (the spec §8 command) detached,
+# then waits for a `trex-global` PUB message (vm/pub_ready.py, one attempt of 60 s); `stop` stops _t-rex-64
+# (SIGINT, then SIGKILL after 15 s).
 # `emu` stops TRex and starts `t-rex-64 -i --iom 0 --no-scapy-server --emu --cfg /etc/trex_cfg.yaml` detached (log
 # /tmp/trex-emu-mode.log; TRex starts trex-emu itself), then waits for EMU to answer api_sync_v2 and ping
-# (vm/emu_ready.py, one attempt of 60 s). `stop` and `emu` also stop any trex-emu still running (TERM, KILL after 15 s), since the wrapper's cleanup
-# stops EMU only when TRex exits cleanly.
+# (vm/emu_ready.py, one attempt of 60 s). `stop`, `emu` and `stateless` also stop any trex-emu still running
+# (TERM, KILL after 15 s), since the wrapper's cleanup stops EMU only when TRex exits cleanly.
 # The snapshot is never saved here, so the next restore of the snapshot is stateless again whatever happened.
 # Seams: TREX_VM_SSH (default vm/ssh.sh), TREX_VM_STACK_SH (default vm/stack.sh), TREX_VM_PUB_READY (default
 # `uv run --project backend python -I -B vm/pub_ready.py`), TREX_VM_EMU_READY (default
@@ -66,7 +67,7 @@ emu() {
 case "${1:-}" in
   emu) emu; exit $? ;;
   stateful) stateful; exit $? ;;
-  stateless) exec "$STACK_SH" legacy ;;
+  stateless) stop_trex && stop_emu && exec "$STACK_SH" legacy; exit $? ;;
   stop) stop_trex && stop_emu; exit $? ;;
   *) sed -n '2,3p' "$0"; exit 2 ;;
 esac

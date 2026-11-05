@@ -65,10 +65,21 @@ def test_mode_stateful_starts_the_spec_command_detached(rig: dict[str, Path]) ->
     assert "pkill -f" not in text
 
 
-def test_mode_stateless_delegates_to_stack_legacy(rig: dict[str, Path]) -> None:
+def test_mode_stateless_stops_trex_and_trex_emu_then_runs_stack_legacy(rig: dict[str, Path]) -> None:
+    """stateless stops _t-rex-64, then any trex-emu (a hosted one outlives a killed TRex), then runs stack.sh
+    legacy; a trex-emu that will not stop fails it before the restart."""
     r = run(rig, "mode.sh", "stateless")
     assert r.returncode == 0, r
-    assert log(rig).strip() == "stack legacy"
+    text = log(rig)
+    assert (text.index("pkill -INT -x _t-rex-64") < text.index("pkill -TERM -x trex-emu")
+            < text.index("stack legacy"))
+    rig["calls"].unlink()
+    calls = rig["calls"]
+    _script(rig["ssh"],
+            f'printf "ssh %s\\n" "$*" >> {calls}\ncase "$*" in *"-x trex-emu"*) exit 1;; esac\nexit 0\n')
+    r = run(rig, "mode.sh", "stateless")
+    assert r.returncode == 1, r
+    assert "trex-emu did not stop" in r.stdout and "stack legacy" not in log(rig)
 
 
 def test_mode_reports_the_guest_log_when_trex_does_not_publish(rig: dict[str, Path]) -> None:

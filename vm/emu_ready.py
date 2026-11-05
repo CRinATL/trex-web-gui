@@ -21,7 +21,10 @@ EMU_API = ("EMU", 1, 1)
 
 def attempt(port: int) -> bool:
     """One handshake and ping against 127.0.0.1:port; False when EMU does not answer or refuses."""
-    rpc = RawRpc("127.0.0.1", port, 2.0)
+    try:
+        rpc = RawRpc("127.0.0.1", port, 2.0)    # the connect itself can fail: that is a failed attempt too
+    except TrexApiError:
+        return False
     try:
         rpc.api_sync(*EMU_API)
         rpc.call("ping")
