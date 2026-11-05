@@ -3,6 +3,8 @@ import { ApiError, emuConnect, emuDisconnect } from '../../api'
 import { EMU_DEFAULT_PORT, hostLabel, readEmuHosts, rememberEmuHost, useEmu } from '../../emuStore'
 import { useAppState } from '../../state'
 
+export const ALREADY_EMU = 'Already connected to this EMU server; change Host or Port to switch'
+
 const failText = (x: unknown) => (x instanceof ApiError ? x.message : String(x))
 
 // The EMU connection form: Host (with the hosts used before), Port, Connect and Disconnect. The host starts as the Control session's
@@ -10,6 +12,7 @@ const failText = (x: unknown) => (x instanceof ApiError ? x.message : String(x))
 export function EmuConnect() {
   const { session, serverHint } = useAppState()
   const state = useEmu((m) => m?.state ?? 'disconnected')
+  const target = useEmu((m) => m?.target ?? null)
   const [history, setHistory] = useState(readEmuHosts)
   const [host, setHost] = useState(() => session.params?.host ?? serverHint ?? '127.0.0.1')
   const [port, setPort] = useState(String(EMU_DEFAULT_PORT))
@@ -24,6 +27,8 @@ export function EmuConnect() {
   }
   const portNo = Number(port)
   const portOk = /^\d+$/.test(port) && portNo >= 1 && portNo <= 65535
+  // Connect to the server already connected to would only drop and rebuild the connection; another host or port switches, as on Monitor.
+  const same = target !== null && state === 'connected' && target.host === host.trim() && target.port === portNo
   async function run(action: () => Promise<unknown>, onOk?: () => void) {
     setBusy(true); setFailure(null)
     try { await action(); onOk?.() } catch (x) { setFailure(failText(x)) } finally { setBusy(false) }
@@ -36,7 +41,7 @@ export function EmuConnect() {
         <label>Port <input className="narrow" inputMode="numeric" value={port} onChange={(e) => setPort(e.target.value)} /></label>
       </div>
       <div className="dialog-footer">
-        <button type="button" disabled={busy || !host.trim() || !portOk || state === 'connecting'}
+        <button type="button" disabled={busy || !host.trim() || !portOk || state === 'connecting' || same} title={same ? ALREADY_EMU : undefined}
           onClick={() => void run(() => emuConnect(host.trim(), portNo), () => setHistory(rememberEmuHost({ host: host.trim(), port: portNo })))}>Connect</button>
         <button type="button" disabled={busy || state === 'disconnected'} onClick={() => void run(emuDisconnect)}>Disconnect</button>
       </div>

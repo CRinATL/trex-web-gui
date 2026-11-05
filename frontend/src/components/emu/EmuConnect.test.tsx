@@ -6,7 +6,7 @@ import type { EmuMsg } from '../../api'
 import { emuStore } from '../../emuStore'
 import * as state from '../../state'
 import emuMsg from '../../__fixtures__/emuMsg.json'
-import { EmuConnect } from './EmuConnect'
+import { ALREADY_EMU, EmuConnect } from './EmuConnect'
 
 const connected = emuMsg.connected as EmuMsg
 const disconnected = emuMsg.disconnected as EmuMsg
@@ -60,5 +60,17 @@ describe('EmuConnect', () => {
     act(() => emuStore.push(connected))
     await userEvent.click(screen.getByRole('button', { name: 'Disconnect' }))
     expect(disconnect).toHaveBeenCalled()
+  })
+  it('Connect is off while connected to the same host and port, and on again for another', async () => {
+    app({ session: { ...state.initialState.session, params: { host: '127.0.0.1', sync_port: 4501, async_port: 4500 } as never } })
+    act(() => emuStore.push(connected))                       // connected to 127.0.0.1:4510
+    render(<EmuConnect />)
+    const btn = screen.getByRole('button', { name: 'Connect' })
+    expect(btn).toBeDisabled()
+    expect(btn).toHaveAttribute('title', ALREADY_EMU)
+    await userEvent.clear(screen.getByLabelText(/^Port/))
+    await userEvent.type(screen.getByLabelText(/^Port/), '4511')
+    expect(btn).toBeEnabled()
+    expect(btn).not.toHaveAttribute('title')
   })
 })

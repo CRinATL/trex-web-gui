@@ -66,4 +66,13 @@ describe('the per-browser target history', () => {
     expect(hostLabel({ host: '::1', port: 4510 })).toBe('[::1]:4510')
     expect(hostLabel({ host: 'lab', port: 4510 })).toBe('lab:4510')
   })
+  it('are kept on the first message after page load, whatever its generation', async () => {
+    vi.resetModules()
+    const fresh = await import('./emuStore')                 // a store that has seen nothing yet
+    const base = await import('./emuBaseline')
+    const clear = vi.spyOn(base, 'clearBaselines')
+    fresh.emuStore.push({ ...connected, generation: 9 })
+    expect(clear).not.toHaveBeenCalled()
+    expect(fresh.emuStore.epoch).toBe(0)
+  })
 })

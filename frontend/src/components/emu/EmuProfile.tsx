@@ -11,12 +11,13 @@ const failText = (x: unknown) => (x instanceof ApiError || x instanceof Error ? 
 type Pending = 'load' | 'remove'
 
 // What is on the server now, read as the confirm opens: counts, and how many namespaces this app did not add. A listing that was interrupted
-// (another client was changing the server) cannot rule foreign ones out, and the text says so without inventing a count.
-function ServerNow({ onRead, ack, onAck, needAck }: { onRead: (foreign: number) => void; ack: boolean; onAck: (v: boolean) => void; needAck: boolean }) {
+// (another client was changing the server) cannot rule foreign ones out: the text says so without inventing a count, and the tick is
+// asked for up front rather than after the server's refusal.
+function ServerNow({ onRead, ack, onAck, needAck }: { onRead: (foreign: number, interrupted: boolean) => void; ack: boolean; onAck: (v: boolean) => void; needAck: boolean }) {
   const [read, setRead] = useState<{ data: EmuNamespaces } | { error: string } | null>(null)
   useEffect(() => {
     let live = true
-    emuNamespaces().then((data) => { if (live) { setRead({ data }); onRead(data.namespaces.filter((n) => !n.ours).length) } },
+    emuNamespaces().then((data) => { if (live) { setRead({ data }); onRead(data.namespaces.filter((n) => !n.ours).length, data.interrupted) } },
       (x: unknown) => { if (live) setRead({ error: failText(x) }) })
     return () => { live = false }
     // eslint-disable-next-line react-hooks/exhaustive-deps -- read once, as the dialog opens
@@ -79,6 +80,7 @@ export function EmuProfile() {
 
   function editPath(p: string) {
     inspectTok.current++
+    setWriteErr(null)                      // a write error belongs to the profile it was about
     setPath(p); setInspected(null); setInspectErr(null); setValues({}); setExtra(''); setInspecting(false)
   }
   async function inspect() {
@@ -114,7 +116,7 @@ export function EmuProfile() {
   }
   const sub = (
     <>
-      <ServerNow onRead={setForeignCount} ack={ack} onAck={setAck} needAck={needAck} />
+      <ServerNow onRead={(n, interrupted) => { setForeignCount(n); if (interrupted) setNeedAck(true) }} ack={ack} onAck={setAck} needAck={needAck} />
       {needCrash && (
         <label className="check">
           <input type="checkbox" checked={crashAck} onChange={(e) => setCrashAck(e.target.checked)} />{' '}
@@ -148,7 +150,6 @@ export function EmuProfile() {
         <button type="button" disabled={!connected || !!busy || !trimmed || !rateOk} onClick={() => open('load')}>Load…</button>
         <button type="button" disabled={!connected || !!busy || !rateOk} onClick={() => open('remove')}>Remove all…</button>
       </div>
-      {busy && <p role="status" className="muted">{busy.kind}: {busy.done}/{busy.total}</p>}
       {loaded && <p className="muted">Loaded from this app: {loaded.path}, {loaded.namespaces} namespace(s), {loaded.clients} client(s).</p>}
       {loaded?.partial && <p role="alert" className="error">A partial profile is on the server: {failedOp === 'load' ? 'the last load' : failedOp === 'remove' ? 'the last removal' : 'a load or removal'} did not finish.</p>}
       {writeErr && !pending && <p role="alert" className="error">{writeErr}</p>}
