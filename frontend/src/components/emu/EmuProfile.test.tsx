@@ -25,7 +25,7 @@ async function typePath(user: ReturnType<typeof userEvent.setup>) {
 }
 
 describe('EmuProfile', () => {
-  it('Inspect shows the counts, plugins, vports and warnings, sending nothing else', async () => {
+  it('Inspect shows the counts, plugins, vports and warnings', async () => {
     const user = userEvent.setup()
     const insp = vi.spyOn(api, 'emuProfileInspect').mockResolvedValue(inspected)
     render(<EmuProfile />)
@@ -117,12 +117,61 @@ describe('EmuProfile', () => {
     expect(remove).not.toHaveBeenCalled()
     expect(screen.queryByRole('dialog')).toBeNull()
   })
-  it('shows the progress while busy and disables both writes', () => {
+  it('disables both writes while busy and leaves the progress to the status line above it', () => {
     act(() => emuStore.push(loading))
     render(<EmuProfile />)
-    expect(screen.getByRole('status')).toHaveTextContent('loading: 3/6')
+    expect(screen.queryByText(/loading: 3/)).toBeNull()       // EmuStatus shows "loading: 3 of 6" on the same page
     expect(screen.getByRole('button', { name: 'Load…' })).toBeDisabled()
     expect(screen.getByRole('button', { name: 'Remove all…' })).toBeDisabled()
+  })
+  it('an interrupted listing says it may be incomplete and offers the tick before any refusal', async () => {
+    const user = userEvent.setup()
+    vi.spyOn(api, 'emuNamespaces').mockResolvedValue(listing([ns(0, 3, true)], true))
+    const remove = vi.spyOn(api, 'emuProfileRemove').mockResolvedValue(connected)
+    render(<EmuProfile />)
+    await user.click(screen.getByRole('button', { name: 'Remove all…' }))
+    const dlg = await screen.findByRole('dialog', { name: 'Remove everything' })
+    expect(await within(dlg).findByText(/may be incomplete/)).toBeInTheDocument()
+    await user.click(within(dlg).getByRole('button', { name: 'Remove' }))
+    expect(remove).not.toHaveBeenCalled()
+    await user.click(within(dlg).getByRole('checkbox', { name: /did not add, or another client was changing it/ }))
+    await user.click(within(dlg).getByRole('button', { name: 'Remove' }))
+    expect(remove).toHaveBeenCalledWith({ confirm: true, foreign_ack: true })
+  })
+  it('a listing that fails says the server could not be read', async () => {
+    const user = userEvent.setup()
+    vi.spyOn(api, 'emuNamespaces').mockRejectedValue(new api.ApiError(502, 'unreachable', 'no reply'))
+    render(<EmuProfile />)
+    await user.click(screen.getByRole('button', { name: 'Remove all…' }))
+    const dlg = await screen.findByRole('dialog', { name: 'Remove everything' })
+    expect(await within(dlg).findByText('Could not read what the server holds: no reply')).toBeInTheDocument()
+  })
+  it('Remove counts the foreign namespaces and needs the tick to send foreign_ack', async () => {
+    const user = userEvent.setup()
+    vi.spyOn(api, 'emuNamespaces').mockResolvedValue(listing([ns(0, 2, true), ns(1, 4, false)]))
+    const remove = vi.spyOn(api, 'emuProfileRemove').mockResolvedValue(connected)
+    render(<EmuProfile />)
+    await user.click(screen.getByRole('button', { name: 'Remove all…' }))
+    const dlg = await screen.findByRole('dialog', { name: 'Remove everything' })
+    expect(await within(dlg).findByText(/2 namespace\(s\), 6 client\(s\), of which 1 namespace\(s\) with 4 client\(s\) were not added by this app/)).toBeInTheDocument()
+    await user.click(within(dlg).getByRole('button', { name: 'Remove' }))
+    expect(remove).not.toHaveBeenCalled()
+    await user.click(within(dlg).getByRole('checkbox', { name: 'Remove the namespaces this app did not add as well' }))
+    await user.click(within(dlg).getByRole('button', { name: 'Remove' }))
+    expect(remove).toHaveBeenCalledWith({ confirm: true, foreign_ack: true })
+  })
+  it('a write error goes when the profile path changes', async () => {
+    const user = userEvent.setup()
+    vi.spyOn(api, 'emuNamespaces').mockResolvedValue(listing([]))
+    vi.spyOn(api, 'emuProfileLoad').mockRejectedValue(new api.ApiError(400, 'emu_error', 'the server refused'))
+    render(<EmuProfile />)
+    await typePath(user)
+    await user.click(screen.getByRole('button', { name: 'Load…' }))
+    await user.click(within(await screen.findByRole('dialog')).getByRole('button', { name: 'Load' }))
+    await user.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Cancel' }))
+    expect(await screen.findByText(/the server refused/)).toBeInTheDocument()
+    await user.type(screen.getByLabelText(/^EMU profile/), 'x')
+    expect(screen.queryByText(/the server refused/)).toBeNull()
   })
   it('the writes are off while not connected', () => {
     act(() => emuStore.push(emuMsg.disconnected as EmuMsg))
