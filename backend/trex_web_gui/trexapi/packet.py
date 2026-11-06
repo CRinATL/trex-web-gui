@@ -80,11 +80,25 @@ class FieldEngineResult(TypedDict):
     error: str | None
 
 
+class StructureFix(TypedDict):
+    layer: int
+    field: str
+    value: str
+
+
+class StructureReport(TypedDict):
+    layer: int
+    selectors: list[StructureFix]
+    fixes: list[StructureFix]
+    complete: bool
+
+
 class BuildResult(TypedDict):
     binary: str | None
     data: list[dict[str, Any]]
     field_engine: FieldEngineResult | None
     error: str | None
+    structure: StructureReport | None
 
 
 class DocFromBinary(TypedDict):

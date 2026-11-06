@@ -16,7 +16,7 @@ const doc = (over: Partial<PacketDoc> = {}): PacketDoc => ({
   fileType: 'trex-packet-editor', version: '1.0.0', metadata: { caption: '' }, fePrarameters: {}, feInstructions: [],
   packet: [{ id: 'Ether', fields: [] }, { id: 'IP', fields: [] }], ...over,
 })
-const ok = (feError: string | null = null): BuildResult => ({ binary: 'AAAA', data: [], field_engine: { instructions: {}, error: feError }, error: null })
+const ok = (feError: string | null = null): BuildResult => ({ binary: 'AAAA', data: [], field_engine: { instructions: {}, error: feError }, error: null, structure: null })
 
 type Build = (d: PacketDoc) => Promise<BuildResult>
 let build: ReturnType<typeof vi.fn<Build>>

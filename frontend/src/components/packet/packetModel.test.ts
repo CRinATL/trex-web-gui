@@ -2,8 +2,9 @@ import { describe, expect, it } from 'vitest'
 import type { BuildResult, Definitions, PacketDoc, PacketTree } from '../../api'
 import definitionsJson from '../../__fixtures__/packet/definitions.json'
 import buildUdpJson from '../../__fixtures__/packet/buildUdp.json'
+import buildShortLenJson from '../../__fixtures__/packet/buildShortLen.json'
 import treeVlanJson from '../../__fixtures__/packetTreeVlan.json'
-import { appendLayer, combine, deleteLayer, layersOfTree, moveLayer, placeOf, resetField, setField } from './packetModel'
+import { appendLayer, combine, withStructure, deleteLayer, layersOfTree, moveLayer, placeOf, resetField, setField } from './packetModel'
 
 const defs = definitionsJson.definitions as unknown as Definitions
 const built = buildUdpJson.udp as unknown as BuildResult
@@ -73,7 +74,7 @@ describe('combine', () => {
     // a layer id the definitions do not list (an indirect Packet subclass has an id in layerIds but no ProtocolDef)
     const doc: PacketDoc = { ...udpDoc(), packet: [{ id: 'FooLayer', fields: [{ id: 'bar', value: '7' }] }] }
     const result: BuildResult = {
-      binary: 'AAAA', error: null, field_engine: null,
+      binary: 'AAAA', error: null, field_engine: null, structure: null,
       data: [{ id: 'FooLayer', offset: 0, real_id: 'FooLayer', valid_structure: true, fields: [{ id: 'bar', value: 7, hvalue: '7', offset: 0, length: 2 }, { id: 'baz', value: 'x', hvalue: 'x', offset: 2, length: 1 }] }],
     }
     const [layer] = combine(doc, result, defs)
@@ -150,5 +151,50 @@ describe('document edits', () => {
     expect(placeOf(doc, appendLayer(doc, 'ICMP'))).toEqual({ layer: 4, field: null, instruction: null })
     expect(placeOf(doc, { ...doc, feInstructions: [{ id: 'STLVmFixIpv4', parameters: {} }] })).toEqual({ layer: null, field: null, instruction: 0 })
     expect(placeOf(doc, doc)).toBeNull()
+  })
+})
+
+// The document buildShortLen.json was recorded from (tests/contract/test_wire_fixtures.py PACKET_SHORT_LEN_DOC): UDP len 12,
+// one short of header and payload, so the bytes' 4-byte payload reads back as DNS on UDP's default port 53.
+const shortLenDoc = (): PacketDoc => ({
+  ...udpDoc(),
+  packet: [...udpDoc().packet.slice(0, 2), { id: 'UDP', fields: [{ id: 'len', value: 12 }] }, { id: 'Raw', fields: [{ id: 'load', value: { vtype: 'BYTES', base64: 'ZHVtbXk=' } }] }],
+})
+const shortLen = buildShortLenJson.shortLen as unknown as BuildResult
+
+describe('structure notes', () => {
+  it('the first layer that does not read back says what it reads as, and names the set field that fixes it', () => {
+    const layers = combine(shortLenDoc(), shortLen, defs)
+    expect(layers.slice(0, 3).map((l) => l.structure)).toEqual([null, null, null])
+    expect(layers[3].structure).toEqual({
+      reason: 'Read back from its bytes, this layer is DNS, not Raw. The packet is sent as built; a receiver and Capture read these bytes as DNS.',
+      selectors: [
+        { layer: 2, layerId: 'UDP', field: 'dport', name: 'dport', current: '53', value: '53' },
+        { layer: 2, layerId: 'UDP', field: 'sport', name: 'sport', current: '53', value: '53' },
+      ],
+      fixes: [{ layer: 2, layerId: 'UDP', field: 'len', name: 'len', current: '12', value: '13' }],
+      unexplained: false,
+    })
+  })
+
+  it('a complete report with no selector and no fix says nothing explains it; an incomplete one, or one with a selector, does not', () => {
+    const none = combine(shortLenDoc(), { ...shortLen, structure: { layer: 3, selectors: [], fixes: [], complete: true } }, defs)
+    expect(none[3].structure?.unexplained).toBe(true)
+    const bound = combine(shortLenDoc(), { ...shortLen, structure: { ...shortLen.structure!, fixes: [], complete: true } }, defs)
+    expect(bound[3].structure).toMatchObject({ fixes: [], unexplained: false })
+    const partial = combine(shortLenDoc(), { ...shortLen, structure: { layer: 3, selectors: [], fixes: [], complete: false } }, defs)
+    expect(partial[3].structure).toMatchObject({ fixes: [], unexplained: false })
+  })
+
+  it('later layers follow from the first; a layer past the bytes says they end before it', () => {
+    const l = (i: number, id: string, realId: string | null, validStructure: boolean) => ({ ...combine(udpDoc(), built, defs)[0], index: i, id, realId, validStructure })
+    const notes = withStructure([l(0, 'Ether', 'Ether', true), l(1, 'IP', null, false), l(2, 'UDP', null, false)], null).map((x) => x.structure?.reason ?? null)
+    expect(notes).toEqual([null, "The packet's bytes end before this layer.", 'Not in the bytes as they read back: they stop matching at layer 2, IP.'])
+  })
+
+  it('a viewer (no report) gives the reason only: nothing about how it is sent, no fixes', () => {
+    const layers = withStructure(combine(shortLenDoc(), shortLen, defs), null)
+    expect(layers[3].structure).toEqual({ reason: 'Read back from its bytes, this layer is DNS, not Raw.', selectors: [], fixes: [], unexplained: false })
+    expect(layersOfTree({ binary: shortLen.binary!, data: shortLen.data })[3].structure?.fixes).toEqual([])
   })
 })

@@ -688,6 +688,12 @@ PACKET_UDP_DOC = {"packet": [
     {"id": "UDP", "fields": [{"id": "sport", "value": 1025}, {"id": "dport", "value": 12}]},
     {"id": "Raw", "fields": [{"id": "load", "value": {"vtype": "BYTES", "generate": "template_code",
                                                       "template_code": "78", "size": 16}}]}]}
+# The user's case (2026-11-06): UDP len set one short of header and payload, so on UDP's default port 53 the
+# 4-byte payload the bytes describe reads back as DNS; the build's `structure` names `len` and its value 13.
+PACKET_SHORT_LEN_DOC = {"packet": [
+    *PACKET_UDP_DOC["packet"][:2],
+    {"id": "UDP", "fields": [{"id": "len", "value": 12}]},
+    {"id": "Raw", "fields": [{"id": "load", "value": {"vtype": "BYTES", "base64": "ZHVtbXk="}}]}]}
 PACKET_ERROR_DOC = {"packet": [{"id": "Ether"}, {"id": "IP", "fields": [
     {"id": "id", "value": {"vtype": "EXPRESSION", "expr": "1/0"}}]}]}
 PACKET_FE_DOC = {"packet": [{"id": "Ether"}, {"id": "IP"}, {"id": "UDP"}], "feInstructions": [
@@ -749,6 +755,7 @@ def test_packet_wire_fixtures(tmp_path):
         defs = c.get(f"{url}/definitions")
         built = c.post(f"{url}/build", json={"doc": PACKET_UDP_DOC})
         failed = c.post(f"{url}/build", json={"doc": PACKET_ERROR_DOC})
+        short_len = c.post(f"{url}/build", json={"doc": PACKET_SHORT_LEN_DOC})
         listing = c.get(f"{url}/templates")
         parts = c.post(f"{url}/to-stream", json={"doc": PACKET_FE_DOC})
         assert parts.status_code == 200, parts.text
@@ -774,7 +781,7 @@ def test_packet_wire_fixtures(tmp_path):
             **ra_body, "rows": [{"name": "NOP", "number": 1, "fields": {}}] * 40, "padding": 1, "length": 40})
         bad = c.post(f"{url}/options", json={
             **ra_body, "rows": [{"name": "Bogus", "number": 1, "fields": {}}]})
-    for r in (defs, built, failed, listing, decompiled, ra_built, encoded, edited):
+    for r in (defs, built, failed, short_len, listing, decompiled, ra_built, encoded, edited):
         assert r.status_code == 200, r.text
     assert too_long.status_code == 422 and bad.status_code == 422
     assert base64.b64decode(encoded.json()["binary"]) == ROUTER_ALERT_FRAME[34:42]
@@ -790,6 +797,10 @@ def test_packet_wire_fixtures(tmp_path):
     _compare_or_write(PACKET_DIR / "buildUdp.json",
                       {"udp": _host_named(built.json(), PACKET_DIR / "buildUdp.json")})
     _compare_or_write(PACKET_DIR / "buildError.json", {"expression": failed.json()})
+    fix = {"layer": 2, "field": "len", "value": "13"}
+    ports = [{"layer": 2, "field": p, "value": "53"} for p in ("dport", "sport")]
+    assert short_len.json()["structure"] == {"layer": 3, "selectors": ports, "fixes": [fix], "complete": True}
+    _compare_or_write(PACKET_DIR / "buildShortLen.json", {"shortLen": short_len.json()})
     _compare_or_write(PACKET_DIR / "templates.json", {"listing": listing_body})
     _compare_or_write(PACKET_DIR / "decompile.json", {"flow_var": decompiled.json()})
     _compare_or_write(PACKET_DIR / "docFromBinaryIpOptions.json", {"routerAlert": from_binary.json()})

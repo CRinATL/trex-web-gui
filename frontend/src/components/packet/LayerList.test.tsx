@@ -12,7 +12,7 @@ const fld = (id: string, shown: string): CombinedField => ({
   id, def: { id, name: id.toUpperCase() }, value: shown, shown, userSet: false, ignored: false, readOnly: false, range: null, bits: null, options: null, error: null,
 })
 const layer = (index: number, id: string, over: Partial<CombinedLayer> = {}): CombinedLayer =>
-  ({ index, id, realId: id, offset: 0, validStructure: true, protocol: null, fields: [fld('a', `${id}-value`)], error: null, ...over })
+  ({ index, id, realId: id, offset: 0, validStructure: true, protocol: null, fields: [fld('a', `${id}-value`)], error: null, structure: null, ...over })
 const stack = (): CombinedLayer[] => [layer(0, 'Ether'), layer(1, 'IP'), layer(2, 'UDP')]
 const props = () => ({ onToggle: vi.fn(), onMove: vi.fn(), onDelete: vi.fn() })
 
@@ -104,5 +104,30 @@ describe('LayerList', () => {
     expect(screen.getByRole('option', { name: 'RR' })).toBeInTheDocument()   // the kinds arrived
     view.rerender(<LayerList layers={[ip]} expanded={new Set([0])} optionKinds={kinds} doc={doc} pending {...props()} />)
     expect(screen.getByRole('combobox', { name: 'Add option' })).toBeDisabled()
+  })
+
+  it('a layer that does not read back shows why in its body and on its mark, and a fix button resets that field', async () => {
+    const p = { ...props(), onReset: vi.fn() }
+    const port = (name: string) => ({ layer: 2, layerId: 'UDP', field: name, name, current: '53', value: '53' })
+    const structure = { reason: 'Read back from its bytes, this layer is DNS, not Raw.', selectors: [port('dport'), port('sport')], fixes: [{ layer: 2, layerId: 'UDP', field: 'len', name: 'len', current: '12', value: '13' }], unexplained: false }
+    const layers = [...stack(), layer(3, 'Raw', { realId: 'DNS', validStructure: false, structure })]
+    const { rerender } = render(<LayerList layers={layers} expanded={new Set()} {...p} />)
+    expect(screen.getByRole('img', { name: 'invalid structure' })).toHaveAttribute('title', structure.reason)   // collapsed: the mark says it
+    rerender(<LayerList layers={layers} expanded={new Set([3])} {...p} />)
+    expect(screen.getByText(structure.reason)).toBeInTheDocument()
+    expect(screen.getByText('UDP dport is 53 and UDP sport is 53; each makes UDP read the bytes after it as DNS, so change all of them.')).toBeInTheDocument()
+    rerender(<LayerList layers={[...stack(), layer(3, 'Raw', { realId: 'DNS', validStructure: false, structure: { ...structure, selectors: [port('sport')] } })]} expanded={new Set([3])} {...p} />)
+    expect(screen.getByText('UDP sport is 53, which makes UDP read the bytes after it as DNS.')).toBeInTheDocument()
+    expect(screen.getByText(/UDP len is 12; left to the editor it would be 13, and this layer reads back as Raw/)).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: 'Reset UDP len' }))
+    expect(p.onReset).toHaveBeenCalledWith(2, 'len')
+    rerender(<LayerList layers={layers} expanded={new Set([3])} readOnly {...p} />)
+    expect(screen.queryByRole('button', { name: 'Reset UDP len' })).toBeNull()
+  })
+
+  it('a layer no set field explains says so', () => {
+    const structure = { reason: 'Read back from its bytes, this layer is DNS, not Raw.', selectors: [], fixes: [], unexplained: true }
+    render(<LayerList layers={[...stack(), layer(3, 'Raw', { realId: 'DNS', validStructure: false, structure })]} expanded={new Set([3])} {...props()} />)
+    expect(screen.getByText('None of the fields you set above this layer changes that.')).toBeInTheDocument()
   })
 })

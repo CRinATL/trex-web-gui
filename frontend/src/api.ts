@@ -438,7 +438,12 @@ export interface Definitions {
 }
 export interface FieldEngineResult { instructions: Record<string, unknown>; error: string | null }
 // A build error is a 200: `error` is set, `binary` is null and `data` empty. A Field Engine error leaves `binary` and `data` and sets `field_engine.error`.
-export interface BuildResult { binary: string | null; data: PacketLayer[]; field_engine: FieldEngineResult | null; error: string | null }
+// Why the bytes do not read back as the layers: `layer` is the first that does not; each selector is a field value of the layer
+// above it, set or default, that binds what the bytes read as (UDP port 53: DNS); each fix is a field the document sets above
+// it that, left to the editor, makes it read back, with the value it would take. `complete` false: the search hit its bound.
+export interface StructureFix { layer: number; field: string; value: string }
+export interface StructureReport { layer: number; selectors: StructureFix[]; fixes: StructureFix[]; complete: boolean }
+export interface BuildResult { binary: string | null; data: PacketLayer[]; field_engine: FieldEngineResult | null; error: string | null; structure: StructureReport | null }
 export interface DocFromBinary { doc: PacketDoc; warnings: string[] }
 export interface ReconstructEdit { doc: PacketDoc; warnings: string[] }
 export interface Decompiled { instructions: FeInstruction[]; global_parameters: Record<string, FeValue>; warnings: string[] }
