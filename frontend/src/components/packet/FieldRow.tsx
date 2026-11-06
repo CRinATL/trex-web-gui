@@ -1,5 +1,5 @@
 import { useId, useState, type KeyboardEvent, type MouseEvent } from 'react'
-import type { FeTemplateMeta, FieldDef, FieldValue, OptionKinds } from '../../api'
+import type { FeTemplateMeta, FieldDef, FieldValue, OptionKinds, PacketDoc } from '../../api'
 import type { MenuAction } from '../../portActions'
 import { ContextMenu } from '../ContextMenu'
 import { BitFlags } from './BitFlags'
@@ -69,10 +69,11 @@ export interface FieldRowProps {
   optionKinds?: OptionKinds               // the options editor's kinds
   pending?: boolean                       // a build is in flight or waiting
   epoch?: number                          // changes when the editor gets a different packet
+  doc?: PacketDoc                         // the editor's current document, for the options editor's reply check
 }
 
 // One field: its name, a control for its type, the byte range, and the user-set and error marks (each a glyph as well as a colour).
-export function FieldRow({ field, onCommit, onReset, onGenerate, onFeTemplate, feTemplates = [], readOnly = false, selected = false, onSelectRange, optionKinds, pending = false, epoch = 0 }: FieldRowProps) {
+export function FieldRow({ field, onCommit, onReset, onGenerate, onFeTemplate, feTemplates = [], readOnly = false, selected = false, onSelectRange, optionKinds, pending = false, epoch = 0, doc }: FieldRowProps) {
   const { def } = field
   const locked = readOnly || field.readOnly
   const [draft, setDraft] = useState<{ text: string; base: string } | null>(null)   // the user's text, for as long as the shown value is the one it started from
@@ -132,7 +133,7 @@ export function FieldRow({ field, onCommit, onReset, onGenerate, onFeTemplate, f
       {payloadOpen && <PayloadEditor value={field.docValue} onSave={(v) => { setPayloadOpen(false); onCommit(v) }} onCancel={() => setPayloadOpen(false)} />}
     </>
   } else if (def.type === 'BITMASK' && def.bits) control = <BitFlags def={def} value={typeof field.value === 'number' ? field.value : 0} onCommit={onCommit} />
-  else if (editOptions) control = <OptionsEditor field={field} kinds={optionKinds} pending={pending} epoch={epoch} onCommit={onCommit} />
+  else if (editOptions) control = <OptionsEditor field={field} kinds={optionKinds} pending={pending} epoch={epoch} doc={doc} onCommit={onCommit} />
   else if (def.type === 'IP_OPTIONS' || def.type === 'TCP_OPTIONS' || field.options !== null) control = <OptionsRow field={field} />
   else {
     const list = def.type === 'ENUM' && !expr ? listId : undefined

@@ -321,4 +321,24 @@ describe('PacketEditor', () => {
     await act(async () => { resolve(encodeFixture.routerAlert) })
     expect(onDocChange).not.toHaveBeenCalled()
   })
+
+  it('drops an options reply that arrives after an undo of another field', async () => {
+    let resolve: (v: { binary: string }) => void = () => undefined
+    vi.mocked(api.encodeOptions).mockReturnValue(new Promise((r) => { resolve = r }))
+    const onDocChange = vi.fn()
+    render(<Host onDocChange={onDocChange} />)
+    await editTtl('9')
+    await waitFor(() => expect(onDocChange).toHaveBeenCalledTimes(1))
+    const editor = () => document.querySelector('.options-editor') as HTMLElement
+    await waitFor(() => expect(within(editor()).getByRole('combobox', { name: 'Add option' })).toBeEnabled())
+    await userEvent.selectOptions(within(editor()).getByRole('combobox', { name: 'Add option' }), 'NOP')
+    await userEvent.click(within(editor()).getByRole('button', { name: 'Add' }))
+    expect(api.encodeOptions).toHaveBeenCalledTimes(1)
+    await userEvent.click(screen.getByRole('button', { name: 'Undo' }))
+    await waitFor(() => expect(onDocChange).toHaveBeenLastCalledWith(doc()))
+    await act(async () => { resolve(encodeFixture.routerAlert) })
+    expect(onDocChange).toHaveBeenCalledTimes(2)   // the edit and its undo; the late reply added nothing
+    expect(screen.getByRole('button', { name: 'Redo' })).toBeEnabled()   // and did not clear the redo line
+    expect(screen.getByText('The packet changed while the options edit was being made: it was dropped.')).toBeInTheDocument()
+  })
 })

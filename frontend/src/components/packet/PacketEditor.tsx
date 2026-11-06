@@ -167,7 +167,7 @@ function Editable({ doc, onDocChange, mode, extraTabs = [], onOpen, onSave }: Om
         onReset={(l, f) => ed.apply((d) => resetField(d, l, f), `reset ${f}`)}
         onGenerate={(l, f) => ed.apply((d) => setField(d, l, f, { vtype: 'RANDOM' }), `generate ${f}`)}
         feTemplates={defs.feTemplates} onFeTemplate={feTemplate} selected={marked} onSelectRange={setMarked}
-        optionKinds={defs.optionKinds} pending={ed.pending} epoch={epoch} />}
+        optionKinds={defs.optionKinds} pending={ed.pending} epoch={epoch} doc={ed.doc} />}
       {defs && <AppendLayer doc={ed.doc} defs={defs} onAppend={append} />}
       {defs && bytes !== null && <HexView bytes={bytes} selected={marked} onSelectByte={selectByte} onEditByte={(i, v) => void editByte(i, v)} />}
       {status && <p role={status.kind === 'error' ? 'alert' : 'status'} className={status.kind === 'error' ? 'field-error' : 'muted'}>{status.text}</p>}

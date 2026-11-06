@@ -1135,7 +1135,8 @@ as ARP's `hwsrc` by its nominal size; a field that adds no bytes, such as a skip
   and **Other** (an option number and its value in hex); **Add** appends it. **Edit as hex** shows the option bytes as
   one hex input (spaces allowed) that commits as typed; **Edit as options** goes back. Bytes that do not parse show a
   warning that names the option, and only hex editing is offered until they do. The header holds 40 bytes of options
-  at most, and an edit or hex over that is refused. The controls are off while the packet is being rebuilt.
+  at most, and an edit or hex over that is refused. Hex whose length is not a multiple of 4 is zero-padded to the next
+  4-byte boundary when the packet is built, and the summary then ends "padded to N bytes". The controls are off while the packet is being rebuilt.
   A document saved before this change keeps the read-only row until a byte edit inside the options or reopening it
   from its bytes. The legacy TRex GUI cannot build a document with MACHINE TCP options.
 - A BYTES field (a payload) shows its bytes cut at 48 characters and a **Payload…** button

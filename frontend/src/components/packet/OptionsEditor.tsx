@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { ApiError, encodeOptions, type DecodedOptions, type OptionKind, type OptionKinds, type OptionRow, type OptionSpec } from '../../api'
+import { ApiError, encodeOptions, type DecodedOptions, type PacketDoc, type OptionKind, type OptionKinds, type OptionRow, type OptionSpec } from '../../api'
 import type { CombinedField } from './packetModel'
 import { decodeBase64, encodeBase64 } from './hexModel'
 
@@ -55,7 +55,6 @@ function parseField(spec: OptionSpec, text: string): Parsed<unknown> {
       if (!b.ok) return { ok: false, message: `${spec.name}: ${b.message}` }
       return spec.size !== undefined && b.value.length !== spec.size ? { ok: false, message: `${spec.name}: needs ${spec.size} bytes` } : { ok: true, value: t.replace(/\s+/g, '') }
     }
-    default: return { ok: true, value: t }   // a kind a newer backend adds: the codec decides
   }
 }
 
@@ -85,12 +84,13 @@ export interface OptionsEditorProps {
   kinds: OptionKinds | undefined
   pending: boolean                        // a build is in flight or waiting
   epoch: number                           // changes when the editor gets a different packet
+  doc?: PacketDoc                         // the editor's current document: its identity changes on every edit, undo, redo and reset
   onCommit: (value: Machine) => void
 }
 
 // IP or TCP options as named rows in the layer: each row's fields, move and remove, Add, and hex as the fallback. An edit
 // asks the backend for the bytes and commits them as MACHINE; the controls are off while the tree lags the document.
-export function OptionsEditor({ field, kinds, pending, epoch, onCommit }: OptionsEditorProps) {
+export function OptionsEditor({ field, kinds, pending, epoch, doc, onCommit }: OptionsEditorProps) {
   const opts = field.options as DecodedOptions
   const family: OptionKind[] = kinds?.[opts.layer] ?? []
   const docB64 = base64Of(field.docValue) ?? ''   // the document's bytes ('' when it sets none)
@@ -105,28 +105,35 @@ export function OptionsEditor({ field, kinds, pending, epoch, onCommit }: Option
   const [otherNumber, setOtherNumber] = useState('')
   const [otherHex, setOtherHex] = useState('')
   // What a reply to an earlier request is checked against: the field's document value and the epoch now, and whether this is still mounted.
-  const now = useRef({ docB64, epoch })
+  const now = useRef({ docB64, epoch, doc })
   const mounted = useRef(true)
-  useEffect(() => { now.current.docB64 = docB64; now.current.epoch = epoch }, [docB64, epoch])
+  useEffect(() => { now.current.docB64 = docB64; now.current.epoch = epoch; now.current.doc = doc }, [docB64, epoch, doc])
   useEffect(() => { mounted.current = true; return () => { mounted.current = false } }, [])
 
   const rowsOff = pending || lag || failed || busy || opts.problem !== null
   const hexOff = pending || busy || (lag && !failed)
   const hexShown = hexMode || opts.problem !== null || failed
   const hexBase = hexOf(docB64)
+  // After a failed build `field.shown` is the document's raw JSON: show its bytes instead.
+  const summary = failed ? (docB64 === '' ? 'none' : hexBase) : opts.rows.length === 0 && opts.problem === null ? 'none' : field.shown
   const hexText = hexDraft !== null && hexDraft.base === hexBase ? hexDraft.text : hexBase
 
-  async function submit(rows: OptionRow[]) {
-    const sent = { docB64, epoch }
+  // Asks for the bytes of `rows` and commits them; true when they were committed. The reply is dropped unless the whole
+  // document is still the one the request was made from (an undo, a redo, a layer move or another edit changes it).
+  async function submit(rows: OptionRow[]): Promise<boolean> {
+    const sent = { docB64, epoch, doc }
+    const current = () => now.current.docB64 === sent.docB64 && now.current.epoch === sent.epoch && now.current.doc === sent.doc
     setMessage(null)
     setBusy(true)
     try {
-      const r = await encodeOptions(opts.layer === 'TCP' ? 'TCP' : 'IP', rows, opts.padding, opts.length)
-      if (!mounted.current) return
-      if (now.current.docB64 !== sent.docB64 || now.current.epoch !== sent.epoch) return   // the field or the packet changed meanwhile: this answer is for another document
+      const r = await encodeOptions(opts.layer, rows, opts.padding, opts.length)
+      if (!mounted.current) return false
+      if (!current()) { setMessage('The packet changed while the options edit was being made: it was dropped.'); return false }
       onCommit({ vtype: 'MACHINE', base64: r.binary })
+      return true
     } catch (e) {
-      if (mounted.current && now.current.docB64 === sent.docB64 && now.current.epoch === sent.epoch) setMessage(e instanceof ApiError || e instanceof Error ? e.message : String(e))
+      if (mounted.current && current()) setMessage(e instanceof ApiError || e instanceof Error ? e.message : String(e))
+      return false
     } finally {
       if (mounted.current) setBusy(false)
     }
@@ -160,8 +167,10 @@ export function OptionsEditor({ field, kinds, pending, epoch, onCommit }: Option
       if (n === null || n > 255) { setMessage('number: must be from 0 to 255'); return }
       const b = bytesOfHex(otherHex)
       if (!b.ok) { setMessage(`value: ${b.message}`); return }
-      void submit([...opts.rows, { name: null, number: n, fields: { value: otherHex.replace(/\s+/g, '') }, edited: true }])
-      setOtherNumber(''); setOtherHex('')
+      void submit([...opts.rows, { name: null, number: n, fields: { value: otherHex.replace(/\s+/g, '') }, edited: true }]).then((ok) => {
+        if (ok && mounted.current) { setOtherNumber(''); setOtherHex(''); setAddKind('') }   // a refusal keeps what was typed
+      })
+      return
     } else {
       const kind = family.find((k) => k.name === addKind)
       if (!kind) return
@@ -179,7 +188,7 @@ export function OptionsEditor({ field, kinds, pending, epoch, onCommit }: Option
 
   return (
     <div className="options-editor">
-      <span className="field-value">{field.shown === '' ? 'none' : field.shown}</span>
+      <span className="field-value">{summary}</span>
       {opts.problem !== null && <p className="field-error" role="alert"><span className="mark-error" aria-hidden="true">!</span> {opts.problem}</p>}
       {hexShown ? (
         <div className="options-line">

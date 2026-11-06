@@ -19,6 +19,8 @@ const field = (over: Partial<CombinedField> = {}): CombinedField => ({
   id: 'options', def: { id: 'options', name: 'Options', type: 'IP_OPTIONS' }, value: built.value, docValue: built.value as FieldValue, shown: String(built.hvalue),
   userSet: true, ignored: false, readOnly: false, range: [34, 40], bits: null, options: built.options ?? null, error: null, ...over,
 })
+// No recorded fixture holds a decode with a `problem` (Task 3 recorded none), so a test that needs one builds the tree by hand; the
+// backend test test_malformed_options_build_as_typed_with_a_problem (tests/unit/test_packet_engine.py) pins that shape.
 const withOptions = (o: Partial<api.DecodedOptions>) => ({ options: { ...(built.options as api.DecodedOptions), ...o } })
 const machine = (base64: string) => ({ vtype: 'MACHINE' as const, base64 })
 
@@ -197,5 +199,29 @@ describe('OptionsEditor', () => {
     expect(screen.queryByRole('button', { name: 'Remove option 1' })).toBeNull()
     await userEvent.type(screen.getByRole('textbox', { name: 'Options as hex' }), ' 00 00 00 00{Enter}')
     expect(onCommit).toHaveBeenCalledTimes(1)
+  })
+
+  it('keeps hex enabled after a failed build while the tree lags the document', () => {
+    setup(field({ error: 'could not build', shown: '{"vtype":"MACHINE"}', value: machine('BwkA') }))   // the tree still holds the older bytes
+    expect(screen.getByRole('textbox', { name: 'Options as hex' })).toBeEnabled()
+    expect(screen.getByRole('textbox', { name: 'Options as hex' })).toHaveValue('01 94 04 00 00 00 00 00')
+    expect(screen.getAllByText('01 94 04 00 00 00 00 00').length).toBeGreaterThan(0)   // the summary is the bytes, not the raw JSON
+  })
+
+  it('says none when there are no options', () => {
+    setup(field({ value: machine(''), docValue: undefined, shown: '[]', ...withOptions({ rows: [], padding: 0, length: 0 }) }))
+    expect(screen.getByText('none')).toBeTruthy()
+  })
+
+  it('keeps what was typed for an other option when the refusal comes back', async () => {
+    vi.mocked(api.encodeOptions).mockRejectedValue(new api.ApiError(422, 'options_too_long', encodeFixture.tooLong.message, encodeFixture.tooLong))
+    setup()
+    await userEvent.selectOptions(screen.getByRole('combobox', { name: 'Add option' }), '*other')
+    await userEvent.type(screen.getByRole('textbox', { name: 'Other option number' }), '25')
+    await userEvent.type(screen.getByRole('textbox', { name: 'Other option hex' }), '0102')
+    await userEvent.click(screen.getByRole('button', { name: 'Add' }))
+    expect(await screen.findByText(encodeFixture.tooLong.message)).toBeTruthy()
+    expect(screen.getByRole('textbox', { name: 'Other option number' })).toHaveValue('25')
+    expect(screen.getByRole('textbox', { name: 'Other option hex' })).toHaveValue('0102')
   })
 })

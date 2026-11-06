@@ -236,8 +236,7 @@ export type SpoolListing = { dir: string; files: SpoolFile[]; total: number }
 // One IP or TCP option as the codec decodes it: `name` is null for an "other" row; `raw` (base64) is absent on a row that was added, `edited` defaults to false.
 export interface OptionRow { name: string | null; number: number; fields: Record<string, unknown>; raw?: string; edited?: boolean }
 // An `options` field's decoded form; `raw` (base64 of the bytes) comes only with `problem`, when `rows` is empty.
-// `layer` is 'IP' or 'TCP' (a string, as the recorded fixtures type it).
-export interface DecodedOptions { layer: string; rows: OptionRow[]; padding: number; length: number; padded: number; problem: string | null; raw?: string }
+export interface DecodedOptions { layer: 'IP' | 'TCP'; rows: OptionRow[]; padding: number; length: number; padded: number; problem: string | null; raw?: string }
 // `options` is on every IP- and TCP-family `options` field.
 export interface PacketField { id: string; value: string | number | { vtype: string; expr?: string; base64?: string }; hvalue: string | number; offset: number; length: number; ignored?: boolean; options?: DecodedOptions }
 export interface PacketLayer { id: string; offset: number; real_id: string | null; valid_structure: boolean; fields: PacketField[] }
@@ -425,14 +424,14 @@ export interface FeParamMeta {
 }
 export interface FeTemplateMeta { id: string; name: string; instructionIds: string[] }
 // `layerIds` lists every Packet subclass (a layer id outside it is refused before the worker); `protocols` only the ones with a definition.
-// One field of an option kind: `kind` ('int', 'enum', 'address', 'addresses', 'ints' or 'hex') picks which of the other keys apply (int: width, min, max; enum: width, values, min, max;
+// One field of an option kind: `kind` picks which of the other keys apply (int: width, min, max; enum: width, values, min, max;
 // address; addresses: max_count; ints: widths, variable; hex: size, a fixed byte count when present).
 export interface OptionSpec {
-  name: string; kind: string; default: unknown
+  name: string; kind: 'int' | 'enum' | 'address' | 'addresses' | 'ints' | 'hex'; default: unknown
   width?: number; min?: number; max?: number; values?: Record<string, number>; max_count?: number; widths?: number[]; variable?: boolean; size?: number
 }
 export interface OptionKind { name: string; number: number; fields: OptionSpec[] }
-export type OptionKinds = Record<string, OptionKind[]>
+export type OptionKinds = Record<'IP' | 'TCP', OptionKind[]>
 export interface Definitions {
   etag: string; layerIds: string[]; protocols: ProtocolDef[]; optionKinds: OptionKinds
   feInstructions: FeInstructionMeta[]; feInstructionParameters: FeParamMeta[]; feParameters: FeParamMeta[]; feTemplates: FeTemplateMeta[]
