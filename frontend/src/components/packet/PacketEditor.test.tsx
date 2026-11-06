@@ -301,6 +301,24 @@ describe('PacketEditor', () => {
     expect(screen.getByRole('button', { name: 'Undo' })).toBeDisabled()   // one step took it all the way back
   })
 
+  it('commits the bytes of an encode reply to the document', async () => {
+    const opened = docOptionsFixture.routerAlert.doc as unknown as PacketDoc
+    vi.mocked(api.buildPacket).mockResolvedValue(buildOptionsFixture.routerAlert as unknown as BuildResult)
+    vi.mocked(api.encodeOptions).mockResolvedValue(encodeFixture.alertEdited)
+    const onDocChange = vi.fn()
+    render(<Host onDocChange={onDocChange} initial={() => opened} />)
+    await ready()
+    await userEvent.click(pane('IP'))
+    const alert = await screen.findByRole('combobox', { name: 'option 2 alert' })
+    await userEvent.clear(alert)
+    await userEvent.type(alert, '1{Enter}')
+    await waitFor(() => expect(onDocChange).toHaveBeenCalledTimes(1))
+    expect(vi.mocked(api.encodeOptions).mock.calls[0][1][1]).toMatchObject({ name: 'Router_Alert', fields: { alert: 1 }, edited: true })
+    const options = onDocChange.mock.calls[0][0].packet[1].fields.find((f: { id: string }) => f.id === 'options')
+    expect(options.value).toEqual({ vtype: 'MACHINE', base64: encodeFixture.alertEdited.binary })
+    expect(encodeFixture.alertEdited.binary).not.toBe(encodeFixture.routerAlert.binary)
+  })
+
   // The reset clears the built tree, so the options row unmounts and the unmount drop is what stops this reply; the epoch's own
   // guard (nothing remounts) is tested in OptionsEditor.test.tsx.
   it('drops an options reply that arrives after the packet was replaced', async () => {

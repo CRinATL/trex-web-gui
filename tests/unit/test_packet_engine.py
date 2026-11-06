@@ -646,6 +646,21 @@ def test_reconstruct_edit_keeps_values_outside_the_field() -> None:
     with_engine(body)
 
 
+def test_reconstruct_edit_takes_a_layer_without_fields() -> None:
+    # A layer with no `fields` key reaches the worker only past parse_doc (which always sets it), so this goes
+    # through the raw call: the edit stays field by field instead of falling back on a KeyError.
+    async def body(e: PacketEngine) -> None:
+        doc = udp_doc()
+        raw = bytearray(await rebuilt(e, doc))
+        raw[22] = 99
+        bare = {**doc, "packet": [{"id": "Ether"}, *doc["packet"][1:]]}
+        res = await e.call("reconstruct_edit", {"doc": bare, "binary": b64(bytes(raw)),
+                                                "edited": {"layer": 1, "field": "ttl"}})
+        assert res["warnings"] == []
+        assert res["doc"]["packet"][1]["fields"] == [{"id": "ttl", "value": 99}]
+    with_engine(body)
+
+
 def test_reconstruct_edit_falls_back_on_a_class_change() -> None:
     async def body(e: PacketEngine) -> None:
         doc = udp_doc(dport=53)                      # the bytes dissect as DNS, not as Raw

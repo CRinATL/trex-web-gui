@@ -1,6 +1,6 @@
 # Vendor patches
 
-trex-web-gui carries its own copy of the TRex Python client in `backend/trex_web_gui/_vendor/`, with fifteen patches
+trex-web-gui carries its own copy of the TRex Python client in `backend/trex_web_gui/_vendor/`, with sixteen patches
 applied (`backend/vendor/patches/`). This file records what each patch fixes, who wrote it, how the copy is
 built and checked, and where each fix stands upstream. Researched 2026-10-18.
 
@@ -38,14 +38,15 @@ Rules:
      files itself (`backend/scripts/vendor_trex.py`).
   4. Add a `test_NN` that fails when the patch is skipped.
 
-  Patch 15 is the latest example.
+  Patch 16 is the latest example.
 - **Re-pinning to a newer TRex:** run `make vendor` against the new checkout. A patch that no longer applies,
   or whose bug upstream has fixed, fails its test; drop or rewrite it.
 
 ## Authorship
 
-All fifteen patches were written by Claude (Claude Code agents running the trex-web-gui plans: implementer
-subagents for 01-13 and 15, the session running the plan for 14). Each was reviewed by a separate reviewer agent, then
+All sixteen patches were written by Claude (Claude Code agents running the trex-web-gui plans: implementer
+subagents for 01-13 and 15, the session running the plan for 14, the session fixing the options-editing minors for
+16). Each was reviewed by a separate reviewer agent, then
 committed under Charles Menser's git identity with a `Co-Authored-By: Claude Opus 5.5` trailer. None came from
 upstream, and none has been submitted there.
 
@@ -60,6 +61,7 @@ upstream, and none has been submitted there.
 | 13 | `main` | 2026-10-28 | P12 Task 2 (public split) |
 | 14 | branch `ihl-guard` | 2026-11-02 | Scapy fork patches Task 3 (option c of the Scapy study) |
 | 15 | branch `options-editing` | 2026-11-05 | Options editing Task 2 (packet worker) |
+| 16 | branch `options-minors` | 2026-11-05 | Options editing minors (DEFERRED `options-editing-3`) |
 
 ## The patches
 
@@ -83,6 +85,7 @@ Paths are relative to `trex/` in the vendored copy. Upstream, that directory is
 | 13 `py314-finally-flow` | `scapy_server/scapy_zmq_server.py:76-100,173-174`, `common/services/trex_service_ap.py:229-241` | A `return` or `break` inside `finally` (three sites), which Python 3.14 compiles with a SyntaxWarning (PEP 765). | On 3.14 each import of these modules prints the warnings; trex-web-gui never imports either module (the packet worker imports `scapy_service`), so only a compile of the tree shows them. With the patch the flow is the same for every exception the handlers catch: `error_handler` still returns its response when a handler itself raises, the server loop still ends after `shut_down`, and the AP cleanup still runs only with a capture id. What used to be swallowed now propagates: a `BaseException` such as `KeyboardInterrupt`, an exception from the reply's send during `shut_down`, and one raised inside the AP loop's own `except` handler while it has no capture id. | No: not yet reported |
 | 14 `ip-options-ihl-guard` | `external_libs/scapy-2.4.3/scapy/layers/inet.py:475` | The IP options field's `length_from=lambda p:p.ihl * 4 - 20` is negative for an ihl below 5. | A negative length reads all but the last 20 bytes of the rest of the frame as options: a 9 238-byte zero-filled IPv4 frame (ihl 0) becomes 9 184 options, and its capture layer tree took 2.5 s and 272 MiB (0.002 s and 47 MiB with the patch). A header with ihl 5 to 15 dissects as before. | No: current Scapy caps list fields with `conf.max_list_count` |
 | 15 `tcp-options-bytes` | `external_libs/scapy-2.4.3/scapy/layers/inet.py:369` | `TCPOptionsField.i2m` walks its value as (name, value) pairs. | Upstream TRex's unpatched `i2m` fails on bytes, so a document with MACHINE TCP options does not build in the legacy scapy server. With the patch a `bytes` value comes back zero-padded to a multiple of 4 and `TCP.post_build` takes `dataofs` from that length; a list value is built as before. | No: not reported |
+| 16 `ip-traceroute-optclass` | `external_libs/scapy-2.4.3/scapy/layers/inet.py:208` | `IPOption_Traceroute` sets `option = 18` and keeps the header's default `optclass` 0, so it builds type 18 (0x12); RFC 1393 and IANA assign 82 (0x52, class 2). | A real Traceroute option reads in the options editor as an unnamed other row, and Add Traceroute (or `IPOption_Traceroute()` in a profile) writes 0x12. Dissection does not change: the registry keys on the 5-bit number. | No: Scapy 2.8.0 still builds 0x12, and no secdev/scapy issue or PR names it (2026-11-05); its `IPOption_Timestamp` (PR #2463) sets `optclass = 2` the same way |
 
 PR #1220 (`get_template` returns bytes): handled in the caller, not patched. The packet editor decodes the
 bytes where it calls `get_template` (spec §7 Deviation 1: no patch for it).

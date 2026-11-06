@@ -1,0 +1,23 @@
+Gives the Traceroute IP option its RFC 1393 type: `IPOption_Traceroute` in the bundled Scapy 2.4.3 fork
+(external_libs/scapy-2.4.3/scapy/layers/inet.py:208 at the pin) sets `option = 18` but keeps the header's default
+`optclass` 0, so it builds type 18 (0x12) where RFC 1393 and IANA assign 82 (0x52: copy 0, class 2 "debug",
+number 18). trex-web-gui's options editor names a kind by the type byte its class builds, so a real Traceroute
+option read as an unnamed "other" row and Add Traceroute wrote 0x12. The patch sets `optclass = 2` on the class,
+which Scapy's packet metaclass turns into the field's default. Dissection is unchanged: the option registry is keyed
+by the 5-bit option number, so 0x12 and 0x52 both dissect as Traceroute, with or without the patch. Every other
+IPOption_ class already builds its IANA type.
+Upstream: Scapy 2.8.0 still builds 0x12 (measured 2026-11-05) and master's class has no optclass; no secdev/scapy
+issue or PR names it (searched 2026-11-05). Scapy's IPOption_Timestamp (PR #2463) sets `optclass = 2` the same way.
+TRex's fork is 2.4.3. Not reported. Not touched by any other patch.
+
+diff -ruN a/external_libs/scapy-2.4.3/scapy/layers/inet.py b/external_libs/scapy-2.4.3/scapy/layers/inet.py
+--- a/external_libs/scapy-2.4.3/scapy/layers/inet.py
++++ b/external_libs/scapy-2.4.3/scapy/layers/inet.py
+@@ -207,6 +207,7 @@
+ 
+ class IPOption_Traceroute(IPOption):
+     name = "IP Option Traceroute"
++    optclass = 2
+     option = 18
+     fields_desc = [_IPOption_HDR,
+                    ByteField("length", 12),

@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState, type FocusEvent } from 'react'
 import { ApiError, encodeOptions, type DecodedOptions, type PacketDoc, type OptionKind, type OptionKinds, type OptionRow, type OptionSpec } from '../../api'
 import type { CombinedField } from './packetModel'
 import { decodeBase64, encodeBase64 } from './hexModel'
@@ -8,7 +8,7 @@ export type Machine = { vtype: 'MACHINE'; base64: string }
 type Parsed<T> = { ok: true; value: T } | { ok: false; message: string }
 
 const OTHER_NUMBER_TEXT = 'number: must be from 2 to 255'   // the codec's range for an "other" row (_encode_other)
-const EOL_TITLE = 'End of Options before the padding: removing it pads to the same bytes'
+const EOL_TITLE = 'End of Options last: removing it pads back to the same bytes'
 const tooLongText = (n: number) => `options are ${n} bytes; the header holds ${MAX_BYTES} at most`
 
 const base64Of = (v: unknown): string | null =>
@@ -71,11 +71,11 @@ function textOfField(spec: OptionSpec, v: unknown): string {
 }
 
 // A text input whose draft lasts while the shown value is the one it started from; Enter or leaving it commits a change.
-function OptionInput({ label, base, disabled, list, onCommit }: { label: string; base: string; disabled: boolean; list?: string; onCommit: (text: string) => void }) {
+function OptionInput({ label, base, disabled, list, width, onCommit }: { label: string; base: string; disabled: boolean; list?: string; width?: string; onCommit: (text: string) => void }) {
   const [draft, setDraft] = useState<{ text: string; base: string } | null>(null)
   const text = draft !== null && draft.base === base ? draft.text : base
   const finish = () => { if (text !== base) { setDraft(null); onCommit(text) } }
-  return <input type="text" className="field-input option-input" aria-label={label} list={list} value={text} disabled={disabled} spellCheck={false}
+  return <input type="text" className="field-input option-input" aria-label={label} list={list} value={text} disabled={disabled} spellCheck={false} style={width === undefined ? undefined : { width }}
     onChange={(e) => setDraft({ text: e.target.value, base })}
     onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); finish() } else if (e.key === 'Escape' && draft !== null) { e.stopPropagation(); setDraft(null) } }}
     onBlur={finish} />
@@ -112,19 +112,23 @@ export function OptionsEditor({ field, kinds, pending, epoch, doc, onCommit }: O
   const now = useRef({ docB64, epoch, doc })
   useLayoutEffect(() => { now.current = { docB64, epoch, doc } }, [docB64, epoch, doc])
   const mounted = useRef(true)
-  // The display state belongs to one packet and one document: a refusal, the hex mode and the Add inputs do not outlive an epoch change, an undo or a redo.
-  const [context, setContext] = useState({ epoch, doc })
-  if (context.epoch !== epoch || context.doc !== doc) {
-    setContext({ epoch, doc })
-    setMessage(null); setHexMode(false); setHexDraft(null); setAddKind(''); setOtherNumber(''); setOtherHex('')
+  // The display state belongs to one packet and one document: a refusal and the hex mode do not outlive an epoch change, an undo
+  // or a redo. The Add inputs belong to these options: an edit elsewhere in the packet keeps what was typed, a change of the
+  // option bytes (an undo of an options edit, a successful add) or of the packet drops it.
+  const [context, setContext] = useState({ epoch, doc, docB64 })
+  if (context.epoch !== epoch || context.doc !== doc || context.docB64 !== docB64) {
+    setContext({ epoch, doc, docB64 })
+    setMessage(null); setHexMode(false); setHexDraft(null)
+    if (context.epoch !== epoch || context.docB64 !== docB64) { setAddKind(''); setOtherNumber(''); setOtherHex('') }
   }
   useEffect(() => { mounted.current = true; return () => { mounted.current = false } }, [])
 
-  // Padding after the last row that is an EOL reads back as that EOL: removing it re-pads to the same bytes.
-  // Only when the rows before the EOL end short of a 4-byte boundary: the codec pads them to the same total (`before` is their byte count).
+  // A last row that is an EOL comes back as padding when removed: the codec pads the rows before it with zeros to a 4-byte
+  // boundary, the same bytes when that boundary is the options' total (`before` is their byte count). With or without padding
+  // after it: NOP, NOP, NOP, EOL re-pads to the same 01 01 01 00.
   const before = opts.length - 1
   const repads = before + (((-before % 4) + 4) % 4) === opts.length + opts.padding
-  const padEol = (i: number) => opts.padding > 0 && i === opts.rows.length - 1 && opts.rows[i].name === 'EOL' && repads
+  const padEol = (i: number) => i === opts.rows.length - 1 && opts.rows[i].name === 'EOL' && repads
   const rowsOff = pending || lag || failed || busy || opts.problem !== null
   const hexOff = pending || busy || (lag && !failed)
   const hexShown = hexMode || opts.problem !== null || failed
@@ -133,11 +137,36 @@ export function OptionsEditor({ field, kinds, pending, epoch, doc, onCommit }: O
   const summary = failed ? (docB64 === '' ? 'none' : hexBase) : opts.rows.length === 0 && opts.problem === null ? 'none' : field.shown
   const hexText = hexDraft !== null && hexDraft.base === hexBase ? hexDraft.text : hexBase
 
+  // A commit turns the controls off (busy, then the build pending), and a browser drops focus from a control when it is disabled,
+  // so Ctrl+Z (the packet editor's key handler) stops reaching the editor. The control that committed gets focus back when the
+  // controls are on again, or the editor itself when that control is gone; never when the user has moved focus meanwhile.
+  // A field commits on blur (Tab, or a click on another control), and while blur runs the focus is on the body: the blur's
+  // relatedTarget, caught on the way down (capture), is where focus is going. It lasts only for that event's handlers.
+  const root = useRef<HTMLDivElement>(null)
+  const refocus = useRef<HTMLElement | null>(null)
+  const blurTo = useRef<EventTarget | null>(null)
+  const onBlurCapture = (e: FocusEvent) => { blurTo.current = e.relatedTarget; queueMicrotask(() => { blurTo.current = null }) }
+  const remember = () => {
+    const active = document.activeElement
+    const a = active === null || active === document.body ? blurTo.current : active
+    if (a instanceof HTMLElement && root.current?.contains(a)) refocus.current = a
+  }
+  useEffect(() => {
+    const target = refocus.current
+    if (rowsOff || target === null) return
+    refocus.current = null
+    const lost = document.activeElement === null || document.activeElement === document.body
+    if (!lost) return
+    if (target.isConnected && !(target as HTMLButtonElement).disabled) target.focus()
+    else root.current?.focus()
+  }, [rowsOff])
+
   // Asks for the bytes of `rows` and commits them; true when they were committed. The reply is dropped unless the whole
   // document is still the one the request was made from (an undo, a redo, a layer move or another edit changes it).
   async function submit(rows: OptionRow[]): Promise<boolean> {
     const sent = { docB64, epoch, doc }
     const current = () => now.current.docB64 === sent.docB64 && now.current.epoch === sent.epoch && now.current.doc === sent.doc
+    remember()
     setMessage(null)
     setBusy(true)
     try {
@@ -203,13 +232,14 @@ export function OptionsEditor({ field, kinds, pending, epoch, doc, onCommit }: O
   function commitHex() {
     const b = bytesOfHex(hexText)
     if (!b.ok) { setMessage(b.message); return }
+    remember()
     setMessage(null)
     setHexDraft(null)
     onCommit({ vtype: 'MACHINE', base64: encodeBase64(b.value) })
   }
 
   return (
-    <div className="options-editor">
+    <div className="options-editor" ref={root} tabIndex={-1} onBlurCapture={onBlurCapture}>
       <span className="field-value">{summary}</span>
       {opts.problem !== null && <p className="field-error" role="alert"><span className="mark-error" aria-hidden="true">!</span> {opts.problem}</p>}
       {hexShown ? (
@@ -232,9 +262,12 @@ export function OptionsEditor({ field, kinds, pending, epoch, doc, onCommit }: O
                   <OptionInput label={`option ${i + 1} hex`} base={String(row.fields.value ?? '')} disabled={rowsOff} onCommit={(t) => changeOther(i, 'hex', t)} />
                 </> : kind?.fields.map((spec) => {
                   const list = spec.kind === 'enum' ? `opt-${field.id}-${i}-${spec.name}` : undefined
+                  // A name list is as wide as its longest name (router_shall_examine_packet) plus the list's arrow; other inputs keep the CSS width.
+                  const longest = Math.max(0, ...Object.keys(spec.values ?? {}).map((k) => k.length))
+                  const width = list && longest > 0 ? `calc(${longest}ch + 2.5rem)` : undefined
                   return (
                     <label key={spec.name} className="option-field"><span className="muted">{spec.name}</span>
-                      <OptionInput label={`option ${i + 1} ${spec.name}`} base={textOfField(spec, row.fields[spec.name])} disabled={rowsOff} list={list} onCommit={(t) => change(i, spec, t)} />
+                      <OptionInput label={`option ${i + 1} ${spec.name}`} base={textOfField(spec, row.fields[spec.name])} disabled={rowsOff} list={list} width={width} onCommit={(t) => change(i, spec, t)} />
                       {list && <datalist id={list}>{Object.keys(spec.values ?? {}).map((k) => <option key={k} value={k} />)}</datalist>}
                     </label>
                   )

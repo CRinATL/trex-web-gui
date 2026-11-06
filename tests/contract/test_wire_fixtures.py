@@ -766,14 +766,19 @@ def test_packet_wire_fixtures(tmp_path):
         ra_body = {"layer": "IP", "rows": ra_rows["rows"], "padding": ra_rows["padding"],
                    "length": ra_rows["length"]}
         encoded = c.post(f"{url}/options", json=ra_body)
+        # An edit that changes the bytes: Router Alert's alert 0 -> 1 (01 94 04 00 01 00 00 00).
+        alert_rows = [{**r, "fields": {"alert": 1}, "edited": True} if r["name"] == "Router_Alert" else r
+                      for r in ra_rows["rows"]]
+        edited = c.post(f"{url}/options", json={**ra_body, "rows": alert_rows})
         too_long = c.post(f"{url}/options", json={
             **ra_body, "rows": [{"name": "NOP", "number": 1, "fields": {}}] * 40, "padding": 1, "length": 40})
         bad = c.post(f"{url}/options", json={
             **ra_body, "rows": [{"name": "Bogus", "number": 1, "fields": {}}]})
-    for r in (defs, built, failed, listing, decompiled, ra_built, encoded):
+    for r in (defs, built, failed, listing, decompiled, ra_built, encoded, edited):
         assert r.status_code == 200, r.text
     assert too_long.status_code == 422 and bad.status_code == 422
     assert base64.b64decode(encoded.json()["binary"]) == ROUTER_ALERT_FRAME[34:42]
+    assert base64.b64decode(edited.json()["binary"]) == bytes.fromhex("0194040001000000")
     assert ra_built.json()["error"] is None
     assert base64.b64decode(ra_built.json()["binary"]) == ROUTER_ALERT_FRAME
     assert built.json()["error"] is None and "ZeroDivisionError" in failed.json()["error"]
@@ -790,7 +795,8 @@ def test_packet_wire_fixtures(tmp_path):
     _compare_or_write(PACKET_DIR / "docFromBinaryIpOptions.json", {"routerAlert": from_binary.json()})
     _compare_or_write(PACKET_DIR / "buildIpOptions.json", {"routerAlert": _clock_free(ra_built.json())})
     _compare_or_write(PACKET_DIR / "encodeOptions.json", {
-        "routerAlert": encoded.json(), "tooLong": too_long.json(), "badOption": bad.json()})
+        "routerAlert": encoded.json(), "alertEdited": edited.json(), "tooLong": too_long.json(),
+        "badOption": bad.json()})
 
 
 def normalise_emu(msg: dict) -> dict:
