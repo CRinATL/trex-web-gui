@@ -100,11 +100,14 @@ describe('EmuCounters', () => {
     expect(within(screen.getByText('newOne').closest('tr')!).getByText('7')).toBeInTheDocument()
   })
   it('shows an unsupported plugin as a muted row, not an error', async () => {
-    vi.spyOn(api, 'emuCounters').mockResolvedValue(nsBody)
+    // The recorded namespace loads only plugins the server has counters for, so its `unsupported` is empty; the
+    // one loaded plugin the shipped server lacks namespace counters for is ipfix (counters.json; the contract
+    // test test_counters_without_plugin_lists_what_the_server_lacks reads it from the fake).
+    vi.spyOn(api, 'emuCounters').mockResolvedValue({ ...nsBody, unsupported: ['ipfix'] })
     render(<EmuCounters ns={ns} mac={null} />)
     fireEvent.click(screen.getByRole('button', { name: 'Namespace' }))
     await tick(0)
-    const li = screen.getByText('dns — no counters here (not loaded, or not supported by this server)')
+    const li = screen.getByText('ipfix — loaded, but this server has no counters for it here')
     expect(li).toHaveClass('unsupported-row')
     expect(screen.queryByRole('alert')).toBeNull()
   })

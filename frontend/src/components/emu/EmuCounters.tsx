@@ -95,7 +95,7 @@ function ScopeCounters({ scope, ns, mac }: { scope: EmuScope; ns: EmuNsKey | nul
       })}
       {data && data.unsupported.length > 0 && (
         <ul className="unsupported">
-          {data.unsupported.map((p) => <li key={p} className="unsupported-row">{p} — no counters here (not loaded, or not supported by this server)</li>)}
+          {data.unsupported.map((p) => <li key={p} className="unsupported-row">{p} — loaded, but this server has no counters for it here</li>)}
         </ul>
       )}
     </div>

@@ -86,8 +86,9 @@ page's service control sets on an owned port (the "Port prerequisite" bullet of 
 9. **The counters.** Under **Counters** press **Namespace**: the selected namespace's counters, one table per
    plugin, with **Hide zeros** ticked, so a plugin whose counters are all zero (`igmp` here) shows no table. The
    `arp` table counts what the clients sent out of port 0 trying to resolve their gateway: `pktTxArpQuery` (ARP
-   requests) and `pktTxGArp` (gratuitous ARPs). The list under the tables names the plugins with no counters at this
-   scope, as `dns — no counters here (not loaded, or not supported by this server)`.
+   requests) and `pktTxGArp` (gratuitous ARPs). Only the plugins loaded in the namespace are read; one whose
+   counters this server lacks would be listed under the tables as `<plugin> — loaded, but this server has no
+   counters for it here`.
 
    ![The namespace's counters](howto/emu-screens/08-namespace-counters.png)
 

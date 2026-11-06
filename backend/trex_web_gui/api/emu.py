@@ -222,13 +222,13 @@ def emu_router(emu: Callable[[], EmuSession], control: Callable[[], TrexSession]
                        vport: Annotated[int | None, Query(ge=0, le=65535)] = None, tci: str = "0,0",
                        tpid: str = "0,0", mac: str | None = None, meta: bool = False) -> Any:
         """{tables: {table: [{name, value, unit, help, info, zero}]}, unsupported: [plugin]}. `scope` ctx
-        takes no key, ns takes `vport` (with `tci`, `tpid`), client also `mac` (`aa:bb:cc:dd:ee:ff`).
-        `plugin` limits the read to one plugin; left out, every plugin with counters in the scope is read and
-        those the server lacks are listed in `unsupported`. `meta=true` answers every counter with value
-        null. 409 `not_connected`; `unsupported` when the named plugin's counters are not available;
-        `no_namespace` or `no_client` when the server answered an error and no longer lists the key. 422
-        `bad_request` for a key that does not fit the scope or an unknown plugin. 502
-        `unreachable` when the server cannot be reached, 400 `emu_error` when it answers an error."""
+        takes no key, ns takes `vport` (with `tci`, `tpid`), client also `mac` (`aa:bb:cc:dd:ee:ff`). `plugin`
+        limits the read to one plugin; left out, every plugin loaded in the namespace or client that has
+        counters in the scope is read and those the server lacks are listed in `unsupported`. `meta=true`
+        answers every counter with value null. 409 `not_connected`; `unsupported` when the named plugin's
+        counters are not available; `no_namespace` or `no_client` when the server answered an error and no
+        longer lists the key. 422 `bad_request` for a key that does not fit the scope or an unknown plugin.
+        502 `unreachable` when the server cannot be reached, 400 `emu_error` when it answers an error."""
         async def go() -> dict[str, Any]:
             """The counters; after a server error, `no_namespace` or `no_client` when the key is gone."""
             ns = _ns_key(vport, tci, tpid)

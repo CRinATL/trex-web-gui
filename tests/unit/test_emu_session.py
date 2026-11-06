@@ -4,6 +4,7 @@ import asyncio
 import threading
 import time
 from collections.abc import Awaitable, Callable
+from types import SimpleNamespace
 from typing import Any
 from unittest.mock import MagicMock
 
@@ -12,7 +13,7 @@ from trex_web_gui.sessions import EmuRefused, EmuSession, TrexSession
 from trex_web_gui.sessions.emu_session import _rows
 from trex_web_gui.trexapi import emu
 from trex_web_gui.trexapi.emu import EmuRpc, NsKey
-from trex_web_gui.trexapi.errors import ServerUnreachable
+from trex_web_gui.trexapi.errors import ServerUnreachable, TrexApiError
 
 Factory = Callable[..., Any]
 KEY0 = NsKey(0)
@@ -304,11 +305,76 @@ def test_meta_cache_is_dropped_on_reconnect(fake_emu: Factory) -> None:
     assert sum(bool(r["params"]["meta"]) for r in methods(f, "ctx_cnt")) == 2
 
 
+def test_plugin_omitted_asks_only_the_plugins_loaded_there(fake_emu: Factory) -> None:
+    """With plugin omitted, one ctx_get_info (ns) or ctx_client_get_info (client) names the loaded plugins
+    and only their counters are asked: a plugin not loaded there costs no request and is not listed."""
+    f = fake_emu("--foreign-ns", "1", "--clients", "1", "--plugins", "arp,mdns")
+
+    async def body() -> None:
+        s = EmuSession(lambda _m: None, ping_s=60)
+        try:
+            await s.connect(f.host, f.port, 2.0)
+            mac = (0, 0, 0, 0, 0, 0)
+            for _ in range(2):
+                ns = await s.counters("ns", KEY0)
+                client = await s.counters("client", KEY0, mac)
+            asked = {r["method"] for r in f.requests() if r["method"].endswith("_cnt")}
+            assert asked == {"arp_ns_cnt", "mdns_ns_cnt", "mdns_c_cnt"}, asked
+            assert len(methods(f, "ctx_get_info")) == 2 and len(methods(f, "ctx_client_get_info")) == 2
+            assert ns["unsupported"] == [] and client["unsupported"] == []
+        finally:
+            await s.close()
+    run(body())
+
+
+def test_a_loaded_plugin_is_matched_by_its_server_name(fake_emu: Factory) -> None:
+    """transporte is `transe` in the server's plug_names (counters.json's server_name): loaded, its
+    namespace counters are asked with plugin omitted."""
+    f = fake_emu("--foreign-ns", "1", "--clients", "1", "--plugins", "transe")
+
+    async def body() -> None:
+        s = EmuSession(lambda _m: None, ping_s=60)
+        try:
+            await s.connect(f.host, f.port, 2.0)
+            await s.counters("ns", KEY0)
+            assert methods(f, "transe_ns_cnt")
+        finally:
+            await s.close()
+    run(body())
+
+
+def test_an_info_answer_naming_no_plugins_is_a_server_error() -> None:
+    """The loaded-plugins read raises TrexApiError (the route's 400, or no_namespace / no_client once the key
+    is gone) for an answer without one row of string plug_names. The answers are malformed by design, so they
+    are written here, not recorded: no server sends them."""
+    class Rpc:
+        """An EmuRpc stand-in whose info reads answer `answer`."""
+        answer: Any = None
+
+        def ns_info(self, _keys: Any) -> Any:
+            """ctx_get_info's answer."""
+            return self.answer
+
+        def client_info(self, _ns: Any, _macs: Any) -> Any:
+            """ctx_client_get_info's answer."""
+            return self.answer
+    rpc = Rpc()
+    conn = SimpleNamespace(rpc=rpc)
+    for answer in ([], [{}], [{"plug_names": "arp"}], [{"plug_names": [1]}], [{"plug_names": []}] * 2):
+        rpc.answer = answer
+        for scope, mac in (("ns", None), ("client", (0, 0, 0, 0, 0, 0))):
+            with pytest.raises(TrexApiError, match="names no plugins"):
+                EmuSession._loaded_plugins(conn, scope, KEY0, mac)  # type: ignore[arg-type]
+    rpc.answer = [{"plug_names": ["arp", "transe"]}]
+    assert EmuSession._loaded_plugins(conn, "ns", KEY0, None) == {"arp", "transe"}  # type: ignore[arg-type]
+
+
 def test_named_unsupported_plugin_is_refused_and_omitted_ones_are_listed(fake_emu: Factory) -> None:
     """ipfix's namespace counters are method-not-found on the shipped server. Named, the request is
     EmuRefused unsupported (and the next one sends nothing); a plugin with no namespace counters is refused
-    without any request. With plugin omitted they are skipped and listed in `unsupported`."""
-    f = fake_emu("--foreign-ns", "1", "--clients", "1")
+    without any request. With plugin omitted they are skipped and listed in `unsupported` (ipfix is loaded
+    in the namespace here: only loaded plugins are asked)."""
+    f = fake_emu("--foreign-ns", "1", "--clients", "1", "--plugins", "arp,icmp,ipfix")
 
     async def body() -> None:
         s = EmuSession(lambda _m: None, ping_s=60)

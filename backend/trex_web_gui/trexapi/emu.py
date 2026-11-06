@@ -45,6 +45,9 @@ PLUGIN_COUNTERS: dict[str, tuple[str | None, str | None]] = {
     "transport": (None, "transport_client_cnt"),
     "transporte": ("transe_ns_cnt", None),
 }
+# A plugin's name in the server's `plug_names` where it is not the PLUGIN_COUNTERS key (recorded:
+# tests/fixtures/p7/counters.json, each plugin's `server_name`).
+PLUGIN_SERVER_NAME: dict[str, str] = {"transporte": "transe"}
 # counter method -> the scope its request names: "ctx" (none), "ns" (a tunnel), "client" (a tunnel and a MAC)
 COUNTER_SCOPES: dict[str, str] = {"ctx_cnt": "ctx"} | {
     cmd: scope for ns_cmd, c_cmd in PLUGIN_COUNTERS.values()
