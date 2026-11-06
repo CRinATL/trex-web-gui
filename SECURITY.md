@@ -58,7 +58,7 @@ encryption and the authentication of the remote end.
 
 ## Known open items
 
-- **No size cap on most JSON request bodies.** The routes that read their body by hand (the Studio library, the
+- **No size cap on most JSON request bodies.** The routes that read their body by hand (the profile library, the
   packet editor, test setups and the settings bundle) refuse one over their limit with 413
   (`backend/trex_web_gui/api/bodies.py:32`); file uploads are capped at 64 MiB
   (`backend/trex_web_gui/api/studio.py:47`).

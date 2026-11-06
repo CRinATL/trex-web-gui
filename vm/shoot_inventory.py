@@ -1026,8 +1026,9 @@ def write_pcap(path, frames, gap_usec=1000):
 
 
 async def step_studio(c):
-    """88-94: Studio: the library with entries and the editor, a selected stream, its Properties and Packet
-    tabs, the import dialog with the pcap wizard, the Simulate report; then Control's Library… pick."""
+    """88-94: Editor > Profiles: the library with entries and the editor, a selected stream, its
+    Stream settings and Stream packet tabs, the import dialog with the pcap wizard, the Simulate report; then
+    Control's Library… pick."""
     b, api = c.b, c.api
     api.post("/api/ports/stop", {"ports": [0, 1]})       # the Traffic tab's Library… needs an idle port
     api.post("/api/studio/import", {"path": str(c.profiles / "udp_for_benchmarks.py"), "kind": "py",
@@ -1038,16 +1039,16 @@ async def step_studio(c):
     api.post("/api/studio/import", {"path": str(c.profiles / "gui_example.yaml"), "kind": "yaml",
                                     "name": "Legacy GUI example"})
     pcap = write_pcap(c.scratch / "two_udp.pcap", [udp_frame(), udp_frame(0x10000002)])
-    await b.click("Studio", "a")
+    await b.click("Editor", "a")
     await b.click("~UDP benchmark x3", "[role=option]")
     await b.wait(STREAM_ROWS + ".length > 0", 20, "stream table rows")
     await b.shot("88-studio-library")
     await b.click_css("table.stream-table tbody tr", 1)
-    await b.wait_for("Properties", "[role=tab]")
+    await b.wait_for("Stream settings", "[role=tab]")
     await b.shot("89-studio-stream-selected")
     await b.js("document.querySelector('.stream-detail').scrollIntoView({ block: 'start' })")
     await b.shot("90-studio-properties")
-    await b.click("Packet", "[role=tab]")
+    await b.click("Stream packet", "[role=tab]")
     await b.shot("91-studio-packet")
     await b.scroll("main", 0)
     await b.click("Import…", "button")
@@ -1075,12 +1076,12 @@ async def step_studio(c):
 
 
 async def step_packet(c):
-    """107-114: the packet editor (P4b): the standalone page with a template, its Field engine tab, the
-    payload editor, the presets, the pcap picker and Add to profile; then Studio's embedded editor and the
-    .py profile's source dialog."""
+    """107-114: the packet editor (P4b): the Editor's Packets tab with a template, its Field engine tab, the
+    payload editor, the presets, the pcap picker and Add to profile; then the Profiles tab's embedded editor
+    and the .py profile's source dialog."""
     b = c.b
-    await b.click("Studio", "a")
-    await b.click("Packet editor", "a")
+    await b.click("Editor", "a")
+    await b.click("Packets", "[role=tab]")
     await b.wait_for("File ▾", "button")
     await b.click("Templates…", "button")
     await b.wait_for("Templates", "[role=dialog]")
@@ -1117,11 +1118,11 @@ async def step_packet(c):
     await b.wait_for("Add to profile", "[role=dialog]")
     await b.shot("112-packet-add-to-profile")
     await b.click("Cancel", "button", "[role=dialog]")
-    await b.click("Studio", "a")
+    await b.click("Profiles", "[role=tab]")
     await b.click("~UDP benchmark x3", "[role=option]")
     await b.wait(STREAM_ROWS + ".length > 0", 20, "stream table rows")
     await b.click_css("table.stream-table tbody tr", 0)
-    await b.click("Packet", "[role=tab]")
+    await b.click("Stream packet", "[role=tab]")
     await b.click("Edit packet", "button")
     await b.wait_for("Save", "button")
     await b.wait_text("Destination")

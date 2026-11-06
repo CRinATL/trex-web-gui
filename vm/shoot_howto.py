@@ -146,10 +146,10 @@ async def step_stock_run(c):
 
 
 async def step_studio(c):
-    """10-12: Studio: New… profile, Add stream, the Packet tab, Edit packet (the embedded editor), the UDP
-    destination port changed and saved."""
+    """10-12: Editor: New… profile, Add stream, the Stream packet tab, Edit packet (the embedded editor), the
+    UDP destination port changed and saved."""
     b = c.b
-    await b.click("Studio", "a")
+    await b.click("Editor", "a")
     await b.click("New…", "button")
     await b.fill("Name", STUDIO_NAME, "[role=group]")
     await b.click("Create", "button", "[role=group]")
@@ -157,7 +157,7 @@ async def step_studio(c):
     await b.click("Add stream", "button")
     await b.wait(inv.STREAM_ROWS + ".length > 0", 20, "stream table rows")
     await b.shot("10-studio-new-profile")
-    await b.click("Packet", "[role=tab]")
+    await b.click("Stream packet", "[role=tab]")
     await b.click("Edit packet", "button")
     await b.wait_for("Save", "button")
     await b.wait_text("Destination")
@@ -170,7 +170,7 @@ async def step_studio(c):
     await b.shot("12-studio-dport-changed")
     await b.click("Save", "button")
     await b.wait_for("Edit packet", "button")
-    await b.click("Properties", "[role=tab]")
+    await b.click("Stream settings", "[role=tab]")
     await b.fill("Rate", "1000")
     await b.shot("13-studio-properties-rate")
     await b.click("Save", "button", ".stream-detail")

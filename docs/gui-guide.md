@@ -3,8 +3,8 @@
 New here? Start with [your first stream](howto-first-stream.md), a short walk-through with shots.
 
 A user's guide to the web GUI. It follows the order you work in: log in, connect, take ports, load a profile,
-start and stop traffic, watch the dashboards, configure and probe ports, capture, build profiles in Studio and
-packets in the packet editor, watch a publisher on the Monitor, drive the TRex daemon, and keep settings and
+start and stop traffic, watch the dashboards, configure and probe ports, capture, build profiles and
+packets in the Editor, watch a publisher on the Monitor, drive the TRex daemon, and keep settings and
 setups. Every control is named as it appears on screen, and every refusal text is quoted from the code.
 
 Screenshots are the inventory's (`gui-inventory/screens/`, shot at 1400x900 in the Light theme against the
@@ -27,8 +27,8 @@ every button is in [`api.md`](api.md).
 6. [Dashboard](#6-dashboard)
 7. [Events](#7-events)
 8. [Capture](#8-capture): Live, the packet viewer, Recorders, Saved files, LLDP, Wireshark
-9. [Studio](#9-studio): the profile library, import, the stream table, properties, the packet tab, Simulate
-10. [Packet editor](#10-packet-editor)
+9. [Editor](#9-editor): the profile library, import, the stream table, stream settings, the stream packet tab, Simulate
+10. [Packet editor](#10-packet-editor): the Editor's Packets tab
 11. [Monitor](#11-monitor)
     - [11a. EMU](#11a-emu)
 12. [TRex daemon dialog](#12-trex-daemon-dialog)
@@ -57,11 +57,11 @@ Between the cookie check and the first message from the backend the page shows o
 ### 1.2 The top bar
 
 On every page: the name **trex-web-gui** at the left, then the links **Control**, **Dashboard**, **Capture**,
-**Studio**, **Monitor**, **Events**, **Settings**. The current page is underlined. **Events** carries a red
+**Editor**, **Monitor**, **Events**, **Settings**. The current page is underlined. **Events** carries a red
 badge with the number of errors and warnings that arrived while the Events page was not open. Opening Events
 clears it.
 
-The Control, Capture, Studio and Packet editor pages stay loaded while you are on another page, so their
+The Control, Capture and Editor pages (both its tabs) stay loaded while you are on another page, so their
 selection, forms and tables are as you left them when you come back. The Dashboard keeps its tab, chart
 interval and layout too (they reset on a new connection).
 
@@ -337,7 +337,7 @@ Select a port or profile row. The heading is `Port N` or `Port N — <name>`; un
 is shown, so an inspected profile, typed values and a ping in progress survive a tab switch. The one exception
 is the Traffic tab's live-update countdown, which is cancelled when the tab is hidden.
 
-A request from the context menu or from Studio moves the panel to the right tab and focuses the field.
+A request from the context menu or from the Editor moves the panel to the right tab and focuses the field.
 
 ### 4.1 Control tab
 
@@ -439,18 +439,26 @@ Each port's form is kept while you switch ports, tabs and pages, and is emptied 
   are on the computer running trex-web-gui serve, …` and `.py profiles run as code there.`
 - **Browse…**: the backend host's file browser ([4.3.1](#431-browse-dialog)). Picking a `.yaml`, `.yml` or
   `.json` file inspects it at once. A `.py` only fills the path, and you press Inspect.
-- **Library…**: pick a profile from the Studio library ([4.3.2](#432-pick-from-the-library-dialog)).
+- **Library…**: pick a profile from the Editor's library ([4.3.2](#432-pick-from-the-library-dialog)).
 - **Inspect**: loads the profile on the backend (a `.py` runs) and shows its tunables and its streams. A failed
   inspect keeps the form and shows the backend's message. A `.py`'s own error comes back as a block of text.
 - After Inspect, a **tunables form** built from the profile's arguments (checkbox, choice, number or text per
   argument, with its help as tooltip) and **Extra arguments**. Re-inspecting the same path keeps your values.
-- **New in Studio…** (an inline **Name** field, **Cancel**, **Create**) makes an empty library profile and
-  opens it in Studio. **Copy to Studio** imports the inspected profile (with its tunables for a `.py`) into the
-  library and opens it in Studio.
+- **New in Editor…** (an inline **Name** field, **Cancel**, **Create**) makes an empty library profile and
+  opens it in the Editor. **Copy to Editor** imports the inspected profile (with its tunables for a `.py`) into the
+  library and opens it in the Editor.
+- **In the profile** (a heading above the streams table, shown while the inspected profile is not what the port
+  holds from this session) with a caption that says how Assign differs. With nothing assigned from this session:
+  `These are the streams in <name>. They aren't on port <id> yet: Assign loads them onto the port, then Start sends
+  them.` With another profile held: `These are the streams in <name>. Port <id> has <held name> loaded instead:
+  Assign replaces it.` The same profile with other arguments: `These are the streams in <name>. Port <id> has it
+  loaded with other arguments: Assign reloads it.` Streams this session did not assign: `These are the streams in
+  <name>. Port <id> has other streams loaded: Assign replaces them.` `<name>` is the library entry's name, or the
+  file name when the profile did not come from the library.
 
 **What it holds**: a table **#**, **Name**, **Enabled**, **Mode**, **Rate**, **Packet**, **Length**, **VM** of
 the inspected (or, after Assign, the assigned) streams, `Showing the first N of M streams` when cut. **Rate** reads
-as in Studio's stream table: `4.00 kpps`, `250.00 Mbps L2`, `10 %`.
+as in the Editor's stream table: `4.00 kpps`, `250.00 Mbps L2`, `10 %`.
 **Show rate at ×1** (an owned port with streams) asks the server what ×1 means: `At ×1: max 1.1 kpps, L2 1.2
 Mbps, 0.012% line utilisation`, and a fold **Full validate response** with the raw answer.
 
@@ -526,7 +534,7 @@ full path and closes. The dialog opens at the last directory shown (kept in this
 One button per library profile with `<n> streams`. An entry with a load error, or a `.py` whose source file
 is gone (`· source missing`), is disabled. A `.py` entry shows its source path and the note quoted above.
 Picking it fills the path and the entry's stored tunables without inspecting. Any other entry fills the path
-with the library's JSON file and inspects it at once. `The library is empty. Add profiles in Studio.` when
+with the library's JSON file and inspects it at once. `The library is empty. Add profiles in the Editor.` when
 there is none ([94](gui-inventory/screens/94-control-library-pick.png)).
 
 ### 4.4 Counters tab
@@ -707,7 +715,7 @@ Per-stream (PG ID) flow statistics; needs streams with flow stats or latency
 - The chart **Streams: <metric>** with **Metric** (Tx pps, Rx pps, Tx bps L1, Tx bps L2, Rx bps L2, Loss/s) and
   **Interval**. The first four ids are charted by themselves, and the checkbox is disabled with
   `At most 8 streams can be charted; untick one first` once every colour is used.
-- `No streams with a PG ID are active.` when there are none, followed by how a stream gets one (Studio > Properties:
+- `No streams with a PG ID are active.` when there are none, followed by how a stream gets one (Editor > Stream settings:
   RX stats Flow stats or Latency, with a PG ID; then assign and start) and what it adds.
 
 ### 6.3 Latency
@@ -895,11 +903,12 @@ Nothing is shown in a screenshot.
 
 ---
 
-## 9. Studio
+## 9. Editor
 
-Route `/studio`. The profile library: TRex profiles kept as files on the backend host, edited offline (no
-session needed), simulated, exported, and assigned from Control. A link **Packet editor** at the top goes to
-[10](#10-packet-editor). Layout: the library list at the left with its actions under it; the selected
+Route `/editor`, the **Profiles** tab of the Editor page (`/studio` redirects here). The page has the title
+**Editor** and two tabs, **Profiles** and **Packets**; the Packets tab is [10](#10-packet-editor). The profile library:
+TRex profiles kept as files on the backend host, edited offline (no session needed), simulated, exported, and
+assigned from Control. Layout: the library list at the left with its actions under it; the selected
 profile's editor at the right ([88](gui-inventory/screens/88-studio-library.png)).
 
 ### 9.1 The library
@@ -996,9 +1005,9 @@ The table is framed. A row lights up under the pointer and ends in `›`, the op
 its left, and the other selected rows keep their tint and outline. Until one stream is open, a dashed panel stands
 where its properties will be: `Click a stream to edit its properties and packet.` and `⌘-click or Shift-click
 selects several, for Copy, Duplicate and Delete.` (Ctrl-click off a Mac); with several selected,
-`N streams selected. Click one to edit it.` With one, the tabs **Properties** and **Packet**.
+`N streams selected. Click one to edit it.` With one, the tabs **Stream settings** and **Stream packet**.
 
-### 9.5 Properties tab
+### 9.5 Stream settings tab
 
 [90](gui-inventory/screens/90-studio-properties.png).
 
@@ -1036,7 +1045,7 @@ editing**). **Cancel** puts the stored values back. **Save** sends only the chan
 there is a change and while a field is invalid. Each field it would send is marked `edited`, and
 `N unsaved changes` shows beside it ([1.4](#14-shortcuts-and-dialogs)). The name is not here: rename in the table.
 
-### 9.6 Packet tab
+### 9.6 Stream packet tab
 
 [91](gui-inventory/screens/91-studio-packet.png).
 
@@ -1076,14 +1085,14 @@ An offline check with no server ([93](gui-inventory/screens/93-studio-simulate.p
 
 ## 10. Packet editor
 
-Route `/studio/packet`, from the **Packet editor** link on Studio. A standalone editor for one packet, kept as
+Route `/editor/packet`, the **Packets** tab of the Editor (`/studio/packet` redirects here). A standalone editor for one packet, kept as
 a `.trp` file in your downloads, as a template on the backend, or added to a library profile as a stream. The
-same editor is embedded in Studio's Packet tab ([9.6](#96-packet-tab)). The page stays loaded while you are
+same editor is embedded in a stream's Stream packet tab ([9.6](#96-stream-packet-tab)). The page stays loaded while you are
 elsewhere ([107](gui-inventory/screens/107-packet-standalone-template.png)).
 
 ### 10.1 The page
 
-The heading `Packet editor — <name or Untitled>` with a `•` while there are unsaved changes.
+The heading `<name or Untitled>` (under the Editor's tabs) with a `•` while there are unsaved changes.
 
 **File ▾**:
 
@@ -1259,7 +1268,7 @@ A capture over the **Largest capture the packet editor opens (MiB)** setting is 
 An empty library shows only the name box, after `The library has no profiles yet. Name one and the packet becomes its
 first stream.`, so the packet never has to be left to make a profile. A created profile joins the list and stays
 chosen, so a failed add is retried into it. The packet becomes a new last stream (continuous, 1 pps, unnamed) with its
-field engine and editor document; `Added as stream N of <name>.` with **Open <name> in Studio**.
+field engine and editor document; `Added as stream N of <name>.` with **Open <name> in Editor**.
 `The packet document is too large to store with the stream: it will reopen from its bytes.` above the sidecar's size
 limit.
 
@@ -1346,7 +1355,7 @@ dialog attaches it by itself ([12.3](#123-run-tab)).
 - Ctrl+Shift+C is not bound.
 
 The backend answers 409 `This backend runs with --monitor-only` to every request that changes state and to the
-capture, Studio, daemon, profile and file-browser routes.
+capture, Editor, daemon, profile and file-browser routes.
 
 ---
 
@@ -1604,7 +1613,7 @@ A port held under your own user name by another session reads `Port N is held by
 | What | Where | Lifetime |
 |---|---|---|
 | Saved connections, preferences, port names, test setups | backend data directory (default `~/.local/share/trex-web-gui`) | until changed; part of Export settings |
-| Studio library, user packet templates, saved capture files | backend data directory (or the directories set in Settings) | until deleted |
+| Editor profile library, user packet templates, saved capture files | backend data directory (or the directories set in Settings) | until deleted |
 | Theme, last Browse directory, Monitor host history, collapsed Monitor panels, histogram bar count | this browser (local storage) | per browser |
 | Traffic forms, Dashboard tab/interval/layout/Y axis, charted PG IDs, xstats pins and baselines, Clear stats baselines | this browser tab | until a new connection starts or the page is reloaded |
 | Event log | this browser tab | across reconnects; lost on reload |
@@ -1639,8 +1648,8 @@ context menus · `11` Start all · `12` profile row · `13`–`15` Control tab �
 · `21`, `23`–`25` Traffic · `22` Browse · `26`, `27` Counters · `28`–`30`, `33` Events · `31`, `32` connection
 lost · `34`–`42` Dashboard · `43`–`50` Capture · `52`, `95`–`99` Monitor · `53`–`58` Settings · `59`, `60`
 themes · `61`–`63`, `84` import · `64`–`82` setups · `83` backend offline · `85`–`87` state chips · `88`–`93`
-Studio · `94` library pick · `100`–`105` daemon · `106` Connect with a stateful run · `107`–`112` packet
-editor · `113` the editor in Studio · `114` a .py source · `118`, `119` EMU. (`51` and `74` are unused.)
+Editor, Profiles tab · `94` library pick · `100`–`105` daemon · `106` Connect with a stateful run · `107`–`112` packet
+editor · `113` the embedded editor in Stream packet · `114` a .py source · `118`, `119` EMU. (`51` and `74` are unused.)
 
 Not in any screenshot: a read-only session, another owner's ports, a non-default profile row, the LLDP table,
 the Wireshark buttons in use, the pop-out Events window, the daemon's Logs tab, the Monitor's Templates,
