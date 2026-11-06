@@ -1,15 +1,18 @@
 import { useEffect, useState } from 'react'
 import { ApiError, emuClients, macText, type EmuNsKey } from '../../api'
 import { CLIENTS_PAGE, dgText, dotted, nsId, nsLabel, v6Lines } from '../../emuFormat'
+import { useEmu } from '../../emuStore'
 import { CLIENTS_POLL_MS, useEmuPoll } from '../../useEmuPoll'
 
-// One page of the selected namespace's clients, 100 at a time, re-read every 5 s. A 409 no_namespace (the namespace is gone)
+// One page of the selected namespace's clients, 100 at a time, re-read every 5 s and whenever the generation changes (as the
+// namespaces list is, so a removal does not leave a removed namespace's clients under "no namespaces"). A 409 no_namespace (the namespace is gone)
 // calls onGone so the page clears the selection. With onSelectClient each row has a Select button (the client whose counters the counters panel can show). The page keys this component by namespace, so a new selection starts at offset 0.
 export function EmuClients({ ns, onGone, selectedMac = null, onSelectClient }: {
   ns: EmuNsKey; onGone: () => void; selectedMac?: readonly number[] | null; onSelectClient?: (mac: number[]) => void
 }) {
   const [offset, setOffset] = useState(0)
-  const { data, error } = useEmuPoll(() => emuClients(ns, offset, CLIENTS_PAGE), CLIENTS_POLL_MS, [nsId(ns), offset])
+  const generation = useEmu((m) => m?.generation ?? 0)
+  const { data, error } = useEmuPoll(() => emuClients(ns, offset, CLIENTS_PAGE), CLIENTS_POLL_MS, [nsId(ns), offset, generation])
   const gone = error instanceof ApiError && error.status === 409 && error.code === 'no_namespace'
   useEffect(() => { if (gone) onGone() }, [gone, onGone])
   const total = data?.total ?? 0

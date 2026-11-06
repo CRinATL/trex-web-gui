@@ -104,6 +104,18 @@ describe('EmuClients', () => {
     expect(onGone).toHaveBeenCalled()
     expect(screen.queryByRole('alert')).toBeNull()
   })
+  it('re-reads at once when the generation changes, so a removed namespace clears the selection then', async () => {
+    const get = vi.spyOn(api, 'emuClients').mockResolvedValue(page)
+    const onGone = vi.fn()
+    render(<EmuClients ns={ns} onGone={onGone} />)
+    await tick(0)
+    expect(get).toHaveBeenCalledTimes(1)
+    get.mockRejectedValue(new api.ApiError(409, 'no_namespace', 'gone'))
+    act(() => emuStore.push({ ...connected, generation: connected.generation + 1 }))   // a Remove all… from this app or another
+    await tick(0)
+    expect(get).toHaveBeenCalledTimes(2)
+    expect(onGone).toHaveBeenCalled()
+  })
   it('offers a Select button per client only when asked, and marks the selected one', async () => {
     vi.spyOn(api, 'emuClients').mockResolvedValue(page)
     const pick = vi.fn()
