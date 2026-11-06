@@ -294,7 +294,7 @@ def test_write_probe_puts_each_attribute_back_and_releases(tmp_path: Path, fake_
     assert all(
         w["attributes"][k]["ok"] for k in ("promiscuous", "promiscuous_restore", "multicast", "led_on")
     )
-    assert w["service_on"]["ok"] and w["service_off"]["ok"] and w["capture"]["ok"] and w["release"]["ok"]
+    assert w["service_on"]["ok"] and w["service_restore"]["ok"] and w["capture"]["ok"] and w["release"]["ok"]
     after = run_probe(f, tmp_path / "after.json")
     assert after["ports"]["0"]["status"]["result"]["owner"] == ""
     assert after["ports"]["0"]["status"]["result"]["service"] is False
@@ -338,3 +338,22 @@ def test_write_on_a_transmitting_port_is_skipped(tmp_path: Path, fake_trex: Any)
         r"first\)",
         skipped,
     ), skipped
+
+
+def test_write_probe_leaves_service_mode_on_when_it_was_on(tmp_path: Path, fake_trex: Any) -> None:
+    """A port another session left in service mode (and released) is in service mode after the probe too."""
+    f = fake_trex()
+    code = (
+        "from trex_web_gui.trexapi.loader import load; load()\n"
+        "from trex.stl.api import STLClient\n"
+        f"c = STLClient(server='127.0.0.1', sync_port={f.rpc_port}, async_port={f.pub_port}, "
+        "verbose_level='none', username='other')\n"
+        "c.connect(); c.acquire(ports=[0]); c.set_service_mode(ports=[0], enabled=True)\n"
+        "c.release(ports=[0]); c.disconnect()\n"
+    )
+    r = subprocess.run([sys.executable, "-c", code], capture_output=True, text=True, timeout=60, check=False)
+    assert r.returncode == 0, r.stderr
+    w = run_probe(f, tmp_path / "probe.json", "--write", "0")["writes"]["0"]
+    assert w["attributes_before"]["service"] is True and w["attributes_after"] == w["attributes_before"]
+    after = run_probe(f, tmp_path / "after.json")
+    assert after["ports"]["0"]["status"]["result"]["service"] is True

@@ -1590,7 +1590,9 @@ upload deletes it, a failed one keeps it for a retry.
 
 ### POST /api/studio/packet/build
 
-Build the document; a build error is a 200 with `error` set.
+Build the document; a build error is a 200 with `error` set. `structure` says why the bytes do not
+read back as the layers (null when they do): the first layer that does not, the values of the layer
+above that select what it reads as, and the set fields whose editor value would make it read back.
 
 **Responses**
 

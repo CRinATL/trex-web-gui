@@ -1822,3 +1822,17 @@ def test_to_stream_does_not_search_for_a_structure_report(monkeypatch: pytest.Mo
     monkeypatch.setattr(packet_worker.Engine, "_structure", lambda self, p, d: called.append(1))
     assert eng.to_stream({"packet": short_udp_len(), "fe": None})["ok"] is True
     assert called == []
+
+
+def test_structure_field_text_falls_back_when_scapy_cannot_show_the_field() -> None:
+    """A fix's value is a hint: a field Scapy cannot render reads `?`, and the build still answers."""
+    from trex_web_gui.trexapi import packet_worker
+
+    class Unshowable:
+        """A dissected layer whose field lookup raises, as a broken field class would."""
+
+        def get_field(self, name: str) -> Any:
+            """Raise as Scapy would for a field it cannot describe."""
+            raise ValueError(name)
+
+    assert packet_worker._field_text(Unshowable(), "len") == "?"
