@@ -6,16 +6,13 @@ empty EMU server."""
 import asyncio
 import json
 import os
-import subprocess
-import sys
 import time
 from collections.abc import Iterator
-from pathlib import Path
 from typing import Any
 
 import pytest
-from daemon_vm import sh
-from support import FIXTURES, ROOT, e3_mismatches, guestenv, real_ports
+from daemon_vm import restore_stateless, sh
+from support import FIXTURES, e3_mismatches, guestenv, real_ports
 from trex_web_gui import trexapi
 from trex_web_gui.sessions import ConnectParams, EmuRefused, EmuSession, TrexSession
 from trex_web_gui.sessions.port_config import LayerRequest
@@ -51,17 +48,7 @@ def emu_guest() -> Iterator[None]:
         sh("vm/mode.sh", "emu")
         yield
     finally:
-        restored = subprocess.run(["vm/mode.sh", "stateless"], cwd=ROOT, check=False).returncode
-        t0 = Path(os.environ.get("TMPDIR", "/tmp")) / f"emu-real-ready-{os.getpid()}"
-        t0.write_text(str(time.time()))
-        try:
-            ready = subprocess.run([sys.executable, str(ROOT / "vm" / "ready.py"), str(t0)], cwd=ROOT,
-                                   check=False, capture_output=True, text=True)
-        finally:
-            t0.unlink()
-        print(f"[teardown] mode stateless rc={restored}, ready rc={ready.returncode}")
-        assert restored == 0 and ready.returncode == 0, \
-            f"the guest is not back on stateless: {ready.stdout}{ready.stderr}"
+        restore_stateless("emu-real")
 
 
 async def emptied(s: EmuSession) -> None:
@@ -72,8 +59,12 @@ async def emptied(s: EmuSession) -> None:
 async def connect_emu(ping_s: float = 60.0, timeout_s: float = 3.0) -> EmuSession:
     """A session connected to the guest's EMU server through the forwarded port, with the server emptied."""
     s = EmuSession(lambda _m: None, ping_s=ping_s)
-    await s.connect("127.0.0.1", emu_port(), timeout_s)
-    await emptied(s)
+    try:
+        await s.connect("127.0.0.1", emu_port(), timeout_s)
+        await emptied(s)
+    except BaseException:
+        await s.close()      # a failed connect or emptying does not leave the session (its ping task) behind
+        raise
     return s
 
 
@@ -222,7 +213,7 @@ def test_profile_round_trip_reload_and_remove() -> None:
                 for key in (NS0, NS1):
                     page = await s.clients(key, 0, 100)
                     assert page["total"] == 3 and len(page["clients"]) == 3, (round_, key)
-                    assert counter(await s.counters("ctx"), "ctx", "activeNs") == 2, round_
+                assert counter(await s.counters("ctx"), "ctx", "activeNs") == 2, round_
             await s.remove_all(**CONFIRMED)
             assert (await s.namespaces())["namespaces"] == []
             assert counter(await s.counters("ctx"), "ctx", "activeNs") == 0
@@ -332,12 +323,12 @@ def test_the_recorded_negatives_hold_under_trex() -> None:
         rpc = RawRpc("127.0.0.1", emu_port(), 3.0)
         dead = failed = False
         try:
-            await asyncio.to_thread(rpc.api_sync, "EMU", 1, 1)
             steps = RECORDED["e3"]["steps"]
             try:
+                await asyncio.to_thread(rpc.api_sync, "EMU", 1, 1)
                 mismatches, not_compared = await asyncio.to_thread(e3_mismatches, rpc.call, steps)
             except ServerUnreachable:
-                dead = True      # the step-named error is the failure; there is nothing to empty
+                dead = True      # the handshake or a step failed by name; there is nothing to empty
                 raise
             print(f"e3 replay: {len(steps) - not_compared} of {len(steps)} steps replayed, "
                   f"{not_compared} not compared, {len(mismatches)} mismatches")
@@ -395,6 +386,10 @@ def test_restart_of_trex_is_detected_and_a_new_connection_sees_an_empty_server()
             await emptied(s)
             await s.load_profile(PROFILE, [], **CONFIRMED)
             await asyncio.to_thread(sh, "vm/mode.sh", "stop")
+            # The clock starts when the stop returns, not when EMU died: mode.sh's stop runs stop_trex, then
+            # stop_emu (trex-emu may outlive a killed TRex), each an ssh session polling every 0.2 s with a
+            # 1 s sleep on its KILL path, so the bound is lenient by up to ~1 s plus two ssh round trips.
+            # Starting it before the stop would count the shutdown itself (up to ~16 s each) instead.
             t = time.monotonic()
             while s.snapshot()["state"] != "lost":
                 assert time.monotonic() - t < bound, f"not lost within {bound} s: {s.snapshot()}"

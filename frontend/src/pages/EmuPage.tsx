@@ -13,7 +13,7 @@ import { useAppState } from '../state'
 
 // The EMU page: the emulation server's connection, its namespaces, the clients of the selected one and the counters of the chosen scope. The WebSocket hello does not
 // carry the EMU state, so the page asks for it as it mounts and again each time the socket comes back (a reload, or a reconnect that missed messages), and then follows the `emu` messages.
-// A failed read is said on the page until the next successful read or hub message.
+// A failed read is said on the page until the next successful read or hub message, or until the socket drops.
 export function EmuPage() {
   const { backendOnline } = useAppState()
   const latest = useEmu((m) => m)
@@ -21,6 +21,9 @@ export function EmuPage() {
   const [selected, setSelected] = useState<EmuNsKey | null>(null)
   const [mac, setMac] = useState<number[] | null>(null)
   const clearSelection = useCallback(() => { setSelected(null); setMac(null) }, [])
+  // A failed read belongs to the socket it was made on: going offline drops it, and the read made on coming back says anew.
+  const [onlineSeen, setOnlineSeen] = useState(backendOnline)
+  if (onlineSeen !== backendOnline) { setOnlineSeen(backendOnline); setFailure(null) }
   useEffect(() => {
     if (!backendOnline) return
     let live = true

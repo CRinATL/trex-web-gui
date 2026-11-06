@@ -36,6 +36,17 @@ describe('EmuProfile', () => {
     expect(await screen.findByText(/2 namespace\(s\), 6 client\(s\); plugins: arp, icmp; vports: 0, 1/)).toBeInTheDocument()
     expect(screen.getByText(/vport 1 is not a port/)).toBeInTheDocument()
   })
+  it('Browse… lists only .py files, which is all the backend takes', async () => {
+    const user = userEvent.setup()
+    vi.spyOn(api, 'fsList').mockResolvedValue({ path: '/opt/trex/v3.08/emu', parent: '/opt/trex/v3.08', truncated: false, entries: [
+      { name: 'simple_emu.py', dir: false, size: 2900 }, { name: 'ipfix_dnac_scale_test.cfg', dir: false, size: 900 },
+      { name: 'stream.yaml', dir: false, size: 10 }] })
+    render(<EmuProfile />)
+    await user.click(screen.getByRole('button', { name: 'Browse…' }))
+    const dialog = await screen.findByRole('dialog', { name: 'Pick an EMU profile (.py)' })
+    await within(dialog).findByRole('button', { name: 'simple_emu.py' })
+    expect(within(dialog).queryByRole('button', { name: 'stream.yaml' })).toBeNull()
+  })
   it('shows a profile error from Inspect', async () => {
     const user = userEvent.setup()
     vi.spyOn(api, 'emuProfileInspect').mockRejectedValue(new api.ApiError(422, 'profile_error', 'no such profile'))

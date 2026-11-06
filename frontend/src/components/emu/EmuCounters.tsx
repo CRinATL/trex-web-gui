@@ -51,8 +51,10 @@ function ScopeCounters({ scope, ns, mac }: { scope: EmuScope; ns: EmuNsKey | nul
     COUNTERS_POLL_MS, [key])
   const epoch = useEmu(() => emuStore.epoch)
   const [local, setLocal] = useState<{ epoch: number; bases: EmuBaselines }>(() => ({ epoch, bases: readBaselines() }))
-  // A connection established anew clears the stored baselines (emuStore); the copy held here is then stale and storage is read again.
-  const bases = local.epoch === epoch ? local.bases : readBaselines()
+  // A connection established anew or a load or removal clears the stored baselines (emuStore); the copy held here is then stale, and
+  // storage is read again once and kept (not on every render until the next Clear).
+  let bases = local.bases
+  if (local.epoch !== epoch) { bases = readBaselines(); setLocal({ epoch, bases }) }
   const [hideZeros, setHideZeros] = useState(true)
   const [totals, setTotals] = useState(false)
   const base = bases[key]

@@ -21,9 +21,10 @@ const lister = (pcap: boolean) => (dir?: string): Promise<FsList> => (pcap ? fsL
 
 // The backend host's file browser: directories enter, Up goes to the parent, a file picks its full path. The last
 // directory shown is remembered for the next Browse. `pcap` also lists .pcap and .cap files (the Studio's import).
-// `active` false (its page is hidden): Escape does nothing.
-export function BrowseDialog({ onPick, onClose, title = 'Browse for a profile', pcap = false, active = true }: {
-  onPick: (path: string) => void; onClose: () => void; title?: string; pcap?: boolean; active?: boolean
+// `active` false (its page is hidden): Escape does nothing. `suffixes` (lower case, with the dot) narrows the files shown to
+// those endings, for a picker that takes only some of what the backend lists (the EMU page takes only .py).
+export function BrowseDialog({ onPick, onClose, title = 'Browse for a profile', pcap = false, active = true, suffixes }: {
+  onPick: (path: string) => void; onClose: () => void; title?: string; pcap?: boolean; active?: boolean; suffixes?: readonly string[]
 }) {
   const ref = useDialogFocus<HTMLDivElement>('[data-autofocus]')
   const [listing, setListing] = useState<FsList | null>(null)
@@ -48,7 +49,7 @@ export function BrowseDialog({ onPick, onClose, title = 'Browse for a profile', 
 
   const join = (dir: string, name: string) => `${dir.replace(/\/$/, '')}/${name}`
   const [filter, setFilter] = useState('')
-  const all = listing?.entries ?? []
+  const all = (listing?.entries ?? []).filter((e) => e.dir || !suffixes || suffixes.some((x) => e.name.toLowerCase().endsWith(x)))
   const needle = filter.trim().toLowerCase()
   const shown = needle ? all.filter((e) => e.name.toLowerCase().includes(needle)) : all
   async function enter(dir: string) { setFilter(''); await go(dir) }

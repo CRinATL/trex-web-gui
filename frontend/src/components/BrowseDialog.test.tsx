@@ -36,6 +36,15 @@ describe('BrowseDialog', () => {
     await userEvent.type(screen.getByRole('textbox', { name: 'Filter' }), 'nothing')
     expect(screen.getByText('Nothing here matches the filter.')).toBeInTheDocument()
   })
+  it('suffixes narrows the files shown, never the directories', async () => {
+    vi.spyOn(api, 'fsList').mockResolvedValue({ path: '/opt/trex/v3.08/emu', parent: '/opt/trex/v3.08', truncated: false, entries: [
+      { name: 'cfg', dir: true, size: null }, { name: 'simple_emu.py', dir: false, size: 2900 },
+      { name: 'ipfix_dnac_scale_test.cfg.yaml', dir: false, size: 900 }, { name: 'OLD.PY', dir: false, size: 10 }] })
+    render(<BrowseDialog suffixes={['.py']} onPick={vi.fn()} onClose={vi.fn()} />)
+    await screen.findByRole('button', { name: 'simple_emu.py' })
+    expect(screen.getAllByRole('button', { name: /^(cfg\/|simple_emu\.py|OLD\.PY|ipfix.*)$/ }).map((b) => b.getAttribute('aria-label')))
+      .toEqual(['cfg/', 'simple_emu.py', 'OLD.PY'])
+  })
   it('sizes read as people read them', () => {
     expect(sizeText(0)).toBe('0 B')
     expect(sizeText(1023)).toBe('1023 B')
