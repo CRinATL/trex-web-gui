@@ -137,6 +137,14 @@ REGISTER: dict[str, Entry] = {
         "(docs/evidence/2026-11-05-p7-prevention-study/e1/e1-report.md) and R33 refuses the profiles that "
         "cause it",
     ),
+    "trex-xstats-short-ports": Entry(
+        "fake_trex",
+        "behaviour",
+        "A port's xstats list can be shorter than another port's, or shrink after its names were read.",
+        "open: seen 2026-11-06 on a server whose ports mix physical and virtual functions (a reset failed "
+        "'Length of get_xstats_names: 91 and get_port_xstats_values: 84'); the per-port lists were not "
+        "recorded, and a probe of such a server would record them",
+    ),
     "trex-link-led-fc-accepted": Entry(
         "fake_trex",
         "behaviour",

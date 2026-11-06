@@ -1,0 +1,50 @@
+Reads each port's own xstats names: `TRexClient._connect` (common/trex_client.py:472-475 at the pin) reads the
+names of one port (`any_port`) and gives them to every port, on the stated assumption that "all ports on a given
+TRex server instance have the same list of xstats". A server whose ports mix physical and virtual functions breaks
+it: a virtual function lists fewer counters. `PortXStats._pre_update` (common/stats/trex_port_stats.py:226) then
+raises "Length of get_xstats_names: N and get_port_xstats_values: M" for every port whose list differs, and
+`_clear_stats_common` (:2959) clears the xstats of every port, so a Reset or Clear of any one port fails (seen
+2026-11-06 on a server with two physical and two virtual-function ports: 91 names against 84 values). The patch
+reads each port's names at connect (one more request per port) and, when a port's values no longer match its
+names, reads that port's names again once before raising, which also covers a list that changes after connect.
+Upstream: not reported. Not touched by any other patch.
+
+diff -ruN a/trex/common/stats/trex_port_stats.py b/trex/common/stats/trex_port_stats.py
+--- a/trex/common/stats/trex_port_stats.py	2026-11-06 12:29:51.948314805 -0500
++++ b/trex/common/stats/trex_port_stats.py	2026-11-06 12:29:58.070956257 -0500
+@@ -208,6 +208,7 @@
+         super(PortXStats, self).__init__(RpcCmdData('get_port_xstats_values', {'port_id': port_obj.port_id}, ''))
+ 
+         self.port_id = port_obj.port_id
++        self.port_obj = port_obj
+         self.names = []
+ 
+     @staticmethod
+@@ -223,6 +224,10 @@
+     def _pre_update(self, snapshot):
+         values = snapshot['xstats_values']
+ 
++        # trex-web-gui patch 17: a list that no longer matches the names read at connect is read again, once
++        if len(values) != len(self.names):
++            self.names = self.get_names(self.port_obj)
++
+         if len(values) != len(self.names):
+             raise TRexError('Length of get_xstats_names: %s and get_port_xstats_values: %s' % (len(self.names), len(values)))
+ 
+diff -ruN a/trex/common/trex_client.py b/trex/common/trex_client.py
+--- a/trex/common/trex_client.py	2026-11-06 12:29:51.946541711 -0500
++++ b/trex/common/trex_client.py	2026-11-06 12:29:58.070785745 -0500
+@@ -467,10 +467,10 @@
+         if not rc:
+             return rc
+ 
+-        xstat_names = self.any_port.xstats.get_names(self.any_port)
+-        # all ports on a given TRex server instance have the same list of xstats
++        # trex-web-gui patch 17: each port reads its own xstats names; the ports of one server can list
++        # different counters (a virtual function lists fewer than a physical port)
+         for port in self.ports.values():
+-            port.xstats.set_names(xstat_names)
++            port.xstats.set_names(port.xstats.get_names(port))
+ 
+         # sync the ports
+         rc = self._for_each_port('sync')

@@ -111,3 +111,15 @@ def test_xstats_without_owning_is_200(tmp_path: Path, fake_trex) -> None:
         assert r.status_code == 200, r.text
         assert r.json()["port"] == 1 and r.json()["values"]["rx_good_packets"] >= 0
         assert c.get("/api/ports/7/xstats").json()["error"] == "bad_port"
+
+
+def test_a_port_with_a_shorter_xstats_list_resets_and_reads(tmp_path: Path, fake_trex) -> None:
+    """Port 1 lists fewer xstats than port 0, as a virtual function does (vendor patch 17): a Reset of port 0,
+    which clears every port's xstats, succeeds, and port 1's Xstats tab reads its own list."""
+    f = fake_trex("--xstats-short", "1")
+    with client(tmp_path) as c:
+        connect(c, f)
+        r = c.post("/api/ports/reset", json={"ports": [0]})
+        assert r.status_code == 200, r.text
+        assert len(c.get("/api/ports/0/xstats").json()["values"]) == 13
+        assert len(c.get("/api/ports/1/xstats").json()["values"]) == 9

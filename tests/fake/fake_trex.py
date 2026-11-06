@@ -18,6 +18,8 @@ Known divergences from the real server:
 - link, LED and flow-control changes are accepted; the measured net_af_packet port reports them
   unsupported (is_link_supported, is_led_supported, is_fc_supported are false). [U:trex-link-led-fc-accepted]
 - rx_filter_mode is not mapped to a status key (P2 never sends it). [U:trex-rx-filter-mode]
+- --xstats-short and --xstats-short-after-names cut a port's xstats list to its first XSTATS_SHORT counters, a
+  virtual function's shorter list as a stand-in; the real lists were not recorded. [U:trex-xstats-short-ports]
 - the class name in the api_h_mismatch text is always 'common' (recorded on a common-class method);
   the fake answers the same text on any method. [U:trex-api-h-class-common]
 - validate_result and the stream shapes come from an inline 1 pps UDP stream; rates are not representative.
@@ -184,6 +186,12 @@ ap.add_argument("--server-version",
 ap.add_argument("--stack", default="legacy", choices=["legacy", "linux_based"],
                 help="the ports' info.stack (the recorded server runs legacy); "
                      "linux_based lets conf_ipv6 enable IPv6")
+ap.add_argument("--xstats-short", type=int, action="append", default=[],
+                help="this port lists only its first XSTATS_SHORT xstats counters (a virtual function's "
+                     "shorter list); repeatable")
+ap.add_argument("--xstats-short-after-names", type=int, default=None,
+                help="this port lists every xstats counter until its names have been read once, then "
+                     "only the first XSTATS_SHORT (a list that changes after connect)")
 ap.add_argument("--manual-clock", action="store_true",
                 help="the counters' clock moves only on the fake_advance_clock RPC "
                      "(deterministic wire fixtures)")
@@ -452,9 +460,22 @@ def p3b_error(method, fragment, rid, **rewrite):
     raise HarnessError(f"tests/fixtures/p3b/rpc.jsonl holds no {method} error containing {fragment!r}")
 
 
+XSTATS_SHORT = 9          # the counters a --xstats-short port lists (of the recorded 13)
+names_read: set[int] = set()   # ports whose get_port_xstats_names was answered (--xstats-short-after-names)
+
+
+def xstats_names(port):
+    """The xstats names port `port` lists now: the recorded list, cut to its first XSTATS_SHORT for a
+    --xstats-short port, and for the --xstats-short-after-names port once its names were read."""
+    names = (table.get(("get_port_xstats_names", port.id))
+             or table[("get_port_xstats_names", 0)])["result"]["xstats_names"]
+    short = port.id in a.xstats_short or (port.id == a.xstats_short_after_names and port.id in names_read)
+    return names[:XSTATS_SHORT] if short else names
+
+
 def xstats_values(port):
     """get_port_xstats_values: the recorded row of this port with the counters that move following the
-    fake's. Names from the recorded get_port_xstats_names. Bytes carry no FCS (the recorded server's 60
+    fake's, listed as `xstats_names` says. Bytes carry no FCS (the recorded server's 60
     per packet), the fake's obytes carry 4 per packet. Settles every port first (so it advances their
     counters and captures); HarnessError for an unmodelled TX rate."""
     peer = ports[port.id ^ 1] if (port.id ^ 1) < len(ports) else None
@@ -477,7 +498,7 @@ def xstats_values(port):
         pk, by = counts(pt)
         for q in ("good", "q0"):
             vals[f"{side}_{q}_packets"], vals[f"{side}_{q}_bytes"] = pk, by
-    return [vals[n] for n in names]
+    return [vals[n] for n in xstats_names(port)]
 
 
 def frame_bytes(stream):
@@ -1052,6 +1073,10 @@ def stateful(m, p, rid):
         return {"id": rid, "jsonrpc": "2.0", "result": result}
     if m == "get_port_xstats_values":
         return {"id": rid, "jsonrpc": "2.0", "result": {"xstats_values": xstats_values(port)}}
+    if m == "get_port_xstats_names" and port is not None:
+        names = xstats_names(port)
+        names_read.add(port.id)
+        return {"id": rid, "jsonrpc": "2.0", "result": {"xstats_names": names}}
     if m in CONFIG_CMDS:
         cmd = CONFIG_CMDS[m]
         # verify_state(IDLE | STREAMS | ASTF_LOADED, cmd) (trex_port.cpp:378, 394, 410, 482)
