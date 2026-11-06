@@ -582,13 +582,13 @@ class OptionBytes(bytes):
     document_length: int = 0
 
 
-def _option_layer(layer: Any) -> OptionLayer | None:
+def _option_layer(layer: Any) -> "OptionLayer | None":
     """`"IP"` for an IP-family layer (`IPerror` too), `"TCP"` for a TCP-family one, else None."""
     from scapy.layers.inet import IP, TCP
     return "IP" if isinstance(layer, IP) else "TCP" if isinstance(layer, TCP) else None
 
 
-def option_bytes(kind: OptionLayer, layer_bytes: bytes) -> bytes:
+def option_bytes(kind: "OptionLayer", layer_bytes: bytes) -> bytes:
     """The option bytes of an IP or TCP header: those between the fixed 20 bytes and the header's end, read
     with the header-length byte of `layer_bytes` (IP `ihl`, TCP `dataofs`), padding included."""
     if kind == "IP":
