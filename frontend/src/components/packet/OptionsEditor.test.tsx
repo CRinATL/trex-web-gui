@@ -322,17 +322,51 @@ describe('OptionsEditor', () => {
     expect(document.activeElement).toBe(up)
   })
 
-  it('gives focus back after a hex commit', async () => {
+  // Rows are keyed by index (a content key would remount the row that committed and lose its focus), so an input keeps its
+  // state when the rows change under it; OptionInput drops a draft typed against another value.
+  it('drops a draft when the row at its index changes under it', async () => {
+    const { again } = setup()
+    const box = screen.getByRole('combobox', { name: 'option 2 alert' })
+    await userEvent.clear(box)
+    await userEvent.type(box, '7')
+    const rows = (built.options as api.DecodedOptions).rows.map((r, i) => (i === 1 ? { ...r, fields: { alert: 3 } } : r))
+    again(field(withOptions({ rows })), { doc: emptyDoc() })
+    expect(screen.getByRole('combobox', { name: 'option 2 alert' })).toHaveValue('3')
+  })
+
+  // A commit gives the editor a new document (PacketEditor passes `doc={ed.doc}`), so each test passes a fresh one after it.
+  it('returns to the rows after a hex commit that parses, with focus on the editor', async () => {
     const { onCommit, again } = setup()
     await userEvent.click(screen.getByRole('button', { name: 'Edit as hex' }))
     const box = screen.getByRole('textbox', { name: 'Options as hex' })
     await userEvent.clear(box)
-    await userEvent.type(box, '01 01 01 00{Enter}')
-    expect(onCommit).toHaveBeenCalledTimes(1)
-    again(field(), { pending: true })
+    await userEvent.type(box, '01 00 00 00{Enter}')
+    expect(onCommit).toHaveBeenCalledWith(machine('AQAAAA=='))
+    const next = emptyDoc()
+    const typed = field({ value: machine('AQAAAA=='), docValue: machine('AQAAAA=='),
+      ...withOptions({ rows: [{ name: 'NOP', number: 1, fields: {}, raw: 'AQ==' }, { name: 'EOL', number: 0, fields: {}, raw: 'AA==' }], padding: 2, length: 2 }) })
+    again(typed, { pending: true, doc: next })
     dropFocus()
-    again(field())
-    expect(document.activeElement).toBe(box)
+    again(typed, { doc: next })
+    expect(screen.queryByRole('textbox', { name: 'Options as hex' })).toBeNull()
+    expect(Array.from(document.querySelectorAll('.option-name'), (e) => e.textContent)).toEqual(['NOP', 'EOL'])
+    expect(document.activeElement).toBe(document.querySelector('.options-editor'))
+  })
+
+  it('gives focus back to the hex box after a hex commit that does not parse', async () => {
+    const { onCommit, again } = setup()
+    await userEvent.click(screen.getByRole('button', { name: 'Edit as hex' }))
+    const box = screen.getByRole('textbox', { name: 'Options as hex' })
+    await userEvent.clear(box)
+    await userEvent.type(box, '07 09 00{Enter}')
+    expect(onCommit).toHaveBeenCalledWith(machine('BwkA'))
+    const next = emptyDoc()
+    const typed = field({ value: machine('BwkA'), docValue: machine('BwkA'),
+      ...withOptions({ rows: [], problem: 'option 7 at byte 0 claims 9 bytes, 3 remain', raw: 'BwkA' }) })
+    again(typed, { pending: true, doc: next })
+    dropFocus()
+    again(typed, { doc: next })
+    expect(document.activeElement).toBe(screen.getByRole('textbox', { name: 'Options as hex' }))
   })
 
   it('leaves focus alone when the user moved it during the commit', async () => {

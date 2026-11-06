@@ -276,6 +276,9 @@ def test_options_text_matches_the_viewer_summary() -> None:
     assert po.options_text("IP", po.decode("IP", bytes.fromhex("070900"))) == (
         "unparsed: 070900 (option 7 at byte 0 claims 9 bytes, 3 remain)")
     assert po.options_text("IP", po.decode("IP", bytes.fromhex("19040102"))) == "option 25 (value=0102)"
+    # The full type byte, as the editor's number input and Wireshark show it (0x99: copied, number 25).
+    assert po.options_text("IP", po.decode("IP", bytes.fromhex("99040102"))) == (
+        "option 153 (value=0102)")
     assert po.options_text("IP", po.decode("IP", bytes.fromhex("01000000"))) == "NOP, EOL, padding 2 bytes"
     assert po.options_text("IP", po.decode("IP", bytes.fromhex("010000"))) == "NOP, EOL, padding 1 byte"
 

@@ -1622,7 +1622,8 @@ A VM's instructions as editor parameters.
 
 ### GET /api/studio/packet/definitions
 
-The protocol and Field Engine definitions with an ETag; 304 when `If-None-Match` has it.
+The protocol and Field Engine definitions with an ETag, and `optionKinds` (the IP and TCP option
+kinds the options editor offers, part of the ETag); 304 when `If-None-Match` has it.
 
 **Responses**
 
