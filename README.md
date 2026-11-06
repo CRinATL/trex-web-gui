@@ -489,4 +489,25 @@ How to set up a checkout, run the GUI from source, and run the checks, and a map
 - Questions about TRex itself: upstream, at [trex-core](https://github.com/cisco-system-traffic-generator/trex-core).
 - A security problem: privately, as [`SECURITY.md`](SECURITY.md) says, not in a public issue.
 
+### Probe a server for a bug report
+
+When a TRex server behaves differently from what the GUI expects (a port that refuses an attribute, counters that
+fail to read, virtual-function ports), the probe collects what each port lists and supports into one JSON file to
+attach to an issue. It is one file, not part of the install: download it on the TRex host, read it, and run it with
+the Python trex-web-gui is installed under (any release):
+
+```
+curl -fLO https://raw.githubusercontent.com/CRinATL/trex-web-gui/main/scripts/trex_probe.py
+"$(uv tool dir)/trex-web-gui/bin/python" trex_probe.py --out trex-probe.json
+```
+
+By default it only reads: it acquires no port and changes nothing. `--write 2,3` also tries promiscuous, multicast,
+LED, flow control, service mode and a short capture on those ports, puts each back and releases them; it touches
+only a port that is idle and owned by nobody else (release it in the GUI first). `--traffic 0:2` sends three bursts
+of 1000 packets from port 0 and counts them on port 2. `--try-link` adds a link down and up to `--write`; on a
+physical port that takes its virtual functions down too. `--help` lists the rest.
+
+MAC, IP and PCI addresses, host, user and interface names are replaced by tokens (`mac-1`, `host-1`); read the file
+before you share it, as the scrubber replaces only what it recognises.
+
 Licence: GPL-2.0-or-later ([`LICENSE`](LICENSE), [`NOTICE`](NOTICE)).
