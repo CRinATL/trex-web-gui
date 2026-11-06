@@ -1,0 +1,26 @@
+{
+  "library_entry": {
+    "assigned": {
+      "name": "cdm-test-1 (options)",
+      "path": "<library>/cdm-test-1-options.json",
+      "slug": "cdm-test-1-options",
+      "stream_count": 1,
+      "summary": [
+        {
+          "enabled": true,
+          "has_vm": false,
+          "index": 0,
+          "length": 60,
+          "mode": "continuous",
+          "name": null,
+          "next": null,
+          "packet": "Ether / IP / UDP 16.0.0.1:1025 > 48.0.0.1:12 / Raw",
+          "rate": "1 pps",
+          "self_start": true
+        }
+      ],
+      "tunables": []
+    },
+    "streams": true
+  }
+}

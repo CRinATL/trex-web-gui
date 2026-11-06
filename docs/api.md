@@ -1045,6 +1045,7 @@ profile.
 | `ports` | `array<integer>` | yes | - | minItems=1, maxItems=64 |
 | `path` | `string` | yes | - | minLength=1 |
 | `tunables` | `array<string>` | no | - | maxItems=100, items maxLength=1000 |
+| `library_slug` | `string \| null` | no | - | pattern="^[a-z0-9]+(-[a-z0-9]+)*$" |
 | `stop_first` | `boolean` | no | `false` | - |
 
 **Responses**
@@ -1355,10 +1356,12 @@ read-only, for an unowned port, or one whose default profile is not transmitting
 ### GET /api/ports/{pid}/assigned
 
 What is on the port: `streams`, whether its default profile holds streams, and `assigned`, this
-connection's last Assign to it (path, name, tunables, summary, stream_count), or null when there is
-none or the port no longer holds streams or is no longer owned. Start sends what is on the port, so
-the Traffic tab shows this, not the path being edited. Refused (409) when not connected or for an
-unknown port.
+connection's last Assign to it (path, name, slug, tunables, summary, stream_count), or null when there
+is none or the port no longer holds streams or is no longer owned. `slug` is the library entry the
+profile came from (null for a file that is not an entry); `name` is resolved on every read, so a
+rename shows at once and a deleted entry falls back to the file's basename. Start sends what is on
+the port, so the Traffic tab shows this, not the path being edited. Refused (409) when not connected
+or for an unknown port.
 
 **Path parameters**
 
@@ -1424,8 +1427,9 @@ connected or for an unknown port.
 ### POST /api/profiles/inspect
 
 Loads a profile in the profile worker subprocess for these ports and tunables and returns its
-summary; touches no server and no session. 422 profile_error when it cannot be loaded or exceeds
-10 seconds.
+summary; touches no server and no session. `name` is what the GUI calls the profile: the library
+entry's name when `path` is that entry's JSON (or its `.py` source, when `library_slug` names the
+entry), else the file's basename. 422 profile_error when it cannot be loaded or exceeds 10 seconds.
 
 **Request body** (`application/json`, schema `InspectBody`)
 
@@ -1434,6 +1438,7 @@ summary; touches no server and no session. 422 profile_error when it cannot be l
 | `path` | `string` | yes | - | minLength=1 |
 | `ports` | `array<integer>` | no | - | minItems=1, maxItems=64 |
 | `tunables` | `array<string>` | no | - | maxItems=100, items maxLength=1000 |
+| `library_slug` | `string \| null` | no | - | pattern="^[a-z0-9]+(-[a-z0-9]+)*$" |
 
 **Responses**
 
@@ -2447,6 +2452,7 @@ The models that request bodies are made of, in name order.
 | `ports` | `array<integer>` | yes | - | minItems=1, maxItems=64 |
 | `path` | `string` | yes | - | minLength=1 |
 | `tunables` | `array<string>` | no | - | maxItems=100, items maxLength=1000 |
+| `library_slug` | `string \| null` | no | - | pattern="^[a-z0-9]+(-[a-z0-9]+)*$" |
 | `stop_first` | `boolean` | no | `false` | - |
 
 ### AttrBody
@@ -2561,6 +2567,7 @@ An import: exactly one of `path` (on the backend host) or `upload_id`.
 | `path` | `string` | yes | - | minLength=1 |
 | `ports` | `array<integer>` | no | - | minItems=1, maxItems=64 |
 | `tunables` | `array<string>` | no | - | maxItems=100, items maxLength=1000 |
+| `library_slug` | `string \| null` | no | - | pattern="^[a-z0-9]+(-[a-z0-9]+)*$" |
 
 ### Ipv6Body
 

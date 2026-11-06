@@ -263,10 +263,60 @@ def test_assigned_records_the_last_assign_until_release(fake_trex, new_session):
         assert r["streams"] is True and r["assigned"] is not None
         assert r["assigned"]["name"] == "udp_for_benchmarks.py"
         assert r["assigned"]["tunables"] == ["--packet_len", "128"] and r["assigned"]["stream_count"] == 1
+        assert r["assigned"]["slug"] is None
         await s.release([0])
         assert (await s.assigned(0))["assigned"] is None
         with pytest.raises(CommandRefused):
             await s.assigned(9)
+    new_session.run(run())
+
+
+def test_assign_records_the_given_name_and_slug(fake_trex, new_session):
+    """assign_profile(name=, slug=) records both and logs the name, not the basename."""
+    f, rec = fake_trex(), Recorder()
+    async def run():
+        s = new_session(rec)
+        await s.connect(params(f))
+        await s.acquire([0])
+        await s.assign_profile([0], await loaded([0]), name="Bench", slug="bench")
+        r = (await s.assigned(0))["assigned"]
+        assert r["name"] == "Bench" and r["slug"] == "bench"
+        assert any("Assign Bench to port(s) [0]" in str(m) for m in rec.msgs)
+    new_session.run(run())
+
+
+def test_relink_library_rewrites_slug_and_path(fake_trex, new_session):
+    """A rename's relink moves the slug of every record and the path of the records on the entry's JSON."""
+    f, rec = fake_trex(), Recorder()
+    async def run():
+        s = new_session(rec)
+        await s.connect(params(f))
+        await s.acquire([0, 1])
+        lp = await loaded([0, 1])
+        await s.assign_profile([0], lp, slug="a")
+        await s.assign_profile([1], lp, slug="a")
+        s._assigned[0]["path"] = "/lib/a.json"
+        s._assigned[1]["path"] = "/src/x.py"
+        s.relink_library("a", "b", "/lib/a.json", "/lib/b.json")
+        assert (s._assigned[0]["slug"], s._assigned[0]["path"]) == ("b", "/lib/b.json")
+        assert (s._assigned[1]["slug"], s._assigned[1]["path"]) == ("b", "/src/x.py")
+    new_session.run(run())
+
+
+def test_a_reconnect_drops_a_slugged_record(fake_trex, new_session):
+    """A new connection forgets the records, slug included, and a relink over none is a no-op."""
+    f, rec = fake_trex(), Recorder()
+    async def run():
+        s = new_session(rec)
+        await s.connect(params(f))
+        await s.acquire([0])
+        await s.assign_profile([0], await loaded([0]), slug="a")
+        await s.disconnect()
+        await s.connect(params(f))
+        await s.acquire([0])
+        assert (await s.assigned(0))["assigned"] is None
+        s.relink_library("a", "b", "/lib/a.json", "/lib/b.json")
+        assert (await s.assigned(0))["assigned"] is None
     new_session.run(run())
 
 

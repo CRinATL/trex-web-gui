@@ -176,8 +176,10 @@ LIBRARY_ANSWERS: tuple[Item, ...] = (
 )
 
 
-def studio_router(library: ProfileLibrary, data_dir: Path) -> APIRouter:
-    """The /api/studio routes over `library`; uploads live in `data_dir / "uploads"`."""
+def studio_router(library: ProfileLibrary, data_dir: Path,
+                  on_renamed: Callable[[str, str, str, str], None] | None = None) -> APIRouter:
+    """The /api/studio routes over `library`; uploads live in `data_dir / "uploads"`. `on_renamed(old_slug,
+    new_slug, old_path, new_path)` is called on the loop after a rename that changed the slug."""
     router = APIRouter()
     lock = asyncio.Lock()            # the library: every read and write
     upload_lock = asyncio.Lock()     # the upload count check and the file creation
@@ -270,8 +272,11 @@ def studio_router(library: ProfileLibrary, data_dir: Path) -> APIRouter:
         invalid_name."""
         async def go() -> LibraryEntry:
             """404 first, then the rename."""
-            library.path_of(slug)
-            return await io(library.rename, slug, b.name, b.rev)
+            old_path = str(library.path_of(slug))
+            entry = await io(library.rename, slug, b.name, b.rev)
+            if on_renamed is not None and entry["slug"] != slug:
+                on_renamed(slug, entry["slug"], old_path, entry["path"])  # on the loop
+            return entry
         return await guarded(go)
 
     @router.post("/api/studio/profiles/{slug}/duplicate", response_model=None,
