@@ -1,14 +1,17 @@
-import { cleanup, render, screen, waitFor, within } from '@testing-library/react'
+import { act, cleanup, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { useState } from 'react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import * as api from '../../api'
 import type { BuildResult, Definitions, PacketDoc, PacketTree } from '../../api'
 import buildFixture from '../../__fixtures__/packet/buildUdp.json'
+import buildOptionsFixture from '../../__fixtures__/packet/buildIpOptions.json'
 import defsFixture from '../../__fixtures__/packet/definitions.json'
+import docOptionsFixture from '../../__fixtures__/packet/docFromBinaryIpOptions.json'
+import encodeFixture from '../../__fixtures__/packet/encodeOptions.json'
 import { PacketEditor } from './PacketEditor'
 
-vi.mock('../../api', async (orig) => ({ ...(await orig<typeof import('../../api')>()), buildPacket: vi.fn(), reconstructEdit: vi.fn(), packetDefinitions: vi.fn(), payloadClasses: vi.fn() }))
+vi.mock('../../api', async (orig) => ({ ...(await orig<typeof import('../../api')>()), buildPacket: vi.fn(), encodeOptions: vi.fn(), reconstructEdit: vi.fn(), packetDefinitions: vi.fn(), payloadClasses: vi.fn() }))
 
 const defs = (defsFixture as unknown as { definitions: Definitions }).definitions
 const udp = buildFixture.udp as unknown as BuildResult
@@ -276,5 +279,46 @@ describe('PacketEditor', () => {
     expect(pane('Raw')).toBeInTheDocument()
     expect(await screen.findAllByRole('button', { name: /^byte \d+: / })).toHaveLength(5)
     expect(screen.queryByRole('alert')).toBeNull()
+  })
+
+  it('opens an options capture as Ether / IP / ICMP and undoes an options edit in one step', async () => {
+    const opened = docOptionsFixture.routerAlert.doc as unknown as PacketDoc
+    vi.mocked(api.buildPacket).mockResolvedValue(buildOptionsFixture.routerAlert as unknown as BuildResult)
+    const onDocChange = vi.fn()
+    render(<Host onDocChange={onDocChange} initial={() => opened} />)
+    await ready()
+    expect(Array.from(list().querySelectorAll('.layer-title'), (e) => e.textContent?.replace(/^\W+/, ''))).toEqual(['Ether', 'IP', 'ICMP'])
+    await userEvent.click(pane('IP'))
+    await userEvent.click(await screen.findByRole('button', { name: 'Edit as hex' }))
+    const box = screen.getByRole('textbox', { name: 'Options as hex' })
+    await userEvent.clear(box)
+    await userEvent.type(box, '07 09 00{Enter}')
+    await waitFor(() => expect(onDocChange).toHaveBeenCalledTimes(1))
+    expect(onDocChange.mock.calls[0][0].packet[1].fields.find((f: { id: string }) => f.id === 'options').value).toEqual({ vtype: 'MACHINE', base64: 'BwkA' })
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Undo' })).toBeEnabled())
+    await userEvent.click(screen.getByRole('button', { name: 'Undo' }))   // the focused hex box is off while the tree lags, so the key would not reach the editor
+    await waitFor(() => expect(onDocChange).toHaveBeenLastCalledWith(opened))
+    expect(screen.getByRole('button', { name: 'Undo' })).toBeDisabled()   // one step took it all the way back
+  })
+
+  // The reset clears the built tree, so the options row unmounts and the unmount drop is what stops this reply; the epoch's own
+  // guard (nothing remounts) is tested in OptionsEditor.test.tsx.
+  it('drops an options reply that arrives after the packet was replaced', async () => {
+    let resolve: (v: { binary: string }) => void = () => undefined
+    vi.mocked(api.encodeOptions).mockReturnValue(new Promise((r) => { resolve = r }))
+    const onDocChange = vi.fn()
+    function Switching() {
+      const [d, setD] = useState(doc)
+      return <><button type="button" onClick={() => setD({ ...doc(), metadata: { caption: 'other' } })}>switch packet</button><PacketEditor doc={d} mode="standalone" onDocChange={onDocChange} /></>
+    }
+    render(<Switching />)
+    await ready()
+    await userEvent.click(pane('IP'))
+    await userEvent.selectOptions(await screen.findByRole('combobox', { name: 'Add option' }), 'NOP')
+    await userEvent.click(within(document.querySelector('.options-editor') as HTMLElement).getByRole('button', { name: 'Add' }))
+    expect(api.encodeOptions).toHaveBeenCalledTimes(1)
+    await userEvent.click(screen.getByRole('button', { name: 'switch packet' }))
+    await act(async () => { resolve(encodeFixture.routerAlert) })
+    expect(onDocChange).not.toHaveBeenCalled()
   })
 })

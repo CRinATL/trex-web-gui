@@ -1,9 +1,10 @@
 import { useId, useState, type KeyboardEvent, type MouseEvent } from 'react'
-import type { FeTemplateMeta, FieldDef, FieldValue } from '../../api'
+import type { FeTemplateMeta, FieldDef, FieldValue, OptionKinds } from '../../api'
 import type { MenuAction } from '../../portActions'
 import { ContextMenu } from '../ContextMenu'
 import { BitFlags } from './BitFlags'
 import { rangeText } from './hexModel'
+import { OptionsEditor } from './OptionsEditor'
 import { OptionsRow } from './OptionsRow'
 import { PayloadEditor } from './PayloadEditor'
 import type { CombinedField } from './packetModel'
@@ -65,10 +66,13 @@ export interface FieldRowProps {
   readOnly?: boolean
   selected?: boolean                      // its bytes are the marked ones in the hex view
   onSelectRange?: (range: [number, number]) => void   // the byte range is a button that marks those bytes
+  optionKinds?: OptionKinds               // the options editor's kinds
+  pending?: boolean                       // a build is in flight or waiting
+  epoch?: number                          // changes when the editor gets a different packet
 }
 
 // One field: its name, a control for its type, the byte range, and the user-set and error marks (each a glyph as well as a colour).
-export function FieldRow({ field, onCommit, onReset, onGenerate, onFeTemplate, feTemplates = [], readOnly = false, selected = false, onSelectRange }: FieldRowProps) {
+export function FieldRow({ field, onCommit, onReset, onGenerate, onFeTemplate, feTemplates = [], readOnly = false, selected = false, onSelectRange, optionKinds, pending = false, epoch = 0 }: FieldRowProps) {
   const { def } = field
   const locked = readOnly || field.readOnly
   const [draft, setDraft] = useState<{ text: string; base: string } | null>(null)   // the user's text, for as long as the shown value is the one it started from
@@ -78,6 +82,8 @@ export function FieldRow({ field, onCommit, onReset, onGenerate, onFeTemplate, f
   const [menu, setMenu] = useState<{ x: number; y: number } | null>(null)
   const listId = useId()
   const builtExpr = exprOf(field.docValue)   // the document's value: the build turns an expression into its result
+  const isMachine = typeof field.docValue === 'object' && field.docValue !== null && !Array.isArray(field.docValue) && field.docValue.vtype === 'MACHINE'
+  const editOptions = !locked && field.options !== null && (field.docValue === undefined || isMachine)   // an expression-valued options field keeps the read-only row
   const expr = asExpr || builtExpr !== null
   const base = builtExpr !== null && field.error === null ? builtExpr : field.shown
   const text = draft !== null && draft.base === base ? draft.text : base
@@ -126,7 +132,8 @@ export function FieldRow({ field, onCommit, onReset, onGenerate, onFeTemplate, f
       {payloadOpen && <PayloadEditor value={field.docValue} onSave={(v) => { setPayloadOpen(false); onCommit(v) }} onCancel={() => setPayloadOpen(false)} />}
     </>
   } else if (def.type === 'BITMASK' && def.bits) control = <BitFlags def={def} value={typeof field.value === 'number' ? field.value : 0} onCommit={onCommit} />
-  else if (def.type === 'IP_OPTIONS' || def.type === 'TCP_OPTIONS') control = <OptionsRow field={field} />
+  else if (editOptions) control = <OptionsEditor field={field} kinds={optionKinds} pending={pending} epoch={epoch} onCommit={onCommit} />
+  else if (def.type === 'IP_OPTIONS' || def.type === 'TCP_OPTIONS' || field.options !== null) control = <OptionsRow field={field} />
   else {
     const list = def.type === 'ENUM' && !expr ? listId : undefined
     control = <>

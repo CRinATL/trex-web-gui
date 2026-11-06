@@ -451,6 +451,14 @@ fieldset.plain legend { padding: 0; font-weight: 600; font-size: 1.1em; margin-b
 .field-row.error { color: var(--bad); }
 .field-row.ignored .field-name { text-decoration: line-through; }
 .field-name { overflow-wrap: anywhere; }
+.options-editor { display: flex; flex-direction: column; gap: .2rem; min-width: 0; }
+.options-editor .option-row, .options-editor .options-line { display: flex; flex-wrap: wrap; align-items: center; gap: .25rem .5rem; padding-left: 1.25rem; }
+.options-editor .option-name { font-family: monospace; min-width: 6rem; }
+.options-editor .option-field { display: inline-flex; align-items: center; gap: .25rem; }
+.options-editor .option-input { width: 8rem; }
+.options-editor .options-hex { flex: 1 1 14rem; width: auto; }
+.options-editor .option-padding { padding-left: 1.25rem; }
+.options-editor .field-error { grid-column: auto; margin: 0; }
 .field-input, .field-value, .field-range { font-family: monospace; }
 .field-input { width: 100%; box-sizing: border-box; color: inherit; }
 .field-row.error .field-input { border-color: var(--bad); }

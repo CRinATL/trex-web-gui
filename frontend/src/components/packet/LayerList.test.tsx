@@ -6,7 +6,7 @@ import type { CombinedField, CombinedLayer } from './packetModel'
 
 afterEach(cleanup)
 const fld = (id: string, shown: string): CombinedField => ({
-  id, def: { id, name: id.toUpperCase() }, value: shown, shown, userSet: false, ignored: false, readOnly: false, range: null, bits: null, error: null,
+  id, def: { id, name: id.toUpperCase() }, value: shown, shown, userSet: false, ignored: false, readOnly: false, range: null, bits: null, options: null, error: null,
 })
 const layer = (index: number, id: string, over: Partial<CombinedLayer> = {}): CombinedLayer =>
   ({ index, id, realId: id, offset: 0, validStructure: true, protocol: null, fields: [fld('a', `${id}-value`)], error: null, ...over })

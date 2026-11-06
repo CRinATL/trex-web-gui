@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import type { FeTemplateMeta, FieldValue } from '../../api'
+import type { FeTemplateMeta, FieldValue, OptionKinds } from '../../api'
 import type { MenuAction } from '../../portActions'
 import { ContextMenu } from '../ContextMenu'
 import { FieldRow } from './FieldRow'
@@ -20,13 +20,16 @@ export interface LayerListProps {
   feTemplates?: FeTemplateMeta[]
   selected?: Range | null                      // the marked bytes; a field whose range is exactly these shows as selected
   onSelectRange?: (range: Range) => void
+  optionKinds?: OptionKinds
+  pending?: boolean                            // a build is in flight or waiting: the options editor is off
+  epoch?: number                               // changes when the editor gets a different packet
 }
 
 // The title says how the bytes decode when that is not the layer itself (B2.2).
 const titleOf = (l: CombinedLayer) => (l.realId === null ? `${l.id} (not decoded)` : l.realId !== l.id ? `${l.id} as ${l.realId}` : l.id)
 
 // One collapsible pane per layer. Which panes are open is the caller's, so a rebuild never changes it.
-export function LayerList({ layers, expanded, onToggle, onMove, onDelete, readOnly = false, onCommit, onReset, onGenerate, onFeTemplate, feTemplates, selected = null, onSelectRange }: LayerListProps) {
+export function LayerList({ layers, expanded, onToggle, onMove, onDelete, readOnly = false, onCommit, onReset, onGenerate, onFeTemplate, feTemplates, selected = null, onSelectRange, optionKinds, pending = false, epoch = 0 }: LayerListProps) {
   const [menu, setMenu] = useState<{ index: number; x: number; y: number } | null>(null)
   const actionsFor = (i: number): MenuAction[] => [
     { id: 'up', label: 'Move up', enabled: i > 1, run: async () => onMove(i, -1) },
@@ -58,7 +61,7 @@ export function LayerList({ layers, expanded, onToggle, onMove, onDelete, readOn
               <div className="layer-body">
                 {l.error !== null && <p className="field-error" role="alert"><span className="mark-error" aria-hidden="true">!</span> {l.error}</p>}
                 {l.fields.map((f) => (
-                  <FieldRow key={f.id} field={f} readOnly={readOnly} feTemplates={feTemplates} onSelectRange={onSelectRange}
+                  <FieldRow key={f.id} field={f} readOnly={readOnly} feTemplates={feTemplates} onSelectRange={onSelectRange} optionKinds={optionKinds} pending={pending} epoch={epoch}
                     selected={selected !== null && f.range !== null && f.range[0] === selected[0] && f.range[1] === selected[1]}
                     onCommit={(v) => onCommit?.(i, f.id, v)} onReset={() => onReset?.(i, f.id)}
                     onGenerate={onGenerate ? () => onGenerate(i, f.id) : undefined}

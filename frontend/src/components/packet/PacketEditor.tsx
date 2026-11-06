@@ -87,6 +87,7 @@ function Editable({ doc, onDocChange, mode, extraTabs = [], onOpen, onSave }: Om
   const [tab, setTab] = useState('packet')
   const [active, setActive] = useState<number | null>(null)   // the layer opened last: the one Ctrl+D deletes
   const [marked, setMarked] = useState<Range | null>(null)
+  const [epoch, setEpoch] = useState(0)   // bumped when a different document replaces the editor's: nothing remounts then, so a reply for the old packet is told apart by it
   const [status, setStatus] = useState<{ kind: 'status' | 'error'; text: string } | null>(null)
   const current = useRef(ed.doc)
   useEffect(() => { current.current = ed.doc }, [ed.doc])
@@ -98,7 +99,7 @@ function Editable({ doc, onDocChange, mode, extraTabs = [], onOpen, onSave }: Om
   useEffect(() => {
     if (doc === prop.current) return
     prop.current = doc
-    if (doc !== seen.current) { seen.current = doc; reset(doc) }   // not the echo of an edit
+    if (doc !== seen.current) { seen.current = doc; reset(doc); setEpoch((e) => e + 1) }   // not the echo of an edit
   }, [doc, reset])
   useEffect(() => { if (ed.doc !== seen.current) { seen.current = ed.doc; onDocChange(ed.doc) } }, [ed.doc, onDocChange])
 
@@ -165,7 +166,8 @@ function Editable({ doc, onDocChange, mode, extraTabs = [], onOpen, onSave }: Om
         onCommit={(l, f, v: FieldValue) => ed.apply((d) => setField(d, l, f, v), `set ${f}`)}
         onReset={(l, f) => ed.apply((d) => resetField(d, l, f), `reset ${f}`)}
         onGenerate={(l, f) => ed.apply((d) => setField(d, l, f, { vtype: 'RANDOM' }), `generate ${f}`)}
-        feTemplates={defs.feTemplates} onFeTemplate={feTemplate} selected={marked} onSelectRange={setMarked} />}
+        feTemplates={defs.feTemplates} onFeTemplate={feTemplate} selected={marked} onSelectRange={setMarked}
+        optionKinds={defs.optionKinds} pending={ed.pending} epoch={epoch} />}
       {defs && <AppendLayer doc={ed.doc} defs={defs} onAppend={append} />}
       {defs && bytes !== null && <HexView bytes={bytes} selected={marked} onSelectByte={selectByte} onEditByte={(i, v) => void editByte(i, v)} />}
       {status && <p role={status.kind === 'error' ? 'alert' : 'status'} className={status.kind === 'error' ? 'field-error' : 'muted'}>{status.text}</p>}
