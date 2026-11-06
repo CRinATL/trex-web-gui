@@ -323,7 +323,9 @@ def writable(c: Any, pid: int) -> str | None:
 
 def probe_writes(c: Any, pid: int, try_link: bool) -> dict[str, Any]:
     """The `writes` entry of port `pid`: refused when `writable` says so; otherwise acquire, each attribute
-    toggled and put back, service mode on and off, a 2 s capture of at most 10 packets, release."""
+    toggled and put back (the LED, whose state the server does not report, is left off), service mode on for
+    a 2 s capture of at most 10 packets and then back as it was (left alone when it is filtered: its mask
+    cannot be read back), release."""
     why = writable(c, pid)
     if why is not None:
         return {"skipped": why}
@@ -331,8 +333,11 @@ def probe_writes(c: Any, pid: int, try_link: bool) -> dict[str, Any]:
     if not out["acquire"]["ok"]:
         return out
     try:
-        st = rpc(c, "get_port_status", {"port_id": pid})["attr"]
+        status = rpc(c, "get_port_status", {"port_id": pid})
+        st = status["attr"]
         before = {
+            "service": bool(status.get("service")),
+            "service_filtered": bool(status.get("service_filtered")),
             "promiscuous": st["promiscuous"]["enabled"],
             "multicast": st["multicast"]["enabled"],
             "link_up": st["link"]["up"],
@@ -358,11 +363,17 @@ def probe_writes(c: Any, pid: int, try_link: bool) -> dict[str, Any]:
             attrs["link_down"] = step(lambda: c.set_port_attr(ports=[pid], link_up=False))
             attrs["link_restore"] = step(lambda: c.set_port_attr(ports=[pid], link_up=before["link_up"]))
         out["attributes"] = attrs
-        out["service_on"] = step(lambda: c.set_service_mode(ports=[pid], enabled=True))
-        out["capture"] = step(lambda: _capture(c, pid))
-        out["service_off"] = step(lambda: c.set_service_mode(ports=[pid], enabled=False))
-        after = rpc(c, "get_port_status", {"port_id": pid})["attr"]
+        if before["service_filtered"]:
+            out["service_on"] = {"ok": False, "error": "filtered service mode is left alone"}
+        else:
+            out["service_on"] = step(lambda: c.set_service_mode(ports=[pid], enabled=True))
+            out["capture"] = step(lambda: _capture(c, pid))
+            out["service_restore"] = step(lambda: c.set_service_mode(ports=[pid], enabled=before["service"]))
+        status = rpc(c, "get_port_status", {"port_id": pid})
+        after = status["attr"]
         out["attributes_after"] = {
+            "service": bool(status.get("service")),
+            "service_filtered": bool(status.get("service_filtered")),
             "promiscuous": after["promiscuous"]["enabled"],
             "multicast": after["multicast"]["enabled"],
             "link_up": after["link"]["up"],
@@ -483,6 +494,14 @@ def build_parser() -> argparse.ArgumentParser:
     return p
 
 
+def _login() -> str | None:
+    """The login name, or None where the host has none (getpass raises without one)."""
+    try:
+        return getpass.getuser()
+    except (OSError, KeyError):
+        return None
+
+
 def _ports(text: str) -> list[int]:
     """`0,2` as [0, 2]; an empty text as []."""
     return [int(x) for x in text.split(",") if x.strip()]
@@ -522,7 +541,7 @@ def main(argv: list[str] | None = None) -> int:
         ("host", socket.gethostname()),
         ("host", socket.getfqdn()),
         ("host", info.get("hostname")),
-        ("user", getpass.getuser()),
+        ("user", _login()),
         ("path", str(Path.home())),
     ):
         s.add(kind, name)

@@ -200,10 +200,7 @@ class Engine:
                     raise
                 continue
             if _reads_back(model, read, k):
-                field = read[i].get_field(f["id"])
-                value = read[i].getfieldval(f["id"])
-                fixes.append({"layer": i, "field": f["id"],
-                              "value": str(field.i2repr(read[i], value) if field is not None else value)})
+                fixes.append({"layer": i, "field": f["id"], "value": _field_text(read[i], f["id"])})
         return {"layer": k, "selectors": selectors, "fixes": fixes, "complete": True}
 
     def tree(self, args: dict[str, Any]) -> dict[str, Any]:
@@ -734,6 +731,19 @@ def _selectors(read: list[Any], k: int) -> list[dict[str, Any]]:
             continue
         out.extend(r for r in rows if r not in out)
     return out
+
+
+def _field_text(layer: Any, field_id: str) -> str:
+    """Field `field_id` of the dissected `layer` as Scapy shows it (`i2repr`), or `?` when Scapy cannot: the
+    structure report is a hint, so a field it cannot show never fails the build that carries it."""
+    try:
+        field = layer.get_field(field_id)
+        value = layer.getfieldval(field_id)
+        return str(field.i2repr(layer, value) if field is not None else value)
+    except Exception as e:
+        if _caused_by_memory(e):
+            raise
+        return "?"
 
 
 def _reads_back(model: list[Any], read: list[Any], k: int) -> bool:

@@ -502,10 +502,11 @@ curl -fLO https://raw.githubusercontent.com/CRinATL/trex-web-gui/main/scripts/tr
 ```
 
 By default it only reads: it acquires no port and changes nothing. `--write 2,3` also tries promiscuous, multicast,
-LED, flow control, service mode and a short capture on those ports, puts each back and releases them; it touches
-only a port that is idle and owned by nobody else (release it in the GUI first). `--traffic 0:2` sends three bursts
-of 1000 packets from port 0 and counts them on port 2. `--try-link` adds a link down and up to `--write`; on a
-physical port that takes its virtual functions down too. `--help` lists the rest.
+LED, flow control, service mode and a short capture on those ports, puts each back (the LED is left off, as its
+state cannot be read) and releases them; it touches only a port that is idle and owned by nobody else (release it in
+the GUI first). `--traffic 0:2` sends three bursts of 1000 packets from port 0 and counts them on port 2.
+`--try-link` adds a link down and up to `--write`; on a physical port that takes its virtual functions down too.
+`--help` lists the rest.
 
 MAC, IP and PCI addresses, host, user and interface names are replaced by tokens (`mac-1`, `host-1`); read the file
 before you share it, as the scrubber replaces only what it recognises.
