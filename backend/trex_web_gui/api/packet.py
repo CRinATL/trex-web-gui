@@ -102,7 +102,7 @@ class OptionRowBody(_Body):
 
     name: str | None = Field(None, max_length=100)
     number: int = Field(ge=0, le=255)
-    fields: dict[str, Any]
+    fields: dict[str, Any] = Field(max_length=16)      # no option kind has more than 4 fields
     raw: str | None = Field(None, max_length=100)
     edited: StrictBool = False
 

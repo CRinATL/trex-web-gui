@@ -756,9 +756,12 @@ def test_options_route_refusals(packet_client: TestClient) -> None:
     {"padding": 41}, {"length": -1}, {"extra": 1}, {"layer": "IPv6"},
     {"rows": [{"name": "NOP", "number": 1, "fields": {}, "extra": 1}]},
     {"rows": [{"name": "NOP", "number": 256, "fields": {}}]},
-    {"rows": [{"name": "NOP", "number": 1, "fields": {}, "edited": 1}]}],
+    {"rows": [{"name": "NOP", "number": 1, "fields": {}, "edited": 1}]},
+    {"rows": [{"name": "NOP", "number": 1, "fields": {f"k{i}": 0 for i in range(17)}}]},
+    {"rows": [{"name": "N" * 101, "number": 1, "fields": {}}]},
+    {"rows": [{"name": "NOP", "number": 1, "fields": {}, "raw": "A" * 101}]}],
     ids=["41 rows", "padding 41", "length -1", "unknown key", "layer IPv6", "unknown row key", "number 256",
-         "edited not a bool"])
+         "edited not a bool", "17 fields", "name 101 chars", "raw 101 chars"])
 def test_options_route_body_bounds(packet_client: TestClient, body: dict[str, Any]) -> None:
     base = {"layer": "IP", "rows": [], "padding": 0, "length": 0}
     r = packet_client.post(f"{URL}/options", json={**base, **body})
@@ -768,3 +771,12 @@ def test_options_route_body_bounds(packet_client: TestClient, body: dict[str, An
 def test_definitions_route_carries_option_kinds(packet_client: TestClient) -> None:
     r = packet_client.get(f"{URL}/definitions")
     assert "Router_Alert" in [k["name"] for k in r.json()["optionKinds"]["IP"]]
+
+
+def test_options_route_encodes_an_other_row(packet_client: TestClient) -> None:
+    """A row with no name (an option the kind table lacks) and no `raw` is built from its hex `value`."""
+    body = {"layer": "IP", "padding": 0, "length": 4,
+            "rows": [{"name": None, "number": 25, "fields": {"value": "0102"}}]}
+    r = packet_client.post(f"{URL}/options", json=body)
+    assert r.status_code == 200, r.text
+    assert base64.b64decode(r.json()["binary"]) == bytes.fromhex("19040102")
