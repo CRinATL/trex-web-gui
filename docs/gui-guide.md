@@ -874,8 +874,8 @@ adds `Stopping leaves service mode on; Turn service mode off appears here once s
 
 The note: `Some NICs consume LLDP in firmware (Intel X710/XL710 under i40e is the known case), so a neighbour that
 sends LLDP may never appear here. Unverified on hardware: the test guest has no LLDP speaker.` Then `Start the
-LLDP monitor to see neighbours.`, `No LLDP neighbours seen by the current monitor.`, or a table **Port**,
-**VLAN**, **System name** (the system description in its tooltip), **Port ID**, **Port description**, **Chassis
+LLDP monitor to see neighbours.`, `No LLDP neighbours seen by the current monitor.`, or a table **Port** (the
+port's number and its name, as in the port tree: a saved name, else its interface name in grey), **VLAN**, **System name** (the system description in its tooltip), **Port ID**, **Port description**, **Chassis
 ID**, **Capabilities**, **Management** (one address per line), **TTL (s)**, polled every 2 s while the tab is
 shown ([50](gui-inventory/screens/50-capture-lldp.png)). An entry drops when its TTL runs out.
 

@@ -3,6 +3,7 @@ import { getLldp, monitorStart, monitorStop, type LldpNeighbour, type LldpReply 
 import { captureStore } from '../../captureStore'
 import { captureBlock, serviceOffPorts, turnServiceOff, turnServiceOn } from '../../captureGate'
 import { errText } from '../../portGate'
+import { usePortDisplayLabelOf } from '../../portLabels'
 import { useAppState } from '../../state'
 import { PortPicker } from './PortPicker'
 import { RunButton } from '../RunButton'
@@ -42,7 +43,7 @@ const COMPARE: Record<SortKey, (a: LldpNeighbour, b: LldpNeighbour) => number> =
 }
 const DEFAULT_ORDER: SortKey[] = ['port', 'vlan', 'name', 'port_id']
 const COLUMNS: { key: SortKey, label: string, num?: boolean }[] = [
-  { key: 'port', label: 'Port', num: true }, { key: 'vlan', label: 'VLAN', num: true }, { key: 'name', label: 'System name' },
+  { key: 'port', label: 'Port' }, { key: 'vlan', label: 'VLAN', num: true }, { key: 'name', label: 'System name' },
   { key: 'port_id', label: 'Port ID' }, { key: 'port_desc', label: 'Port description' }, { key: 'chassis', label: 'Chassis ID' },
   { key: 'caps', label: 'Capabilities' }, { key: 'mgmt', label: 'Management' }, { key: 'ttl', label: 'TTL (s)', num: true },
 ]
@@ -69,8 +70,16 @@ function IdCell({ what, value, subtype }: { what: string, value: string, subtype
 // The neighbours the current monitor has seen, polled from the backend; the backend drops an entry once its TTL runs out.
 // The page stays mounted while hidden (App.tsx), so it polls only while it matters: connected, a monitor running (the table
 // belongs to it) and the page shown (`active`).
+// A neighbour's Rx port: its number, then its name when it has one (an inferred interface name in grey).
+function PortCell({ id, label }: { id: number; label: { name: string; inferred?: boolean } | null }) {
+  if (!label?.name) return <td>{id}</td>
+  return <td>{id} — <span className={label.inferred ? 'muted' : undefined}>{label.name}</span></td>
+}
+
 export function LldpNeighbours({ active = true }: { active?: boolean }) {
   const { capture, ports, session } = useAppState()
+  // The Port cell names the port as the port tree and tables do: a saved name, else its confirmed interface name (grey).
+  const labelOf = usePortDisplayLabelOf(ports)
   const connected = session.state === 'connected'
   const monitorActive = capture.monitor !== null && !capture.monitor.gone
   const polling = connected && monitorActive && active
@@ -176,7 +185,7 @@ export function LldpNeighbours({ active = true }: { active?: boolean }) {
             <tbody>
               {sorted(neighbours, sort).map((n) => (
                 <tr key={`${n.port}/${n.vlan ?? ''}/${n.chassis_id}/${n.port_id}`}>
-                  <td className="num">{n.port}</td>
+                  <PortCell id={n.port} label={(() => { const p = ports.find((x) => x.id === n.port); return p ? labelOf(p) : null })()} />
                   <td className="num">{n.vlan ?? ''}</td>
                   <td className="lldp-name"><span title={n.system_description ?? undefined}>{n.system_name ?? ''}</span></td>
                   <IdCell what="Port ID" value={n.port_id} subtype={n.port_id_subtype} />
