@@ -63,6 +63,9 @@ RATE_MIN, RATE_MAX = 1, 100000      # a write's max_rate, in clients per second
 
 _API_MISMATCH = re.compile(r"Server API (\w+):\((\d+):(\d+)\) does not match the client API")
 _NO_PLUGIN = "no valid plugin"      # the server's text for a plugin not loaded in that scope (ruling R11)
+# transport_client_cnt's text for a client with the transport plugin loaded but no transport context
+# (tests/fixtures/p7/counters.json): no counters there, like a plugin not loaded, not a failed read.
+_NO_TRANSPORT_CONTEXT = "does not have a transport context"
 RESTARTED = "The EMU server restarted (its API handler changed); connect again."
 
 
@@ -126,8 +129,9 @@ class Listing[T]:
 def translate_emu(exc: BaseException, method: str) -> TrexApiError:
     """The typed error for `exc` by the EMU server's own wording: a handshake mismatch is
     UnsupportedServerVersion naming the server's API, -32602 'Method with not a valid API' is ServerRestarted,
-    -32601 or a plugin that is not loaded is EmuUnsupported(method). A TrexApiError that matches none of
-    those, with its code if it has one, is returned unchanged; anything else is ServerUnreachable."""
+    -32601, a plugin that is not loaded, or a client without a transport context is EmuUnsupported(method). A
+    TrexApiError that matches none of those, with its code if it has one, is returned unchanged; anything else
+    is ServerUnreachable."""
     if not isinstance(exc, TrexApiError):
         return ServerUnreachable(f"Cannot reach the EMU server: {exc}")
     if not isinstance(exc, RawRpcError):
@@ -140,7 +144,7 @@ def translate_emu(exc: BaseException, method: str) -> TrexApiError:
             f"{EMU_API[0]} API {EMU_API[1]}.{EMU_API[2]}.")
     if exc.code == -32602 and "not a valid API" in text:
         return ServerRestarted(RESTARTED)
-    if exc.code == -32601 or (exc.code == -32600 and _NO_PLUGIN in text):
+    if exc.code == -32601 or (exc.code == -32600 and (_NO_PLUGIN in text or _NO_TRANSPORT_CONTEXT in text)):
         return EmuUnsupported(method)
     return exc
 
