@@ -33,12 +33,14 @@ export function AppShell() {
   const { pathname } = useLocation()
   // The page the user left may have held focus (a link or button that hid its own page): <main> takes it.
   // Not on first render, and not from an open dialog.
+  // Keyed on the top-level page: a switch between the Editor's tabs (/editor, /editor/packet) keeps focus on the tab.
+  const page = pathname.split('/')[1]
   const firstPath = useRef(true)
   useEffect(() => {
     if (firstPath.current) { firstPath.current = false; return }
     if (document.querySelector('[role="dialog"]')) return
     mainRef.current?.focus()
-  }, [pathname])
+  }, [page])
   const onControl = useMatch('/control') !== null
   const onCapture = useMatch('/capture') !== null
   const onEditor = useMatch('/editor/*') !== null

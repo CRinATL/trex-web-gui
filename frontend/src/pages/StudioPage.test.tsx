@@ -186,8 +186,8 @@ describe('StudioPage', () => {
 
   it('a studioSelect navigation made while the Editor is hidden asks when it is next shown', async () => {
     let go: (slug: string) => void = () => undefined
-    function Nav() { const navigate = useNavigate(); go = (slug) => navigate('/studio', { state: { studioSelect: slug } }); return null }
-    const ui = (a: boolean) => <MemoryRouter initialEntries={['/studio']}><Nav /><StudioPage active={a} /></MemoryRouter>
+    function Nav() { const navigate = useNavigate(); go = (slug) => navigate('/editor', { state: { studioSelect: slug } }); return null }
+    const ui = (a: boolean) => <MemoryRouter initialEntries={['/editor']}><Nav /><StudioPage active={a} /></MemoryRouter>
     const { user, view } = await dirtyProfile(ui)
     view.rerender(ui(false))
     act(() => go('other'))
