@@ -233,7 +233,12 @@ export interface SpoolFile {
 }
 export type SpoolListing = { dir: string; files: SpoolFile[]; total: number }
 // `ignored`: the field is not in the packet as built (a conditional field that is absent); the service sets it only when true.
-export interface PacketField { id: string; value: string | number | { vtype: string; expr?: string; base64?: string }; hvalue: string | number; offset: number; length: number; ignored?: boolean }
+// One IP or TCP option as the codec decodes it: `name` is null for an "other" row; `raw` (base64) is absent on a row that was added, `edited` defaults to false.
+export interface OptionRow { name: string | null; number: number; fields: Record<string, unknown>; raw?: string; edited?: boolean }
+// An `options` field's decoded form; `raw` (base64 of the bytes) comes only with `problem`, when `rows` is empty.
+export interface DecodedOptions { layer: 'IP' | 'TCP'; rows: OptionRow[]; padding: number; length: number; padded: number; problem: string | null; raw?: string }
+// `options` is on every IP- and TCP-family `options` field.
+export interface PacketField { id: string; value: string | number | { vtype: string; expr?: string; base64?: string }; hvalue: string | number; offset: number; length: number; ignored?: boolean; options?: DecodedOptions }
 export interface PacketLayer { id: string; offset: number; real_id: string | null; valid_structure: boolean; fields: PacketField[] }
 export type PacketTree = { binary: string; data: PacketLayer[] }
 export interface CaptureBody { tx: number[]; rx: number[]; bpf: string; limit: number }
@@ -419,8 +424,16 @@ export interface FeParamMeta {
 }
 export interface FeTemplateMeta { id: string; name: string; instructionIds: string[] }
 // `layerIds` lists every Packet subclass (a layer id outside it is refused before the worker); `protocols` only the ones with a definition.
+// One field of an option kind: `kind` picks which of the other keys apply (int: width, min, max; enum: width, values, min, max;
+// address; addresses: max_count; ints: widths, variable; hex: size, a fixed byte count when present).
+export interface OptionSpec {
+  name: string; kind: 'int' | 'enum' | 'address' | 'addresses' | 'ints' | 'hex'; default: unknown
+  width?: number; min?: number; max?: number; values?: Record<string, number>; max_count?: number; widths?: number[]; variable?: boolean; size?: number
+}
+export interface OptionKind { name: string; number: number; fields: OptionSpec[] }
+export type OptionKinds = Record<'IP' | 'TCP', OptionKind[]>
 export interface Definitions {
-  etag: string; layerIds: string[]; protocols: ProtocolDef[]
+  etag: string; layerIds: string[]; protocols: ProtocolDef[]; optionKinds: OptionKinds
   feInstructions: FeInstructionMeta[]; feInstructionParameters: FeParamMeta[]; feParameters: FeParamMeta[]; feTemplates: FeTemplateMeta[]
 }
 export interface FieldEngineResult { instructions: Record<string, unknown>; error: string | null }
@@ -443,6 +456,9 @@ const packetPath = (rest: string) => `/api/studio/packet${rest}`
 const templatePath = (kind: 'server' | 'user', name: string) => packetPath(`/templates/${kind}/${name.split('/').map(encodeURIComponent).join('/')}`)
 export const packetDefinitions = () => call<Definitions>('GET', packetPath('/definitions'))
 export const buildPacket = (doc: PacketDoc) => call<BuildResult>('POST', packetPath('/build'), { doc })
+// The option bytes (base64) for `rows`; `length` is the rows' byte length as decoded, so an unchanged length keeps the padding.
+export const encodeOptions = (layer: 'IP' | 'TCP', rows: OptionRow[], padding: number, length: number) =>
+  call<{ binary: string }>('POST', packetPath('/options'), { layer, rows, padding, length })
 export const payloadClasses = (doc: PacketDoc) => call<{ classes: string[] }>('POST', packetPath('/payload-classes'), { doc })
 export const paramValues = (doc: PacketDoc, paramId: string) => call<{ map: Record<string, string> }>('POST', packetPath('/param-values'), { doc, param_id: paramId })
 export const docFromBinary = (binary: string, vm?: StreamJson['vm']) => call<DocFromBinary>('POST', packetPath('/doc-from-binary'), vm ? { binary, vm } : { binary })

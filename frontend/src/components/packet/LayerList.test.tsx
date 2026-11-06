@@ -1,12 +1,15 @@
 import { cleanup, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it, vi } from 'vitest'
+import type { BuildResult, Definitions, FieldValue, PacketDoc, PacketField } from '../../api'
+import buildFixture from '../../__fixtures__/packet/buildIpOptions.json'
+import defsFixture from '../../__fixtures__/packet/definitions.json'
 import { LayerList } from './LayerList'
 import type { CombinedField, CombinedLayer } from './packetModel'
 
 afterEach(cleanup)
 const fld = (id: string, shown: string): CombinedField => ({
-  id, def: { id, name: id.toUpperCase() }, value: shown, shown, userSet: false, ignored: false, readOnly: false, range: null, bits: null, error: null,
+  id, def: { id, name: id.toUpperCase() }, value: shown, shown, userSet: false, ignored: false, readOnly: false, range: null, bits: null, options: null, error: null,
 })
 const layer = (index: number, id: string, over: Partial<CombinedLayer> = {}): CombinedLayer =>
   ({ index, id, realId: id, offset: 0, validStructure: true, protocol: null, fields: [fld('a', `${id}-value`)], error: null, ...over })
@@ -85,5 +88,21 @@ describe('LayerList', () => {
     rerender(<LayerList layers={[layer(0, 'Ether'), { ...layer(1, 'UDP'), index: 1 }]} expanded={new Set([0, 1])} {...p} />)
     expect(screen.getByDisplayValue('typed')).toBeInTheDocument()   // not lost, and not shown on another layer
     expect(screen.getByDisplayValue('Ether-value')).toBeInTheDocument()
+  })
+
+  it('passes the kinds and the pending flag to the options editor', () => {
+    const f = (buildFixture.routerAlert as unknown as BuildResult).data[1].fields.find((x) => x.id === 'options') as PacketField
+    const opts: CombinedField = {
+      id: 'options', def: { id: 'options', name: 'Options', type: 'IP_OPTIONS' }, value: f.value, docValue: f.value as FieldValue, shown: String(f.hvalue),
+      userSet: true, ignored: false, readOnly: false, range: null, bits: null, options: f.options ?? null, error: null,
+    }
+    const kinds = (defsFixture as unknown as { definitions: Definitions }).definitions.optionKinds
+    const ip = layer(1, 'IP', { fields: [opts] })
+    const doc: PacketDoc = { fileType: 'trex-packet', version: '1', metadata: { caption: '' }, packet: [], fePrarameters: {}, feInstructions: [] }
+    const view = render(<LayerList layers={[ip]} expanded={new Set([0])} optionKinds={kinds} doc={doc} {...props()} />)
+    expect(screen.getByRole('combobox', { name: 'Add option' })).toBeEnabled()
+    expect(screen.getByRole('option', { name: 'RR' })).toBeInTheDocument()   // the kinds arrived
+    view.rerender(<LayerList layers={[ip]} expanded={new Set([0])} optionKinds={kinds} doc={doc} pending {...props()} />)
+    expect(screen.getByRole('combobox', { name: 'Add option' })).toBeDisabled()
   })
 })

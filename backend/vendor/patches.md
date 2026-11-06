@@ -1,6 +1,6 @@
 # Vendor patches
 
-trex-web-gui carries its own copy of the TRex Python client in `backend/trex_web_gui/_vendor/`, with fourteen patches
+trex-web-gui carries its own copy of the TRex Python client in `backend/trex_web_gui/_vendor/`, with fifteen patches
 applied (`backend/vendor/patches/`). This file records what each patch fixes, who wrote it, how the copy is
 built and checked, and where each fix stands upstream. Researched 2026-10-18.
 
@@ -38,14 +38,14 @@ Rules:
      files itself (`backend/scripts/vendor_trex.py`).
   4. Add a `test_NN` that fails when the patch is skipped.
 
-  Patch 14 is the latest example.
+  Patch 15 is the latest example.
 - **Re-pinning to a newer TRex:** run `make vendor` against the new checkout. A patch that no longer applies,
   or whose bug upstream has fixed, fails its test; drop or rewrite it.
 
 ## Authorship
 
-All fourteen patches were written by Claude (Claude Code agents running the trex-web-gui plans: implementer
-subagents for 01-13, the session running the plan for 14). Each was reviewed by a separate reviewer agent, then
+All fifteen patches were written by Claude (Claude Code agents running the trex-web-gui plans: implementer
+subagents for 01-13 and 15, the session running the plan for 14). Each was reviewed by a separate reviewer agent, then
 committed under Charles Menser's git identity with a `Co-Authored-By: Claude Opus 5.5` trailer. None came from
 upstream, and none has been submitted there.
 
@@ -59,6 +59,7 @@ upstream, and none has been submitted there.
 | 12 | branch `p4b-packet-editor` | 2026-10-25 | P4b final-gate fix (packet editor) |
 | 13 | `main` | 2026-10-28 | P12 Task 2 (public split) |
 | 14 | branch `ihl-guard` | 2026-11-02 | Scapy fork patches Task 3 (option c of the Scapy study) |
+| 15 | branch `options-editing` | 2026-11-05 | Options editing Task 2 (packet worker) |
 
 ## The patches
 
@@ -81,6 +82,7 @@ Paths are relative to `trex/` in the vendored copy. Upstream, that directory is
 | 12 `flow-var-init-value` | `stl/trex_stl_packet_builder_scapy.py:1827-1835` | `STLPktBuilder.from_json` rebuilds each `flow_var` without its `init_value`, although `to_json` writes it. | Every JSON profile path (`STLProfile.load_json`, `from_json`, the packet editor's Copy as Python) drops an `init_value` that differs from the default (`min_value`, or `max_value` for `dec`): TRex counts from the default, and nothing says so. With the patch, a hand-written JSON profile whose `init_value` lies outside [`min_value`, `max_value`] fails to load, as TRex already does for a `.py` profile (P4b ledger :231). | No: not yet reported |
 | 13 `py314-finally-flow` | `scapy_server/scapy_zmq_server.py:76-100,173-174`, `common/services/trex_service_ap.py:229-241` | A `return` or `break` inside `finally` (three sites), which Python 3.14 compiles with a SyntaxWarning (PEP 765). | On 3.14 each import of these modules prints the warnings; trex-web-gui never imports either module (the packet worker imports `scapy_service`), so only a compile of the tree shows them. With the patch the flow is the same for every exception the handlers catch: `error_handler` still returns its response when a handler itself raises, the server loop still ends after `shut_down`, and the AP cleanup still runs only with a capture id. What used to be swallowed now propagates: a `BaseException` such as `KeyboardInterrupt`, an exception from the reply's send during `shut_down`, and one raised inside the AP loop's own `except` handler while it has no capture id. | No: not yet reported |
 | 14 `ip-options-ihl-guard` | `external_libs/scapy-2.4.3/scapy/layers/inet.py:475` | The IP options field's `length_from=lambda p:p.ihl * 4 - 20` is negative for an ihl below 5. | A negative length reads all but the last 20 bytes of the rest of the frame as options: a 9 238-byte zero-filled IPv4 frame (ihl 0) becomes 9 184 options, and its capture layer tree took 2.5 s and 272 MiB (0.002 s and 47 MiB with the patch). A header with ihl 5 to 15 dissects as before. | No: current Scapy caps list fields with `conf.max_list_count` |
+| 15 `tcp-options-bytes` | `external_libs/scapy-2.4.3/scapy/layers/inet.py:369` | `TCPOptionsField.i2m` walks its value as (name, value) pairs. | Upstream TRex's unpatched `i2m` fails on bytes, so a document with MACHINE TCP options does not build in the legacy scapy server. With the patch a `bytes` value comes back zero-padded to a multiple of 4 and `TCP.post_build` takes `dataofs` from that length; a list value is built as before. | No: not reported |
 
 PR #1220 (`get_template` returns bytes): handled in the caller, not patched. The packet editor decodes the
 bytes where it calls `get_template` (spec §7 Deviation 1: no patch for it).

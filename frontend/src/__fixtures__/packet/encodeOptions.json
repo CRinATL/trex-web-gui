@@ -1,0 +1,13 @@
+{
+  "badOption": {
+    "error": "bad_option",
+    "message": "'Bogus' is not a known IP option"
+  },
+  "routerAlert": {
+    "binary": "AZQEAAAAAAA="
+  },
+  "tooLong": {
+    "error": "options_too_long",
+    "message": "options are 41 bytes; the header holds 40 at most"
+  }
+}

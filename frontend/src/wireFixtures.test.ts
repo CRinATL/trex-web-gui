@@ -2,7 +2,7 @@
 // those to string) must satisfy the api.ts types. tsc -b (npm run build)
 // type-checks this file, so a type that drifts from the recorded wire shape fails the build.
 import { describe, expect, it } from 'vitest'
-import type { BuildResult, EmuClientsPage, EmuCounters, EmuMsg, EmuNamespaces, Decompiled, Definitions, DiffReply, FeInstruction, FeParamMeta, FieldDef, LibraryList, PacketTree, SimReport, Source, SpoolListing, StreamMode, StreamPage, TemplateList } from './api'
+import type { BuildResult, EmuClientsPage, EmuCounters, EmuMsg, EmuNamespaces, Decompiled, Definitions, DiffReply, FeInstruction, FeParamMeta, FieldDef, LibraryList, OptionKind, OptionSpec, PacketTree, SimReport, Source, SpoolListing, StreamMode, StreamPage, TemplateList } from './api'
 import captureFiles from './__fixtures__/captureFiles.json'
 import emuClients from './__fixtures__/emuClients.json'
 import emuCounters from './__fixtures__/emuCounters.json'
@@ -50,13 +50,18 @@ describe('wire fixtures against api.ts types', () => {
       o && (Object.fromEntries(Object.entries(o).filter(([, v]) => v !== undefined)) as Record<string, T>)
     const d = packetDefinitions.definitions
     const meta = (m: (typeof d.feInstructionParameters)[number]): FeParamMeta => ({ ...m, type: m.type as FeParamMeta['type'], dict: rec<string | number>(m.dict) })
+    const kindOf = (k: (typeof d.optionKinds.IP)[number] | (typeof d.optionKinds.TCP)[number]): OptionKind => ({ ...k, fields: k.fields.map((f): OptionSpec => ({ ...f, kind: f.kind as OptionSpec['kind'] })) })
     const defs = {
       ...d,
       protocols: d.protocols.map((p) => ({ ...p, fields: p.fields.map((f): FieldDef => ({ ...f, type: f.type as FieldDef['type'], values_dict: rec<number>(f.values_dict) })) })),
       feInstructionParameters: d.feInstructionParameters.map(meta),
       feParameters: d.feParameters.map(meta),
+      optionKinds: { IP: d.optionKinds.IP.map(kindOf), TCP: d.optionKinds.TCP.map(kindOf) },
     } satisfies Definitions
-    const udp = packetBuildUdp.udp satisfies BuildResult
+    const udp = {
+      ...packetBuildUdp.udp,
+      data: packetBuildUdp.udp.data.map((l) => ({ ...l, fields: l.fields.map((f) => ('options' in f && f.options ? { ...f, options: { ...f.options, layer: f.options.layer as 'IP' | 'TCP' } } : f)) })),
+    } satisfies BuildResult
     const failed = packetBuildError.expression satisfies BuildResult
     const list = packetTemplates.listing satisfies TemplateList
     const dec = {

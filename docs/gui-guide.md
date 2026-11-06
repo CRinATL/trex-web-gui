@@ -1128,7 +1128,20 @@ as ARP's `hwsrc` by its nominal size; a field that adds no bytes, such as a skip
   - **Edit as expression** / **Edit as text** (a Python expression, `evaluated as Python on the backend`).
   - **Field engine: <template>** for each field-engine template the backend offers (adds its instructions on this
     field and opens the Field engine tab).
-- A BITMASK field shows its flags as checkboxes and choices. IP and TCP options are read-only.
+- A BITMASK field shows its flags as checkboxes and choices.
+- **IP and TCP options** show as a summary line with one row under it for each option, in the layer. A row has the
+  option's fields (an enum is a list of names that also takes a number) and **↑**, **↓** and **×** to move or remove
+  it. A padding line says how many zero bytes follow the options. **Add option…** offers the kinds the backend knows
+  and **Other** (an option number and its value in hex); **Add** puts it before End of Options, where a receiver
+  stops reading, or at the end when there is none. **Edit as hex** shows the option bytes as
+  one hex input (spaces allowed) that commits as typed; **Edit as options** goes back. Bytes that do not parse show a
+  warning that names the option, and only hex editing is offered until they do. The header holds 40 bytes of options
+  at most, and an edit or hex over that is refused. Hex whose length is not a multiple of 4 is zero-padded to the next
+  4-byte boundary when the packet is built, and the summary then ends "padded to N bytes". The controls are off while the packet is being rebuilt.
+  A document saved before this change keeps the read-only row until a byte edit inside the options or reopening it
+  from its bytes. **A packet with TCP options needs trex-web-gui to build once saved**: opening a capture stores IP
+  and TCP options as their exact bytes, edited or not, and stock TRex (the legacy TRex GUI, another TRex install)
+  cannot build TCP options in that form; trex-web-gui can, through its vendored patch 15. IP options build in both.
 - A BYTES field (a payload) shows its bytes cut at 48 characters and a **Payload…** button
   ([10.4](#104-payload-dialog)).
 

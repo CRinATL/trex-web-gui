@@ -1,0 +1,300 @@
+{
+  "routerAlert": {
+    "binary": "////////AgAAAAABCABHAAAkAAEAAEABM0MQAAABMAAAAQGUBAAAAAAACAD3/wAAAAA=",
+    "data": [
+      {
+        "fields": [
+          {
+            "hvalue": "ff:ff:ff:ff:ff:ff",
+            "id": "dst",
+            "length": 6,
+            "offset": 0,
+            "value": "ff:ff:ff:ff:ff:ff"
+          },
+          {
+            "hvalue": "02:00:00:00:00:01",
+            "id": "src",
+            "length": 6,
+            "offset": 6,
+            "value": "02:00:00:00:00:01"
+          },
+          {
+            "hvalue": "IPv4",
+            "id": "type",
+            "length": 2,
+            "offset": 12,
+            "value": 2048
+          }
+        ],
+        "id": "Ether",
+        "offset": 0,
+        "real_id": "Ether",
+        "valid_structure": true
+      },
+      {
+        "fields": [
+          {
+            "hvalue": "4",
+            "id": "version",
+            "length": 0,
+            "offset": 0,
+            "value": 4
+          },
+          {
+            "hvalue": "7",
+            "id": "ihl",
+            "length": 0,
+            "offset": 0,
+            "value": 7
+          },
+          {
+            "hvalue": "0x0",
+            "id": "tos",
+            "length": 1,
+            "offset": 1,
+            "value": 0
+          },
+          {
+            "hvalue": "36",
+            "id": "len",
+            "length": 2,
+            "offset": 2,
+            "value": 36
+          },
+          {
+            "hvalue": "1",
+            "id": "id",
+            "length": 2,
+            "offset": 4,
+            "value": 1
+          },
+          {
+            "hvalue": "0",
+            "id": "flags",
+            "length": 0,
+            "offset": 6,
+            "value": 0
+          },
+          {
+            "hvalue": "0",
+            "id": "frag",
+            "length": 0,
+            "offset": 6,
+            "value": 0
+          },
+          {
+            "hvalue": "64",
+            "id": "ttl",
+            "length": 1,
+            "offset": 8,
+            "value": 64
+          },
+          {
+            "hvalue": "icmp",
+            "id": "proto",
+            "length": 1,
+            "offset": 9,
+            "value": 1
+          },
+          {
+            "hvalue": "0x3343",
+            "id": "chksum",
+            "length": 2,
+            "offset": 10,
+            "value": 13123
+          },
+          {
+            "hvalue": "16.0.0.1",
+            "id": "src",
+            "length": 4,
+            "offset": 12,
+            "value": "16.0.0.1"
+          },
+          {
+            "hvalue": "48.0.0.1",
+            "id": "dst",
+            "length": 4,
+            "offset": 16,
+            "value": "48.0.0.1"
+          },
+          {
+            "hvalue": "NOP, Router Alert (alert=router_shall_examine_packet), EOL, padding 2 bytes",
+            "id": "options",
+            "length": 2,
+            "offset": 20,
+            "options": {
+              "layer": "IP",
+              "length": 6,
+              "padded": 0,
+              "padding": 2,
+              "problem": null,
+              "rows": [
+                {
+                  "fields": {},
+                  "name": "NOP",
+                  "number": 1,
+                  "raw": "AQ=="
+                },
+                {
+                  "fields": {
+                    "alert": 0
+                  },
+                  "name": "Router_Alert",
+                  "number": 148,
+                  "raw": "lAQAAA=="
+                },
+                {
+                  "fields": {},
+                  "name": "EOL",
+                  "number": 0,
+                  "raw": "AA=="
+                }
+              ]
+            },
+            "value": {
+              "base64": "AZQEAAAAAAA=",
+              "vtype": "MACHINE"
+            }
+          }
+        ],
+        "id": "IP",
+        "offset": 14,
+        "real_id": "IP",
+        "valid_structure": true
+      },
+      {
+        "fields": [
+          {
+            "hvalue": "echo-request",
+            "id": "type",
+            "length": 1,
+            "offset": 0,
+            "value": 8
+          },
+          {
+            "hvalue": 0,
+            "id": "code",
+            "length": 1,
+            "offset": 1,
+            "value": 0
+          },
+          {
+            "hvalue": "0xf7ff",
+            "id": "chksum",
+            "length": 2,
+            "offset": 2,
+            "value": 63487
+          },
+          {
+            "hvalue": "0x0",
+            "id": "id",
+            "length": 2,
+            "offset": 4,
+            "value": 0
+          },
+          {
+            "hvalue": "0x0",
+            "id": "seq",
+            "length": 2,
+            "offset": 6,
+            "value": 0
+          },
+          {
+            "hvalue": "0:0:0.0",
+            "id": "ts_ori",
+            "ignored": true,
+            "length": 4,
+            "offset": 8,
+            "value": 0
+          },
+          {
+            "hvalue": "0:0:0.0",
+            "id": "ts_rx",
+            "ignored": true,
+            "length": 4,
+            "offset": 8,
+            "value": 0
+          },
+          {
+            "hvalue": "0:0:0.0",
+            "id": "ts_tx",
+            "ignored": true,
+            "length": 4,
+            "offset": 8,
+            "value": 0
+          },
+          {
+            "hvalue": "0.0.0.0",
+            "id": "gw",
+            "ignored": true,
+            "length": 4,
+            "offset": 8,
+            "value": "0.0.0.0"
+          },
+          {
+            "hvalue": "0",
+            "id": "ptr",
+            "ignored": true,
+            "length": 1,
+            "offset": 8,
+            "value": 0
+          },
+          {
+            "hvalue": "0",
+            "id": "reserved",
+            "ignored": true,
+            "length": 1,
+            "offset": 8,
+            "value": 0
+          },
+          {
+            "hvalue": "0",
+            "id": "length",
+            "ignored": true,
+            "length": 1,
+            "offset": 8,
+            "value": 0
+          },
+          {
+            "hvalue": "0.0.0.0",
+            "id": "addr_mask",
+            "ignored": true,
+            "length": 4,
+            "offset": 8,
+            "value": "0.0.0.0"
+          },
+          {
+            "hvalue": "0",
+            "id": "nexthopmtu",
+            "ignored": true,
+            "length": 2,
+            "offset": 8,
+            "value": 0
+          },
+          {
+            "hvalue": "0",
+            "id": "unused",
+            "ignored": true,
+            "length": 2,
+            "offset": 8,
+            "value": 0
+          },
+          {
+            "hvalue": "0",
+            "id": "unused",
+            "ignored": true,
+            "length": 4,
+            "offset": 8,
+            "value": 0
+          }
+        ],
+        "id": "ICMP",
+        "offset": 42,
+        "real_id": "ICMP",
+        "valid_structure": true
+      }
+    ],
+    "error": null,
+    "field_engine": null
+  }
+}

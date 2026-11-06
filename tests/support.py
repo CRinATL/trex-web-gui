@@ -227,3 +227,9 @@ def e3_mismatches(call: Callable[[str, dict[str, Any]], Any],
         if _as_compared(method, got) != _as_compared(method, expected):
             mismatches.append(f"{name}: expected {expected}, got {got}")
     return mismatches, 0
+
+
+# An IP packet with options as a user's capture had them (01 | 94 04 00 00 | 00 | 00 00: NOP, Router Alert,
+# EOL, two zeros); the addresses are test ones. The option bytes are ROUTER_ALERT_FRAME[34:42].
+ROUTER_ALERT_FRAME = bytes.fromhex(
+    "ffffffffffff0200000000010800470000240001000040013343100000013000000101940400000000000800f7ff00000000")

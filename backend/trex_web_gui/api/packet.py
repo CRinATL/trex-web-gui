@@ -19,11 +19,19 @@ import stat
 import struct
 from collections.abc import Awaitable, Callable
 from pathlib import Path
-from typing import Any, BinaryIO, TypeVar
+from typing import Any, BinaryIO, Literal, TypeVar
 
 from fastapi import APIRouter, Header, Request
 from fastapi.responses import JSONResponse, Response
-from pydantic import BaseModel, ConfigDict, Field, ValidationError, field_validator, model_validator
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    StrictBool,
+    ValidationError,
+    field_validator,
+    model_validator,
+)
 
 from trex_web_gui.api.bodies import BODY_ANSWERS, BodyRefused, err, read_json_capped
 from trex_web_gui.api.declared import Item, answers
@@ -41,7 +49,7 @@ from trex_web_gui.studio.templates import (
     TemplateTooLarge,
     check_name,
 )
-from trex_web_gui.trexapi.packet import PacketBusy, PacketEngine, PacketError
+from trex_web_gui.trexapi.packet import OptionsRefused, PacketBusy, PacketEngine, PacketError
 from trex_web_gui.validation import code_problem
 
 PCAP_PAGE_MAX = 100                      # rows in one picker page (R3)
@@ -87,6 +95,25 @@ class FromBinaryBody(_Body):
     def _b64(cls, v: str) -> str:
         """Strict base64, not empty."""
         return _base64(v)
+
+
+class OptionRowBody(_Body):
+    """One option row as the codec takes it; a row the user added has no `raw`."""
+
+    name: str | None = Field(None, max_length=100)
+    number: int = Field(ge=0, le=255)
+    fields: dict[str, Any] = Field(max_length=16)      # no option kind has more than 4 fields
+    raw: str | None = Field(None, max_length=100)
+    edited: StrictBool = False
+
+
+class OptionsBody(_Body):
+    """The rows of an IP or TCP option field, to encode: at most 40 rows, `padding` and `length` 0..40."""
+
+    layer: Literal["IP", "TCP"]
+    rows: list[OptionRowBody] = Field(max_length=40)
+    padding: int = Field(ge=0, le=40)
+    length: int = Field(ge=0, le=40)
 
 
 class DecompileBody(_Body):
@@ -413,6 +440,27 @@ def packet_router(engine: PacketEngine, store: TemplateStore, prefs_fn: Callable
             if b.vm is not None:
                 _vm_checked(b.vm)
             return await engine.doc_from_binary(b.binary, b.vm)
+        return await guarded(go)
+
+    @router.post("/options", response_model=None,
+                 responses=answers(
+                     *BODY_ANSWERS,
+                     *ENGINE_ANSWERS,
+                     (422, "options_too_long", "the options are over the 40 bytes the header holds"),
+                     (422, "bad_option", "an option is unknown or one of its values is not valid")))
+    async def options(request: Request) -> Any:
+        """The option bytes for IP or TCP option rows: `{binary}`, base64. Answers 422 `options_too_long`
+        or 422 `bad_option` with the codec's text."""
+        async def go() -> Any:
+            """Encode, mapping the codec's refusal to its code."""
+            b = await body_of(request, OptionsBody)
+            rows = [r.model_dump(exclude_none=True) for r in b.rows]
+            try:
+                return {"binary": await engine.encode_options(b.layer, rows, b.padding, b.length)}
+            except OptionsRefused as e:
+                if e.code == "options_too_long":
+                    return err(422, "options_too_long", str(e))
+                return err(422, "bad_option", str(e))
         return await guarded(go)
 
     @router.post("/reconstruct", response_model=None,
