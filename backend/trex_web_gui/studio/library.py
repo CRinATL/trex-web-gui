@@ -241,6 +241,7 @@ class ProfileLibrary:
         """The library entry that supplied the file at `path`, or None; never raises. Reads only the sidecar.
         Without `slug`, `path` must be a `<slug>.json` directly in the current library directory. With `slug`,
         `path` must be that entry's JSON, or its sidecar's `.py` source path."""
+        given = slug is not None
         try:
             if slug is None:
                 p = Path(path).resolve()
@@ -251,7 +252,7 @@ class ProfileLibrary:
                 if not SLUG_RE.fullmatch(slug):
                     return None
             side = parse_sidecar(json.loads(_read_json(self._side_path(slug))))
-            if slug is not None and Path(path).resolve() != self.path_of(slug).resolve():
+            if given and Path(path).resolve() != self.path_of(slug).resolve():
                 src = side["source"]
                 if src is None or src["kind"] != "py" or src["path"] != path:
                     return None

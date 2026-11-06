@@ -460,6 +460,15 @@ def test_label_of_a_py_entry_needs_its_slug(tmp_path: Path) -> None:
     assert pl.label_of(str(py), "") is None
 
 
+def test_label_of_a_py_slug_needs_that_entrys_own_py_source(tmp_path: Path) -> None:
+    pl = mklib(tmp_path)
+    py, other = tmp_path / "p.py", tmp_path / "q.py"
+    pl.create("A", [stream("a")], source=src_of("py", py))
+    pl.create("Y", [stream("y")], source=src_of("yaml", py))
+    assert pl.label_of(str(other), "a") is None          # a py entry, but not this file
+    assert pl.label_of(str(py), "y") is None             # this path, but the source is not a .py kind
+
+
 def test_display_name() -> None:
     assert display_name("/a/b/x.json", None) == "x.json"
     assert display_name("/a/b/x.json", LibraryLabel("x", "X!")) == "X!"
