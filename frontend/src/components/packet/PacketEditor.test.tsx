@@ -144,7 +144,7 @@ describe('PacketEditor', () => {
   })
 
   it('a rejected value stays in the field, red, with the message', async () => {
-    vi.mocked(api.buildPacket).mockImplementation(async (d) => (ttlOf(d) === 9 ? { binary: null, data: [], field_engine: null, error: 'ValueError: no 9' } : built(d)))
+    vi.mocked(api.buildPacket).mockImplementation(async (d) => (ttlOf(d) === 9 ? { binary: null, data: [], field_engine: null, error: 'ValueError: no 9', structure: null } : built(d)))
     render(<Host onDocChange={() => undefined} />)
     await editTtl('9')
     const box = await screen.findByRole('textbox', { name: 'TTL' })
@@ -271,7 +271,7 @@ describe('PacketEditor', () => {
   it('a frame under 14 bytes: a first layer of Raw is shown with its bytes', async () => {
     const short = btoa('\x01\x02\x03\x04\x05')
     vi.mocked(api.buildPacket).mockResolvedValue({
-      binary: short, field_engine: null, error: null,
+      binary: short, field_engine: null, error: null, structure: null,
       data: [{ id: 'Raw', offset: 0, real_id: 'Raw', valid_structure: true, fields: [{ id: 'load', value: { vtype: 'BYTES', base64: short }, hvalue: '01 02 03 04 05', offset: 0, length: 5 }] }],
     })
     render(<Host onDocChange={() => undefined} initial={() => ({ ...doc(), packet: [{ id: 'Raw', fields: [] }] })} />)

@@ -3,7 +3,7 @@ import type { BuildResult, PacketDoc } from '../../api'
 import { BuildQueue } from './buildQueue'
 
 const doc = (caption: string): PacketDoc => ({ fileType: 'trex-packet-editor', version: '1.0.0', metadata: { caption }, packet: [{ id: 'Ether', fields: [] }], fePrarameters: {}, feInstructions: [] })
-const result = (tag: string): BuildResult => ({ binary: tag, data: [], field_engine: null, error: null })
+const result = (tag: string): BuildResult => ({ binary: tag, data: [], field_engine: null, error: null, structure: null })
 
 // A send that records its documents and lets the test settle each call when it chooses.
 function manual() {

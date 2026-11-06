@@ -9,8 +9,8 @@ const base = (): PacketDoc => ({
   packet: [{ id: 'Ether', fields: [] }, { id: 'IP', fields: [] }, { id: 'UDP', fields: [] }],
 })
 // A build result that names the document it was made from.
-const ok = (doc: PacketDoc): BuildResult => ({ binary: btoa(JSON.stringify(doc.packet)), data: [], field_engine: null, error: null })
-const failed = (message: string): BuildResult => ({ binary: null, data: [], field_engine: null, error: message })
+const ok = (doc: PacketDoc): BuildResult => ({ binary: btoa(JSON.stringify(doc.packet)), data: [], field_engine: null, error: null, structure: null })
+const failed = (message: string): BuildResult => ({ binary: null, data: [], field_engine: null, error: message, structure: null })
 const ttl = (doc: PacketDoc) => doc.packet[1].fields.find((f) => f.id === 'ttl')?.value
 const src = (doc: PacketDoc) => doc.packet[0].fields.find((f) => f.id === 'src')?.value
 

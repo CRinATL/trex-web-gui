@@ -1733,3 +1733,92 @@ def test_encode_options_refusals_carry_the_codec_text() -> None:
         assert not issubclass(OptionsRefused, PacketError)
         assert e.starts == 1                                    # a refusal kills no worker
     with_engine(body)
+
+
+# UDP's DNS bindings that hold at its default ports, in `payload_guess` order (dport first).
+PORTS_53 = [{"layer": 2, "field": "dport", "value": "53"}, {"layer": 2, "field": "sport", "value": "53"}]
+
+
+def bytes_value(data: bytes) -> dict[str, str]:
+    """A BYTES field value holding `data`."""
+    return {"vtype": "BYTES", "base64": base64.b64encode(data).decode()}
+
+
+def short_udp_len(fields: list[dict[str, Any]] | None = None) -> list[dict[str, Any]]:
+    """Ether / IP / UDP(len=12, plus `fields`) / Raw("dummy"): the header and payload are 13 bytes, so the
+    bytes read back as a 4-byte payload, which on UDP's default port 53 dissects as DNS (the user's case)."""
+    udp = [{"id": "len", "value": 12}, *(fields or [])]
+    return [{"id": "Ether"}, {"id": "IP"}, {"id": "UDP", "fields": udp},
+            {"id": "Raw", "fields": [{"id": "load", "value": bytes_value(b"dummy")}]}]
+
+
+def test_structure_names_the_set_field_whose_default_reads_back_and_the_value_it_takes() -> None:
+    async def body(e: PacketEngine) -> None:
+        r = await e.build(short_udp_len(), None)
+        assert [(x["id"], x["real_id"], x["valid_structure"]) for x in r["data"]][3] == ("Raw", "DNS", False)
+        assert r["structure"] == {"layer": 3, "selectors": PORTS_53,
+                                  "fixes": [{"layer": 2, "field": "len", "value": "13"}], "complete": True}
+    with_engine(body)
+
+
+def test_structure_is_none_when_every_layer_reads_back() -> None:
+    async def body(e: PacketEngine) -> None:
+        model = short_udp_len()
+        model[2]["fields"] = [{"id": "len", "value": 13}]
+        assert (await e.build(model, None))["structure"] is None
+    with_engine(body)
+
+
+def test_structure_with_no_explaining_field_is_complete_and_empty() -> None:
+    """UDP's default ports are 53, so a longer payload reads as DNS with nothing set above it; a set field
+    whose default does not help (sport) is tried and not listed. The ports that bind DNS are the
+    selectors, set (sport) or default (dport)."""
+    async def body(e: PacketEngine) -> None:
+        model = [{"id": "Ether"}, {"id": "IP"}, {"id": "UDP", "fields": [{"id": "sport", "value": 53}]},
+                 {"id": "Raw", "fields": [{"id": "load", "value": bytes_value(b"x" * 20)}]}]
+        assert (await e.build(model, None))["structure"] == {"layer": 3, "selectors": PORTS_53, "fixes": [],
+                                                             "complete": True}
+    with_engine(body)
+
+
+def test_structure_stops_at_the_try_bound_and_says_it_is_incomplete(monkeypatch: pytest.MonkeyPatch) -> None:
+    from trex_web_gui.trexapi import packet_worker
+    monkeypatch.setattr(packet_worker, "STRUCTURE_MAX_TRIES", 1)
+    eng = engine_worker()
+    # sport is tried first and does not help; the bound stops the search before len, the field that does.
+    model = short_udp_len()
+    model[2]["fields"] = [{"id": "sport", "value": 53}, {"id": "len", "value": 12}]
+    res = eng.build({"packet": model, "fe": None})
+    assert res["structure"] == {"layer": 3, "selectors": PORTS_53, "fixes": [], "complete": False}
+
+
+def test_structure_stops_at_the_time_budget_and_says_it_is_incomplete(
+        monkeypatch: pytest.MonkeyPatch) -> None:
+    from trex_web_gui.trexapi import packet_worker
+    monkeypatch.setattr(packet_worker, "STRUCTURE_BUDGET_S", -1.0)
+    res = engine_worker().build({"packet": short_udp_len(), "fe": None})
+    assert res["structure"] == {"layer": 3, "selectors": PORTS_53, "fixes": [], "complete": False}
+
+
+def test_structure_selectors_name_only_the_binding_that_holds() -> None:
+    """With dport changed, only the default sport 53 still binds DNS."""
+    model = [{"id": "Ether"}, {"id": "IP"}, {"id": "UDP", "fields": [{"id": "dport", "value": 9}]},
+             {"id": "Raw", "fields": [{"id": "load", "value": bytes_value(b"x" * 20)}]}]
+    res = engine_worker().build({"packet": model, "fe": None})
+    assert res["structure"]["selectors"] == [{"layer": 2, "field": "sport", "value": "53"}]
+
+
+def test_structure_has_no_selectors_when_the_bytes_end_before_the_layer() -> None:
+    """IP's proto set to UDP over an empty payload: the bytes hold no UDP layer, so nothing binds one."""
+    model = [{"id": "Ether"}, {"id": "IP", "fields": [{"id": "len", "value": 20}]}, {"id": "UDP"}]
+    res = engine_worker().build({"packet": model, "fe": None})
+    assert res["structure"] is not None and res["structure"]["selectors"] == []
+
+
+def test_to_stream_does_not_search_for_a_structure_report(monkeypatch: pytest.MonkeyPatch) -> None:
+    from trex_web_gui.trexapi import packet_worker
+    eng = engine_worker()
+    called: list[int] = []
+    monkeypatch.setattr(packet_worker.Engine, "_structure", lambda self, p, d: called.append(1))
+    assert eng.to_stream({"packet": short_udp_len(), "fe": None})["ok"] is True
+    assert called == []

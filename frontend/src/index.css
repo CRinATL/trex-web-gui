@@ -445,6 +445,8 @@ fieldset.plain legend { padding: 0; font-weight: 600; font-size: 1.1em; margin-b
 .layer-title { flex: 1; text-align: left; background: none; border: 0; color: inherit; font: inherit; font-weight: 600; cursor: pointer; padding: .3rem .5rem; }
 .layer-menu { background: none; border: 0; color: inherit; cursor: pointer; }
 .layer-body { padding: .25rem .5rem; }
+.structure-note { margin: 0 0 .25rem; }
+.structure-note p { margin: .15rem 0; }
 /* baseline, not centre, in the editor and the viewers: a field's name and byte range sit on the first line of its value, so the
    name of a tall value (the options rows, a wrapped summary) stays at its top (user, 2026-11-05) */
 .field-row { display: grid; grid-template-columns: 10rem minmax(12rem, 1fr) 4rem 11rem; align-items: baseline; gap: .1rem .5rem; padding: .1rem 0; color: var(--muted); }

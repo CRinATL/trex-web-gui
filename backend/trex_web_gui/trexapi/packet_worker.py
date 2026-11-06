@@ -47,6 +47,11 @@ TRUNCATED_WARNING = ("the record is {n} bytes; only the first " + str(EDITOR_DEC
 FALLBACK_WARNING = ("the byte edit re-derived the packet from its bytes: generated and expression values "
                     "became literal values")
 NOT_FIELDWISE_WARNING = "the packet could not be represented field by field"
+# The structure report (`_structure`) rebuilds the packet once per field the user set above the first layer
+# that does not read back as itself. Both bounds keep a long or slow packet inside the call timeout; a report
+# that hit one says so (`complete` false), so the editor never reads it as "no field explains it".
+STRUCTURE_MAX_TRIES = 24
+STRUCTURE_BUDGET_S = 0.5
 
 
 def set_parent_death_signal() -> bool:
@@ -139,22 +144,67 @@ class Engine:
         """Build the packet model `args["packet"]` and, when `args["fe"]` has instructions, compile them.
         `{ok, binary, data, field_engine, error}`: an exception from the packet half becomes `error`
         (`"<Type>: <message>"`) with binary null and data []; one from the field-engine half becomes
-        `field_engine.error`, and the packet is rebuilt without the FE to keep `binary`."""
-        packet, fe = args["packet"], args.get("fe")
+        `field_engine.error`, and the packet is rebuilt without the FE to keep `binary`. `structure` is
+        `_structure`'s report, or None when `args["explain"]` is false (`to_stream` has no use for it)."""
+        packet, fe, explain = args["packet"], args.get("fe"), args.get("explain", True)
         if not fe or not fe.get("instructions"):
-            return self._packet_only(packet, None)
+            return self._packet_only(packet, None, explain)
         try:
             res = self.svc.build_pkt_ex(self.h, packet, {"field_engine": fe})
         except Exception as e:
             if _caused_by_memory(e):
                 raise
             # Which half failed? One build_pkt tells; its result is kept, so nothing is built again.
-            return self._packet_only(packet, {"instructions": {}, "error": _describe(e)})
+            return self._packet_only(packet, {"instructions": {}, "error": _describe(e)}, explain)
         engine = res["field_engine"]
         instructions = engine["instructions"]
         return {"ok": True, "binary": res["binary"], "data": res["data"], "error": None,
+                "structure": self._structure(packet, res["data"]) if explain else None,
                 "field_engine": {"instructions": instructions if isinstance(instructions, dict) else {},
                                  "error": engine["error"]}}
+
+    def _structure(self, packet: list[dict[str, Any]], data: list[dict[str, Any]]) -> dict[str, Any] | None:
+        """Why the packet's bytes do not read back as its layers, or None when they do. `{layer, selectors,
+        fixes, complete}`: `layer` is the index of the first layer whose `valid_structure` is false (the
+        service stops matching there, so every later layer is false too). `selectors` (`_selectors`) are the
+        field values of the layer above, set or default, that bind what the bytes read as. `fixes` lists
+        each field the model sets in an earlier layer that, left out of the model, makes every layer up to
+        `layer` read back as itself, as `{layer, field, value}` with `value` the text the field then takes.
+        `complete` is false when a bound (STRUCTURE_MAX_TRIES, STRUCTURE_BUDGET_S) stopped the search before
+        every such field was tried. The Field Engine is not applied: it changes the bytes per packet, not
+        what they dissect as."""
+        k = next((i for i, layer in enumerate(data) if layer.get("valid_structure") is False), None)
+        if k is None:
+            return None
+        try:
+            read = _chain(self._bounded_define(self.svc._packet_model_to_scapy_packet(packet)))
+        except Exception as e:
+            if _caused_by_memory(e):
+                raise
+            read = []
+        selectors = _selectors(read, k)
+        fixes: list[dict[str, Any]] = []
+        candidates = [(i, f) for i, layer in enumerate(packet[:k]) for f in layer.get("fields") or []]
+        deadline = time.monotonic() + STRUCTURE_BUDGET_S
+        for n, (i, f) in enumerate(candidates):
+            if n == STRUCTURE_MAX_TRIES or time.monotonic() > deadline:
+                return {"layer": k, "selectors": selectors, "fixes": fixes, "complete": False}
+            layer = packet[i]
+            kept = [g for g in layer["fields"] if g is not f]
+            trial = [*packet[:i], {**layer, "fields": kept}, *packet[i + 1:]]
+            try:
+                pkt = self.svc._packet_model_to_scapy_packet(trial)
+                model, read = _chain(pkt), _chain(self._bounded_define(pkt))
+            except Exception as e:
+                if _caused_by_memory(e):
+                    raise
+                continue
+            if _reads_back(model, read, k):
+                field = read[i].get_field(f["id"])
+                value = read[i].getfieldval(f["id"])
+                fixes.append({"layer": i, "field": f["id"],
+                              "value": str(field.i2repr(read[i], value) if field is not None else value)})
+        return {"layer": k, "selectors": selectors, "fixes": fixes, "complete": True}
 
     def tree(self, args: dict[str, Any]) -> dict[str, Any]:
         """`{data, binary}` for the captured frame `args["binary"]` (base64), the capture viewer's layer tree:
@@ -535,7 +585,7 @@ class Engine:
     def to_stream(self, args: dict[str, Any]) -> dict[str, Any]:
         """`{packet: {binary, meta}, vm}` for the packet model and Field Engine model; a build or Field
         Engine error is the reply's error. The VM never carries `split_by_var` (plan D2)."""
-        res = self.build(args)
+        res = self.build({**args, "explain": False})
         if res["error"]:
             return {"ok": False, "error": res["error"]}
         fe = res["field_engine"]
@@ -554,18 +604,19 @@ class Engine:
         stop = next(i for i, ln in enumerate(lines) if ln.startswith("stream = STLStream("))
         return {"ok": True, "code": "\n".join(lines[start:stop])}
 
-    def _packet_only(self, packet: list[dict[str, Any]],
-                     field_engine: dict[str, Any] | None) -> dict[str, Any]:
+    def _packet_only(self, packet: list[dict[str, Any]], field_engine: dict[str, Any] | None,
+                     explain: bool) -> dict[str, Any]:
         """`build_pkt` alone, with `field_engine` as given; a failure is the result's `error` and, since the
-        packet half is then what failed, the field-engine result is dropped."""
+        packet half is then what failed, the field-engine result is dropped. `explain`: as `build`'s."""
         try:
             res = self.svc.build_pkt(self.h, packet)
         except Exception as e:
             if _caused_by_memory(e):
                 raise
-            return {"ok": True, "binary": None, "data": [], "field_engine": None, "error": _describe(e)}
+            return {"ok": True, "binary": None, "data": [], "field_engine": None, "error": _describe(e),
+                    "structure": None}
         return {"ok": True, "binary": res["binary"], "data": res["data"], "field_engine": field_engine,
-                "error": None}
+                "error": None, "structure": self._structure(packet, res["data"]) if explain else None}
 
 
 class _Fallback(Exception):
@@ -659,6 +710,39 @@ def _chain(pkt: Any) -> list[Any]:
         out.append(pkt)
         pkt = pkt.payload
     return out
+
+
+def _selectors(read: list[Any], k: int) -> list[dict[str, Any]]:
+    """The field values of `read[k - 1]` that bind its payload to the class `read[k]` dissected as: each
+    entry of the layer's `payload_guess` (Scapy's `bind_layers` table, which `guess_payload_class` walks)
+    for that class whose every field holds its value, as `{layer, field, value}`. UDP's default ports are
+    53, so a payload under it reads as DNS by default (`dport` 53 and `sport` 53 are both listed). Empty
+    when there is no layer above, the bytes end before `k`, or the class came from no binding."""
+    if k < 1 or len(read) <= k:
+        return []
+    upper, target = read[k - 1], type(read[k])
+    out: list[dict[str, Any]] = []
+    for values, cls in getattr(upper, "payload_guess", []):
+        if cls is not target or not values:
+            continue
+        try:
+            if any(upper.getfieldval(f) != v for f, v in values.items()):
+                continue
+            rows = [{"layer": k - 1, "field": f, "value": str(upper.get_field(f).i2repr(upper, v))}
+                    for f, v in values.items()]
+        except AttributeError:
+            continue
+        out.extend(r for r in rows if r not in out)
+    return out
+
+
+def _reads_back(model: list[Any], read: list[Any], k: int) -> bool:
+    """True when the dissected layers `read` match the model's layers `model` through index `k`, by the
+    service's own test (`scapy_service.py`, its `valid_struct`): each class is a subclass of the other."""
+    if len(model) <= k or len(read) <= k:
+        return False
+    pairs = zip(model[:k + 1], read[:k + 1], strict=True)
+    return all(isinstance(m, type(b)) or isinstance(b, type(m)) for m, b in pairs)
 
 
 def _raw_layer(data: bytes) -> dict[str, Any]:

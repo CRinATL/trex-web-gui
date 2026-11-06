@@ -1,7 +1,7 @@
 // The packet editor's model, pure (no React): document edits, and the join of the user's document with a build result
 // and the protocol definitions that the field rows show. The document is the user's intent (only what they set); the
 // build result is what the service made of it (every field, with its bytes).
-import type { BitDef, BuildResult, Definitions, DecodedOptions, FeInstruction, FeValue, FieldDef, FieldValue, PacketDoc, PacketLayer, PacketTree, ProtocolDef } from '../../api'
+import type { BitDef, BuildResult, StructureReport, Definitions, DecodedOptions, FeInstruction, FeValue, FieldDef, FieldValue, PacketDoc, PacketLayer, PacketTree, ProtocolDef } from '../../api'
 import { fieldRange, layerEnds, type Range } from './hexModel'
 
 const same = (a: unknown, b: unknown) => JSON.stringify(a) === JSON.stringify(b)
@@ -105,6 +105,41 @@ export interface CombinedLayer {
   protocol: ProtocolDef | null   // null when the layer has no definition (an indirect subclass)
   fields: CombinedField[]
   error: string | null
+  structure: StructureNote | null  // why the layer does not read back as itself; null when it does
+}
+// A field set above the first layer that does not read back, which left to the editor makes it read back.
+export interface StructureFixNote { layer: number; layerId: string; field: string; name: string; current: string; value: string }
+export interface StructureNote {
+  reason: string
+  selectors: StructureFixNote[]    // the values above it that bind what the bytes read as; first layer, editor only
+  fixes: StructureFixNote[]        // only on the first layer that does not read back, and only in the editor
+  unexplained: boolean             // nothing binds it and the editor tried every field set above it: none helps
+}
+
+// Each layer's structure note. The first layer whose bytes do not read back as itself says what they read as; every
+// later one follows from it (the service stops matching there). `report` is the editor's build report, or null in a
+// viewer: only the editor says the packet is sent as built and names the set fields that explain the first one.
+export function withStructure(layers: CombinedLayer[], report: StructureReport | null): CombinedLayer[] {
+  const k = layers.findIndex((l) => !l.validStructure)
+  if (k < 0) return layers
+  const first = layers[k]
+  return layers.map((l, i): CombinedLayer => {
+    if (l.validStructure) return l
+    if (i > k) {
+      return { ...l, structure: { reason: `Not in the bytes as they read back: they stop matching at layer ${k + 1}, ${first.id}.`, selectors: [], fixes: [], unexplained: false } }
+    }
+    const sent = report === null ? '' : ` The packet is sent as built; a receiver and Capture read these bytes as ${l.realId}.`
+    const reason = l.realId === null ? "The packet's bytes end before this layer." : `Read back from its bytes, this layer is ${l.realId}, not ${l.id}.${sent}`
+    const mine = report !== null && report.layer === k
+    const notes = (list: StructureReport['fixes']) => list.flatMap((f): StructureFixNote[] => {
+      const owner = layers[f.layer]
+      const field = owner?.fields.find((x) => x.id === f.field)
+      return owner && field ? [{ layer: f.layer, layerId: owner.id, field: f.field, name: field.def.name, current: field.shown, value: f.value }] : []
+    })
+    const selectors = mine ? notes(report.selectors) : []
+    const fixes = mine ? notes(report.fixes) : []
+    return { ...l, structure: { reason, selectors, fixes, unexplained: mine && report.complete && selectors.length === 0 && fixes.length === 0 } }
+  })
 }
 
 // A value as the user would type it.
@@ -136,10 +171,10 @@ export function combine(doc: PacketDoc, result: BuildResult | null, defs: Defini
         const bad = failure?.layer === i && failure.field === f.id
         return { id: f.id, def, value: null, docValue: f.value, shown: textOf(f.value), userSet: true, ignored: false, readOnly: false, range: null, bits: null, options: null, error: bad ? failure.message : null }
       })
-      return { index: i, id: dl.id, realId: dl.id, offset: 0, validStructure: true, protocol, fields, error: failure?.layer === i && failure.field === null ? failure.message : null }
+      return { index: i, id: dl.id, realId: dl.id, offset: 0, validStructure: true, protocol, fields, error: failure?.layer === i && failure.field === null ? failure.message : null, structure: null }
     })
   }
-  return built.map((l, i) => {
+  return withStructure(built.map((l, i): CombinedLayer => {
     // The user's layer at this index, when it is the same layer (a stale build may not be; Padding is reported as Raw).
     const cand = doc.packet[i]
     const dl = cand && (cand.id === l.id || l.id === 'Raw') ? cand : undefined
@@ -155,15 +190,15 @@ export function combine(doc: PacketDoc, result: BuildResult | null, defs: Defini
         shown: bad ? textOf(docField?.value) : String(f.hvalue ?? ''), bits: groupsOf(def, f.value), options: f.options ?? null, error: bad ? failure.message : null,
       }
     })
-    return { index: i, id: l.id, realId: l.real_id, offset: l.offset, validStructure: l.valid_structure, protocol, fields, error: failure?.layer === i && failure.field === null ? failure.message : null }
-  })
+    return { index: i, id: l.id, realId: l.real_id, offset: l.offset, validStructure: l.valid_structure, protocol, fields, error: failure?.layer === i && failure.field === null ? failure.message : null, structure: null }
+  }), result?.structure ?? null)
 }
 
 // A capture's decoded tree as layers, for the viewer: no document and no definitions, so every field is read-only,
 // edited as text, and never user-set.
 export function layersOfTree(tree: PacketTree): CombinedLayer[] {
   const ends = layerEnds(tree)
-  return tree.data.map((l, i) => {
+  return withStructure(tree.data.map((l, i): CombinedLayer => {
     const end = ends[i]
     const fields = l.fields.map((f, k): CombinedField => {
       return {
@@ -171,8 +206,8 @@ export function layersOfTree(tree: PacketTree): CombinedLayer[] {
         readOnly: true, range: fieldRange(l.fields, k, l.offset, end), bits: null, options: null, error: null,
       }
     })
-    return { index: i, id: l.id, realId: l.real_id, offset: l.offset, validStructure: l.valid_structure, protocol: null, fields, error: null }
-  })
+    return { index: i, id: l.id, realId: l.real_id, offset: l.offset, validStructure: l.valid_structure, protocol: null, fields, error: null, structure: null }
+  }), null)
 }
 
 // The narrowest field whose bytes hold byte `i`, with its layer; null when no field does. The same rule selects a field

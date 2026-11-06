@@ -1099,7 +1099,11 @@ packet you have since changed.
 - one collapsible pane per layer:
   - `<id> as <real id>` when the bytes decode as something else;
   - `<id> (not decoded)` when the bytes hold no such layer;
-  - a `!` for an invalid structure;
+  - a `!` for an invalid structure, a layer whose bytes do not read back as itself. Hover the `!`, or open the pane,
+    for why: what the bytes read back as (the packet is still sent as built); the values of the layer above, set or
+    default, that make it read them so (`UDP dport is 53` for DNS); and each field you set above it that, left to
+    the editor, makes it read back, with the value it would then take and a **Reset** button for it (a UDP `len`
+    one short of the header and payload, say). When nothing explains it, the pane says so;
 - **Add layer…** (a text box that lists the protocols the last layer can carry first, then every protocol;
   `unknown protocol "x"`). GENEVE, GTP and LACP are among them. A GENEVE layer under UDP shows as `GENEVE as DNS`,
   or `GENEVE as Raw` when what follows is no valid DNS message, while UDP's source port is 53, its default:
