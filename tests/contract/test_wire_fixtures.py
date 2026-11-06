@@ -857,8 +857,9 @@ def test_p7_emu_wire_fixtures(fake_emu, tmp_path):
     msgs, namespaces, clients, counters = capture_emu(fake_emu, tmp_path)
     assert msgs["connected"]["info"]["version"] and msgs["disconnected"]["info"] is None
     assert "truncated" not in namespaces["two_namespaces"]
-    assert counters["ctx"]["tables"] and "ipfix" in counters["ns"]["unsupported"]
-    assert "dhcp" not in counters["ns"]["unsupported"]              # ruling R17: it has no namespace counters
+    # Only the plugins loaded in the namespace (arp, icmp, mdns) are read, and the server has all their
+    # namespace counters (a loaded plugin it lacks: test_counters_without_plugin_lists_what_the_server_lacks).
+    assert counters["ctx"]["tables"] and counters["ns"]["unsupported"] == []
     assert msgs["loading"]["busy"]["total"] == 6 and msgs["loaded"]["busy"] is None
     assert msgs["loaded"]["loaded"]["partial"] is False and msgs["loaded"]["generation"] == 1
     _compare_or_write(EMU_MSG_FILE, msgs)

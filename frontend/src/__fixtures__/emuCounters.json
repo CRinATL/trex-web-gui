@@ -100,19 +100,7 @@
         }
       ]
     },
-    "unsupported": [
-      "appsim",
-      "cdp",
-      "dhcp",
-      "dhcpsrv",
-      "dhcpv6",
-      "dns",
-      "dot1x",
-      "ipfix",
-      "lldp",
-      "tdl",
-      "transport"
-    ]
+    "unsupported": []
   },
   "ctx": {
     "tables": {
@@ -2061,12 +2049,6 @@
         }
       ]
     },
-    "unsupported": [
-      "dns",
-      "igmp",
-      "ipfix",
-      "ipv6",
-      "transporte"
-    ]
+    "unsupported": []
   }
 }

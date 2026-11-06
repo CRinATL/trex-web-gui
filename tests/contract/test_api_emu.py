@@ -114,8 +114,9 @@ def test_counters_by_scope(tmp_path: Path, fake_emu: Factory) -> None:
 
 def test_counters_without_plugin_lists_what_the_server_lacks(tmp_path: Path, fake_emu: Factory) -> None:
     """Plugins whose counters the server lacks are in `unsupported`; naming one is 409 unsupported; a plugin
-    with no counter method in the scope at all (dhcp in a namespace, ruling R17) is not listed."""
-    f = fake_emu("--foreign-ns", "1", "--clients", "1")
+    with no counter method in the scope at all (dhcp in a namespace, ruling R17) is not listed. ipfix is
+    loaded in the namespace: only loaded plugins are asked."""
+    f = fake_emu("--foreign-ns", "1", "--clients", "1", "--plugins", "arp,icmp,ipfix,dhcp")
     with authed(create_app(tmp_path, token=TEST_TOKEN)) as c:
         connect(c, f)
         every = c.get("/api/emu/counters", params={"scope": "ns", "vport": 0}).json()
@@ -146,7 +147,10 @@ def test_unknown_namespace_is_409_no_namespace(tmp_path: Path, fake_emu: Factory
         for path, params in (("/api/emu/clients", {"vport": 9}),
                              ("/api/emu/counters", {"scope": "ns", "vport": 9, "plugin": "arp"}),
                              ("/api/emu/counters", {"scope": "client", "vport": 9, "mac": MAC0,
-                                                    "plugin": "mdns"})):
+                                                    "plugin": "mdns"}),
+                             # plugin omitted (the page's poll): the loaded-plugins read is what fails
+                             ("/api/emu/counters", {"scope": "ns", "vport": 9}),
+                             ("/api/emu/counters", {"scope": "client", "vport": 9, "mac": MAC0})):
             r = c.get(path, params=params)
             assert r.status_code == 409 and r.json()["error"] == "no_namespace", (path, r.text)
         # a read that succeeds lists nothing: the re-listing belongs to the error path
@@ -160,10 +164,11 @@ def test_known_namespace_unknown_mac_is_409_no_client(tmp_path: Path, fake_emu: 
     f = fake_emu("--foreign-ns", "1", "--clients", "2", "--plugins", "arp,icmp,mdns")
     with authed(create_app(tmp_path, token=TEST_TOKEN)) as c:
         connect(c, f)
-        r = c.get("/api/emu/counters", params={"scope": "client", "vport": 0, "mac": "00:00:00:00:99:99",
-                                               "plugin": "mdns"})
-        assert r.status_code == 409 and r.json()["error"] == "no_client", r.text
-        assert "00:00:00:00:99:99" in r.json()["message"]
+        for plugin in ({"plugin": "mdns"}, {}):          # named, and omitted (the loaded-plugins read fails)
+            r = c.get("/api/emu/counters", params={"scope": "client", "vport": 0, "mac": "00:00:00:00:99:99",
+                                                   **plugin})
+            assert r.status_code == 409 and r.json()["error"] == "no_client", (plugin, r.text)
+            assert "00:00:00:00:99:99" in r.json()["message"]
 
 
 def test_a_read_error_with_the_key_present_is_400(tmp_path: Path, fake_emu: Factory,

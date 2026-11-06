@@ -18,6 +18,7 @@ from ..trexapi.emu import (
     CHUNK,
     LISTING_RETRIES,
     PLUGIN_COUNTERS,
+    PLUGIN_SERVER_NAME,
     RATE_MAX,
     RATE_MIN,
     EmuInfo,
@@ -371,10 +372,11 @@ class EmuSession:
     async def counters(self, scope: str, ns: NsKey | None = None, mac: Mac | None = None,
                        plugin: str | None = None, meta: bool = False) -> dict[str, Any]:
         """{tables: {table: [{name, value, unit, help, info, zero}]}, unsupported: [plugin]}. `scope` ctx is
-        the server's own counters, ns a tunnel's plugin counters and client one client's (`ns` and `mac`
-        given as the scope needs). A plugin counter names `plugin`, or leaves it out for every plugin with
-        counters in that scope. A table's meta is fetched once per key for the connection, then only sparse
-        values; `meta=True` answers every counter the meta describes, with value None.
+        the server's own counters, ns a tunnel's plugin counters and client one client's (`ns` and `mac` given
+        as the scope needs). A plugin counter names `plugin`, or leaves it out for every plugin loaded in the
+        namespace or client (one info read says which) that has counters in that scope. A table's meta is
+        fetched once per key for the connection, then only sparse values; `meta=True` answers every counter
+        the meta describes, with value None.
 
         EmuRefused `unsupported` when `plugin` is named and the server lacks its counters for the scope (or
         the plugin has none there); without `plugin` such plugins are skipped and listed in `unsupported`.
@@ -407,7 +409,13 @@ class EmuSession:
         """The counter requests of one `counters` call (one executor job)."""
         tables: dict[str, list[dict[str, Any]]] = {}
         unsupported: list[str] = []
-        for name, method in self._methods(scope, plugin):
+        methods = self._methods(scope, plugin)
+        if plugin is None and scope != "ctx":
+            # Only the plugins loaded in the namespace or client: asking the others costs a request each that
+            # the server answers 'no valid plugin', every poll.
+            loaded = self._loaded_plugins(conn, scope, ns, mac)
+            methods = [(p, m) for p, m in methods if p is not None and PLUGIN_SERVER_NAME.get(p, p) in loaded]
+        for name, method in methods:
             try:
                 if not method:
                     raise EmuUnsupported(f"{name} counters in a {scope} scope")
@@ -419,6 +427,22 @@ class EmuSession:
                 if name is not None:
                     unsupported.append(name)
         return {"tables": tables, "unsupported": unsupported}
+
+    @staticmethod
+    def _loaded_plugins(conn: _Conn, scope: str, ns: NsKey | None, mac: Mac | None) -> set[str]:
+        """The server's names of the plugins loaded in `ns` (scope ns, one ctx_get_info) or in its client
+        `mac` (scope client, one ctx_client_get_info). TrexApiError when the answer names none (an error
+        answer raises as any read's does, so the route can say the key is gone)."""
+        assert ns is not None
+        if scope == "ns":
+            rows, method = conn.rpc.ns_info([ns]), "ctx_get_info"
+        else:
+            assert mac is not None
+            rows, method = conn.rpc.client_info(ns, [mac]), "ctx_client_get_info"
+        plugs = rows[0].get("plug_names") if len(rows) == 1 else None
+        if not isinstance(plugs, list) or not all(isinstance(p, str) for p in plugs):
+            raise TrexApiError(f"The EMU server's {method} answer names no plugins for this {scope}.")
+        return set(plugs)
 
     @staticmethod
     def _method_rows(conn: _Conn, method: str, ns: NsKey | None, mac: Mac | None,
