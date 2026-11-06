@@ -3,6 +3,7 @@ import subprocess
 import sys
 from collections.abc import Callable
 from pathlib import Path
+from typing import Any
 
 import pytest
 from support import PIN_FILE, ROOT, VENDOR, pinned_sha, run_vendor_python, warnings_in
@@ -16,7 +17,7 @@ def test_pin_records_sha_and_all_patches() -> None:
     pin = json.loads((VENDOR / "TREX_PIN").read_text())
     assert pin == json.loads(PIN_FILE.read_text())                  # copy in _vendor matches the record
     assert f"--sha {pinned_sha()}" in (ROOT / "Makefile").read_text()  # and the record matches the Makefile
-    assert [p[:2] for p in pin["patches"]] == [f"{n:02d}" for n in range(1, 17)]
+    assert [p[:2] for p in pin["patches"]] == [f"{n:02d}" for n in range(1, 18)]
 
 
 def test_vendor_is_reproducible(build_vendor: BuildVendor) -> None:  # canon:TSK-5
@@ -328,3 +329,32 @@ def test_16_ip_traceroute_optclass(build_vendor: BuildVendor) -> None:
     assert run_vendor_python(VENDOR, CODE_16).stdout.strip().splitlines()[-1] == "52 IPOption_Traceroute"
     unpatched = run_vendor_python(build_vendor(["16"]), CODE_16)   # canon:VER-2: patch 16 skipped
     assert unpatched.stdout.strip().splitlines()[-1] == "12 IPOption_Traceroute"
+
+
+# 17: each port's own xstats names. Against the fake with port 1's list shorter (--xstats-short 1, a
+# virtual function's) or shrinking after connect (--xstats-short-after-names 1), clear_stats reads every
+# port's xstats.
+CODE_17 = IMPORT_ALL + """
+from trex.stl.api import STLClient
+c = STLClient(server={host!r}, sync_port={rpc}, async_port={pub}, verbose_level='none')
+c.connect()
+try:
+    c.clear_stats()
+    print('cleared', len(c.get_xstats(0)), len(c.get_xstats(1)))
+except Exception as e:
+    print('failed', e)
+finally:
+    c.disconnect()
+"""
+
+
+@pytest.mark.parametrize("flag", ["--xstats-short", "--xstats-short-after-names"])
+def test_17_per_port_xstats_names(build_vendor: BuildVendor, fake_trex: Callable[..., Any],
+                                  flag: str) -> None:
+    f = fake_trex(flag, "1")
+    code = CODE_17.format(host=f.host, rpc=f.rpc_port, pub=f.pub_port)
+    r = run_vendor_python(VENDOR, code)
+    assert r.stdout.strip().splitlines()[-1] == "cleared 13 9", r.stderr
+    unpatched = run_vendor_python(build_vendor(["17"]), code)   # canon:VER-2: patch 17 skipped
+    assert unpatched.stdout.strip().splitlines()[-1] == (
+        "failed Length of get_xstats_names: 13 and get_port_xstats_values: 9"), unpatched.stderr

@@ -1,6 +1,6 @@
 # Vendor patches
 
-trex-web-gui carries its own copy of the TRex Python client in `backend/trex_web_gui/_vendor/`, with sixteen patches
+trex-web-gui carries its own copy of the TRex Python client in `backend/trex_web_gui/_vendor/`, with seventeen patches
 applied (`backend/vendor/patches/`). This file records what each patch fixes, who wrote it, how the copy is
 built and checked, and where each fix stands upstream. Researched 2026-10-18.
 
@@ -38,15 +38,15 @@ Rules:
      files itself (`backend/scripts/vendor_trex.py`).
   4. Add a `test_NN` that fails when the patch is skipped.
 
-  Patch 16 is the latest example.
+  Patch 17 is the latest example.
 - **Re-pinning to a newer TRex:** run `make vendor` against the new checkout. A patch that no longer applies,
   or whose bug upstream has fixed, fails its test; drop or rewrite it.
 
 ## Authorship
 
-All sixteen patches were written by Claude (Claude Code agents running the trex-web-gui plans: implementer
+All seventeen patches were written by Claude (Claude Code agents running the trex-web-gui plans: implementer
 subagents for 01-13 and 15, the session running the plan for 14, the session fixing the options-editing minors for
-16). Each was reviewed by a separate reviewer agent, then
+16, the session fixing a Reset on virtual-function ports for 17). Each was reviewed by a separate reviewer agent, then
 committed under Charles Menser's git identity with a `Co-Authored-By: Claude Opus 5.5` trailer. None came from
 upstream, and none has been submitted there.
 
@@ -62,6 +62,7 @@ upstream, and none has been submitted there.
 | 14 | branch `ihl-guard` | 2026-11-02 | Scapy fork patches Task 3 (option c of the Scapy study) |
 | 15 | branch `options-editing` | 2026-11-05 | Options editing Task 2 (packet worker) |
 | 16 | branch `options-minors` | 2026-11-05 | Options editing minors (DEFERRED `options-editing-3`) |
+| 17 | branch `vf-xstats-names` | 2026-11-06 | A Reset failing on a server with virtual-function ports (user report) |
 
 ## The patches
 
@@ -86,6 +87,7 @@ Paths are relative to `trex/` in the vendored copy. Upstream, that directory is
 | 14 `ip-options-ihl-guard` | `external_libs/scapy-2.4.3/scapy/layers/inet.py:475` | The IP options field's `length_from=lambda p:p.ihl * 4 - 20` is negative for an ihl below 5. | A negative length reads all but the last 20 bytes of the rest of the frame as options: a 9 238-byte zero-filled IPv4 frame (ihl 0) becomes 9 184 options, and its capture layer tree took 2.5 s and 272 MiB (0.002 s and 47 MiB with the patch). A header with ihl 5 to 15 dissects as before. | No: current Scapy caps list fields with `conf.max_list_count` |
 | 15 `tcp-options-bytes` | `external_libs/scapy-2.4.3/scapy/layers/inet.py:369` | `TCPOptionsField.i2m` walks its value as (name, value) pairs. | The unpatched `i2m` fails on bytes, and trex-web-gui's worker hands a document's MACHINE TCP options to it as bytes (the legacy scapy server reads them through `m2i`, a list, so it builds them unpatched, a lossy option re-encoded). With the patch a `bytes` value comes back zero-padded to a multiple of 4 and `TCP.post_build` takes `dataofs` from that length; a list value is built as before. | No: not reported |
 | 16 `ip-traceroute-optclass` | `external_libs/scapy-2.4.3/scapy/layers/inet.py:208` | `IPOption_Traceroute` sets `option = 18` and keeps the header's default `optclass` 0, so it builds type 18 (0x12); RFC 1393 and IANA assign 82 (0x52, class 2). | A real Traceroute option reads in the options editor as an unnamed other row, and Add Traceroute (or `IPOption_Traceroute()` in a profile) writes 0x12. Dissection does not change: the registry keys on the 5-bit number. | No: Scapy 2.8.0 still builds 0x12, and no secdev/scapy issue or PR names it (2026-11-05); its `IPOption_Timestamp` (PR #2463) sets `optclass = 2` the same way |
+| 17 `per-port-xstats-names` | `common/trex_client.py:472-475`, `common/stats/trex_port_stats.py:226` | `_connect` reads one port's xstats names and gives them to every port ("all ports on a given TRex server instance have the same list of xstats"). | On a server whose ports list different counters (physical and virtual functions mixed), every xstats read of a port whose list differs raises "Length of get_xstats_names: N and get_port_xstats_values: M"; `_clear_stats_common` reads every port's, so a Reset or Clear stats of any port fails. | No: not yet reported |
 
 PR #1220 (`get_template` returns bytes): handled in the caller, not patched. The packet editor decodes the
 bytes where it calls `get_template` (spec §7 Deviation 1: no patch for it).

@@ -467,10 +467,10 @@ class TRexClient(object):
         if not rc:
             return rc
 
-        xstat_names = self.any_port.xstats.get_names(self.any_port)
-        # all ports on a given TRex server instance have the same list of xstats
+        # trex-web-gui patch 17: each port reads its own xstats names; the ports of one server can list
+        # different counters (a virtual function lists fewer than a physical port)
         for port in self.ports.values():
-            port.xstats.set_names(xstat_names)
+            port.xstats.set_names(port.xstats.get_names(port))
 
         # sync the ports
         rc = self._for_each_port('sync')

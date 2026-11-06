@@ -208,6 +208,7 @@ class PortXStats(AbstractStats):
         super(PortXStats, self).__init__(RpcCmdData('get_port_xstats_values', {'port_id': port_obj.port_id}, ''))
 
         self.port_id = port_obj.port_id
+        self.port_obj = port_obj
         self.names = []
 
     @staticmethod
@@ -222,6 +223,10 @@ class PortXStats(AbstractStats):
 
     def _pre_update(self, snapshot):
         values = snapshot['xstats_values']
+
+        # trex-web-gui patch 17: a list that no longer matches the names read at connect is read again, once
+        if len(values) != len(self.names):
+            self.names = self.get_names(self.port_obj)
 
         if len(values) != len(self.names):
             raise TRexError('Length of get_xstats_names: %s and get_port_xstats_values: %s' % (len(self.names), len(values)))

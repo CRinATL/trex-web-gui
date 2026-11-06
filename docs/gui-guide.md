@@ -362,6 +362,13 @@ Shown in [13](gui-inventory/screens/13-port-control-top.png), [14](gui-inventory
   - Unticking Link up on a transmitting port first shows `Link down while transmitting can hang the TRex v3.08
     server (upstream issue #1207). Stop traffic first, or click again to proceed.` The second click within 5 s
     proceeds.
+- **Virtual-function ports** (a slice of a physical card, such as a Mellanox VF) can list fewer counters than a
+  physical port and support fewer attributes; each port's own Xstats list and support flags are used. Two host
+  settings of a VF, made on the host from its physical port and invisible to trex-web-gui, decide what it carries
+  (`ip link show <physical port>` lists them per VF):
+  - **spoofchk on** drops every frame whose source MAC is not the VF's own: a stream with another source MAC
+    shows packets sent and none received.
+  - **trust off** usually refuses promiscuous and all-multicast on the VF.
 - **Service mode**: radios **Off**, **On**, **Filtered**.
   - Off and On apply at once (a failure puts the radio back).
   - Filtered shows the mask checkboxes **No TCP/UDP**, **BGP**, **DHCP**, **Transport**, **mDNS**, **All** and
