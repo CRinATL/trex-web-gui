@@ -2,6 +2,7 @@ import { useRef, useState, useSyncExternalStore } from 'react'
 import type { PortView } from '../api'
 import { CLEAR_STATS_HINT, clearAll } from '../clearStats'
 import { SetupsMenu } from './setups/SetupsMenu'
+import { DropMenu } from '../ui/DropMenu'
 import { actionsFor, defaultState, TRANSMITTING, type MenuAction, type Selection } from '../portActions'
 import { RunButton, type RunKind } from './RunButton'
 import { dropPending, FormError, startFromForm, startSummary } from '../trafficStart'
@@ -9,16 +10,18 @@ import { trafficStore } from '../trafficStore'
 
 const errText = (x: unknown) => (x instanceof Error ? x.message : String(x))
 
-// Two labelled groups: Port N acts on the selected port (always shown, disabled at the root so the bar never jumps),
-// All ports acts on every port. Start reads the port's Traffic form from trafficStore; a bad form goes to onFormError
+// Two rows. The first holds the two traffic groups: Port N acts on the selected port (always shown, disabled at the root so
+// the bar never jumps), All ports acts on every port. The second holds the rest, with Reset in More ▾: Reset takes ports
+// from any owner and removes their streams, so it sits a step away from Start and Stop, and the page confirms it (onReset). Start reads the port's Traffic form from trafficStore; a bad form goes to onFormError
 // so the page can open the Traffic tab with the message. Start all asks the page for its confirmation dialog (onStartAll).
-export function Toolbar({ ports, selection, readOnly, connected, statsConnected = false, onError, onFormError, onStartAll, onSaveSetup, onManageSetups, onDaemon }: {
+export function Toolbar({ ports, selection, readOnly, connected, statsConnected = false, onError, onFormError, onStartAll, onSaveSetup, onManageSetups, onDaemon, onReset }: {
   ports: PortView[]; selection: Selection; readOnly: boolean; connected: boolean; statsConnected?: boolean
   onError: (message: string | null) => void
   onFormError?: (port: number, message: string) => void
   onStartAll?: () => void
   onSaveSetup?: () => void; onManageSetups?: () => void   // the Setups menu is shown when the page owns the dialogs
   onDaemon?: () => void   // opens the Daemon dialog; enabled while disconnected too, because the daemon starts a TRex before anyone connects
+  onReset?: (ports: number[]) => void   // asks the page to confirm a reset of these ports
 }) {
   const onSelection = actionsFor(selection, ports, readOnly, connected)
   const root = actionsFor({ kind: 'root' }, ports, readOnly, connected)
@@ -62,8 +65,13 @@ export function Toolbar({ ports, selection, readOnly, connected, statsConnected 
     })
   }
 
+  // Reset needs a session that may act; the selected port's reset is also off for a secondary profile (actionsFor says why)
+  const portReset = find(onSelection, 'reset')
+  const canReset = connected && !readOnly
+  const resetWhy = !connected ? 'Not connected' : readOnly ? 'Read-only session' : undefined
   return (
-    <div role="toolbar" aria-label="Control" className="toolbar">
+    <div role="toolbar" aria-label="Control" className="toolbar toolbar-rows">
+      <div className="tb-row">
       <div role="group" aria-label={label} className="tb-group">
         <span className="tb-label">{label}</span>
         {/* lit while the port transmits or is paused: the state sits where Start was */}
@@ -84,9 +92,19 @@ export function Toolbar({ ports, selection, readOnly, connected, statsConnected 
         {elsewhere.length > 0 && act('Re-acquire my ports', find(root, 'reacquire'), undefined,
           `Port${elsewhere.length > 1 ? 's' : ''} ${elsewhere.join(', ')} ${elsewhere.length > 1 ? 'are' : 'is'} held under your user name by another session`, 'go')}
       </div>
+      </div>
+      <div className="tb-row">
       <button type="button" disabled={!statsConnected} title={CLEAR_STATS_HINT} onClick={clearAll}>Clear stats</button>
       {onSaveSetup && onManageSetups && <SetupsMenu connected={connected} onSave={onSaveSetup} onManage={onManageSetups} />}
       {onDaemon && <button type="button" onClick={onDaemon}>TRex daemon…</button>}
+      {onReset && <DropMenu name="More" items={[
+        { id: 'reset', label: portId === null ? 'Reset port…' : `Reset port ${portId}…`, danger: true,
+          disabled: portId === null || !portReset?.enabled, title: noPort ?? resetWhy ?? (portReset?.enabled ? undefined : portReset?.label),
+          onPick: () => { if (portId !== null) onReset([portId]) } },
+        { id: 'reset_all', label: 'Reset all ports…', danger: true, disabled: !canReset || ports.length === 0, title: resetWhy,
+          onPick: () => onReset(ports.map((p) => p.id)) },
+      ]} />}
+      </div>
     </div>
   )
 }

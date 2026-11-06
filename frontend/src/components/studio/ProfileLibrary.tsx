@@ -3,6 +3,7 @@ import { ApiError, createProfile, deleteProfile, duplicateProfile, getProfile, r
 import { useAppState } from '../../state'
 import { AssignToPortDialog } from './AssignToPortDialog'
 import { ImportDialog } from './ImportDialog'
+import { RunButton } from '../RunButton'
 
 const errText = (x: unknown) => (x instanceof ApiError || x instanceof Error ? x.message : String(x))
 type Edit = { kind: 'new' | 'rename' | 'duplicate'; name: string }
@@ -102,9 +103,12 @@ export function ProfileLibrary({ entries, loadErrors, selected, onSelect, onChan
       {edit && (
         <div role="group" aria-label={TITLE[edit.kind]}>
           <label>Name <input autoFocus value={edit.name} onChange={(e) => setEdit({ ...edit, name: e.target.value })}
-            onKeyDown={(e) => { if (e.key === 'Enter' && edit.name.trim() && !busy && !renamePinned) void doEdit(); if (e.key === 'Escape') { setEdit(null); setError(null) } }} /></label>{' '}
-          <button type="button" onClick={() => { setEdit(null); setError(null) }}>Cancel</button>{' '}
-          <button type="button" disabled={busy || !edit.name.trim() || renamePinned} title={renamePinned ? PINNED : undefined} onClick={() => void doEdit()}>{VERB[edit.kind]}</button>
+            onKeyDown={(e) => { if (e.key === 'Enter' && edit.name.trim() && !busy && !renamePinned) void doEdit(); if (e.key === 'Escape') { setEdit(null); setError(null) } }} /></label>
+          {/* under the name box: the step to take in green first, Cancel plain (user, 2026-11-06) */}
+          <div className="name-edit-actions">
+            <RunButton kind="go" disabled={busy || !edit.name.trim() || renamePinned} title={renamePinned ? PINNED : undefined} onClick={() => void doEdit()}>{VERB[edit.kind]}</RunButton>{' '}
+            <button type="button" onClick={() => { setEdit(null); setError(null) }}>Cancel</button>
+          </div>
           {edit.kind === 'rename' && pointing > 0 && (
             <p className="muted">{pointing} test setup{pointing === 1 ? '' : 's'} point{pointing === 1 ? 's' : ''} at this profile; they will need the new path.</p>
           )}

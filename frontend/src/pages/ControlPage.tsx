@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { ApiError, daemonDisconnect, start } from '../api'
+import { ApiError, daemonDisconnect, resetPorts, start } from '../api'
 import { DaemonDialog } from '../components/daemon/DaemonDialog'
 import { ContextMenu } from '../components/ContextMenu'
 import { OpenMonitorLink } from '../components/OpenMonitorLink'
@@ -8,7 +8,7 @@ import { PortPanel, type PanelRequest } from '../components/PortPanel'
 import { SaveSetupDialog } from '../components/setups/SaveSetupDialog'
 import { SetupDialog } from '../components/setups/SetupDialog'
 import { Toolbar } from '../components/Toolbar'
-import { actionsFor, defaultState, type Selection } from '../portActions'
+import { actionsFor, defaultState, resetCaptureWarning, type Selection } from '../portActions'
 import { portTitle, usePortDisplayLabelOf } from '../portLabels'
 import { useOptionalLocation } from '../routerSafe'
 import { useDialogFocus } from '../components/useDialogFocus'
@@ -43,6 +43,27 @@ function StartAllDialog({ ports, busy, onConfirm, onCancel }: { ports: number[];
   )
 }
 
+// The toolbar's More ▾ Reset asks here first: Reset takes each port from any owner, so Cancel has the focus.
+function ResetDialog({ ports, warning, busy, onConfirm, onCancel }: { ports: number[]; warning: string | null; busy: boolean; onConfirm: () => void; onCancel: () => void }) {
+  const ref = useDialogFocus<HTMLDivElement>('[data-autofocus]')
+  useHotkey('escape', onCancel)
+  const what = `${ports.length === 1 ? 'port' : 'ports'} ${ports.join(', ')}`
+  return (
+    <div role="dialog" aria-modal="true" aria-labelledby="reset-title" className="modal" ref={ref}>
+      <h2 id="reset-title">Reset {ports.length === 1 ? 'port' : 'ports'}</h2>
+      <p>Reset {what}?</p>
+      <p className="muted">Reset takes {ports.length === 1 ? 'the port' : 'each port'} from any owner, stops traffic and removes all streams.</p>
+      {warning && <p role="status" className="error">{warning}</p>}
+      <div className="dialog-footer">
+        <div className="end">
+          <button type="button" data-autofocus onClick={onCancel}>Cancel</button>
+          <button type="button" className="danger" disabled={busy} onClick={onConfirm}>Reset {what}</button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 // onConnect opens the Connect dialog, as the status bar's Connect… does.
 // The lost session's cause as a sentence, as the status bar and the loss dialog give it.
 const lostCause = (error: string | null) => { const t = error ?? 'unknown cause'; return /[.!?]$/.test(t) ? t : `${t}.` }
@@ -65,11 +86,13 @@ export function ControlPage({ active = true, onConnect }: { active?: boolean; on
   const [setupsDialog, setSetupsDialog] = useState<'save' | 'manage' | null>(null)
   const [startAllBusy, setStartAllBusy] = useState(false)
   const [daemonOpen, setDaemonOpen] = useState(false)
+  const [resetting, setResetting] = useState<number[] | null>(null)
+  const [resetBusy, setResetBusy] = useState(false)
   const closeMenu = useCallback(() => setMenu(null), [])
   // A hidden page keeps its state but not its modal parts: no Escape hotkey and no focus trap behind another page.
   // Adjusting state during render, as for port errors above.
   // A Run goes on without its dialog; reopening shows the progress and result (setups.ts setupSession).
-  if (!active && (menu || startAll || setupsDialog !== null)) { setMenu(null); setStartAll(false); setSetupsDialog(null) }
+  if (!active && (menu || startAll || setupsDialog !== null || resetting !== null)) { setMenu(null); setStartAll(false); setSetupsDialog(null); setResetting(null) }
   // Save needs a session (it reads the Traffic forms of the connected ports); Manage works offline (Rename, Duplicate, Delete)
   if (setupsDialog === 'save' && !session.params) setSetupsDialog(null)
   // A hidden page closes the Daemon dialog too (adjusting state during render, as above); the effect below disconnects whenever it closes.
@@ -118,6 +141,12 @@ export function ControlPage({ active = true, onConnect }: { active?: boolean; on
   }
   const hooks = { request, capture }
   const startable = ports.filter((p) => p.owned && defaultState(p) === 'STREAMS').map((p) => p.id)
+  async function doReset(ids: number[]) {
+    setResetBusy(true)
+    try { await resetPorts({ ports: ids }); setError(null) }
+    catch (x) { setError(x instanceof ApiError ? x.message : String(x)) }
+    finally { setResetBusy(false); setResetting(null) }
+  }
   async function doStartAll() {
     setStartAllBusy(true)
     try { await start({ ports: startable, mult: START_ALL_MULT }); setError(null); setStartAll(false) }
@@ -140,7 +169,7 @@ export function ControlPage({ active = true, onConnect }: { active?: boolean; on
       <h1>Control</h1>
       <Toolbar ports={ports} selection={selection} readOnly={readOnly} connected={live} statsConnected={connected}
         onError={setError} onFormError={onFormError} onStartAll={() => setStartAll(true)}
-        onSaveSetup={() => setSetupsDialog('save')} onManageSetups={() => setSetupsDialog('manage')} onDaemon={() => setDaemonOpen(true)} />
+        onSaveSetup={() => setSetupsDialog('save')} onManageSetups={() => setSetupsDialog('manage')} onDaemon={() => setDaemonOpen(true)} onReset={setResetting} />
       {stfOnHint && serverHint && <p role="status" className="banner">{stfRunText(serverHint)} <OpenMonitorLink /></p>}
       {error && <p role="alert" className="error error-block">{error}</p>}
       <div className="control-grid">
@@ -156,6 +185,7 @@ export function ControlPage({ active = true, onConnect }: { active?: boolean; on
         </div>
       </div>
       {daemonOpen && <DaemonDialog onClose={() => setDaemonOpen(false)} />}
+      {resetting && <ResetDialog ports={resetting} warning={capture ? resetCaptureWarning(capture) : null} busy={resetBusy} onConfirm={() => void doReset(resetting)} onCancel={() => setResetting(null)} />}
       {startAll && <StartAllDialog ports={startable} busy={startAllBusy} onConfirm={() => void doStartAll()} onCancel={() => setStartAll(false)} />}
       {setupsDialog === 'save' && session.params && <SaveSetupDialog params={session.params} ports={ports} setups={setups} onClose={() => setSetupsDialog(null)} />}
       {setupsDialog === 'manage' && <SetupDialog setups={setups} loadErrors={setupLoadErrors} params={session.params} ports={ports} readOnly={readOnly} onClose={() => setSetupsDialog(null)} />}

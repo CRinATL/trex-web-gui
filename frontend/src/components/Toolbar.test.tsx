@@ -262,4 +262,34 @@ describe('Toolbar', () => {
     setup({ kind: 'root' }, [])
     expect(screen.queryByRole('button', { name: 'TRex daemon…' })).toBeNull()
   })
+
+  it('two rows: the traffic groups first, and the rest with Reset in More ▾ on the second (user, 2026-11-06)', async () => {
+    const onReset = vi.fn()
+    render(<Toolbar ports={[port(0), port(1)]} selection={{ kind: 'port', id: 1 }} readOnly={false} connected onError={vi.fn()} onReset={onReset} onDaemon={vi.fn()} />)
+    const [first, second] = Array.from(document.querySelectorAll('.tb-row')) as HTMLElement[]
+    expect(within(first).getAllByRole('group').map((g) => g.getAttribute('aria-label'))).toEqual(['Port 1', 'All ports'])
+    expect(within(first).queryByRole('button', { name: /Reset|Clear stats|daemon/ })).toBeNull()
+    expect(within(second).getAllByRole('button').map((b) => b.textContent)).toEqual(['Clear stats', 'TRex daemon…', 'More ▾'])
+    await userEvent.click(within(second).getByRole('button', { name: 'More ▾' }))
+    expect(within(screen.getByRole('menu', { name: 'More' })).getAllByRole('menuitem').map((b) => b.textContent)).toEqual(['Reset port 1…', 'Reset all ports…'])
+    await userEvent.click(screen.getByRole('menuitem', { name: 'Reset port 1…' }))
+    expect(onReset).toHaveBeenLastCalledWith([1])
+    expect(screen.queryByRole('menu')).toBeNull()
+    await userEvent.click(screen.getByRole('button', { name: 'More ▾' }))
+    await userEvent.click(screen.getByRole('menuitem', { name: 'Reset all ports…' }))
+    expect(onReset).toHaveBeenLastCalledWith([0, 1])
+  })
+  it('More ▾ Reset is off with no port, read-only or not connected, and says why', async () => {
+    const show = async (selection: Selection, readOnly: boolean, connected: boolean) => {
+      const r = render(<Toolbar ports={[port(0)]} selection={selection} readOnly={readOnly} connected={connected} onError={vi.fn()} onReset={vi.fn()} />)
+      await userEvent.click(screen.getByRole('button', { name: 'More ▾' }))
+      const items = screen.getAllByRole('menuitem') as HTMLButtonElement[]
+      const out = items.map((b) => [b.textContent, b.disabled, b.title])
+      r.unmount()
+      return out
+    }
+    expect(await show({ kind: 'root' }, false, true)).toEqual([['Reset port…', true, 'Select a port'], ['Reset all ports…', false, '']])
+    expect(await show({ kind: 'port', id: 0 }, true, true)).toEqual([['Reset port 0…', true, 'Read-only session'], ['Reset all ports…', true, 'Read-only session']])
+    expect(await show({ kind: 'port', id: 0 }, false, false)).toEqual([['Reset port 0…', true, 'Not connected'], ['Reset all ports…', true, 'Not connected']])
+  })
 })

@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { afterEach, describe, expect, it, vi } from 'vitest'
@@ -102,6 +102,18 @@ describe('ProfileLibrary', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Rename' }))
     expect(rename).toHaveBeenCalledWith('a', 'b', 'r1')
     expect(onChanged).toHaveBeenCalledWith('b')
+  })
+
+  it('the name form puts the green commit button first and a plain Cancel under the name box (user, 2026-11-06)', async () => {
+    show([entry('a')], { selected: 'a' })
+    await userEvent.click(screen.getByRole('button', { name: 'Rename…' }))
+    const form = screen.getByRole('group', { name: /rename/i })
+    const row = form.querySelector('.name-edit-actions') as HTMLElement
+    expect(within(row).getAllByRole('button').map((b) => b.textContent)).toEqual(['Rename', 'Cancel'])
+    expect(within(row).getByRole('button', { name: 'Rename' })).toHaveAttribute('data-run', 'go')
+    expect(within(row).getByRole('button', { name: 'Cancel' })).not.toHaveAttribute('data-run')
+    expect(within(row).queryByRole('textbox')).toBeNull()                  // the buttons sit under the box, not beside it
+    expect(name().compareDocumentPosition(row) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
   })
 
   it('Duplicate sends the new name', async () => {
