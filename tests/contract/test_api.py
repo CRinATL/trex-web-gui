@@ -9,6 +9,7 @@ import sys
 import threading
 import time
 import urllib.request
+from collections.abc import Callable
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from typing import Any
@@ -352,23 +353,16 @@ def test_cli_serve_exits_promptly_on_sigint_with_lost_session(tmp_path: Path, fa
     finalisation)."""
     f = fake_trex()
     timeout_s = 1.0
-    port = free_port_pair()[0]
     env = {**os.environ, "PYTHONPATH": str(ROOT / "backend"), "TREX_WEB_GUI_TOKEN": TEST_TOKEN}
-    code = (
-        "from trex_web_gui.cli import main; "
-        f"main(['serve','--dev','--port','{port}','--data-dir',{str(tmp_path)!r}])"
-    )
-    srv = subprocess.Popen([sys.executable, "-c", code], env=env, stdout=subprocess.PIPE,
-                           stderr=subprocess.STDOUT, text=True)
+
+    def launch(port: int) -> subprocess.Popen[str]:
+        """`cli.main(['serve', '--dev', …])` on `port` in a child interpreter."""
+        code = ("from trex_web_gui.cli import main; "
+                f"main(['serve','--dev','--port','{port}','--data-dir',{str(tmp_path)!r}])")
+        return subprocess.Popen([sys.executable, "-c", code], env=env, stdout=subprocess.PIPE,
+                                stderr=subprocess.STDOUT, text=True)
+    srv, port = start_server(launch, tmp_path, 30)
     try:
-        deadline = time.monotonic() + 30
-        while True:
-            try:
-                _http(port, "/api/about")
-                break
-            except OSError:
-                assert srv.poll() is None and time.monotonic() < deadline, "server did not start"
-                time.sleep(0.1)
         _http(port, "/api/session/connect", {"host": f.host, "sync_port": f.rpc_port,
                                               "async_port": f.pub_port, "timeout_s": timeout_s})
         f.proc.send_signal(signal.SIGSTOP)
@@ -397,24 +391,91 @@ def test_cli_serve_exits_promptly_on_sigint_with_lost_session(tmp_path: Path, fa
             srv.wait()
 
 
+def start_server(launch: Callable[[int], subprocess.Popen[str]], data_dir: Path,
+                 timeout_s: float = 60) -> tuple[subprocess.Popen[str], int]:
+    """`launch(port)` on a free port and wait until /api/settings answers with `data_dir`: (proc, port).
+    The port is chosen before the child binds it, so another process can take it in between: a fake's
+    ZMQ socket there answers the readiness poll with a BadStatusLine, which is the likely cause of
+    p7-emu-155's one failure under gate load (its log was not kept). An answer that is not this server's
+    (not HTTP, or another server's data dir) is not ready; a child that exits before it is ready (it could
+    not bind) is started again on another port, three tries in all. RuntimeError (a harness error) when
+    none starts within `timeout_s`."""
+    want = str(data_dir.resolve())
+    deadline = time.monotonic() + timeout_s
+    for _ in range(3):
+        port = free_port_pair()[0]
+        proc = launch(port)
+        while proc.poll() is None and time.monotonic() < deadline:
+            try:
+                if str(Path(str(_http(port, "/api/settings")["data_dir"])).resolve()) == want:
+                    return proc, port
+            except (OSError, http.client.HTTPException, ValueError, KeyError):
+                pass
+            time.sleep(0.1)
+        out = stop_serve(proc)
+        if time.monotonic() >= deadline:
+            break
+    raise RuntimeError(f"HARNESS ERROR: trex-web-gui serve did not start: {out[-2000:]}")
+
+
 def serve(tmp_path: Path) -> tuple[subprocess.Popen[str], int]:
     """Start the real `trex-web-gui serve` in its own process group (as a terminal's Ctrl+C reaches uv and
     the server alike) and wait for /api/about. The caller must call stop_serve() in a finally."""
-    port = free_port_pair()[0]
-    proc = subprocess.Popen(["uv", "run", "--project", str(ROOT / "backend"), "trex-web-gui", "serve",
-                             "--port", str(port), "--data-dir", str(tmp_path / "data")],
-                            stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True,
-                            start_new_session=True, env={**os.environ, "TREX_WEB_GUI_TOKEN": TEST_TOKEN})
-    deadline = time.monotonic() + 60
-    while True:
+    def launch(port: int) -> subprocess.Popen[str]:
+        """The real `trex-web-gui serve` on `port`, in its own process group."""
+        return subprocess.Popen(["uv", "run", "--project", str(ROOT / "backend"), "trex-web-gui", "serve",
+                                 "--port", str(port), "--data-dir", str(tmp_path / "data")],
+                                stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True,
+                                start_new_session=True, env={**os.environ, "TREX_WEB_GUI_TOKEN": TEST_TOKEN})
+    return start_server(launch, tmp_path / "data")
+
+
+def test_start_server_moves_on_when_the_port_is_taken(tmp_path: Path,
+                                                      monkeypatch: pytest.MonkeyPatch) -> None:
+    """The first port start_server picks is held by a socket that answers in garbage (as a ZMQ socket does):
+    the poll is not ready (no BadStatusLine escapes), the child cannot bind and exits, and the second port,
+    free, serves. The child is a stand-in that answers /api/settings with its data dir."""
+    import socket
+    taken = socket.socket()
+    taken.bind(("127.0.0.1", 0))
+    taken.listen()
+    held = taken.getsockname()[1]
+    stop = threading.Event()
+
+    def garble() -> None:
+        """Answer every connection to the held port with bytes that are not HTTP."""
+        taken.settimeout(0.2)
+        while not stop.is_set():
+            with contextlib.suppress(OSError):
+                conn, _ = taken.accept()
+                conn.sendall(b"\xff\x00\x00\x00\x00\x00\x00\x00\x01\x7fnot http\r\n\r\n")
+                conn.close()
+    t = threading.Thread(target=garble, daemon=True)
+    t.start()
+    ports = iter([(held, 0), free_port_pair()])
+    monkeypatch.setattr(sys.modules[__name__], "free_port_pair", lambda: next(ports))
+    data = tmp_path / "data"
+    stand_in = (
+        "import http.server, json, sys\n"
+        "class H(http.server.BaseHTTPRequestHandler):\n"
+        "    def do_GET(self):\n"
+        f"        body = json.dumps({{'data_dir': {str(data)!r}}}).encode()\n"
+        "        self.send_response(200); self.send_header('Content-Length', str(len(body)))\n"
+        "        self.end_headers()\n"
+        "        self.wfile.write(body)\n"
+        "http.server.HTTPServer(('127.0.0.1', int(sys.argv[1])), H).serve_forever()\n")
+    try:
+        proc, port = start_server(lambda p: subprocess.Popen([sys.executable, "-c", stand_in, str(p)],
+                                                             stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+                                                             text=True), data, 30)
         try:
-            _http(port, "/api/about")
-            return proc, port
-        except OSError:
-            if proc.poll() is not None or time.monotonic() > deadline:
-                stop_serve(proc)
-                raise RuntimeError("HARNESS ERROR: trex-web-gui serve did not start") from None
-            time.sleep(0.1)
+            assert port != held and proc.poll() is None
+        finally:
+            stop_serve(proc)
+    finally:
+        stop.set()
+        t.join()
+        taken.close()
 
 
 def sigint_group(proc: subprocess.Popen[str]) -> None:
@@ -424,9 +485,12 @@ def sigint_group(proc: subprocess.Popen[str]) -> None:
 
 
 def stop_serve(proc: subprocess.Popen[str]) -> str:
-    """Make sure no process of the serve group outlives the test; returns the remaining output."""
+    """Make sure no process of the serve group outlives the test; returns the remaining output. A child that
+    does not lead its own group (start_server's other callers) is killed by itself."""
     with contextlib.suppress(ProcessLookupError):
         os.killpg(proc.pid, signal.SIGKILL)
+    if proc.poll() is None:
+        proc.kill()
     return proc.communicate()[0] or ""
 
 
@@ -489,9 +553,16 @@ def test_sigint_during_lifespan_cleanup_lets_the_close_finish(tmp_path: Path) ->
     before the lifespan shutdown. The further SIGINT is sent while the close runs. gc.collect() makes
     the collection happen before exit, not whenever the collector next runs. The test runs `cli.main`
     directly, without uv, so every signal is one this test sends."""
-    port = free_port_pair()[0]
     env = {**os.environ, "PYTHONPATH": str(ROOT / "backend"), "TREX_WEB_GUI_TOKEN": TEST_TOKEN}
-    code = (
+
+    def launch(port: int) -> subprocess.Popen[str]:
+        """The harness below in a child interpreter, serving on `port`."""
+        return subprocess.Popen([sys.executable, "-c", harness(port)], env=env, stdout=subprocess.PIPE,
+                                stderr=subprocess.STDOUT, text=True)
+
+    def harness(port: int) -> str:
+        """The child's code: a slowed, marked close and a held drain, then `cli.main(['serve'])`."""
+        return (
         "import asyncio, gc\n"
         "from trex_web_gui.cli import main\n"
         "from trex_web_gui.sessions import TrexSession\n"
@@ -517,19 +588,10 @@ def test_sigint_during_lifespan_cleanup_lets_the_close_finish(tmp_path: Path) ->
         f"    main(['serve', '--port', '{port}', '--data-dir', {str(tmp_path / 'data')!r}])\n"
         "finally:\n"
         "    gc.collect()\n")
-    srv = subprocess.Popen([sys.executable, "-c", code], env=env, stdout=subprocess.PIPE,
-                           stderr=subprocess.STDOUT, text=True)
+    srv, _port = start_server(launch, tmp_path / "data", 30)
     watchdog = threading.Timer(60, srv.kill)
     watchdog.start()
     try:
-        deadline = time.monotonic() + 30
-        while True:
-            try:
-                _http(port, "/api/about")
-                break
-            except OSError:
-                assert srv.poll() is None and time.monotonic() < deadline, "server did not start"
-                time.sleep(0.1)
         assert srv.stdout is not None
         head = ""
 
