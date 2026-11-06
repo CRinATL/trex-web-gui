@@ -1,5 +1,6 @@
 import type { Inspected, LibraryEntry } from './api'
 import type { MultUnit } from './traffic'
+import { linkedSlug } from './linkedSlug'
 
 // One port's Traffic form. Browser-side and outside the reducer (the captureStore pattern), so the form survives
 // switching ports (TrafficTab is keyed by port) and saved setups can read and write it. The pending live-update
@@ -58,7 +59,10 @@ class TrafficStore {
         if (f.formPath === old.path) patch.formPath = entry.path
       }
       if (onSlug) patch.librarySlug = entry.slug
-      if (f.inspected) patch.inspected = { ...f.inspected, name: entry.name, ...(f.inspected.path === old.path ? { path: entry.path } : {}) }
+      // The name follows only a form that still shows the renamed entry: on its file path, or still the .py pick. A form
+      // that drifted from its pick shows the file's basename, which a rename does not change.
+      const named = onPath || linkedSlug(f) === old.slug
+      if (f.inspected) patch.inspected = { ...f.inspected, ...(named ? { name: entry.name } : {}), ...(f.inspected.path === old.path ? { path: entry.path } : {}) }
       next[Number(k)] = { ...f, ...patch }
       changed = true
     }

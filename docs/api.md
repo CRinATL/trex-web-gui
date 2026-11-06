@@ -39,7 +39,7 @@ status of the refusal (a browser navigation gets an HTML page with the same stat
 - 404 `not_found` and 405 `method_not_allowed`: an unknown route or a wrong method.
 - 500 `internal`: an unhandled exception (the message is its type and text).
 - 500 `storage_error`: a file the backend keeps could not be read or written (settings, port labels, test
-  setups, the Studio library, packet templates, uploads, bundle imports); the message says which.
+  setups, the profile library, packet templates, uploads, bundle imports); the message says which.
 - Any other code is the route's own, or one of the refusals below; each route's Responses list names the
   ones it can answer. A route's list is every pair its handler's code can reach, including codes a shared
   helper answers only for other routes, so a listed code is one the route may answer, not one it must.

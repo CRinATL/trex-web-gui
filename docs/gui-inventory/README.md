@@ -15,7 +15,7 @@ screens with them. New: [117](screens/117-connection-lost-dialog.png), the Conne
 
 **The Studio page is the Editor page (2026-11-06).** The nav item and page title read **Editor**, with the tabs **Profiles**
 (the old Studio page, route `/editor`) and **Packets** (the packet editor, `/editor/packet`; `/studio` and `/studio/packet`
-redirect). A stream's inner tabs read **Stream settings** and **Stream packet** (were Properties and Packet), the packet
+redirect). Every existing shot's top bar still reads "Studio" until the re-shoot. A stream's inner tabs read **Stream settings** and **Stream packet** (were Properties and Packet), the packet
 editor's heading is the packet's name or `Untitled`, Control's buttons are **New in Editor…** and **Copy to Editor**, and the
 Traffic tab has an **In the profile** heading with a caption over its streams table. The text below, and the shot file names, still
 say Studio and Properties for the shots taken before this change; `vm/shoot_inventory.py` and `vm/shoot_howto.py` now click the

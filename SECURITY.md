@@ -29,9 +29,9 @@ encryption and the authentication of the remote end.
   - The uvicorn access log rewrites the login URL's `token` parameter to `<redacted>`
     (`backend/trex_web_gui/api/auth.py:111-114`, `backend/trex_web_gui/cli.py:248`).
 - **Host and Origin checks.** Only the host names `127.0.0.1` and `localhost` are served, against DNS rebinding
-  (`backend/trex_web_gui/api/app.py:326`), and a browser request whose `Origin` is not a loopback origin on the serving
-  port is refused, against cross-site requests and WebSocket hijacking (`backend/trex_web_gui/api/origin.py:25`,
-  `backend/trex_web_gui/api/origin.py:46`).
+  (`backend/trex_web_gui/api/origin.py:39-60`, installed at `backend/trex_web_gui/api/app.py:325`), and a browser
+  request whose `Origin` is not a loopback origin on the serving port is refused, against cross-site requests and WebSocket hijacking (`backend/trex_web_gui/api/origin.py:65-75`,
+  `backend/trex_web_gui/api/origin.py:92`).
 
 ## By design, not vulnerabilities
 

@@ -73,6 +73,16 @@ describe('trafficStore', () => {
       expect(trafficStore.get(0).inspected?.name).toBe('Cdm Test 1')
       expect(trafficStore.get(0).path).toBe('/lib/a.json')
     })
+    it('relink moves the slug of a form drifted from its .py pick but keeps its basename', () => {
+      // a tunable edited since the pick: linkedSlug is undefined, so the form shows the file name, not the entry's
+      trafficStore.set(0, {
+        path: '/s/a.py', libraryPy: '/s/a.py', librarySlug: 'old', libraryArgs: [],
+        specs: [{ dest: 'x', flag: '--x', kind: 'int', default: 1, choices: null, help: '' }], values: { x: 2 }, extra: '', inspected: insp('/s/a.py', 'a.py'),
+      })
+      trafficStore.relink({ slug: 'old', path: '/lib/old.json' }, entry('new', 'New'))
+      expect(trafficStore.get(0).librarySlug).toBe('new')
+      expect(trafficStore.get(0).inspected?.name).toBe('a.py')
+    })
   })
   it('the defaults are frozen', () => {
     expect(Object.isFrozen(DEFAULT_FORM)).toBe(true)

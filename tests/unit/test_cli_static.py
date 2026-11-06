@@ -72,6 +72,27 @@ def test_serve_passes_the_resolved_static_dir(monkeypatch: pytest.MonkeyPatch, t
     assert seen == [tmp_path, None]
 
 
+def test_serve_makes_a_relative_data_dir_absolute(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    """The library's paths and the session's `os.path.abspath` of a request path must agree, so the data dir
+    create_app receives is absolute, whatever the working directory was at start-up."""
+    import uvicorn
+    from trex_web_gui.api import app as app_module
+
+    seen: list[Path] = []
+
+    def fake_create_app(data_dir: Path, hint: Any, static_dir: Path | None, **kw: Any) -> object:
+        seen.append(data_dir)
+        return object()
+
+    monkeypatch.setattr(app_module, "create_app", fake_create_app)
+    monkeypatch.setattr(uvicorn, "run", lambda *a, **k: None)
+    monkeypatch.setattr(cli, "resolve_static", lambda: tmp_path)
+    monkeypatch.chdir(tmp_path)
+    assert cli.main(["serve", "--data-dir", "rel/data"]) == 0
+    assert seen == [tmp_path / "rel" / "data"]
+    assert seen[0].is_absolute()
+
+
 def test_the_console_script_ignores_ctrl_c_once_the_server_has_stopped() -> None:
     """A Ctrl+C that lands while Python runs its exit handlers (logging.shutdown) printed a KeyboardInterrupt
     traceback: `uv run` forwards each Ctrl+C again about 0.2 s later, and under load one arrived after

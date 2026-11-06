@@ -1,6 +1,9 @@
 import { inspect, type LibraryEntry } from '../../api'
-import { defaultsFor, tunablesToArgs } from '../../traffic'
-import { trafficStore, type TrafficForm } from '../../trafficStore'
+import { defaultsFor } from '../../traffic'
+import { trafficStore } from '../../trafficStore'
+
+// linkedSlug lives in ../../linkedSlug, because trafficStore's relink reads it and this file imports trafficStore.
+export { linkedSlug } from '../../linkedSlug'
 
 // Spec §6.1, Q10: a .py entry is assigned from its source, not from the frozen JSON.
 export const PY_NOTE = 'Assigns the .py source with these tunables; editor changes to this entry are not sent.'
@@ -24,13 +27,4 @@ export async function fillFromJson(port: number, e: LibraryEntry): Promise<void>
   const i = await inspect({ path: e.path, ports: [port], tunables: [] })
   if (trafficStore.generation() !== gen) return
   trafficStore.set(port, { path: e.path, formPath: i.path, inspected: i, specs: i.tunables, values: defaultsFor(i.tunables), extra: '', libraryPy: null, librarySlug: null })
-}
-
-// The slug a request may send for this form: the pick's, while the form still is that pick (same path, same arguments).
-// Before the specs are known the arguments are libraryArgs themselves, as TrafficTab's tunablesFor has it.
-export function linkedSlug(form: TrafficForm): string | undefined {
-  if (!form.librarySlug || form.libraryPy !== form.path) return undefined
-  const args = form.specs.length === 0 ? form.libraryArgs : tunablesToArgs(form.specs, form.values, form.extra)
-  const same = args.length === form.libraryArgs.length && args.every((a, i) => a === form.libraryArgs[i])
-  return same ? form.librarySlug : undefined
 }

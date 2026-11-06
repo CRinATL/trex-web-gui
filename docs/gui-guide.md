@@ -456,8 +456,10 @@ Each port's form is kept while you switch ports, tabs and pages, and is emptied 
   <name>. Port <id> has other streams loaded: Assign replaces them.` `<name>` is the library entry's name, or the
   file name when the profile did not come from the library.
 
-**What it holds**: a table **#**, **Name**, **Enabled**, **Mode**, **Rate**, **Packet**, **Length**, **VM** of
-the inspected (or, after Assign, the assigned) streams, `Showing the first N of M streams` when cut. **Rate** reads
+**What it holds**: two tables, **In the profile** (the profile in the box, shown while it is not what the port
+holds from this session) and **On the port** (the profile this session assigned, with its arguments, or a note that
+the streams on the port were not assigned from this session, or that there are none). Each table has **#**, **Name**,
+**Enabled**, **Mode**, **Rate**, **Packet**, **Length**, **VM** columns, `Showing the first N of M streams` when cut. **Rate** reads
 as in the Editor's stream table: `4.00 kpps`, `250.00 Mbps L2`, `10 %`.
 **Show rate at ×1** (an owned port with streams) asks the server what ×1 means: `At ×1: max 1.1 kpps, L2 1.2
 Mbps, 0.012% line utilisation`, and a fold **Full validate response** with the raw answer.
@@ -1355,7 +1357,7 @@ dialog attaches it by itself ([12.3](#123-run-tab)).
 - Ctrl+Shift+C is not bound.
 
 The backend answers 409 `This backend runs with --monitor-only` to every request that changes state and to the
-capture, Editor, daemon, profile and file-browser routes.
+capture, Editor (`/api/studio`), daemon, profile and file-browser routes.
 
 ---
 
