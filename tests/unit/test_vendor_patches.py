@@ -293,6 +293,29 @@ def test_15_tcp_options_bytes(build_vendor: BuildVendor) -> None:
     assert "01010100" not in neg.stdout and "Traceback" in neg.stderr
 
 
+# Stock TRex's scapy server builds a document's MACHINE TCP options without patch 15: it reads them
+# through `m2i` (scapy_service.py:613), the (name, value) list, never handing the bytes to `i2m`. A lossy
+# option is re-encoded.
+CODE_15_STOCK = IMPORT_ALL + """
+import base64
+from trex.scapy_server.scapy_service import Scapy_service
+s = Scapy_service()
+def built(opts):
+    value = {"vtype": "MACHINE", "base64": base64.b64encode(opts).decode()}
+    model = [{"id": "Ether", "fields": []}, {"id": "IP", "fields": []},
+             {"id": "TCP", "fields": [{"id": "options", "value": value}]}]
+    raw = base64.b64decode(s.build_pkt(s.get_version_handler("1", "02"), model)["binary"])
+    return raw[34 + 20:34 + 20 + len(opts)].hex()
+print(built(bytes.fromhex("020405b40402080a0001e2400000000001030307")),
+      built(bytes.fromhex("1e010000")))
+"""
+
+
+def test_15_stock_server_builds_machine_tcp_options(build_vendor: BuildVendor) -> None:
+    out = run_vendor_python(build_vendor(["15"]), CODE_15_STOCK)
+    assert out.stdout.split()[-2:] == ["020405b40402080a0001e2400000000001030307", "1e020000"], out.stderr
+
+
 # 16: the Traceroute IP option builds its RFC 1393 type 82 (0x52), not 18 (0x12); both dissect as Traceroute
 CODE_16 = IMPORT_ALL + """
 from scapy.all import IP, IPOption_Traceroute

@@ -4,8 +4,10 @@ pairs, so a `bytes` value raises. trex-web-gui's packet editor stores TCP option
 re-encode rewrites a lossy option, `1e 01` to `1e 02`) and hands them to the field. The patch returns bytes
 zero-padded to a multiple of 4; `TCP.post_build` takes `dataofs` from that padded length, so the header length and
 the offsets of later layers follow. A list value goes through the old code unchanged.
-Upstream: the unpatched i2m fails on bytes, so a document with MACHINE TCP options does not build in the legacy
-scapy server. Not reported. Not touched by any other patch.
+Upstream: only trex-web-gui's worker hands the bytes to i2m. The legacy scapy server reads a MACHINE value through
+m2i (scapy_server/scapy_service.py:613 at the pin), which turns the bytes into the (name, value) list first, so it
+builds a document with MACHINE TCP options without the patch; a lossy option comes out re-encoded there (`1e 01` as
+`1e 02`). Not reported. Not touched by any other patch.
 
 diff -ruN a/external_libs/scapy-2.4.3/scapy/layers/inet.py b/external_libs/scapy-2.4.3/scapy/layers/inet.py
 --- a/external_libs/scapy-2.4.3/scapy/layers/inet.py

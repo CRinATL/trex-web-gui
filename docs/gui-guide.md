@@ -1140,9 +1140,10 @@ as ARP's `hwsrc` by its nominal size; a field that adds no bytes, such as a skip
   whose length is not a multiple of 4 is zero-padded to the next 4-byte boundary when the packet is built, and the
   summary then ends "padded to N bytes". The controls are off while the packet is being rebuilt.
   A document saved before this change keeps the read-only row until a byte edit inside the options or reopening it
-  from its bytes. **A packet with TCP options needs trex-web-gui to build once saved**: opening a capture stores IP
-  and TCP options as their exact bytes, edited or not, and stock TRex (the legacy TRex GUI, another TRex install)
-  cannot build TCP options in that form; trex-web-gui can, through its vendored patch 15. IP options build in both.
+  from its bytes. Opening a capture stores IP and TCP options as their exact bytes, edited or not. Stock TRex (the
+  legacy TRex GUI, another TRex install) builds them too: its Scapy server reads stored TCP option bytes back as
+  Scapy's option list. A malformed TCP option, one whose length Scapy does not keep (`1e 01`), comes out there as
+  Scapy rewrites it (`1e 02`); trex-web-gui builds the exact bytes, through its vendored patch 15.
 - A BYTES field (a payload) shows its bytes cut at 48 characters and a **Payload…** button
   ([10.4](#104-payload-dialog)).
 
