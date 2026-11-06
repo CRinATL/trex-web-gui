@@ -456,6 +456,7 @@ fieldset.plain legend { padding: 0; font-weight: 600; font-size: 1.1em; margin-b
 .options-editor .option-name { font-family: monospace; min-width: 6rem; }
 .options-editor .option-field { display: inline-flex; align-items: center; gap: .25rem; }
 .options-editor .option-input { width: 8rem; }
+.options-editor .option-field .option-input { width: 15rem; }   /* an enum label such as router_shall_examine_packet */
 .options-editor .options-hex { flex: 1 1 14rem; width: auto; }
 .options-editor .option-padding { padding-left: 1.25rem; }
 .options-editor .field-error { grid-column: auto; margin: 0; }

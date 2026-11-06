@@ -121,7 +121,10 @@ export function OptionsEditor({ field, kinds, pending, epoch, doc, onCommit }: O
   useEffect(() => { mounted.current = true; return () => { mounted.current = false } }, [])
 
   // Padding after the last row that is an EOL reads back as that EOL: removing it re-pads to the same bytes.
-  const padEol = (i: number) => opts.padding > 0 && i === opts.rows.length - 1 && opts.rows[i].name === 'EOL'
+  // Only when the rows before the EOL end short of a 4-byte boundary: the codec pads them to the same total (`before` is their byte count).
+  const before = opts.length - 1
+  const repads = before + (((-before % 4) + 4) % 4) === opts.length + opts.padding
+  const padEol = (i: number) => opts.padding > 0 && i === opts.rows.length - 1 && opts.rows[i].name === 'EOL' && repads
   const rowsOff = pending || lag || failed || busy || opts.problem !== null
   const hexOff = pending || busy || (lag && !failed)
   const hexShown = hexMode || opts.problem !== null || failed
@@ -172,6 +175,12 @@ export function OptionsEditor({ field, kinds, pending, epoch, doc, onCommit }: O
     ;[rows[i], rows[i + dir]] = [rows[i + dir], rows[i]]
     void submit(rows)
   }
+  // A new row goes before the first End of Options, where a receiver stops reading; with none, at the end.
+  const withRow = (row: OptionRow): OptionRow[] => {
+    const eol = opts.rows.findIndex((r) => r.name === 'EOL')
+    const at = eol === -1 ? opts.rows.length : eol
+    return [...opts.rows.slice(0, at), row, ...opts.rows.slice(at)]
+  }
   function add() {
     if (addKind === '') return
     if (addKind === '*other') {
@@ -179,14 +188,14 @@ export function OptionsEditor({ field, kinds, pending, epoch, doc, onCommit }: O
       if (n === null || n < 2 || n > 255) { setMessage(OTHER_NUMBER_TEXT); return }
       const b = bytesOfHex(otherHex)
       if (!b.ok) { setMessage(`value: ${b.message}`); return }
-      void submit([...opts.rows, { name: null, number: n, fields: { value: otherHex.replace(/\s+/g, '') }, edited: true }]).then((ok) => {
+      void submit(withRow({ name: null, number: n, fields: { value: otherHex.replace(/\s+/g, '') }, edited: true })).then((ok) => {
         if (ok && mounted.current) { setOtherNumber(''); setOtherHex(''); setAddKind('') }   // a refusal keeps what was typed
       })
       return
     } else {
       const kind = family.find((k) => k.name === addKind)
       if (!kind) return
-      void submit([...opts.rows, { name: kind.name, number: kind.number, fields: Object.fromEntries(kind.fields.map((s) => [s.name, s.default])), edited: true }]).then((ok) => {
+      void submit(withRow({ name: kind.name, number: kind.number, fields: Object.fromEntries(kind.fields.map((s) => [s.name, s.default])), edited: true })).then((ok) => {
         if (ok && mounted.current) setAddKind('')   // a refusal keeps the selected kind
       })
     }

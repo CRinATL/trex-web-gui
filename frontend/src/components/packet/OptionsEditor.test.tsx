@@ -78,8 +78,8 @@ describe('OptionsEditor', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Add' }))
     const rows = sentRows()
     expect(rows).toHaveLength(4)
-    expect(rows[3]).toMatchObject({ name: 'RR', number: 7, fields: { pointer: 4, routers: [] } })
-    expect('raw' in rows[3]).toBe(false)
+    expect(rows[2]).toMatchObject({ name: 'RR', number: 7, fields: { pointer: 4, routers: [] } })
+    expect('raw' in rows[2]).toBe(false)
   })
 
   it('adds an other option', async () => {
@@ -89,7 +89,7 @@ describe('OptionsEditor', () => {
     await userEvent.type(screen.getByRole('textbox', { name: 'Other option number' }), '25')
     await userEvent.type(screen.getByRole('textbox', { name: 'Other option hex' }), '0102')
     await userEvent.click(screen.getByRole('button', { name: 'Add' }))
-    expect(sentRows()[3]).toMatchObject({ name: null, number: 25, fields: { value: '0102' } })
+    expect(sentRows()[2]).toMatchObject({ name: null, number: 25, fields: { value: '0102' } })
   })
 
   it('shows the refusal and commits nothing', async () => {
@@ -299,5 +299,33 @@ describe('OptionsEditor', () => {
   it('keeps remove on an EOL with no padding after it', () => {
     setup(field({ ...withOptions({ padding: 0 }) }))
     expect(screen.getByRole('button', { name: 'Remove option 3' })).toBeEnabled()
+  })
+
+  it('inserts an added row before the first EOL', async () => {
+    vi.mocked(api.encodeOptions).mockResolvedValue(encodeFixture.routerAlert)
+    setup()   // NOP, Router Alert, EOL, padding 2
+    await userEvent.selectOptions(screen.getByRole('combobox', { name: 'Add option' }), 'RR')
+    await userEvent.click(screen.getByRole('button', { name: 'Add' }))
+    expect(sentRows().map((r) => r.name)).toEqual(['NOP', 'Router_Alert', 'RR', 'EOL'])
+  })
+
+  it('inserts an added other row before the first EOL', async () => {
+    vi.mocked(api.encodeOptions).mockResolvedValue(encodeFixture.routerAlert)
+    setup()
+    await userEvent.selectOptions(screen.getByRole('combobox', { name: 'Add option' }), '*other')
+    await userEvent.type(screen.getByRole('textbox', { name: 'Other option number' }), '25')
+    await userEvent.type(screen.getByRole('textbox', { name: 'Other option hex' }), '0102')
+    await userEvent.click(screen.getByRole('button', { name: 'Add' }))
+    expect(sentRows().map((r) => r.name)).toEqual(['NOP', 'Router_Alert', null, 'EOL'])
+  })
+
+  it('keeps remove on an EOL whose removal would change the bytes', () => {
+    // Router_Alert, EOL, padding 3 (94 04 00 00 00 00 00 00): no recorded fixture holds it, so the codec's decode shape is written by hand.
+    const rows = [
+      { name: 'Router_Alert', number: 148, fields: { alert: 0 }, raw: 'lAQAAA==' },
+      { name: 'EOL', number: 0, fields: {} },
+    ]
+    setup(field({ value: machine('lAQAAAAAAAA='), docValue: machine('lAQAAAAAAAA='), ...withOptions({ rows: rows as api.OptionRow[], padding: 3, length: 5 }) }))
+    expect(screen.getByRole('button', { name: 'Remove option 2' })).toBeEnabled()
   })
 })
