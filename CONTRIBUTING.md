@@ -12,8 +12,10 @@ response-time promise. Questions about TRex itself belong upstream, at
   Without a user session (a container, some CI runners), run the tests with the cap removed:
   `make test PYTEST="uv run --project backend pytest" VITEST_CAP=`. `make check-py`, which runs the unit tests on
   Python 3.12, 3.13 and 3.14, has no such override and needs the session.
-- **[uv](https://docs.astral.sh/uv/).** It provides Python 3.12 or later and the backend's dependencies; nothing is
-  installed system-wide.
+- **[uv](https://docs.astral.sh/uv/).** It provides Python and the backend's dependencies; nothing is installed
+  system-wide. `backend/.python-version` pins the development environment to Python 3.12, the oldest the backend
+  supports and the one CI and the documented installs use, so `make check` tests what users run; uv downloads a 3.12
+  if the machine has none. `make check-py` covers 3.13 and 3.14.
 - **Node.js with npm**, a version `frontend/package.json` accepts (`engines`: `^22.22.2 || ^24.15.0 || >=26.0.0`,
   the range jsdom, a test dependency, requires). npm only warns on another version.
 - **A TRex v3.08 server** in stateless mode, to use the GUI against. The tests do not need one: they run against a

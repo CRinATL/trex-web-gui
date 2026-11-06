@@ -3,7 +3,9 @@ target-version = "py312"
 extend-exclude = ["backend/trex_web_gui/_vendor"]
 
 [lint]
-select = ["E", "F", "W", "I", "B", "UP"]
+# TC004: a name imported under TYPE_CHECKING and used where Python evaluates it. Python 3.14 defers annotations, so
+# such a name passes there and fails at import on 3.12 (the packet worker's `OptionLayer`, PR #62).
+select = ["E", "F", "W", "I", "B", "UP", "TC004"]
 
 [lint.per-file-ignores]
 # TRex profiles conventionally do `from trex_stl_lib.api import *` (or `trex.stl.api`). The fixtures copy
