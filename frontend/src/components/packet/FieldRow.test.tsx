@@ -291,6 +291,10 @@ describe('field row alignment', () => {
   it('aligns every field row on the first line, not the centre', () => {
     const css = readFileSync(resolve(import.meta.dirname, '../../index.css'), 'utf8')
     expect(css).toMatch(/^\.field-row \{[^}]*align-items: baseline;/m)
-    expect(css).not.toMatch(/\.field-row \{[^}]*align-items: (center|stretch|end)/)
+    // and no rule whose subject is a field row sets any other alignment
+    const rules = Array.from(css.matchAll(/([^{}]+)\{([^}]*)\}/g), (m) => ({ sel: m[1], body: m[2] }))
+    const rowRules = rules.filter((r) => r.sel.split(',').some((s) => /\.field-row(\.[\w-]+)*\s*$/.test(s.trim())))
+    expect(rowRules.length).toBeGreaterThan(1)
+    for (const r of rowRules) expect(r.body.match(/align-items:\s*([\w-]+)/)?.[1] ?? 'baseline').toBe('baseline')
   })
 })

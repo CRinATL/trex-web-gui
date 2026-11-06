@@ -38,14 +38,15 @@ Rules:
      files itself (`backend/scripts/vendor_trex.py`).
   4. Add a `test_NN` that fails when the patch is skipped.
 
-  Patch 15 is the latest example.
+  Patch 16 is the latest example.
 - **Re-pinning to a newer TRex:** run `make vendor` against the new checkout. A patch that no longer applies,
   or whose bug upstream has fixed, fails its test; drop or rewrite it.
 
 ## Authorship
 
 All sixteen patches were written by Claude (Claude Code agents running the trex-web-gui plans: implementer
-subagents for 01-13 and 15, the session running the plan for 14). Each was reviewed by a separate reviewer agent, then
+subagents for 01-13 and 15, the session running the plan for 14, the session fixing the options-editing minors for
+16). Each was reviewed by a separate reviewer agent, then
 committed under Charles Menser's git identity with a `Co-Authored-By: Claude Opus 5.5` trailer. None came from
 upstream, and none has been submitted there.
 

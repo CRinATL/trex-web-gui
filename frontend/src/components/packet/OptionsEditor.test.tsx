@@ -1,5 +1,7 @@
 import { act, cleanup, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { readFileSync } from 'node:fs'
+import { resolve } from 'node:path'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import * as api from '../../api'
 import type { BuildResult, Definitions, FieldValue, PacketDoc, PacketField } from '../../api'
@@ -304,6 +306,35 @@ describe('OptionsEditor', () => {
     expect(document.activeElement).toBe(up)
   })
 
+  it('gives focus back to the control Tab moved to when a field commits on leaving it', async () => {
+    let resolve!: (v: { binary: string }) => void
+    vi.mocked(api.encodeOptions).mockReturnValue(new Promise((r) => { resolve = r }))
+    const { again } = setup()
+    const alert = screen.getByRole('combobox', { name: 'option 2 alert' })
+    await userEvent.clear(alert)
+    await userEvent.type(alert, '1')
+    await userEvent.tab()                      // leaving the input commits it; focus moves on to Move option 2 up
+    const up = screen.getByRole('button', { name: 'Move option 2 up' })
+    expect(api.encodeOptions).toHaveBeenCalledTimes(1)
+    dropFocus()
+    await act(async () => { resolve(encodeFixture.alertEdited); again(field(), { pending: true }) })
+    again(field())
+    expect(document.activeElement).toBe(up)
+  })
+
+  it('gives focus back after a hex commit', async () => {
+    const { onCommit, again } = setup()
+    await userEvent.click(screen.getByRole('button', { name: 'Edit as hex' }))
+    const box = screen.getByRole('textbox', { name: 'Options as hex' })
+    await userEvent.clear(box)
+    await userEvent.type(box, '01 01 01 00{Enter}')
+    expect(onCommit).toHaveBeenCalledTimes(1)
+    again(field(), { pending: true })
+    dropFocus()
+    again(field())
+    expect(document.activeElement).toBe(box)
+  })
+
   it('leaves focus alone when the user moved it during the commit', async () => {
     let resolve!: (v: { binary: string }) => void
     vi.mocked(api.encodeOptions).mockReturnValue(new Promise((r) => { resolve = r }))
@@ -340,6 +371,10 @@ describe('OptionsEditor', () => {
     expect(alert.style.width).toBe(`calc(${'router_shall_examine_packet'.length}ch + 2.5rem)`)
     expect(screen.getByRole('textbox', { name: 'option 4 pointer' }).style.width).toBe('')
     expect(screen.getByRole('textbox', { name: 'option 4 routers' }).style.width).toBe('')
+    // and no stylesheet rule widens every option field input again (jsdom has no layout, so the rule is pinned)
+    const css = readFileSync(resolve(import.meta.dirname, '../../index.css'), 'utf8')
+    expect(css).not.toMatch(/\.option-field \.option-input \{[^}]*width/)
+    expect(css).toMatch(/\.options-editor \.option-input \{ width: 8rem; \}/)
   })
 
   it('refuses an other number of 1 locally, adding or editing', async () => {
@@ -408,7 +443,7 @@ describe('OptionsEditor', () => {
 
   it('appends an added row after the rows when there is no EOL', async () => {
     vi.mocked(api.encodeOptions).mockResolvedValue(encodeFixture.routerAlert)
-    // NOP, Router Alert (01 94 04 00 00 01 01 01 -> rows written by hand: no fixture has options with no EOL)
+    // NOP, Router Alert (01 94 04 00 00, 5 bytes) with no EOL: rows written by hand, as no fixture has options with no EOL
     const rows = [{ name: 'NOP', number: 1, fields: {}, raw: 'AQ==' }, { name: 'Router_Alert', number: 148, fields: { alert: 0 }, raw: 'lAQAAA==' }]
     setup(field({ value: machine('AZQEAAA='), docValue: machine('AZQEAAA='), ...withOptions({ rows: rows as api.OptionRow[], padding: 0, length: 5 }) }))
     await userEvent.selectOptions(screen.getByRole('combobox', { name: 'Add option' }), 'RR')

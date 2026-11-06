@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState, type FocusEvent } from 'react'
 import { ApiError, encodeOptions, type DecodedOptions, type PacketDoc, type OptionKind, type OptionKinds, type OptionRow, type OptionSpec } from '../../api'
 import type { CombinedField } from './packetModel'
 import { decodeBase64, encodeBase64 } from './hexModel'
@@ -140,10 +140,15 @@ export function OptionsEditor({ field, kinds, pending, epoch, doc, onCommit }: O
   // A commit turns the controls off (busy, then the build pending), and a browser drops focus from a control when it is disabled,
   // so Ctrl+Z (the packet editor's key handler) stops reaching the editor. The control that committed gets focus back when the
   // controls are on again, or the editor itself when that control is gone; never when the user has moved focus meanwhile.
+  // A field commits on blur (Tab, or a click on another control), and while blur runs the focus is on the body: the blur's
+  // relatedTarget, caught on the way down (capture), is where focus is going. It lasts only for that event's handlers.
   const root = useRef<HTMLDivElement>(null)
   const refocus = useRef<HTMLElement | null>(null)
+  const blurTo = useRef<EventTarget | null>(null)
+  const onBlurCapture = (e: FocusEvent) => { blurTo.current = e.relatedTarget; queueMicrotask(() => { blurTo.current = null }) }
   const remember = () => {
-    const a = document.activeElement
+    const active = document.activeElement
+    const a = active === null || active === document.body ? blurTo.current : active
     if (a instanceof HTMLElement && root.current?.contains(a)) refocus.current = a
   }
   useEffect(() => {
@@ -227,13 +232,14 @@ export function OptionsEditor({ field, kinds, pending, epoch, doc, onCommit }: O
   function commitHex() {
     const b = bytesOfHex(hexText)
     if (!b.ok) { setMessage(b.message); return }
+    remember()
     setMessage(null)
     setHexDraft(null)
     onCommit({ vtype: 'MACHINE', base64: encodeBase64(b.value) })
   }
 
   return (
-    <div className="options-editor" ref={root} tabIndex={-1}>
+    <div className="options-editor" ref={root} tabIndex={-1} onBlurCapture={onBlurCapture}>
       <span className="field-value">{summary}</span>
       {opts.problem !== null && <p className="field-error" role="alert"><span className="mark-error" aria-hidden="true">!</span> {opts.problem}</p>}
       {hexShown ? (

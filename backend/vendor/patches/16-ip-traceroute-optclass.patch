@@ -10,6 +10,7 @@ Upstream: Scapy 2.8.0 still builds 0x12 (measured 2026-11-05) and master's class
 issue or PR names it (searched 2026-11-05). Scapy's IPOption_Timestamp (PR #2463) sets `optclass = 2` the same way.
 TRex's fork is 2.4.3. Not reported. Not touched by any other patch.
 
+diff -ruN a/external_libs/scapy-2.4.3/scapy/layers/inet.py b/external_libs/scapy-2.4.3/scapy/layers/inet.py
 --- a/external_libs/scapy-2.4.3/scapy/layers/inet.py
 +++ b/external_libs/scapy-2.4.3/scapy/layers/inet.py
 @@ -207,6 +207,7 @@
