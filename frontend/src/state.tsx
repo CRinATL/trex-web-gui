@@ -55,6 +55,8 @@ export interface AppState { backendOnline: boolean
   monitorTarget: MonitorTarget | null
   // True once the first hello has arrived: until then monitorOnly is not known, so the shell renders nothing that could ask the backend for anything.
   helloSeen: boolean
+  // The backend's own version, from hello (null until the first): the status bar shows it. A backend restart sends a new hello.
+  appVersion: string | null
   // The Daemon dialog's data: the newest `daemon` message (null until the first), the hello's target hint, and the stateful run the
   // Daemon dialog started last ({host, endsAt in ms}). The last is in memory only: a reload forgets it. Control connects never touch them.
   daemon: DaemonMsg | null
@@ -97,14 +99,16 @@ export const initialState: AppState = {
   monitorOnly: false,
   monitorTarget: null,
   helloSeen: false,
+  appVersion: null,
   daemon: null,
   daemonHint: null,
   lastStfRun: null,
 }
 
 // What a connect_seq change keeps: the socket state, the server hint (sent once per socket accept), and the
-// monotonic port-error counter, the event log with its unseen count, and the port labels, test setups and settings (the GUI's own files, not the server's). Everything else starts over.
-const KEEP = ['backendOnline', 'authenticated', 'serverHint', 'serverPorts', 'log', 'logUnseen', 'portErrorSeq', 'portLabels', 'portLabelsError', 'setups', 'setupLoadErrors', 'settings', 'monitorOnly', 'monitorTarget', 'helloSeen', 'daemon', 'daemonHint', 'lastStfRun'] as const satisfies readonly (keyof AppState)[]
+// monotonic port-error counter, the event log with its unseen count, and the port labels, test setups and settings (the GUI's own files, not the server's),
+// and the hello's backend version (a TRex connect does not change the backend). Everything else starts over.
+const KEEP = ['backendOnline', 'authenticated', 'serverHint', 'serverPorts', 'log', 'logUnseen', 'portErrorSeq', 'portLabels', 'portLabelsError', 'setups', 'setupLoadErrors', 'settings', 'monitorOnly', 'monitorTarget', 'helloSeen', 'appVersion', 'daemon', 'daemonHint', 'lastStfRun'] as const satisfies readonly (keyof AppState)[]
 
 // Adds one entry to the log (capped), counting it as unseen when it is an error or a warning.
 function appendLog(s: AppState, e: LogEntry): AppState {
@@ -163,7 +167,7 @@ export function reducer(s: AppState, a: Action): AppState {
       const text = connectionMark(m, prev, newConnect)
       return text === null ? next : appendLog(next, { kind: 'MARK', ts: Date.now() / 1000, message: text })
     }
-    case 'hello': return { ...s, serverHint: m.server_hint, serverPorts: m.server_ports, monitorOnly: m.monitor_only ?? false, monitorTarget: m.monitor_target ?? null, daemonHint: m.daemon_hint ?? null, helloSeen: true }
+    case 'hello': return { ...s, serverHint: m.server_hint, serverPorts: m.server_ports, monitorOnly: m.monitor_only ?? false, monitorTarget: m.monitor_target ?? null, daemonHint: m.daemon_hint ?? null, helloSeen: true, appVersion: typeof m.app_version === 'string' ? m.app_version : null }
     case 'daemon': return { ...s, daemon: m }
     case 'port_labels': return { ...s, portLabels: m.labels, portLabelsError: m.load_error }
     case 'test_setups': return { ...s, setups: m.setups, setupLoadErrors: m.load_errors }

@@ -27,6 +27,14 @@ describe('reducer', () => {
     const s = reducer(initialState, { kind: 'msg', msg: { type: 'hello', app_version: '0', server_hint: 'lab1', server_ports: null } })
     expect(s.serverHint).toBe('lab1')
   })
+  it('hello sets the backend version; a later hello (a backend restart) replaces it, and a new connect keeps it', () => {
+    let s = reducer(initialState, { kind: 'msg', msg: { type: 'hello', app_version: '9.8.7', server_hint: null, server_ports: null } })
+    expect(s.appVersion).toBe('9.8.7')
+    s = reducer(s, { kind: 'msg', msg: { type: 'session', state: 'connecting', params: null, info: null, error: null, rpc_console: false, include_polling: false, connect_seq: 'b' } })
+    expect(s.appVersion).toBe('9.8.7')
+    s = reducer(s, { kind: 'msg', msg: { type: 'hello', app_version: '9.8.8', server_hint: null, server_ports: null } })
+    expect(s.appVersion).toBe('9.8.8')
+  })
   it('hello sets the server ports', () => {
     const ports = { sync_port: 4601, async_port: 4600 }
     let s = reducer(initialState, { kind: 'msg', msg: { type: 'hello', app_version: '0', server_hint: 'lab1', server_ports: ports } })

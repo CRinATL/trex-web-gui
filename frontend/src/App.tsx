@@ -27,7 +27,7 @@ function NotAuthorised() {
 }
 
 export function AppShell() {
-  const { backendOnline, authenticated, session, serverHint, serverPorts, ports, logUnseen, monitorOnly, helloSeen } = useAppState()
+  const { backendOnline, authenticated, session, serverHint, serverPorts, ports, logUnseen, monitorOnly, helloSeen, appVersion } = useAppState()
   const [connectOpen, setConnectOpen] = useState(false)
   const navigate = useNavigate()
   const mainRef = useRef<HTMLElement>(null)
@@ -117,7 +117,7 @@ export function AppShell() {
           <Route path="/settings" element={<SettingsPage />} />
         </Routes>
       </main>
-      <StatusBar backendOnline={backendOnline} session={session} owned={ports.filter((p) => p.owned).map((p) => p.id)} onConnect={openConnect} />
+      <StatusBar backendOnline={backendOnline} appVersion={appVersion} session={session} owned={ports.filter((p) => p.owned).map((p) => p.id)} onConnect={openConnect} />
       <LossDialog session={session} />
       {connectOpen && <ConnectDialog initialHost={serverHint ?? '127.0.0.1'} initialPorts={serverPorts} initialParams={session.params} onClose={() => setConnectOpen(false)} />}
     </div>
