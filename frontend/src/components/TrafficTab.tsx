@@ -74,7 +74,7 @@ export function TrafficTab({ port, selection, ports, readOnly, connected, visibl
   const [error, setError] = useState<string | null>(null)
   const [reqErr, setReqErr] = useState<string | null>(null)
   const navigate = useOptionalNavigate()
-  const [naming, setNaming] = useState<string | null>(null)   // the inline name of New in Studio…, null while closed
+  const [naming, setNaming] = useState<string | null>(null)   // the inline name of New in Editor…, null while closed
   const [studioBusy, setStudioBusy] = useState(false)
   const [studioErr, setStudioErr] = useState<string | null>(null)
   const [seenReqSeq, setSeenReqSeq] = useState(requestError?.seq ?? 0)   // a remount must not replay an old request's error
@@ -198,13 +198,13 @@ export function TrafficTab({ port, selection, ports, readOnly, connected, visibl
     })
   }
 
-  // A3.6: New in Studio… and Copy to Studio create a library entry and open it in Studio.
+  // A3.6: New in Editor… and Copy to Editor create a library entry and open it in the Editor.
   async function toStudio(make: () => Promise<LibraryEntry | { rev: string }>) {
     setStudioBusy(true); setStudioErr(null)
     try {
       const r = await make()
       setNaming(null)
-      if ('slug' in r) navigate?.('/studio', { state: { studioSelect: r.slug } })
+      if ('slug' in r) navigate?.('/editor', { state: { studioSelect: r.slug } })
     } catch (x) { setStudioErr(x instanceof ApiError || x instanceof Error ? x.message : String(x)) }
     finally { setStudioBusy(false) }
   }
@@ -254,11 +254,11 @@ export function TrafficTab({ port, selection, ports, readOnly, connected, visibl
           </>
         )}
         <div className="action-bar">
-          <button type="button" disabled={studioBusy || naming !== null} onClick={() => { setStudioErr(null); setNaming('') }}>New in Studio…</button>
-          <button type="button" disabled={studioBusy || !inspected} onClick={() => void copyToStudio()}>Copy to Studio</button>
+          <button type="button" disabled={studioBusy || naming !== null} onClick={() => { setStudioErr(null); setNaming('') }}>New in Editor…</button>
+          <button type="button" disabled={studioBusy || !inspected} onClick={() => void copyToStudio()}>Copy to Editor</button>
         </div>
         {naming !== null && (
-          <div role="group" aria-label="New profile in Studio">
+          <div role="group" aria-label="New profile in Editor">
             <label>Name <input autoFocus value={naming} onChange={(e) => setNaming(e.target.value)}
               onKeyDown={(e) => { if (e.key === 'Enter' && naming.trim() && !studioBusy) void toStudio(() => createProfile(naming.trim())); if (e.key === 'Escape') setNaming(null) }} /></label>{' '}
             <button type="button" onClick={() => setNaming(null)}>Cancel</button>{' '}

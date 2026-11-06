@@ -26,7 +26,7 @@ export function LibraryPickDialog({ onPick, onClose, active = true }: { onPick: 
     <div role="dialog" aria-modal="true" aria-label="Pick from the library" className="modal" ref={ref}>
       <h2>Pick from the library</h2>
       {entries === null && !error && <p className="muted">Loading…</p>}
-      {entries && entries.length === 0 && <p className="muted">The library is empty. Add profiles in Studio.</p>}
+      {entries && entries.length === 0 && <p className="muted">The library is empty. Add profiles in the Editor.</p>}
       {entries && entries.length > 0 && (
         <ul className="setups-list">
           {entries.map((e, i) => {

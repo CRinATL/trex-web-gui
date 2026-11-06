@@ -14,7 +14,7 @@ import { StreamProperties } from './StreamProperties'
 import { endOf, ProfileWriter, type WriterState } from './studioWriter'
 
 type DetailTab = 'properties' | 'packet'
-const DETAIL_TABS: { id: DetailTab; label: string }[] = [{ id: 'properties', label: 'Properties' }, { id: 'packet', label: 'Packet' }]
+const DETAIL_TABS: { id: DetailTab; label: string }[] = [{ id: 'properties', label: 'Stream settings' }, { id: 'packet', label: 'Stream packet' }]
 
 const errText = (x: unknown) => (x instanceof ApiError || x instanceof Error ? x.message : String(x))
 const noSubscribe = () => () => undefined

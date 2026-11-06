@@ -472,7 +472,7 @@ describe('ControlPage from Studio', () => {
   it('a studioAssign request selects the port\'s Traffic tab', async () => {
     const state = await import('../state')
     vi.spyOn(state, 'useAppState').mockReturnValue({ ...state.initialState, backendOnline: true, session: connected, ports: [{ ...port0, state: 'STREAMS', profiles: wireProfiles('STREAMS') }] })
-    render(<MemoryRouter initialEntries={['/studio']}><ControlPage /><GoAssign /></MemoryRouter>)
+    render(<MemoryRouter initialEntries={['/editor']}><ControlPage /><GoAssign /></MemoryRouter>)
     expect(screen.queryByRole('tab', { name: 'Traffic' })).toBeNull()
     await userEvent.click(screen.getByRole('button', { name: 'go' }))
     expect(screen.getByRole('tab', { name: 'Traffic' })).toHaveAttribute('aria-selected', 'true')

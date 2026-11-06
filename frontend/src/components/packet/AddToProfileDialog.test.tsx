@@ -135,13 +135,13 @@ describe('AddToProfileDialog', () => {
     expect(api.createProfile).toHaveBeenCalledTimes(1)
     expect(sent()[0]).toBe('c')
   })
-  it('success links to the profile in Studio', async () => {
+  it('success links to the profile in Editor', async () => {
     const onClose = vi.fn()
     renderIt({ onClose })
     await pickBeta()
     await userEvent.click(screen.getByRole('button', { name: 'Add' }))
-    await userEvent.click(await screen.findByRole('link', { name: 'Open Beta in Studio' }))
-    expect(screen.getByTestId('where')).toHaveTextContent('/studio{"studioSelect":"b"}')
+    await userEvent.click(await screen.findByRole('link', { name: 'Open Beta in Editor' }))
+    expect(screen.getByTestId('where')).toHaveTextContent('/editor{"studioSelect":"b"}')
     expect(onClose).toHaveBeenCalled()
   })
 })

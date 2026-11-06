@@ -200,5 +200,5 @@ def explain_dst_mac(c: Any, text: str, ifaces: dict[int, str] | None = None) -> 
     name = f"Port {pid} ({iface})" if iface else f"Port {pid}"
     return (f"{name} cannot start: {why}, and {which} the destination MAC from the port.\nGive port "
             f"{pid} a destination on Control > Config (an L2 destination MAC, or an L3 gateway that answers "
-            f"ARP), or set Destination MAC to From packet on those streams in Studio > Properties and assign "
-            f"the profile again.")
+            f"ARP), or set Destination MAC to From packet on those streams in "
+            f"Editor > Stream settings and assign the profile again.")

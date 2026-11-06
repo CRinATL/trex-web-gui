@@ -339,7 +339,7 @@ def test_start_refused_for_dest_mac_says_why_and_what_to_do(fake_trex, new_sessi
             await s.start([0], "1kpps")
         assert ei.value.message.startswith("Port 0 cannot start: ")
         assert "stream 0 takes the destination MAC from the port" in ei.value.message
-        assert "Studio > Properties" in ei.value.message
+        assert "Editor > Stream settings" in ei.value.message
     new_session.run(run())
 
 

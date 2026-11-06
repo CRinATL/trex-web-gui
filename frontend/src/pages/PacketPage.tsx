@@ -119,7 +119,7 @@ export function PacketPage({ active = true }: { active?: boolean }) {
 
   return (
     <section className="packet-page" onKeyDown={onKeyDown}>
-      <h1>Packet editor — {name ?? 'Untitled'}{dirty && <> <span title="Unsaved changes" aria-label="unsaved changes">•</span></>}</h1>
+      <h2>{name ?? 'Untitled'}{dirty && <> <span title="Unsaved changes" aria-label="unsaved changes">•</span></>}</h2>
       <div className="setups-buttons">
         <FileMenu active={active} items={[
           { label: 'New', run: newPacket },

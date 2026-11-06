@@ -211,7 +211,7 @@ describe('ProfileEditor', () => {
   })
 
   describe('the selected stream', () => {
-    it('shows Properties and Packet tabs once one stream is selected', async () => {
+    it('shows Stream settings and Stream packet tabs once one stream is selected', async () => {
       const { user } = show(py)
       await screen.findByRole('cell', { name: /UDP/ })
       const holder = screen.getByText('Click a stream to edit its properties and packet.')
@@ -222,7 +222,7 @@ describe('ProfileEditor', () => {
       expect(screen.getByRole('tablist', { name: 'Stream' })).toBeInTheDocument()
       expect(screen.getByLabelText('ISG (µs)')).toBeVisible()
       expect(screen.getByRole('button', { name: 'View packet…', hidden: true })).not.toBeVisible()
-      await user.click(screen.getByRole('tab', { name: 'Packet' }))
+      await user.click(screen.getByRole('tab', { name: 'Stream packet' }))
       expect(screen.getByRole('button', { name: 'View packet…' })).toBeVisible()
     })
 
@@ -511,7 +511,7 @@ describe('ProfileEditor', () => {
       render(<ProfileEditor entry={py} onChanged={vi.fn()} />)
       const user = userEvent.setup()
       await user.click(await screen.findByRole('cell', { name: 's0' }))
-      await user.click(streamTab('Packet'))
+      await user.click(streamTab('Stream packet'))
       await user.click(screen.getByRole('button', { name: 'Edit packet' }))
       await screen.findByRole('tab', { name: 'Field engine' })
       await vi.waitFor(() => expect(document.querySelector('.layer-list')).not.toBeNull())
@@ -562,12 +562,12 @@ describe('ProfileEditor', () => {
 
     it('switching the detail tab asks too, and Discard starts the editor again', async () => {
       const { user } = await editing()
-      await user.click(streamTab('Properties'))
+      await user.click(streamTab('Stream settings'))
       expect(await screen.findByRole('dialog', { name: 'Discard the packet edits?' })).toBeInTheDocument()
-      expect(streamTab('Packet')).toHaveAttribute('aria-selected', 'true')
+      expect(streamTab('Stream packet')).toHaveAttribute('aria-selected', 'true')
       await user.click(screen.getByRole('button', { name: 'Discard' }))
-      expect(streamTab('Properties')).toHaveAttribute('aria-selected', 'true')
-      await user.click(streamTab('Packet'))
+      expect(streamTab('Stream settings')).toHaveAttribute('aria-selected', 'true')
+      await user.click(streamTab('Stream packet'))
       expect(screen.getByRole('button', { name: 'Edit packet' })).toBeInTheDocument()
     })
 
@@ -577,7 +577,7 @@ describe('ProfileEditor', () => {
       const user = userEvent.setup()
       await user.click(await screen.findByRole('cell', { name: 's0' }))
       await user.click(screen.getByRole('cell', { name: 's1' }))
-      await user.click(streamTab('Packet'))
+      await user.click(streamTab('Stream packet'))
       expect(asked()).not.toBeInTheDocument()
       expect(screen.getByRole('row', { name: /s1/ })).toHaveAttribute('aria-selected', 'true')
     })

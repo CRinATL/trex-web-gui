@@ -15,7 +15,7 @@ const json: LibraryEntry = { slug: 'a', name: 'a', path: '/lib/a.json', stream_c
   source: { kind: 'json', path: null, args: [], tunables: null, ports_differ: false, imported: 'i' } }
 const py: LibraryEntry = { ...json, slug: 'p', source: { kind: 'py', path: '/srv/p/udp.py', args: [], tunables: { values: { n: 3 }, extra: '--x 1' }, ports_differ: false, imported: 'i' } }
 function Where() { const l = useLocation(); return <p data-testid="where">{l.pathname} {JSON.stringify(l.state)}</p> }
-const show = (entry: LibraryEntry) => render(<MemoryRouter initialEntries={['/studio']}><AssignToPortDialog entry={entry} ports={[port(0), port(2)]} onClose={vi.fn()} /><Where /></MemoryRouter>)
+const show = (entry: LibraryEntry) => render(<MemoryRouter initialEntries={['/editor']}><AssignToPortDialog entry={entry} ports={[port(0), port(2)]} onClose={vi.fn()} /><Where /></MemoryRouter>)
 
 describe('AssignToPortDialog', () => {
   it("Open Traffic tab fills the port's form and navigates with the port", async () => {
@@ -62,6 +62,6 @@ describe('AssignToPortDialog', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Open Traffic tab' }))
     expect(await screen.findByRole('alert')).toHaveTextContent('bad profile')
     expect(trafficStore.get(0).path).toBe('')
-    expect(screen.getByTestId('where')).toHaveTextContent('/studio')
+    expect(screen.getByTestId('where')).toHaveTextContent('/editor')
   })
 })

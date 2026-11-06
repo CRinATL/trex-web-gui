@@ -33,7 +33,7 @@ async function dirtyProfile(ui: (active: boolean) => ReactElement, beforeEdit?: 
   await user.click(await screen.findByRole('option', { name: /udp_for_benchmarks/ }))
   await beforeEdit?.(user)
   await user.click(await screen.findByRole('cell', { name: '0' }))
-  await user.click(within(screen.getByRole('tablist', { name: 'Stream' })).getByRole('tab', { name: 'Packet' }))
+  await user.click(within(screen.getByRole('tablist', { name: 'Stream' })).getByRole('tab', { name: 'Stream packet' }))
   await user.click(screen.getByRole('button', { name: 'Edit packet' }))
   await vi.waitFor(() => expect(document.querySelector('.layer-list')).not.toBeNull())
   await user.click(within(document.querySelector('.layer-list') as HTMLElement).getByRole('button', { name: 'IP' }))
@@ -60,7 +60,7 @@ describe('StudioPage', () => {
   it('a studioSelect request from Control selects that entry', async () => {
     vi.spyOn(api, 'listLibrary').mockResolvedValue(fixture)
     vi.spyOn(api, 'getStreams').mockResolvedValue(streams.udp_for_benchmarks as unknown as StreamPage)
-    render(<MemoryRouter initialEntries={[{ pathname: '/studio', state: { studioSelect: 'udp-for-benchmarks' } }]}><StudioPage active /></MemoryRouter>)
+    render(<MemoryRouter initialEntries={[{ pathname: '/editor', state: { studioSelect: 'udp-for-benchmarks' } }]}><StudioPage active /></MemoryRouter>)
     expect(await screen.findByRole('option', { name: /udp_for_benchmarks/, selected: true })).toBeInTheDocument()
   })
 
@@ -90,7 +90,7 @@ describe('StudioPage', () => {
     expect(list).toHaveBeenCalledTimes(2)
   })
 
-  it('while the page is hidden, Escape neither closes a Studio dialog nor releases the table lock', async () => {
+  it('while the page is hidden, Escape neither closes an Editor dialog nor releases the table lock', async () => {
     vi.spyOn(api, 'listLibrary').mockResolvedValue(fixture)
     vi.spyOn(api, 'getStreams').mockResolvedValue(streams.udp_for_benchmarks as unknown as StreamPage)
     vi.spyOn(api, 'importProfile').mockImplementation(() => new Promise(() => undefined))   // the append stays out
@@ -184,7 +184,7 @@ describe('StudioPage', () => {
     expect(rename).not.toHaveBeenCalled()
   })
 
-  it('a studioSelect navigation made while Studio is hidden asks when Studio is next shown', async () => {
+  it('a studioSelect navigation made while the Editor is hidden asks when it is next shown', async () => {
     let go: (slug: string) => void = () => undefined
     function Nav() { const navigate = useNavigate(); go = (slug) => navigate('/studio', { state: { studioSelect: slug } }); return null }
     const ui = (a: boolean) => <MemoryRouter initialEntries={['/studio']}><Nav /><StudioPage active={a} /></MemoryRouter>
