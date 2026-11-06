@@ -14,7 +14,7 @@ const failText = (x: unknown) => (x instanceof ApiError ? x.message : String(x))
 
 // The connection state and, at the right, the actions that change it. A failed Reconnect leaves the session disconnected with
 // the error (the backend does not keep it lost), and reads and acts like lost. Connect… is the page-independent entry (the dialog is the app's).
-export function StatusBar({ backendOnline, session, owned, onConnect }: { backendOnline: boolean; session: SessionSnapshot; owned: number[]; onConnect: () => void }) {
+export function StatusBar({ backendOnline, session, owned, onConnect, appVersion = null }: { backendOnline: boolean; session: SessionSnapshot; owned: number[]; onConnect: () => void; appVersion?: string | null }) {
   const [failure, setFailure] = useState<string | null>(null)
   // A failed Disconnect or Reconnect stays until the next attempt or any change of session state; adjusting state during render, as ControlPage does.
   const [seenState, setSeenState] = useState(session.state)
@@ -66,7 +66,8 @@ export function StatusBar({ backendOnline, session, owned, onConnect }: { backen
     <footer className={`statusbar state-${backendOnline ? session.state : 'offline'}`}>
       <span role="status">{text}</span>
       {failure && <span role="alert" className="error">{failure}</span>}
-      <span className="end">{buttons}</span>
+      {/* the backend's version, outside the status text: it is not news, so a screen reader does not hear it on every change */}
+      <span className="end">{backendOnline && appVersion && <span className="muted app-version">trex-web-gui {appVersion}</span>}{buttons}</span>
     </footer>
   )
 }

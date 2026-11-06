@@ -81,6 +81,9 @@ The footer on every page states the connection and offers the actions that chang
 | `Disconnected: <error>` | a connect or Reconnect failed | **See Events**, **Reconnect** (when the failed parameters are known), **Connect…** |
 | `Backend offline, reconnecting…` | the browser lost the backend's WebSocket | **Connect…**, disabled |
 
+At its right end, before the buttons, the bar shows the backend's own version, `trex-web-gui 1.3.0`, in every state
+but `Backend offline` (the version comes with the backend's greeting, so a restarted backend shows its new one).
+
 **Reconnect** connects again with the lost session's parameters, without a dialog. A failed Disconnect or
 Reconnect shows its message in red in the bar until the next attempt or the next change of state.
 

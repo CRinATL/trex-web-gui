@@ -87,8 +87,12 @@ def test_ws_without_cookie_is_refused_before_accept(tmp_path: Path) -> None:
 
 
 def test_ws_with_cookie_gets_hello(tmp_path: Path) -> None:
+    """The hello carries the package's own version (the status bar shows it), compared with the source's
+    `__version__`, never a literal, so a release bump needs no test edit."""
+    from trex_web_gui import __version__
     with authed(create_app(tmp_path)) as c, c.websocket_connect(WS) as ws:
-        assert ws.receive_json()["type"] == "hello"
+        hello = ws.receive_json()
+    assert hello["type"] == "hello" and hello["app_version"] == __version__
 
 
 def test_logout_clears_cookie_then_401(tmp_path: Path) -> None:

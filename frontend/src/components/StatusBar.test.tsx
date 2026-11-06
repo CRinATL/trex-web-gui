@@ -11,11 +11,23 @@ afterEach(() => vi.restoreAllMocks())
 const base: SessionSnapshot = { type: 'session', state: 'connected', params: null, info: null, error: null, rpc_console: false, include_polling: false }
 const params = { host: 'h', sync_port: 4501, async_port: 4500, timeout_s: 3 }
 const info = { version: 'v3.08', mode: 'STL', build_date: '', hostname: 'trex-vm', port_count: 16, core_type: '', ports: [] }
-function bar(session: SessionSnapshot, o: { backendOnline?: boolean; owned?: number[]; onConnect?: () => void } = {}) {
-  return render(<MemoryRouter><StatusBar backendOnline={o.backendOnline ?? true} session={session} owned={o.owned ?? []} onConnect={o.onConnect ?? (() => undefined)} /></MemoryRouter>)
+function bar(session: SessionSnapshot, o: { backendOnline?: boolean; owned?: number[]; onConnect?: () => void; appVersion?: string | null } = {}) {
+  return render(<MemoryRouter><StatusBar backendOnline={o.backendOnline ?? true} session={session} owned={o.owned ?? []} onConnect={o.onConnect ?? (() => undefined)} appVersion={o.appVersion} /></MemoryRouter>)
 }
 
 describe('StatusBar', () => {
+  it('shows the backend version at its end, outside the status text, and not while the backend is offline', () => {
+    const { unmount } = bar({ ...base, params, info }, { appVersion: '9.8.7' })
+    expect(screen.getByText('trex-web-gui 9.8.7')).toBeInTheDocument()
+    expect(screen.getByRole('status')).not.toHaveTextContent('9.8.7')
+    unmount()
+    bar({ ...base, state: 'disconnected' }, { appVersion: '9.8.7', backendOnline: false })
+    expect(screen.queryByText(/trex-web-gui/)).toBeNull()
+  })
+  it('shows no version before the first hello', () => {
+    bar({ ...base, state: 'disconnected' })
+    expect(screen.queryByText(/trex-web-gui/)).toBeNull()
+  })
   it('connected with null params/info reads "Connected", never "Disconnected" under a connected colour', () => {
     bar(base)
     expect(screen.getByRole('status')).toHaveTextContent(/^Connected$/)
