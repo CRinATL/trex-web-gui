@@ -73,6 +73,7 @@ function textOfField(spec: OptionSpec, v: unknown): string {
 // A text input whose draft lasts while the shown value is the one it started from; Enter or leaving it commits a change.
 function OptionInput({ label, base, disabled, list, width, onCommit }: { label: string; base: string; disabled: boolean; list?: string; width?: string; onCommit: (text: string) => void }) {
   const [draft, setDraft] = useState<{ text: string; base: string } | null>(null)
+  // Rows are keyed by index, so a draft typed against another value (the row at this index changed under it) is dropped.
   const text = draft !== null && draft.base === base ? draft.text : base
   const finish = () => { if (text !== base) { setDraft(null); onCommit(text) } }
   return <input type="text" className="field-input option-input" aria-label={label} list={list} value={text} disabled={disabled} spellCheck={false} style={width === undefined ? undefined : { width }}
@@ -132,6 +133,8 @@ export function OptionsEditor({ field, kinds, pending, epoch, doc, onCommit }: O
   const rowsOff = pending || lag || failed || busy || opts.problem !== null
   const hexOff = pending || busy || (lag && !failed)
   const hexShown = hexMode || opts.problem !== null || failed
+  // Whether the controls on screen are off: the hex line's while hex is shown (the rows stay off while the bytes have a problem).
+  const shownOff = hexShown ? hexOff : rowsOff
   const hexBase = hexOf(docB64)
   // After a failed build `field.shown` is the document's raw JSON: show its bytes instead.
   const summary = failed ? (docB64 === '' ? 'none' : hexBase) : opts.rows.length === 0 && opts.problem === null ? 'none' : field.shown
@@ -139,7 +142,7 @@ export function OptionsEditor({ field, kinds, pending, epoch, doc, onCommit }: O
 
   // A commit turns the controls off (busy, then the build pending), and a browser drops focus from a control when it is disabled,
   // so Ctrl+Z (the packet editor's key handler) stops reaching the editor. The control that committed gets focus back when the
-  // controls are on again, or the editor itself when that control is gone; never when the user has moved focus meanwhile.
+  // controls on screen are on again, or the editor itself when that control is gone; never when the user has moved focus meanwhile.
   // A field commits on blur (Tab, or a click on another control), and while blur runs the focus is on the body: the blur's
   // relatedTarget, caught on the way down (capture), is where focus is going. It lasts only for that event's handlers.
   const root = useRef<HTMLDivElement>(null)
@@ -153,13 +156,13 @@ export function OptionsEditor({ field, kinds, pending, epoch, doc, onCommit }: O
   }
   useEffect(() => {
     const target = refocus.current
-    if (rowsOff || target === null) return
+    if (shownOff || target === null) return
     refocus.current = null
     const lost = document.activeElement === null || document.activeElement === document.body
     if (!lost) return
     if (target.isConnected && !(target as HTMLButtonElement).disabled) target.focus()
     else root.current?.focus()
-  }, [rowsOff])
+  }, [shownOff])
 
   // Asks for the bytes of `rows` and commits them; true when they were committed. The reply is dropped unless the whole
   // document is still the one the request was made from (an undo, a redo, a layer move or another edit changes it).

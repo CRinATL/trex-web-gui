@@ -426,8 +426,7 @@ def _row_text(layer: OptionLayer, row: OptionRow) -> str:
     """One row as text: `Router Alert (alert=router_shall_examine_packet)`, `MSS (value=1460)`, `NOP`."""
     name = row.get("name")
     if name is None:
-        number = row["number"] & 0x1F if layer == "IP" else row["number"]
-        return f"option {number} (value={row['fields']['value']})"
+        return f"option {row['number']} (value={row['fields']['value']})"
     kind = _by_name(layer, name)
     shown = [f"{s['name']}={_repr(s, row['fields'][s['name']])}" for s in kind["fields"]] if kind else []
     label = name.replace("_", " ") if layer == "IP" else name
