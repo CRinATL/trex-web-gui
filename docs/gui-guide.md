@@ -235,7 +235,8 @@ Interface is the kernel interface name when the backend could confirm it, or the
 
 ### 3.2 The toolbar
 
-Two labelled groups and three single buttons. Every port action is disabled while the session is not
+Two rows. The first holds the two labelled groups that run traffic; the second holds **Clear stats**,
+**Setups ▾**, **TRex daemon…** and **More ▾**. Every port action is disabled while the session is not
 connected, in a read-only session, and when a non-default profile row is selected.
 
 | Group | Button | Enabled when |
@@ -252,6 +253,7 @@ connected, in a read-only session, and when a non-default profile row is selecte
 | | **Clear stats** | the session is connected. Resets this browser's baselines for the Dashboard counters and the stream counters; nothing is sent to the server (its tooltip says so). |
 | | **Setups ▾** | always: **Save current…** (needs a connected session) and **Manage setups…** ([5](#5-saved-test-setups)). |
 | | **TRex daemon…** | always, disconnected included: opens the daemon dialog ([12](#12-trex-daemon-dialog)). |
+| | **More ▾** | **Reset port N…** (a port is selected) and **Reset all ports…**, in red, each enabled when connected and not read-only; the tooltip says why one is not. Each opens a **Reset port** (or **Reset ports**) dialog: `Reset takes the port from any owner, stops traffic and removes all streams.`, the captures a reset removes, and **Cancel** (focused) and **Reset port 0** (or **Reset ports 0, 1**). Reset sits here, a step away from Start and Stop, because it takes ports from any owner; the port's Control tab and its right-click menu have it too. |
 
 Pause and Stop also cancel a pending live rate update ([4.3](#43-traffic-tab)). One request at a time: the
 buttons are disabled while one is in flight.
@@ -894,7 +896,8 @@ editor documents). The list shows each profile's name and `<n> streams · <sourc
 `pcap`, `new`, `no source`), then `source missing` or its load error. Files in the directory that are not
 profiles are listed in red, not selectable. `No profiles yet. New… or Import… to add one.`
 
-- **New…**: an inline **Name** with **Cancel** and **Create**; makes an empty profile and selects it.
+- **New…**: an inline **Name** with, under it, a green **Create** and **Cancel** (Rename and Duplicate use the same
+  row); makes an empty profile and selects it.
 - **Import…**: the import dialog ([9.2](#92-import-dialog)).
 - For the selected profile:
   - **Rename…** (the New name row says `N test setups point at this profile; they will need the new path.` when

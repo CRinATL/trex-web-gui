@@ -534,4 +534,50 @@ describe('ControlPage and the TRex daemon', () => {
     expect(screen.getByText(/is running a stateful/)).toBeInTheDocument()
     monitorStore.reset()
   })
+
+})
+
+describe('ControlPage More ▾ Reset', () => {
+  async function setup(ports: api.PortView[]) {
+    const state = await import('../state')
+    vi.spyOn(state, 'useAppState').mockReturnValue({ ...state.initialState, backendOnline: true, session: connected, ports })
+    const el = (active: boolean) => <ControlPage active={active} />
+    return { ...render(el(true)), el }
+  }
+  it('More ▾ Reset asks first, with Cancel focused, and the confirm resets those ports', async () => {
+    const reset = vi.spyOn(api, 'resetPorts').mockResolvedValue({ ports: [] })
+    await setup([port0, { ...port0, id: 1 }])
+    await userEvent.click(screen.getByRole('treeitem', { name: /^Port 0,/ }))
+    await userEvent.click(screen.getByRole('button', { name: 'More ▾' }))
+    await userEvent.click(screen.getByRole('menuitem', { name: 'Reset port 0…' }))
+    const dialog = screen.getByRole('dialog', { name: 'Reset port' })
+    expect(dialog).toHaveTextContent('Reset takes the port from any owner, stops traffic and removes all streams.')
+    expect(within(dialog).getByRole('button', { name: 'Cancel' })).toHaveFocus()
+    await userEvent.keyboard('{Escape}')
+    expect(screen.queryByRole('dialog')).toBeNull()
+    expect(reset).not.toHaveBeenCalled()
+    await userEvent.click(screen.getByRole('button', { name: 'More ▾' }))
+    await userEvent.click(screen.getByRole('menuitem', { name: 'Reset all ports…' }))
+    await userEvent.click(within(screen.getByRole('dialog', { name: 'Reset ports' })).getByRole('button', { name: 'Reset ports 0, 1' }))
+    expect(reset).toHaveBeenCalledWith({ ports: [0, 1] })
+    expect(screen.queryByRole('dialog')).toBeNull()
+  })
+  it('a failed reset closes the dialog and shows the error', async () => {
+    vi.spyOn(api, 'resetPorts').mockRejectedValue(new api.ApiError(409, 'x', 'port 0 is busy'))
+    await setup([port0])
+    await userEvent.click(screen.getByRole('treeitem', { name: /^Port 0,/ }))
+    await userEvent.click(screen.getByRole('button', { name: 'More ▾' }))
+    await userEvent.click(screen.getByRole('menuitem', { name: 'Reset port 0…' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Reset port 0' }))
+    expect(await screen.findByRole('alert')).toHaveTextContent('port 0 is busy')
+    expect(screen.queryByRole('dialog')).toBeNull()
+  })
+  it('an open reset dialog closes when the page is hidden', async () => {
+    const { rerender, el } = await setup([port0, { ...port0, id: 1 }])
+    await userEvent.click(screen.getByRole('button', { name: 'More ▾' }))
+    await userEvent.click(screen.getByRole('menuitem', { name: 'Reset all ports…' }))
+    expect(screen.getByRole('dialog', { name: 'Reset ports' })).toBeInTheDocument()
+    rerender(el(false))
+    expect(document.querySelector('[role="dialog"]')).toBeNull()
+  })
 })
