@@ -425,7 +425,8 @@ its namespaces, their clients and counters, and loads or removes an EMU profile.
   service mode with mask 29 (DHCP, MDNS, NO_TCP_UDP, TRANSPORT): the Control page's service control can set it, and
   there is no EMU preset.
 - **Connecting.** Open the **EMU** page, give the host and port (4510), and press **Connect**. The page's guide is
-  [`docs/gui-guide.md`](docs/gui-guide.md#11a-emu).
+  [`docs/gui-guide.md`](docs/gui-guide.md#11a-emu); [`docs/howto-emu.md`](docs/howto-emu.md) walks through loading
+  a stock EMU profile, reading its namespaces, clients and counters, and removing it.
 
 ### EMU exposure
 
@@ -447,6 +448,7 @@ Within trex-web-gui:
 
 - [`docs/howto-first-stream.md`](docs/howto-first-stream.md): a walk-through that sends a first stream and watches it
   arrive.
+- [`docs/howto-emu.md`](docs/howto-emu.md): a walk-through of the EMU page with a stock EMU profile.
 - [`docs/gui-guide.md`](docs/gui-guide.md): the user's guide to every page, dialog, menu and shortcut.
 - [`docs/gui-inventory/README.md`](docs/gui-inventory/README.md): every screen, with the screenshots in
   `docs/gui-inventory/screens/`.
