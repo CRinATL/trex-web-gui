@@ -138,6 +138,22 @@ def test_counters_check_their_keys(tmp_path: Path, fake_emu: Factory) -> None:
     assert not served(f, "ctx_cnt")
 
 
+def test_a_client_without_a_transport_context_is_unsupported_not_a_failed_poll(tmp_path: Path,
+                                                                              fake_emu: Factory) -> None:
+    """transport_client_cnt answers -32600 'client does not have a transport context' (counters.json) for a
+    client with the plugin loaded but no transport context. With plugin omitted that plugin is listed in
+    `unsupported` and the others' tables still come back; named, it is 409 unsupported."""
+    f = fake_emu("--foreign-ns", "1", "--clients", "1", "--plugins", "arp,mdns,transport")
+    with authed(create_app(tmp_path, token=TEST_TOKEN)) as c:
+        connect(c, f)
+        r = c.get("/api/emu/counters", params={"scope": "client", "vport": 0, "mac": MAC0})
+        assert r.status_code == 200, r.text
+        assert r.json()["unsupported"] == ["transport"] and r.json()["tables"]
+        named = c.get("/api/emu/counters", params={"scope": "client", "vport": 0, "mac": MAC0,
+                                                   "plugin": "transport"})
+        assert named.status_code == 409 and named.json()["error"] == "unsupported", named.text
+
+
 def test_unknown_namespace_is_409_no_namespace(tmp_path: Path, fake_emu: Factory) -> None:
     """A clients or counters read of a namespace the server does not list: its error, then a re-listing that
     lacks the key, is 409 no_namespace (ruling R19)."""
