@@ -374,6 +374,10 @@ Shown in [13](gui-inventory/screens/13-port-control-top.png), [14](gui-inventory
   - **spoofchk on** drops every frame whose source MAC is not the VF's own: a stream with another source MAC
     shows packets sent and none received.
   - **trust off** usually refuses promiscuous and all-multicast on the VF.
+  - **a VLAN** (`vlan <id>` in that list) is added by the card to every frame the VF sends and removed from what
+    it receives, outside TRex: a capture on the VF does not show it, and a VLAN set in TRex on that port is a
+    second tag, or is dropped, depending on the card.
+  - TRex's `is_virtual` reads false on an mlx5 VF; the port's **Description** (`… Virtual Function`) tells it.
 - **Service mode**: radios **Off**, **On**, **Filtered**.
   - Off and On apply at once (a failure puts the radio back).
   - Filtered shows the mask checkboxes **No TCP/UDP**, **BGP**, **DHCP**, **Transport**, **mDNS**, **All** and
