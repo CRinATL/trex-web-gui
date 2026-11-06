@@ -17,9 +17,10 @@ from pathlib import Path
 from typing import Any
 
 import pytest
+from support import ROUTER_ALERT_FRAME
 from trex_web_gui.studio.packetdoc import PacketDoc, model_of, parse_doc
 from trex_web_gui.trexapi import packet
-from trex_web_gui.trexapi.packet import PacketEngine, PacketError
+from trex_web_gui.trexapi.packet import OptionsRefused, PacketEngine, PacketError
 
 PROTOCOL_KEYS = ["fields", "id", "name"]
 FIELD_KEYS = ["auto", "bits", "id", "max", "min", "name", "regex", "type", "values_dict"]
@@ -1326,8 +1327,7 @@ def test_capture_tree_of_a_zero_filled_ipv4_frame_has_no_options() -> None:
 # expression names every field. The shown text (hvalue) is a summary; the value stays the service's
 # expression.
 # The option bytes are those of a user's capture (01 | 94 04 00 00 | 00 | 00 00); the addresses are test ones.
-ROUTER_ALERT_FRAME = bytes.fromhex(
-    "ffffffffffff0200000000010800470000240001000040013343100000013000000101940400000000000800f7ff00000000")
+# The frame, ROUTER_ALERT_FRAME, lives in tests/support.py: the contract tests use it too.
 
 
 RA = ROUTER_ALERT_FRAME[34:42]       # the frame's option bytes: NOP, Router Alert, EOL, two zeros
@@ -1662,4 +1662,59 @@ def test_a_bytes_expression_for_ip_options_still_builds() -> None:
             frame = base64.b64decode(r["binary"])
             assert frame[14] == 0x46 and frame[34:38] == b"\1\1\1\1"
             assert field_of(r, "IP", "options")["value"] == machine(b"\1\1\1\1")
+    with_engine(body)
+
+
+def ra_rows() -> list[dict[str, Any]]:
+    """The rows of the Router Alert frame's option bytes, as the field tree shows them."""
+    from trex_web_gui.trexapi.loader import load
+    from trex_web_gui.trexapi.packet_options import decode
+    load()                                  # the codec's kind table reads Scapy's classes
+    return list(decode("IP", RA)["rows"])
+
+
+def test_definitions_carry_option_kinds() -> None:
+    async def body(e: PacketEngine) -> None:
+        kinds = (await e.definitions())["optionKinds"]
+        assert "Router_Alert" in [k["name"] for k in kinds["IP"]]
+        assert "MSS" in [k["name"] for k in kinds["TCP"]]
+    with_engine(body)
+
+
+def test_option_kinds_are_part_of_the_etag(monkeypatch: pytest.MonkeyPatch) -> None:
+    """The etag hashes the definitions with `optionKinds` in them. The monkeypatch reaches an in-process
+    worker Engine only, not PacketEngine's subprocess."""
+    from trex_web_gui.trexapi import packet_options
+    first = engine_worker().definitions({})["etag"]
+    real = packet_options.option_kinds
+    monkeypatch.setattr(packet_options, "option_kinds",
+                        lambda layer: [*real(layer), {"name": "Extra", "number": 99, "fields": []}])
+    changed = engine_worker().definitions({})
+    assert changed["etag"] != first
+    assert changed["optionKinds"]["IP"][-1]["name"] == "Extra"
+
+
+def test_encode_options_answers_the_bytes() -> None:
+    async def body(e: PacketEngine) -> None:
+        got = await e.encode_options("IP", ra_rows(), 2, 6)
+        assert base64.b64decode(got) == RA
+        added = [{"name": "RR", "number": 7, "fields": {"pointer": 4, "routers": ["16.0.0.1"]}}]
+        got_added = base64.b64decode(await e.encode_options("IP", added, 0, 0))
+        assert got_added == bytes.fromhex("07070410000001") + b"\0"
+    with_engine(body)
+
+
+def test_encode_options_refusals_carry_the_codec_text() -> None:
+    """The op's two `except` clauses: each codec refusal becomes OptionsRefused with its own code."""
+    async def body(e: PacketEngine) -> None:
+        nops = [{"name": "NOP", "number": 1, "fields": {}}] * 41
+        with pytest.raises(OptionsRefused) as long:
+            await e.encode_options("IP", nops, 0, 0)
+        assert long.value.code == "options_too_long"
+        assert str(long.value) == "options are 41 bytes; the header holds 40 at most"
+        with pytest.raises(OptionsRefused) as bad:
+            await e.encode_options("IP", [{"name": "Bogus", "number": 1, "fields": {}}], 0, 0)
+        assert bad.value.code == "bad_option" and str(bad.value) == "'Bogus' is not a known IP option"
+        assert not issubclass(OptionsRefused, PacketError)
+        assert e.starts == 1                                    # a refusal kills no worker
     with_engine(body)

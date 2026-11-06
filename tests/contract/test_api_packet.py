@@ -15,7 +15,7 @@ from typing import Any
 
 import pytest
 from fastapi.testclient import TestClient
-from support import TEST_TOKEN, anon, authed
+from support import ROUTER_ALERT_FRAME, TEST_TOKEN, anon, authed
 from test_api_control import connect
 from test_api_studio import RECORDED, burst
 from trex_web_gui.api.app import create_app
@@ -25,6 +25,7 @@ from trex_web_gui.trexapi import packet as packet_module
 from trex_web_gui.trexapi.packet import PacketEngine
 
 URL = "/api/studio/packet"
+RA = ROUTER_ALERT_FRAME[34:42]                 # the frame's option bytes: NOP, Router Alert, EOL, two zeros
 FRAME = bytes.fromhex("00112233445566778899aabb0800") + b"\x45" + b"\x00" * 33        # 48 bytes, junk IP
 
 
@@ -714,3 +715,56 @@ def test_dhcp_discover_template_builds_a_decodable_discover(packet_client: TestC
     assert bootp[28:34] == raw[6:12]                           # chaddr is the source MAC
     assert bootp[236:240] == bytes.fromhex("63825363")         # the DHCP magic cookie
     assert bootp[240:243] == bytes([53, 1, 1])                 # option 53, message type 1: DHCPDISCOVER
+
+
+def ra_body(**over: Any) -> dict[str, Any]:
+    """The Router Alert frame's options as the encode route's body (rows as the field tree gives them)."""
+    from trex_web_gui.trexapi.loader import load
+    from trex_web_gui.trexapi.packet_options import decode
+    load()                                  # the codec's kind table reads Scapy's classes
+    d = decode("IP", RA)
+    return {"layer": "IP", "rows": d["rows"], "padding": d["padding"], "length": d["length"], **over}
+
+
+def test_options_route_encodes_rows(packet_client: TestClient) -> None:
+    c = packet_client
+    r = c.post(f"{URL}/options", json=ra_body())
+    assert r.status_code == 200, r.text
+    assert base64.b64decode(r.json()["binary"]) == RA
+    added = {"layer": "IP", "padding": 0, "length": 0,
+             "rows": [{"name": "RR", "number": 7,
+                       "fields": {"pointer": 4, "routers": ["16.0.0.1"]}}]}
+    r = c.post(f"{URL}/options", json=added)
+    assert r.status_code == 200, r.text
+    assert base64.b64decode(r.json()["binary"]) == bytes.fromhex("07070410000001") + b"\0"
+
+
+def test_options_route_refusals(packet_client: TestClient) -> None:
+    c = packet_client
+    nops = [{"name": "NOP", "number": 1, "fields": {}}] * 41
+    long = c.post(f"{URL}/options", json={"layer": "IP", "rows": nops[:40], "padding": 1, "length": 40})
+    assert long.status_code == 422 and long.json() == {
+        "error": "options_too_long", "message": "options are 41 bytes; the header holds 40 at most"}
+    bad = c.post(f"{URL}/options", json={"layer": "IP", "padding": 0, "length": 0,
+                                         "rows": [{"name": "Bogus", "number": 1, "fields": {}}]})
+    assert bad.status_code == 422 and bad.json() == {
+        "error": "bad_option", "message": "'Bogus' is not a known IP option"}
+
+
+@pytest.mark.parametrize("body", [
+    {"rows": [{"name": "NOP", "number": 1, "fields": {}}] * 41},
+    {"padding": 41}, {"length": -1}, {"extra": 1}, {"layer": "IPv6"},
+    {"rows": [{"name": "NOP", "number": 1, "fields": {}, "extra": 1}]},
+    {"rows": [{"name": "NOP", "number": 256, "fields": {}}]},
+    {"rows": [{"name": "NOP", "number": 1, "fields": {}, "edited": 1}]}],
+    ids=["41 rows", "padding 41", "length -1", "unknown key", "layer IPv6", "unknown row key", "number 256",
+         "edited not a bool"])
+def test_options_route_body_bounds(packet_client: TestClient, body: dict[str, Any]) -> None:
+    base = {"layer": "IP", "rows": [], "padding": 0, "length": 0}
+    r = packet_client.post(f"{URL}/options", json={**base, **body})
+    assert r.status_code == 422 and r.json()["error"] == "bad_request", r.text
+
+
+def test_definitions_route_carries_option_kinds(packet_client: TestClient) -> None:
+    r = packet_client.get(f"{URL}/definitions")
+    assert "Router_Alert" in [k["name"] for k in r.json()["optionKinds"]["IP"]]

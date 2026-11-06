@@ -69,13 +69,14 @@ from pathlib import Path
 
 import pytest
 from helpers import Recorder, wait_for
-from support import FIXTURES, ROOT, TEST_TOKEN, authed
+from support import FIXTURES, ROOT, ROUTER_ALERT_FRAME, TEST_TOKEN, authed
 from test_api import WS, client, recv
 from test_control import PROFILE, last_ports, loaded, params
 from trex_web_gui import trexapi
 from trex_web_gui.api.app import create_app
 from trex_web_gui.sessions.port_config import LayerRequest
-from trex_web_gui.trexapi import decode, scapy_exec
+from trex_web_gui.trexapi import decode, packet_options, scapy_exec
+from trex_web_gui.trexapi.loader import load
 
 FIXTURE_DIR = ROOT / "frontend" / "src" / "__fixtures__"
 FILE = FIXTURE_DIR / "portViews.json"
@@ -730,6 +731,17 @@ def test_host_named_accepts_only_the_number(tmp_path, monkeypatch):
     assert _host_named(other, want) == other
 
 
+def _clock_free(built: dict) -> dict:
+    """`built` with the ICMP timestamp fields (`ts_ori`, `ts_rx`, `ts_tx`, ignored ones Scapy fills from the
+    time of day when the layer is described) fixed at 0, so the recorded file does not depend on the clock."""
+    out = json.loads(json.dumps(built))
+    for layer in out["data"]:
+        for field in layer["fields"]:
+            if layer["id"] == "ICMP" and field["id"] in ("ts_ori", "ts_rx", "ts_tx"):
+                field["value"], field["hvalue"] = 0, "0:0:0.0"
+    return out
+
+
 def test_packet_wire_fixtures(tmp_path):
     """The packet group, recorded with an entered client (the lifespan closes the engine)."""
     url = "/api/studio/packet"
@@ -742,8 +754,28 @@ def test_packet_wire_fixtures(tmp_path):
         assert parts.status_code == 200, parts.text
         decompiled = c.post(f"{url}/decompile", json={"binary": parts.json()["packet"]["binary"],
                                                       "vm": parts.json()["vm"]})
-    for r in (defs, built, failed, listing, decompiled):
+        # Options (options-editing Task 3): the Router Alert frame as a document, its build, and the encode
+        # route's success and two refusals. packetTreeVlan.json is recorded through the in-process service
+        # (no `_retext`), so it keeps EXPRESSION options; it is not re-recorded here.
+        ra_binary = base64.b64encode(ROUTER_ALERT_FRAME).decode()
+        from_binary = c.post(f"{url}/doc-from-binary", json={"binary": ra_binary})
+        assert from_binary.status_code == 200, from_binary.text
+        ra_built = c.post(f"{url}/build", json={"doc": from_binary.json()["doc"]})
+        load()                                  # the codec's kind table reads Scapy's classes
+        ra_rows = packet_options.decode("IP", ROUTER_ALERT_FRAME[34:42])
+        ra_body = {"layer": "IP", "rows": ra_rows["rows"], "padding": ra_rows["padding"],
+                   "length": ra_rows["length"]}
+        encoded = c.post(f"{url}/options", json=ra_body)
+        too_long = c.post(f"{url}/options", json={
+            **ra_body, "rows": [{"name": "NOP", "number": 1, "fields": {}}] * 40, "padding": 1, "length": 40})
+        bad = c.post(f"{url}/options", json={
+            **ra_body, "rows": [{"name": "Bogus", "number": 1, "fields": {}}]})
+    for r in (defs, built, failed, listing, decompiled, ra_built, encoded):
         assert r.status_code == 200, r.text
+    assert too_long.status_code == 422 and bad.status_code == 422
+    assert base64.b64decode(encoded.json()["binary"]) == ROUTER_ALERT_FRAME[34:42]
+    assert ra_built.json()["error"] is None
+    assert base64.b64decode(ra_built.json()["binary"]) == ROUTER_ALERT_FRAME
     assert built.json()["error"] is None and "ZeroDivisionError" in failed.json()["error"]
     dirs = listing.json()
     assert dirs["dir"] == str(tmp_path / "templates")
@@ -755,6 +787,10 @@ def test_packet_wire_fixtures(tmp_path):
     _compare_or_write(PACKET_DIR / "buildError.json", {"expression": failed.json()})
     _compare_or_write(PACKET_DIR / "templates.json", {"listing": listing_body})
     _compare_or_write(PACKET_DIR / "decompile.json", {"flow_var": decompiled.json()})
+    _compare_or_write(PACKET_DIR / "docFromBinaryIpOptions.json", {"routerAlert": from_binary.json()})
+    _compare_or_write(PACKET_DIR / "buildIpOptions.json", {"routerAlert": _clock_free(ra_built.json())})
+    _compare_or_write(PACKET_DIR / "encodeOptions.json", {
+        "routerAlert": encoded.json(), "tooLong": too_long.json(), "badOption": bad.json()})
 
 
 def normalise_emu(msg: dict) -> dict:

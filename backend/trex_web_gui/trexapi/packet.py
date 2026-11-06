@@ -41,6 +41,16 @@ class PacketError(TrexApiError):
         self.restarted = restarted
 
 
+class OptionsRefused(Exception):
+    """The codec refused option rows: `code` is `options_too_long` or `bad_option`. Not a PacketError: the
+    worker is fine, and the route answers it by its own code rather than as `packet_error`."""
+
+    def __init__(self, code: str, message: str) -> None:
+        """Keep `code` next to the message."""
+        super().__init__(message)
+        self.code = code
+
+
 class PacketBusy(PacketError):
     """The queue wait passed PACKET_QUEUE_S: an earlier call is still running. Nothing was killed."""
 
@@ -56,6 +66,7 @@ class PacketStartError(PacketError):
 
 class Definitions(TypedDict):
     etag: str
+    optionKinds: dict[str, list[dict[str, Any]]]
     layerIds: list[str]
     protocols: list[dict[str, Any]]
     feInstructionParameters: list[dict[str, Any]]
@@ -229,6 +240,17 @@ class PacketEngine:
         It holds literals only (plan D13)."""
         res = await self.call("doc_from_binary", {"binary": binary, "vm": vm})
         return {"doc": _parse_reply(res["doc"]), "warnings": list(res["warnings"])}
+
+    async def encode_options(self, layer: str, rows: list[dict[str, Any]], padding: int, length: int
+                             ) -> str:
+        """The base64 option bytes of `rows` for `layer` ("IP" or "TCP"). OptionsRefused when the codec
+        refuses them (too long, or an unknown option or a bad value)."""
+        res = await self.call("encode_options", {"layer": layer, "rows": rows, "padding": padding,
+                                                 "length": length})
+        refused = res["refused"]
+        if refused is not None:
+            raise OptionsRefused(refused["code"], refused["message"])
+        return str(res["binary"])
 
     async def reconstruct_edit(self, doc: PacketDoc, binary: str, edited: dict[str, Any] | None
                                ) -> ReconstructEdit:

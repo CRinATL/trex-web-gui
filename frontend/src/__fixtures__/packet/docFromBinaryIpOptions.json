@@ -1,0 +1,55 @@
+{
+  "routerAlert": {
+    "doc": {
+      "feInstructions": [],
+      "fePrarameters": {
+        "cache_size": "1000"
+      },
+      "fileType": "trex-packet-editor",
+      "metadata": {
+        "caption": ""
+      },
+      "packet": [
+        {
+          "fields": [
+            {
+              "id": "dst",
+              "value": "ff:ff:ff:ff:ff:ff"
+            },
+            {
+              "id": "src",
+              "value": "02:00:00:00:00:01"
+            },
+            {
+              "id": "type",
+              "value": 2048
+            }
+          ],
+          "id": "Ether"
+        },
+        {
+          "fields": [
+            {
+              "id": "proto",
+              "value": 1
+            },
+            {
+              "id": "options",
+              "value": {
+                "base64": "AZQEAAAAAAA=",
+                "vtype": "MACHINE"
+              }
+            }
+          ],
+          "id": "IP"
+        },
+        {
+          "fields": [],
+          "id": "ICMP"
+        }
+      ],
+      "version": "1.0.0"
+    },
+    "warnings": []
+  }
+}

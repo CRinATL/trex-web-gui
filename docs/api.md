@@ -1650,6 +1650,24 @@ A literal-only document for packet bytes and, optionally, a stream's VM.
 - `503` `engine_closed`: the packet worker is closed
 - `503` `engine_restarted`: the packet worker restarted; the next call starts a fresh one
 
+### POST /api/studio/packet/options
+
+The option bytes for IP or TCP option rows: `{binary}`, base64. Answers 422 `options_too_long`
+or 422 `bad_option` with the codec's text.
+
+**Responses**
+
+- `200`: the body is described above
+- `411` `length_required`: the request has no valid Content-Length
+- `413` `too_large`: the request body is over its size cap
+- `422` `bad_option`: an option is unknown or one of its values is not valid
+- `422` `bad_request`: the body is not valid JSON, or a field is wrong
+- `422` `options_too_long`: the options are over the 40 bytes the header holds
+- `422` `packet_error`: the packet worker refused the request
+- `503` `engine_busy`: the packet worker is busy
+- `503` `engine_closed`: the packet worker is closed
+- `503` `engine_restarted`: the packet worker restarted; the next call starts a fresh one
+
 ### POST /api/studio/packet/param-values
 
 The values a Field Engine parameter may take for the document.

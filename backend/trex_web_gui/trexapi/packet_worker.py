@@ -116,17 +116,19 @@ class Engine:
         self.ops: dict[str, Callable[[dict[str, Any]], dict[str, Any]]] = {
             "definitions": self.definitions, "build": self.build, "payload_classes": self.payload_classes,
             "param_values": self.param_values, "doc_from_binary": self.doc_from_binary,
-            "reconstruct_edit": self.reconstruct_edit, "decompile": self.decompile,
-            "templates": self.templates, "template": self.template, "pcap_list": self.pcap_list,
-            "pcap_packet": self.pcap_packet, "to_stream": self.to_stream, "to_code": self.to_code,
-            "tree": self.tree}
+            "encode_options": self.encode_options, "reconstruct_edit": self.reconstruct_edit,
+            "decompile": self.decompile, "templates": self.templates, "template": self.template,
+            "pcap_list": self.pcap_list, "pcap_packet": self.pcap_packet, "to_stream": self.to_stream,
+            "to_code": self.to_code, "tree": self.tree}
 
     def definitions(self, args: dict[str, Any]) -> dict[str, Any]:
-        """`get_definitions(h, None)` plus `etag` (the first 16 hex digits of the sha256 of the canonical
-        definitions JSON, plan D6) and `layerIds` (the sorted name of every Packet subclass); computed
-        once."""
+        """`get_definitions(h, None)` plus `optionKinds` (the IP and TCP option kinds the codec encodes),
+        `etag` (the first 16 hex digits of the sha256 of the canonical definitions JSON with `optionKinds`
+        in it, plan D6) and `layerIds` (the sorted name of every Packet subclass); computed once."""
         if self._definitions is None:
-            d = self.svc.get_definitions(self.h, None)
+            from trex_web_gui.trexapi.packet_options import option_kinds
+            d = {**self.svc.get_definitions(self.h, None),
+                 "optionKinds": {"IP": option_kinds("IP"), "TCP": option_kinds("TCP")}}
             canon = json.dumps(d, sort_keys=True, separators=(",", ":"), default=str)
             etag = hashlib.sha256(canon.encode()).hexdigest()[:16]
             ids = sorted({c.__name__ for c in self.svc._all_subclasses(self.packet_class)})
@@ -202,6 +204,19 @@ class Engine:
             doc["fePrarameters"] = dec["global_parameters"]
             warnings += dec["warnings"]
         return {"ok": True, "doc": doc, "warnings": warnings}
+
+    def encode_options(self, args: dict[str, Any]) -> dict[str, Any]:
+        """`{binary, refused}` for the option rows `args["rows"]` of layer `args["layer"]` (`padding`,
+        `length` as the codec takes them): the base64 option bytes, or `binary` None and `refused`
+        `{code, message}` when the codec refuses them (`options_too_long`, `bad_option`)."""
+        from trex_web_gui.trexapi.packet_options import BadOption, OptionsTooLong, encode
+        try:
+            raw = encode(args["layer"], args["rows"], args["padding"], args["length"])
+        except OptionsTooLong as e:
+            return {"ok": True, "binary": None, "refused": {"code": "options_too_long", "message": str(e)}}
+        except BadOption as e:
+            return {"ok": True, "binary": None, "refused": {"code": "bad_option", "message": str(e)}}
+        return {"ok": True, "binary": base64.b64encode(raw).decode(), "refused": None}
 
     def _layers_of(self, raw: bytes) -> tuple[list[dict[str, Any]], list[str]]:
         """The document layers for `raw`, and the warnings. Dissect with `Ether`, hide default values, delete
