@@ -1,7 +1,7 @@
 import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import type { BuildResult, Definitions, FieldDef, FieldValue, PacketField } from '../../api'
+import type { BuildResult, Definitions, FieldDef, FieldValue, PacketDoc, PacketField } from '../../api'
 import buildFixture from '../../__fixtures__/packet/buildIpOptions.json'
 import defsFixture from '../../__fixtures__/packet/definitions.json'
 import { FieldRow } from './FieldRow'
@@ -246,31 +246,37 @@ describe('FieldRow', () => {
     const opt = (def: FieldDef, over: Partial<CombinedField> = {}) =>
       field(def, { value: builtOptions.value, docValue: builtOptions.value as FieldValue, shown: String(builtOptions.hvalue), options: builtOptions.options ?? null, ...over })
     const expression: FieldValue = { vtype: 'EXPRESSION', expr: '[]' }
+    const doc: PacketDoc = { fileType: 'trex-packet', version: '1', metadata: { caption: '' }, packet: [], fePrarameters: {}, feInstructions: [] }   // the editor mounts only with a document
 
     it('keeps OptionsRow for an expression-valued field', () => {
-      setup(opt(OPTIONS, { docValue: expression }), { optionKinds: kinds })
+      setup(opt(OPTIONS, { docValue: expression }), { optionKinds: kinds, doc })
       expect(screen.getByText('(read-only)')).toBeInTheDocument()
       expect(screen.queryByRole('combobox', { name: 'Add option' })).toBeNull()
     })
     it('gives a field with an absent or MACHINE document value the editor', () => {
-      setup(opt(OPTIONS, { docValue: undefined, value: { vtype: 'MACHINE', base64: '' } }), { optionKinds: kinds })
+      setup(opt(OPTIONS, { docValue: undefined, value: { vtype: 'MACHINE', base64: '' } }), { optionKinds: kinds, doc })
       expect(screen.getByRole('combobox', { name: 'Add option' })).toBeInTheDocument()
       cleanup()
-      setup(opt(OPTIONS), { optionKinds: kinds })
+      setup(opt(OPTIONS), { optionKinds: kinds, doc })
       expect(screen.getByRole('combobox', { name: 'Add option' })).toBeInTheDocument()
       expect(screen.queryByText('(read-only)')).toBeNull()
     })
     it('gives an IPerror options field the editor', () => {
-      setup(opt(NO_TYPE), { optionKinds: kinds })
+      setup(opt(NO_TYPE), { optionKinds: kinds, doc })
       expect(screen.getByRole('combobox', { name: 'Add option' })).toBeInTheDocument()
     })
     it('keeps OptionsRow for an expression-valued IPerror', () => {
-      setup(opt(NO_TYPE, { docValue: expression }), { optionKinds: kinds })
+      setup(opt(NO_TYPE, { docValue: expression }), { optionKinds: kinds, doc })
+      expect(screen.getByText('(read-only)')).toBeInTheDocument()
+      expect(screen.queryByRole('combobox', { name: 'Add option' })).toBeNull()
+    })
+    it('keeps the read-only row when no document is passed', () => {
+      setup(opt(OPTIONS), { optionKinds: kinds })
       expect(screen.getByText('(read-only)')).toBeInTheDocument()
       expect(screen.queryByRole('combobox', { name: 'Add option' })).toBeNull()
     })
     it('keeps the read-only row for a locked field', () => {
-      setup(opt(OPTIONS), { optionKinds: kinds, readOnly: true })
+      setup(opt(OPTIONS), { optionKinds: kinds, doc, readOnly: true })
       expect(screen.queryByRole('combobox', { name: 'Add option' })).toBeNull()
     })
   })

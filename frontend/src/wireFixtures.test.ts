@@ -50,9 +50,7 @@ describe('wire fixtures against api.ts types', () => {
       o && (Object.fromEntries(Object.entries(o).filter(([, v]) => v !== undefined)) as Record<string, T>)
     const d = packetDefinitions.definitions
     const meta = (m: (typeof d.feInstructionParameters)[number]): FeParamMeta => ({ ...m, type: m.type as FeParamMeta['type'], dict: rec<string | number>(m.dict) })
-    // the fixture's specs are a union of shapes (a widths list here, a values map there) that TypeScript cannot narrow per kind;
-    // each is cast to OptionSpec once, the discriminant being the only string-literal key
-    const kindOf = (k: { name: string; number: number; fields: readonly { kind: string }[] }): OptionKind => ({ ...k, fields: k.fields.map((f) => f as OptionSpec) })
+    const kindOf = (k: (typeof d.optionKinds.IP)[number] | (typeof d.optionKinds.TCP)[number]): OptionKind => ({ ...k, fields: k.fields.map((f): OptionSpec => ({ ...f, kind: f.kind as OptionSpec['kind'] })) })
     const defs = {
       ...d,
       protocols: d.protocols.map((p) => ({ ...p, fields: p.fields.map((f): FieldDef => ({ ...f, type: f.type as FieldDef['type'], values_dict: rec<number>(f.values_dict) })) })),

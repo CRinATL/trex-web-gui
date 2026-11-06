@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { ApiError, encodeOptions, type DecodedOptions, type PacketDoc, type OptionKind, type OptionKinds, type OptionRow, type OptionSpec } from '../../api'
 import type { CombinedField } from './packetModel'
 import { decodeBase64, encodeBase64 } from './hexModel'
@@ -7,6 +7,8 @@ const MAX_BYTES = 40
 export type Machine = { vtype: 'MACHINE'; base64: string }
 type Parsed<T> = { ok: true; value: T } | { ok: false; message: string }
 
+const OTHER_NUMBER_TEXT = 'number: must be from 2 to 255'   // the codec's range for an "other" row (_encode_other)
+const EOL_TITLE = 'End of Options before the padding: removing it pads to the same bytes'
 const tooLongText = (n: number) => `options are ${n} bytes; the header holds ${MAX_BYTES} at most`
 
 const base64Of = (v: unknown): string | null =>
@@ -84,7 +86,7 @@ export interface OptionsEditorProps {
   kinds: OptionKinds | undefined
   pending: boolean                        // a build is in flight or waiting
   epoch: number                           // changes when the editor gets a different packet
-  doc?: PacketDoc                         // the editor's current document: its identity changes on every edit, undo, redo and reset
+  doc: PacketDoc                          // the editor's current document: its identity changes on every edit, undo, redo and reset; required, so no caller skips the whole-document check
   onCommit: (value: Machine) => void
 }
 
@@ -105,11 +107,21 @@ export function OptionsEditor({ field, kinds, pending, epoch, doc, onCommit }: O
   const [otherNumber, setOtherNumber] = useState('')
   const [otherHex, setOtherHex] = useState('')
   // What a reply to an earlier request is checked against: the field's document value and the epoch now, and whether this is still mounted.
+  // Written in a layout effect, which runs inside the commit, before any reply can resolve: a passive effect could flush after one
+  // (the lint rule react-hooks/refs forbids writing a ref during render itself).
   const now = useRef({ docB64, epoch, doc })
+  useLayoutEffect(() => { now.current = { docB64, epoch, doc } }, [docB64, epoch, doc])
   const mounted = useRef(true)
-  useEffect(() => { now.current.docB64 = docB64; now.current.epoch = epoch; now.current.doc = doc }, [docB64, epoch, doc])
+  // The display state belongs to one packet and one document: a refusal, the hex mode and the Add inputs do not outlive an epoch change, an undo or a redo.
+  const [context, setContext] = useState({ epoch, doc })
+  if (context.epoch !== epoch || context.doc !== doc) {
+    setContext({ epoch, doc })
+    setMessage(null); setHexMode(false); setHexDraft(null); setAddKind(''); setOtherNumber(''); setOtherHex('')
+  }
   useEffect(() => { mounted.current = true; return () => { mounted.current = false } }, [])
 
+  // Padding after the last row that is an EOL reads back as that EOL: removing it re-pads to the same bytes.
+  const padEol = (i: number) => opts.padding > 0 && i === opts.rows.length - 1 && opts.rows[i].name === 'EOL'
   const rowsOff = pending || lag || failed || busy || opts.problem !== null
   const hexOff = pending || busy || (lag && !failed)
   const hexShown = hexMode || opts.problem !== null || failed
@@ -147,7 +159,7 @@ export function OptionsEditor({ field, kinds, pending, epoch, doc, onCommit }: O
     const r = opts.rows[i]
     if (key === 'number') {
       const n = intOf(text)
-      if (n === null || n > 255) { setMessage('number: must be from 0 to 255'); return }
+      if (n === null || n < 2 || n > 255) { setMessage(OTHER_NUMBER_TEXT); return }
       void submit(opts.rows.map((x, j) => (j === i ? { ...x, number: n, edited: true } : x)))
     } else {
       const b = bytesOfHex(text)
@@ -164,7 +176,7 @@ export function OptionsEditor({ field, kinds, pending, epoch, doc, onCommit }: O
     if (addKind === '') return
     if (addKind === '*other') {
       const n = intOf(otherNumber)
-      if (n === null || n > 255) { setMessage('number: must be from 0 to 255'); return }
+      if (n === null || n < 2 || n > 255) { setMessage(OTHER_NUMBER_TEXT); return }
       const b = bytesOfHex(otherHex)
       if (!b.ok) { setMessage(`value: ${b.message}`); return }
       void submit([...opts.rows, { name: null, number: n, fields: { value: otherHex.replace(/\s+/g, '') }, edited: true }]).then((ok) => {
@@ -174,9 +186,10 @@ export function OptionsEditor({ field, kinds, pending, epoch, doc, onCommit }: O
     } else {
       const kind = family.find((k) => k.name === addKind)
       if (!kind) return
-      void submit([...opts.rows, { name: kind.name, number: kind.number, fields: Object.fromEntries(kind.fields.map((s) => [s.name, s.default])), edited: true }])
+      void submit([...opts.rows, { name: kind.name, number: kind.number, fields: Object.fromEntries(kind.fields.map((s) => [s.name, s.default])), edited: true }]).then((ok) => {
+        if (ok && mounted.current) setAddKind('')   // a refusal keeps the selected kind
+      })
     }
-    setAddKind('')
   }
   function commitHex() {
     const b = bytesOfHex(hexText)
@@ -219,7 +232,7 @@ export function OptionsEditor({ field, kinds, pending, epoch, doc, onCommit }: O
                 })}
                 <button type="button" aria-label={`Move option ${i + 1} up`} disabled={rowsOff || i === 0} onClick={() => move(i, -1)}>↑</button>
                 <button type="button" aria-label={`Move option ${i + 1} down`} disabled={rowsOff || i === opts.rows.length - 1} onClick={() => move(i, 1)}>↓</button>
-                <button type="button" aria-label={`Remove option ${i + 1}`} disabled={rowsOff} onClick={() => void submit(opts.rows.filter((_, j) => j !== i))}>×</button>
+                <button type="button" aria-label={`Remove option ${i + 1}`} disabled={rowsOff || padEol(i)} title={padEol(i) ? EOL_TITLE : undefined} onClick={() => void submit(opts.rows.filter((_, j) => j !== i))}>×</button>
               </div>
             )
           })}

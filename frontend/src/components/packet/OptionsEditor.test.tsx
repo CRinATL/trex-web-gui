@@ -2,7 +2,7 @@ import { act, cleanup, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import * as api from '../../api'
-import type { BuildResult, Definitions, FieldValue, PacketField } from '../../api'
+import type { BuildResult, Definitions, FieldValue, PacketDoc, PacketField } from '../../api'
 import buildFixture from '../../__fixtures__/packet/buildIpOptions.json'
 import defsFixture from '../../__fixtures__/packet/definitions.json'
 import encodeFixture from '../../__fixtures__/packet/encodeOptions.json'
@@ -24,11 +24,16 @@ const field = (over: Partial<CombinedField> = {}): CombinedField => ({
 const withOptions = (o: Partial<api.DecodedOptions>) => ({ options: { ...(built.options as api.DecodedOptions), ...o } })
 const machine = (base64: string) => ({ vtype: 'MACHINE' as const, base64 })
 
-function setup(f: CombinedField = field(), extra: { pending?: boolean; epoch?: number } = {}) {
+// A document is only an identity to the editor (it compares it by reference), so a minimal one stands in; a test of an undo passes another.
+const emptyDoc = (): PacketDoc => ({ fileType: 'trex-packet', version: '1', metadata: { caption: '' }, packet: [], fePrarameters: {}, feInstructions: [] })
+const DOC = emptyDoc()
+
+interface Extra { pending?: boolean; epoch?: number; doc?: PacketDoc }
+function setup(f: CombinedField = field(), extra: Extra = {}) {
   const onCommit = vi.fn()
-  const view = render(<OptionsEditor field={f} kinds={kinds} pending={extra.pending ?? false} epoch={extra.epoch ?? 0} onCommit={onCommit} />)
-  const again = (g: CombinedField, e: { pending?: boolean; epoch?: number } = {}) =>
-    view.rerender(<OptionsEditor field={g} kinds={kinds} pending={e.pending ?? false} epoch={e.epoch ?? 0} onCommit={onCommit} />)
+  const view = render(<OptionsEditor field={f} kinds={kinds} pending={extra.pending ?? false} epoch={extra.epoch ?? 0} doc={extra.doc ?? DOC} onCommit={onCommit} />)
+  const again = (g: CombinedField, e: Extra = {}) =>
+    view.rerender(<OptionsEditor field={g} kinds={kinds} pending={e.pending ?? false} epoch={e.epoch ?? 0} doc={e.doc ?? DOC} onCommit={onCommit} />)
   return { onCommit, again }
 }
 const sentRows = () => vi.mocked(api.encodeOptions).mock.calls[0][1]
@@ -223,5 +228,76 @@ describe('OptionsEditor', () => {
     expect(await screen.findByText(encodeFixture.tooLong.message)).toBeTruthy()
     expect(screen.getByRole('textbox', { name: 'Other option number' })).toHaveValue('25')
     expect(screen.getByRole('textbox', { name: 'Other option hex' })).toHaveValue('0102')
+  })
+
+  it('keeps the selected kind when the refusal comes back', async () => {
+    vi.mocked(api.encodeOptions).mockRejectedValue(new api.ApiError(422, 'options_too_long', encodeFixture.tooLong.message, encodeFixture.tooLong))
+    setup()
+    await userEvent.selectOptions(screen.getByRole('combobox', { name: 'Add option' }), 'RR')
+    await userEvent.click(screen.getByRole('button', { name: 'Add' }))
+    expect(await screen.findByText(encodeFixture.tooLong.message)).toBeTruthy()
+    expect(screen.getByRole('combobox', { name: 'Add option' })).toHaveValue('RR')
+  })
+
+  it('clears the selected kind once the add is committed', async () => {
+    vi.mocked(api.encodeOptions).mockResolvedValue(encodeFixture.routerAlert)
+    const { onCommit } = setup()
+    await userEvent.selectOptions(screen.getByRole('combobox', { name: 'Add option' }), 'RR')
+    await userEvent.click(screen.getByRole('button', { name: 'Add' }))
+    await vi.waitFor(() => expect(onCommit).toHaveBeenCalled())
+    expect(screen.getByRole('combobox', { name: 'Add option' })).toHaveValue('')
+  })
+
+  it('drops a refusal, the hex mode and the Add inputs when the epoch changes', async () => {
+    vi.mocked(api.encodeOptions).mockRejectedValue(new api.ApiError(422, 'options_too_long', encodeFixture.tooLong.message, encodeFixture.tooLong))
+    const { again } = setup()
+    await userEvent.click(screen.getByRole('button', { name: 'Remove option 1' }))
+    expect(await screen.findByText(encodeFixture.tooLong.message)).toBeTruthy()
+    again(field(), { epoch: 1 })
+    expect(screen.queryByText(encodeFixture.tooLong.message)).toBeNull()
+    await userEvent.click(screen.getByRole('button', { name: 'Edit as hex' }))
+    expect(screen.getByRole('textbox', { name: 'Options as hex' })).toBeTruthy()
+    again(field(), { epoch: 2 })
+    expect(screen.queryByRole('textbox', { name: 'Options as hex' })).toBeNull()
+    await userEvent.selectOptions(screen.getByRole('combobox', { name: 'Add option' }), '*other')
+    await userEvent.type(screen.getByRole('textbox', { name: 'Other option number' }), '25')
+    again(field(), { epoch: 3 })
+    expect(screen.getByRole('combobox', { name: 'Add option' })).toHaveValue('')
+  })
+
+  it('drops a refusal when the document changes by an undo', async () => {
+    vi.mocked(api.encodeOptions).mockRejectedValue(new api.ApiError(422, 'options_too_long', encodeFixture.tooLong.message, encodeFixture.tooLong))
+    const { again } = setup()
+    await userEvent.click(screen.getByRole('button', { name: 'Remove option 1' }))
+    expect(await screen.findByText(encodeFixture.tooLong.message)).toBeTruthy()
+    again(field(), { doc: emptyDoc() })
+    expect(screen.queryByText(encodeFixture.tooLong.message)).toBeNull()
+  })
+
+  it('refuses an other number of 1 locally, adding or editing', async () => {
+    const { onCommit } = setup(field({ ...withOptions({ rows: [{ name: null, number: 25, fields: { value: '0102' }, raw: 'GQQBAg==' }], padding: 0, length: 4 }) }))
+    await userEvent.selectOptions(screen.getByRole('combobox', { name: 'Add option' }), '*other')
+    await userEvent.type(screen.getByRole('textbox', { name: 'Other option number' }), '1')
+    await userEvent.type(screen.getByRole('textbox', { name: 'Other option hex' }), '0102')
+    await userEvent.click(screen.getByRole('button', { name: 'Add' }))
+    expect(screen.getByText('number: must be from 2 to 255')).toBeTruthy()
+    const box = screen.getByRole('textbox', { name: 'option 1 number' })
+    await userEvent.clear(box)
+    await userEvent.type(box, '1{Enter}')
+    expect(screen.getByText('number: must be from 2 to 255')).toBeTruthy()
+    expect(api.encodeOptions).not.toHaveBeenCalled()
+    expect(onCommit).not.toHaveBeenCalled()
+  })
+
+  it('disables the remove button of an EOL that only padding follows', () => {
+    setup()   // NOP, Router Alert, EOL, padding 2
+    expect(screen.getByRole('button', { name: 'Remove option 3' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Remove option 3' })).toHaveAttribute('title', 'End of Options before the padding: removing it pads to the same bytes')
+    expect(screen.getByRole('button', { name: 'Remove option 1' })).toBeEnabled()
+  })
+
+  it('keeps remove on an EOL with no padding after it', () => {
+    setup(field({ ...withOptions({ padding: 0 }) }))
+    expect(screen.getByRole('button', { name: 'Remove option 3' })).toBeEnabled()
   })
 })

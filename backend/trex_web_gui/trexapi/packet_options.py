@@ -411,11 +411,14 @@ def encode(layer: OptionLayer, rows: list[OptionRow], padding: int, length: int)
 
 
 def _repr(spec: dict[str, Any], value: Any) -> str:
-    """A field value as the options text shows it: an enum by its label when it has one."""
+    """A field value as the options text shows it: an enum by its label when it has one, an address list as
+    `16.0.0.1, 48.0.0.1`, an int list as `(1, 2)`."""
     if spec["kind"] == "enum":
         return next((label for label, num in spec["values"].items() if num == value), str(value))
     if spec["kind"] == "ints":
         return "(" + ", ".join(str(v) for v in value) + ")"
+    if spec["kind"] == "addresses":
+        return ", ".join(str(v) for v in value)
     return str(value)
 
 

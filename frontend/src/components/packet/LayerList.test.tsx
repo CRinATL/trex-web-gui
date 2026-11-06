@@ -1,7 +1,7 @@
 import { cleanup, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import type { BuildResult, Definitions, FieldValue, PacketField } from '../../api'
+import type { BuildResult, Definitions, FieldValue, PacketDoc, PacketField } from '../../api'
 import buildFixture from '../../__fixtures__/packet/buildIpOptions.json'
 import defsFixture from '../../__fixtures__/packet/definitions.json'
 import { LayerList } from './LayerList'
@@ -98,10 +98,11 @@ describe('LayerList', () => {
     }
     const kinds = (defsFixture as unknown as { definitions: Definitions }).definitions.optionKinds
     const ip = layer(1, 'IP', { fields: [opts] })
-    const view = render(<LayerList layers={[ip]} expanded={new Set([0])} optionKinds={kinds} {...props()} />)
+    const doc: PacketDoc = { fileType: 'trex-packet', version: '1', metadata: { caption: '' }, packet: [], fePrarameters: {}, feInstructions: [] }
+    const view = render(<LayerList layers={[ip]} expanded={new Set([0])} optionKinds={kinds} doc={doc} {...props()} />)
     expect(screen.getByRole('combobox', { name: 'Add option' })).toBeEnabled()
     expect(screen.getByRole('option', { name: 'RR' })).toBeInTheDocument()   // the kinds arrived
-    view.rerender(<LayerList layers={[ip]} expanded={new Set([0])} optionKinds={kinds} pending {...props()} />)
+    view.rerender(<LayerList layers={[ip]} expanded={new Set([0])} optionKinds={kinds} doc={doc} pending {...props()} />)
     expect(screen.getByRole('combobox', { name: 'Add option' })).toBeDisabled()
   })
 })

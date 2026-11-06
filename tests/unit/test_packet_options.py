@@ -266,6 +266,11 @@ def test_options_text_matches_the_viewer_summary() -> None:
     assert po.options_text("IP", po.decode("IP", bytes.fromhex("010000"))) == "NOP, EOL, padding 1 byte"
 
 
+def test_an_address_list_reads_as_addresses_not_a_python_list() -> None:
+    rr = po.decode("IP", po.encode("IP", [ip("RR", pointer=4, routers=["16.0.0.1", "48.0.0.1"])], 0, 0))
+    assert po.options_text("IP", rr) == "RR (pointer=4, routers=16.0.0.1, 48.0.0.1), EOL"
+
+
 def test_tcp_options_text_and_padded() -> None:
     d = po.decode("TCP", bytes.fromhex("020405b40101"))
     assert po.options_text("TCP", d) == "MSS (value=1460), NOP, NOP"

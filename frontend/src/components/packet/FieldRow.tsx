@@ -69,7 +69,7 @@ export interface FieldRowProps {
   optionKinds?: OptionKinds               // the options editor's kinds
   pending?: boolean                       // a build is in flight or waiting
   epoch?: number                          // changes when the editor gets a different packet
-  doc?: PacketDoc                         // the editor's current document, for the options editor's reply check
+  doc?: PacketDoc                         // the editor's current document; the options editor mounts only with it, for its reply check
 }
 
 // One field: its name, a control for its type, the byte range, and the user-set and error marks (each a glyph as well as a colour).
@@ -84,7 +84,7 @@ export function FieldRow({ field, onCommit, onReset, onGenerate, onFeTemplate, f
   const listId = useId()
   const builtExpr = exprOf(field.docValue)   // the document's value: the build turns an expression into its result
   const isMachine = typeof field.docValue === 'object' && field.docValue !== null && !Array.isArray(field.docValue) && field.docValue.vtype === 'MACHINE'
-  const editOptions = !locked && field.options !== null && (field.docValue === undefined || isMachine)   // an expression-valued options field keeps the read-only row
+  const editOptions = !locked && doc !== undefined && field.options !== null && (field.docValue === undefined || isMachine)   // an expression-valued options field keeps the read-only row
   const expr = asExpr || builtExpr !== null
   const base = builtExpr !== null && field.error === null ? builtExpr : field.shown
   const text = draft !== null && draft.base === base ? draft.text : base
