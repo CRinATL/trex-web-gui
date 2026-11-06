@@ -7,6 +7,8 @@ import { ConfirmDialog } from '../daemon/ConfirmDialog'
 import { TunablesForm } from '../TunablesForm'
 
 const failText = (x: unknown) => (x instanceof ApiError || x instanceof Error ? x.message : String(x))
+// The EMU profile picker lists only Python files: the backend refuses any other suffix (422).
+const PY = ['.py'] as const
 
 type Pending = 'load' | 'remove'
 
@@ -135,7 +137,7 @@ export function EmuProfile() {
         <button type="button" disabled={!trimmed || inspecting} onClick={() => void inspect()}>Inspect</button>
         <label>Rate limit (clients/s) <input className="narrow" type="number" min={1} max={100000} value={rate} onChange={(e) => setRate(e.target.value)} /></label>
       </div>
-      {browsing && <BrowseDialog title="Pick an EMU profile (.py)" onClose={() => setBrowsing(false)} onPick={(p) => { setBrowsing(false); editPath(p) }} />}
+      {browsing && <BrowseDialog title="Pick an EMU profile (.py)" suffixes={PY} onClose={() => setBrowsing(false)} onPick={(p) => { setBrowsing(false); editPath(p) }} />}
       {inspectErr && <p role="alert" className="error">{inspectErr}</p>}
       {inspected && (
         <>

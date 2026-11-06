@@ -34,6 +34,22 @@ def sh(*args: str) -> str:
     return p.stdout + p.stderr
 
 
+def restore_stateless(label: str, before: str = "") -> None:
+    """Put the guest back on stateless (`vm/mode.sh stateless`) and assert vm/ready.py then passes; print
+    `[teardown] <before>mode stateless rc=…, ready rc=…`. `label` names the ready.py timestamp file."""
+    restored = subprocess.run(["vm/mode.sh", "stateless"], cwd=ROOT, check=False).returncode
+    t0 = Path(os.environ.get("TMPDIR", "/tmp")) / f"{label}-ready-{os.getpid()}"
+    t0.write_text(str(time.time()))
+    try:
+        ready = subprocess.run([sys.executable, str(ROOT / "vm" / "ready.py"), str(t0)], cwd=ROOT,
+                               check=False, capture_output=True, text=True)
+    finally:
+        t0.unlink()
+    print(f"[teardown] {before}mode stateless rc={restored}, ready rc={ready.returncode}")
+    assert restored == 0 and ready.returncode == 0, \
+        f"the guest is not back on stateless: {ready.stdout}{ready.stderr}"
+
+
 def daemon_running_fixture(*, stop_trex: bool = False) -> Iterator[None]:
     """The body of a module fixture: skip unless TREX_REAL_HOST is set, run `vm/daemon.sh start` (and
     `vm/mode.sh stop` when `stop_trex`), yield, and always, at teardown, `vm/daemon.sh stop`, then
@@ -48,18 +64,7 @@ def daemon_running_fixture(*, stop_trex: bool = False) -> Iterator[None]:
         yield
     finally:
         stopped = subprocess.run(["vm/daemon.sh", "stop"], cwd=ROOT, check=False).returncode
-        restored = subprocess.run(["vm/mode.sh", "stateless"], cwd=ROOT, check=False).returncode
-        t0 = Path(os.environ.get("TMPDIR", "/tmp")) / f"daemon-vm-ready-{os.getpid()}"
-        t0.write_text(str(time.time()))
-        try:
-            ready = subprocess.run([sys.executable, str(ROOT / "vm" / "ready.py"), str(t0)], cwd=ROOT,
-                                   check=False, capture_output=True, text=True)
-        finally:
-            t0.unlink()
-        print(f"[teardown] daemon stop rc={stopped}, mode stateless rc={restored}, "
-              f"ready rc={ready.returncode}")
-        assert restored == 0 and ready.returncode == 0, \
-            f"the guest is not back on stateless: {ready.stdout}{ready.stderr}"
+        restore_stateless("daemon-vm", f"daemon stop rc={stopped}, ")
 
 
 def direct() -> DaemonClient:

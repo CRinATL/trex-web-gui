@@ -171,4 +171,14 @@ describe('EmuCounters', () => {
     expect(screen.queryByText(/^since /)).toBeNull()
     expect(localStorage.getItem('trex-web-gui.emuBaseline')).toBeNull()
   })
+  it('reads the stored baselines once after a load or removal, not on every render until the next Clear', async () => {
+    let n = 0
+    vi.spyOn(api, 'emuCounters').mockImplementation(async () => withRow(ctx, { value: ++n }))   // a new body each poll: a render each
+    render(<EmuCounters ns={null} mac={null} />)
+    await tick(0)
+    const reads = vi.spyOn(Storage.prototype, 'getItem')
+    act(() => emuStore.push({ ...connected, generation: connected.generation + 1 }))   // the panel stays mounted
+    await tick(5000)
+    expect(reads.mock.calls.filter(([k]) => k === 'trex-web-gui.emuBaseline').length).toBe(1)
+  })
 })

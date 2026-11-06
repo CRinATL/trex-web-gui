@@ -80,6 +80,20 @@ describe('EmuPage', () => {
     act(() => emuStore.push(connected))
     expect(screen.queryByRole('alert')).toBeNull()
   })
+  it('drops a failed read when the socket drops, and does not bring it back with the socket', async () => {
+    const spy = online(true)
+    act(() => emuStore.push(disconnected))
+    const get = vi.spyOn(api, 'getEmu').mockRejectedValue(new api.ApiError(500, 'http_error', 'boom'))
+    const { rerender } = render(<EmuPage />)
+    expect(await screen.findByRole('alert')).toHaveTextContent('Could not read the EMU state: boom')
+    spy.mockReturnValue({ ...state.initialState, backendOnline: false })
+    rerender(<EmuPage />)
+    expect(screen.queryByRole('alert')).toBeNull()
+    get.mockReturnValue(new Promise(() => undefined))      // the read made on coming back is still in flight
+    spy.mockReturnValue({ ...state.initialState, backendOnline: true })
+    rerender(<EmuPage />)
+    expect(screen.queryByRole('alert')).toBeNull()
+  })
   it('reads a client\'s counters once a namespace and a client are selected there', async () => {
     online(true)
     act(() => emuStore.push(connected))
