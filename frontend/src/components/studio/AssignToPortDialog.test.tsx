@@ -19,7 +19,7 @@ const show = (entry: LibraryEntry) => render(<MemoryRouter initialEntries={['/st
 
 describe('AssignToPortDialog', () => {
   it("Open Traffic tab fills the port's form and navigates with the port", async () => {
-    const inspected: api.Inspected = { path: '/lib/a.json', kind: 'json', tunables: [], summary: [], stream_count: 1 }
+    const inspected: api.Inspected = { path: '/lib/a.json', name: 'a.json', kind: 'json', tunables: [], summary: [], stream_count: 1 }
     // resolves on a later timer, as a loaded run does, so the test cannot pass by reading the location too early
     const insp = vi.spyOn(api, 'inspect').mockImplementation(() => new Promise(r => setTimeout(() => r(inspected), 30)))
     const asg = vi.spyOn(api, 'assign')

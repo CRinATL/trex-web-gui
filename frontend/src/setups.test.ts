@@ -17,7 +17,7 @@ const view = (id: number, o: Partial<PortView> = {}): PortView => ({
 })
 const ports = [view(0), view(1)]
 const insp = (path: string): Inspected => ({
-  path, kind: 'py', stream_count: 1, summary: [],
+  path, name: 'gen.py', kind: 'py', stream_count: 1, summary: [],
   tunables: [{ dest: 'size', flag: '--size', kind: 'int', default: 64, choices: null, help: '' }],
 })
 const sp = (port: number, o: Partial<SetupPort> = {}): SetupPort => ({
@@ -134,6 +134,12 @@ describe('matchPorts claims', () => {
 })
 
 describe('loadSetup', () => {
+  it('loading a setup clears a .py pick\'s link', async () => {
+    trafficStore.set(0, { path: '/p/0.py', libraryPy: '/p/0.py', librarySlug: 'b' })
+    const r = await loadSetup(setup([sp(0)]), params, ports, { inspect: async (b) => insp(b.path) })
+    expect(r.ok).toBe(true)
+    expect(trafficStore.get(0)).toMatchObject({ path: '/p/0.py', libraryPy: null, librarySlug: null })
+  })
   it('Load reports a missing profile per port and leaves the forms unchanged', async () => {
     const s = setup([sp(0), sp(1)], { dashboard: { tab: 'latency', window_s: 120, layout: 2, streams_pgids: [1], latency_pgids: [2] } })
     const inspect = vi.fn(async (b: { path: string }) => {

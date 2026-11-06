@@ -44,7 +44,7 @@ describe('ProfilePicker', () => {
     expect(screen.getByText('.py profiles run as code there.')).toBeInTheDocument()
   })
   it('Inspect sends the path and this port and lifts the result', async () => {
-    const result: api.Inspected = { path: '/p/a.py', kind: 'py', tunables: [], summary: [], stream_count: 0 }
+    const result: api.Inspected = { path: '/p/a.py', name: 'a.py', kind: 'py', tunables: [], summary: [], stream_count: 0 }
     const insp = vi.spyOn(api, 'inspect').mockResolvedValue(result)
     const onInspected = vi.fn()
     render(<Harness onInspected={onInspected} />)
@@ -133,7 +133,7 @@ describe('ProfilePicker', () => {
     expect([...dlg.querySelectorAll('.dialog-footer .end button')].map((b) => b.textContent)).toEqual(['Cancel'])
   })
   describe('Browse picks', () => {
-    const insp = (path: string): api.Inspected => ({ path, kind: 'yaml', tunables: [], summary: [], stream_count: 0 })
+    const insp = (path: string): api.Inspected => ({ path, name: 'a.yaml', kind: 'yaml', tunables: [], summary: [], stream_count: 0 })
     async function pick(name: string) {
       vi.spyOn(api, 'fsList').mockResolvedValue(listing('/home/me', null, [file(name)]))
       await userEvent.click(screen.getByRole('button', { name: 'Browse…' }))
@@ -159,7 +159,7 @@ describe('ProfilePicker', () => {
     const entry = { slug: 'a', name: 'a', path: '/lib/a.json', stream_count: 1, created: 'c', updated: 'u', source_missing: false, load_error: null,
       source: { kind: 'json' as const, path: null, args: [], tunables: null, ports_differ: false, imported: 'i' } }
     vi.spyOn(api, 'listLibrary').mockResolvedValue({ profiles: [entry], load_errors: [], dir: '/lib' })
-    const result: api.Inspected = { path: '/lib/a.json', kind: 'json', tunables: [], summary: [], stream_count: 1 }
+    const result: api.Inspected = { path: '/lib/a.json', name: 'a.json', kind: 'json', tunables: [], summary: [], stream_count: 1 }
     const insp = vi.spyOn(api, 'inspect').mockResolvedValue(result)
     const onInspected = vi.fn()
     render(<Harness onInspected={onInspected} />)

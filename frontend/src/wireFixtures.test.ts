@@ -2,8 +2,10 @@
 // those to string) must satisfy the api.ts types. tsc -b (npm run build)
 // type-checks this file, so a type that drifts from the recorded wire shape fails the build.
 import { describe, expect, it } from 'vitest'
-import type { BuildResult, EmuClientsPage, EmuCounters, EmuMsg, EmuNamespaces, Decompiled, Definitions, DiffReply, FeInstruction, FeParamMeta, FieldDef, LibraryList, OptionKind, OptionSpec, PacketTree, SimReport, Source, SpoolListing, StreamMode, StreamPage, TemplateList } from './api'
+import type { AssignedReply, BuildResult, EmuClientsPage, EmuCounters, EmuMsg, EmuNamespaces, Decompiled, Definitions, DiffReply, FeInstruction, FeParamMeta, FieldDef, LibraryList, OptionKind, OptionSpec, Inspected, PacketTree, SimReport, Source, SpoolListing, StreamMode, StreamPage, TemplateList } from './api'
+import assignedReply from './__fixtures__/assignedReply.json'
 import captureFiles from './__fixtures__/captureFiles.json'
+import inspectReply from './__fixtures__/inspectReply.json'
 import emuClients from './__fixtures__/emuClients.json'
 import emuCounters from './__fixtures__/emuCounters.json'
 import emuMsg from './__fixtures__/emuMsg.json'
@@ -20,6 +22,13 @@ import studioSim from './__fixtures__/studioSim.json'
 import studioStreams from './__fixtures__/studioStreams.json'
 
 describe('wire fixtures against api.ts types', () => {
+  // JSON widens the kind literal to string, so it is narrowed; every other field is checked.
+  it('the recorded inspect and assigned replies satisfy their types', () => {
+    const i = { ...inspectReply.library_entry, kind: 'json' as Inspected['kind'] } satisfies Inspected
+    const a = assignedReply.library_entry satisfies AssignedReply
+    expect([i.name, a.assigned.slug]).toEqual(['cdm-test-1 (options)', 'cdm-test-1-options'])
+  })
+
   it('each recorded fixture is assignable to its type', () => {
     const checked = [captureFiles.listing satisfies SpoolListing, packetTree.udp satisfies PacketTree]
     expect(checked).toHaveLength(2)

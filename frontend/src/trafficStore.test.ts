@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
+import type { Inspected, LibraryEntry } from './api'
 import { DEFAULT_FORM, trafficStore } from './trafficStore'
 
 afterEach(() => trafficStore.reset())
@@ -45,6 +46,33 @@ describe('trafficStore', () => {
     expect(trafficStore.generation()).toBe(g)
     trafficStore.reset()
     expect(trafficStore.generation()).toBe(g + 1)
+  })
+  it('reset clears librarySlug', () => {
+    trafficStore.set(0, { librarySlug: 'a' })
+    trafficStore.reset()
+    expect(trafficStore.get(0).librarySlug).toBeNull()
+  })
+  describe('relink', () => {
+    const insp = (path: string, name: string): Inspected => ({ path, name, kind: 'json', tunables: [], summary: [], stream_count: 0 })
+    const entry = (slug: string, name: string): LibraryEntry => ({
+      slug, name, path: `/lib/${slug}.json`, stream_count: 0, created: 'c', updated: 'u', source: null, source_missing: false, load_error: null,
+    })
+    it('relink moves forms on the old path and the old slug', () => {
+      trafficStore.set(0, { path: '/lib/old.json', formPath: '/lib/old.json', inspected: insp('/lib/old.json', 'Old') })
+      trafficStore.set(1, { path: '/s/a.py', libraryPy: '/s/a.py', librarySlug: 'old', inspected: insp('/s/a.py', 'Old') })
+      trafficStore.set(2, { path: '/lib/else.json', inspected: insp('/lib/else.json', 'Else') })
+      const third = trafficStore.get(2)
+      trafficStore.relink({ slug: 'old', path: '/lib/old.json' }, entry('new', 'New'))
+      expect(trafficStore.get(0)).toMatchObject({ path: '/lib/new.json', formPath: '/lib/new.json', inspected: { path: '/lib/new.json', name: 'New' } })
+      expect(trafficStore.get(1)).toMatchObject({ path: '/s/a.py', librarySlug: 'new', inspected: { path: '/s/a.py', name: 'New' } })
+      expect(trafficStore.get(2)).toBe(third)
+    })
+    it('relink with the same path refreshes inspected.name', () => {
+      trafficStore.set(0, { path: '/lib/a.json', inspected: insp('/lib/a.json', 'cdm test 1') })
+      trafficStore.relink({ slug: 'a', path: '/lib/a.json' }, entry('a', 'Cdm Test 1'))
+      expect(trafficStore.get(0).inspected?.name).toBe('Cdm Test 1')
+      expect(trafficStore.get(0).path).toBe('/lib/a.json')
+    })
   })
   it('the defaults are frozen', () => {
     expect(Object.isFrozen(DEFAULT_FORM)).toBe(true)

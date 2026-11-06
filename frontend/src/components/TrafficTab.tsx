@@ -9,7 +9,7 @@ import { sentence } from '../portGate'
 import { canUpdateRate, startFromForm, startSummary } from '../trafficStart'
 import { ProfilePicker } from './ProfilePicker'
 import { rateLine } from './rate'
-import { fillFromPy, PY_NOTE, pySourceOf } from './studio/libraryPick'
+import { fillFromPy, linkedSlug, PY_NOTE, pySourceOf } from './studio/libraryPick'
 import { TunablesForm } from './TunablesForm'
 import { RunButton } from './RunButton'
 import { EditedTag } from '../ui/Edited'
@@ -191,7 +191,8 @@ export function TrafficTab({ port, selection, ports, readOnly, connected, visibl
     }
     clearTimeout(confirmTimer.current); setConfirmAssign(false)
     await command(async () => {
-      const r = await assign({ ports: [id], path: inspected.path, tunables: tunablesToArgs(inspected.tunables, values, extra), ...(needsStop ? { stop_first: true } : {}) })
+      const slug = linkedSlug(form)
+      const r = await assign({ ports: [id], path: inspected.path, tunables: tunablesToArgs(inspected.tunables, values, extra), ...(slug ? { library_slug: slug } : {}), ...(needsStop ? { stop_first: true } : {}) })
       setRateInfo(r.rate[String(id)] ?? null)
       setOnPortSeq((n) => n + 1)
     })
@@ -216,6 +217,12 @@ export function TrafficTab({ port, selection, ports, readOnly, connected, visibl
   // The profile in the box is not what Start would send: another file, other arguments, or nothing assigned yet.
   const notOnPort = !!inspected && (held === null || held.path !== inspected.path
     || !sameArgs(held.tunables, tunablesToArgs(inspected.tunables, values, extra)))
+  // What the streams listed under "In the profile" are, and how they differ from what Start would send.
+  const caption = !inspected || !notOnPort ? '' : `These are the streams in ${inspected.name}. ` + (
+    held ? (held.path !== inspected.path ? `Port ${id} has ${held.name} loaded instead: Assign replaces it.`
+      : `Port ${id} has it loaded with other arguments: Assign reloads it.`)
+      : onPort?.streams ? `Port ${id} has other streams loaded: Assign replaces them.`
+        : `They aren't on port ${id} yet: Assign loads them onto the port, then Start sends them.`)
   const assignEnabled = !!act('assign')?.enabled && !!inspected && !busy
   const tx = (aid: string) => !!act(aid)?.enabled && !busy
 
@@ -224,8 +231,9 @@ export function TrafficTab({ port, selection, ports, readOnly, connected, visibl
       <section>
         <h3>Profile</h3>
         <ProfilePicker portId={id} path={path} inputRef={pathRef} disabled={readOnly} visible={visible} onLibraryPick={(e) => { const src = pySourceOf(e); if (!src) return; setReqErr(null); setError(null); fillFromPy(id, e, src) }}
+          librarySlugFor={(p) => (p === path ? linkedSlug(trafficStore.get(id)) : undefined)}
           tunablesFor={(p) => (p !== formPath ? [] : specs.length === 0 && p === libraryPy ? libraryArgs : tunablesToArgs(specs, values, extra))}
-          onPath={(p) => { setReqErr(null); patch({ path: p, inspected: null }) }}
+          onPath={(p) => { setReqErr(null); patch({ path: p, inspected: null, librarySlug: null }) }}
           onInspected={(i) => {
             if (!i) return   // a failed inspect (a typo in the profile) keeps the form, its values and the last table
             if (trafficStore.generation() !== gen) return   // a connect_seq reset came first: write nothing
@@ -240,7 +248,8 @@ export function TrafficTab({ port, selection, ports, readOnly, connected, visibl
         {inspected && <TunablesForm specs={inspected.tunables} values={values} extra={extra} onValues={setValues} onExtra={setExtra} />}
         {inspected && notOnPort && (
           <>
-            <p className="muted">In {stemOf(inspected.path)}, not on the port: Assign puts these streams on the port.</p>
+            <h3>In the profile</h3>
+            <p className="muted">{caption}</p>
             <StreamsTable summary={inspected.summary} count={inspected.stream_count} label="Streams in the profile" />
           </>
         )}
@@ -321,7 +330,7 @@ export function TrafficTab({ port, selection, ports, readOnly, connected, visibl
         {/* the reason the bar is blocked, shown as text (not only as a tooltip), else what Start will send */}
         {editBlock ? <span className="muted">{sentence(editBlock)}</span>
           : !inspected ? <span className="muted">Inspect a profile first.</span>
-            : <span className="muted">{startSummary(form)}{notOnPort && held ? `, sending ${stemOf(held.path)}, not ${stemOf(inspected.path)}: assign it first` : ''}.</span>}
+            : <span className="muted">{startSummary(form)}{notOnPort && held ? `, sending ${held.name}, not ${inspected.name}: assign it first` : ''}.</span>}
         {libraryPy && libraryPy === path && <span className="muted">{PY_NOTE}</span>}
         {live && (
           <span role="status" className="live-update">

@@ -181,6 +181,7 @@ export async function loadSetup(setup: TestSetup, params: ConnectParams, ports: 
       forms.push({ id, form: {
         path: sp.profile.path, formPath: sp.profile.path, inspected, specs: inspected.tunables, values: { ...defaultsFor(inspected.tunables), ...sp.tunables.values },
         extra: sp.tunables.extra, multValue: mult.value, unit: mult.unit, duration: sp.duration === -1 ? '' : String(sp.duration), force: sp.force,
+        libraryPy: null, librarySlug: null,   // a saved setup is not a library pick
         pending: null,   // a running live-update countdown would fire the old multiplier and record it as applied
       } })
     } catch (x) {

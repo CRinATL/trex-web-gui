@@ -1,6 +1,7 @@
 import { useRef, useState, type KeyboardEvent } from 'react'
 import { ApiError, createProfile, deleteProfile, duplicateProfile, getProfile, renameProfile, type LibraryEntry, type LibraryList } from '../../api'
 import { useAppState } from '../../state'
+import { trafficStore } from '../../trafficStore'
 import { AssignToPortDialog } from './AssignToPortDialog'
 import { ImportDialog } from './ImportDialog'
 import { RunButton } from '../RunButton'
@@ -63,7 +64,10 @@ export function ProfileLibrary({ entries, loadErrors, selected, onSelect, onChan
     if (edit.kind === 'new') return (await createProfile(name)).slug
     if (!sel) return undefined
     if (edit.kind === 'duplicate') return (await duplicateProfile(sel.slug, name)).slug
-    return (await renameProfile(sel.slug, name, (await getProfile(sel.slug)).rev)).slug
+    const old = { slug: sel.slug, path: sel.path }
+    const entry = await renameProfile(old.slug, name, (await getProfile(old.slug)).rev)
+    trafficStore.relink(old, entry)   // open Control forms follow the entry's new path, slug and name
+    return entry.slug
   })
   const doDelete = () => sel && run(async () => { await deleteProfile(sel.slug); return null })
   const renamePinned = pinned && edit?.kind === 'rename'      // a Rename form opened while clean must not submit once the edits are unsaved

@@ -23,7 +23,7 @@ const sp = (port: number, o: Partial<SetupPort> = {}): SetupPort => ({
 })
 const lab = (list: SetupPort[] = [sp(0), sp(1)]): TestSetup =>
   ({ name: 'Lab A', slug: 'lab-a', created: 'c', updated: 'u1', server: 'h:4501', ports: list, dashboard: null })
-const inspected = (path: string): api.Inspected => ({ path, kind: 'py', tunables: [], summary: [], stream_count: 1 })
+const inspected = (path: string): api.Inspected => ({ path, name: 'gen.py', kind: 'py', tunables: [], summary: [], stream_count: 1 })
 
 function open(o: { setups?: TestSetup[]; serverPorts?: PortView[]; readOnly?: boolean; loadErrors?: { file: string; error: string }[] } = {}) {
   vi.spyOn(api, 'inspect').mockImplementation(async (b) => inspected(b.path))
