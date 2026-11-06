@@ -1,5 +1,7 @@
 import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { readFileSync } from 'node:fs'
+import { resolve } from 'node:path'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { BuildResult, Definitions, FieldDef, FieldValue, PacketDoc, PacketField } from '../../api'
 import buildFixture from '../../__fixtures__/packet/buildIpOptions.json'
@@ -279,5 +281,16 @@ describe('FieldRow', () => {
       setup(opt(OPTIONS), { optionKinds: kinds, doc, readOnly: true })
       expect(screen.queryByRole('combobox', { name: 'Add option' })).toBeNull()
     })
+  })
+})
+
+// A field's name sits on the first line of its value, in the editor and the viewers alike: centred, the name of a tall value
+// (the options editor's rows, a long options summary) floated in the middle of it (user, 2026-11-05). jsdom has no layout,
+// so the rule is pinned.
+describe('field row alignment', () => {
+  it('aligns every field row on the first line, not the centre', () => {
+    const css = readFileSync(resolve(import.meta.dirname, '../../index.css'), 'utf8')
+    expect(css).toMatch(/^\.field-row \{[^}]*align-items: baseline;/m)
+    expect(css).not.toMatch(/\.field-row \{[^}]*align-items: (center|stretch|end)/)
   })
 })

@@ -16,7 +16,7 @@ def test_pin_records_sha_and_all_patches() -> None:
     pin = json.loads((VENDOR / "TREX_PIN").read_text())
     assert pin == json.loads(PIN_FILE.read_text())                  # copy in _vendor matches the record
     assert f"--sha {pinned_sha()}" in (ROOT / "Makefile").read_text()  # and the record matches the Makefile
-    assert [p[:2] for p in pin["patches"]] == [f"{n:02d}" for n in range(1, 16)]
+    assert [p[:2] for p in pin["patches"]] == [f"{n:02d}" for n in range(1, 17)]
 
 
 def test_vendor_is_reproducible(build_vendor: BuildVendor) -> None:  # canon:TSK-5
@@ -291,3 +291,17 @@ def test_15_tcp_options_bytes(build_vendor: BuildVendor) -> None:
     assert got.endswith("01010100") and got[24:25] == "6"      # dataofs 6, the bytes padded with one zero
     neg = run_vendor_python(build_vendor(["15"]), CODE_15)       # canon:VER-2: patch 15 skipped
     assert "01010100" not in neg.stdout and "Traceback" in neg.stderr
+
+
+# 16: the Traceroute IP option builds its RFC 1393 type 82 (0x52), not 18 (0x12); both dissect as Traceroute
+CODE_16 = IMPORT_ALL + """
+from scapy.all import IP, IPOption_Traceroute
+back = IP(bytes(IP(options=[IPOption_Traceroute()])))
+print(bytes(IPOption_Traceroute())[:1].hex(), type(back.options[0]).__name__)
+"""
+
+
+def test_16_ip_traceroute_optclass(build_vendor: BuildVendor) -> None:
+    assert run_vendor_python(VENDOR, CODE_16).stdout.strip().splitlines()[-1] == "52 IPOption_Traceroute"
+    unpatched = run_vendor_python(build_vendor(["16"]), CODE_16)   # canon:VER-2: patch 16 skipped
+    assert unpatched.stdout.strip().splitlines()[-1] == "12 IPOption_Traceroute"

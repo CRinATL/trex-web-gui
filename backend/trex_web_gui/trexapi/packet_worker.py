@@ -393,7 +393,9 @@ class Engine:
                 raise _Fallback
             tail = [_raw_layer(data[EDITOR_DECODE_BYTES:])]
             packet, binary = packet[:-1], base64.b64encode(data[:EDITOR_DECODE_BYTES]).decode("ascii")
-        model = [{**layer, "fields": [f for f in layer["fields"] if not (j == at and f["id"] == name)]}
+        # A layer may omit `fields` when the document did not pass through parse_doc.
+        model = [{**layer, "fields": [f for f in layer.get("fields", [])
+                                      if not (j == at and f["id"] == name)]}
                  for j, layer in enumerate(packet)]
         try:
             built = self._reconstructed(binary, model)
@@ -412,7 +414,7 @@ class Engine:
             value = _machine(option_bytes(kind, bytes(_chain(Ether(head))[at])))
         else:
             value = doc_value(stack[at].getfieldval(name))
-        out = [{**layer, "fields": list(layer["fields"])} for layer in packet]
+        out = [{**layer, "fields": list(layer.get("fields", []))} for layer in packet]
         fields = out[at]["fields"]
         for f in fields:
             if f["id"] == name:

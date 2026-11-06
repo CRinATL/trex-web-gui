@@ -309,8 +309,7 @@ button[data-run][data-on] { border-color: var(--run); box-shadow: inset 0 0 0 1p
 .packet-viewer-body { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; gap: .75rem; }
 .packet-viewer-tree { flex: 1 1 auto; min-height: 6rem; overflow: auto; }
 .packet-viewer-bytes { flex: none; border-top: 1px solid var(--border); padding-top: .5rem; overflow-x: auto; }
-/* baseline, not centre: a value that wraps keeps its name and byte range on its first line */
-.packet-viewer .field-row { grid-template-columns: 8rem minmax(0, 1fr) 1.5rem 10rem; align-items: baseline; }
+.packet-viewer .field-row { grid-template-columns: 8rem minmax(0, 1fr) 1.5rem 10rem; }   /* aligned on the baseline by .field-row */
 .packet-viewer .field-range { white-space: nowrap; justify-self: start; text-align: left; }
 .packet-viewer .field-value { overflow-wrap: anywhere; }
 .hex-view { font-family: monospace; white-space: pre; }
@@ -446,7 +445,9 @@ fieldset.plain legend { padding: 0; font-weight: 600; font-size: 1.1em; margin-b
 .layer-title { flex: 1; text-align: left; background: none; border: 0; color: inherit; font: inherit; font-weight: 600; cursor: pointer; padding: .3rem .5rem; }
 .layer-menu { background: none; border: 0; color: inherit; cursor: pointer; }
 .layer-body { padding: .25rem .5rem; }
-.field-row { display: grid; grid-template-columns: 10rem minmax(12rem, 1fr) 4rem 11rem; align-items: center; gap: .1rem .5rem; padding: .1rem 0; color: var(--muted); }
+/* baseline, not centre, in the editor and the viewers: a field's name and byte range sit on the first line of its value, so the
+   name of a tall value (the options rows, a wrapped summary) stays at its top (user, 2026-11-05) */
+.field-row { display: grid; grid-template-columns: 10rem minmax(12rem, 1fr) 4rem 11rem; align-items: baseline; gap: .1rem .5rem; padding: .1rem 0; color: var(--muted); }
 .field-row.user-set { color: var(--accent); }
 .field-row.error { color: var(--bad); }
 .field-row.ignored .field-name { text-decoration: line-through; }
@@ -456,7 +457,6 @@ fieldset.plain legend { padding: 0; font-weight: 600; font-size: 1.1em; margin-b
 .options-editor .option-name { font-family: monospace; min-width: 6rem; }
 .options-editor .option-field { display: inline-flex; align-items: center; gap: .25rem; }
 .options-editor .option-input { width: 8rem; }
-.options-editor .option-field .option-input { width: 15rem; }   /* an enum label such as router_shall_examine_packet */
 .options-editor .options-hex { flex: 1 1 14rem; width: auto; }
 .options-editor .option-padding { padding-left: 1.25rem; }
 .options-editor .field-error { grid-column: auto; margin: 0; }

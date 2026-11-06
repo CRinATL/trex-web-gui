@@ -274,6 +274,74 @@ describe('OptionsEditor', () => {
     expect(screen.queryByText(encodeFixture.tooLong.message)).toBeNull()
   })
 
+  it('keeps the typed Add inputs through an edit elsewhere in the packet, and drops them when the options change', async () => {
+    const { again } = setup()
+    await userEvent.selectOptions(screen.getByRole('combobox', { name: 'Add option' }), '*other')
+    await userEvent.type(screen.getByRole('textbox', { name: 'Other option number' }), '25')
+    again(field(), { doc: emptyDoc() })        // another field's edit: a new document, the same option bytes
+    expect(screen.getByRole('textbox', { name: 'Other option number' })).toHaveValue('25')
+    const nopEol = [{ name: 'NOP', number: 1, fields: {}, raw: 'AQ==' }, { name: 'EOL', number: 0, fields: {}, raw: 'AA==' }]   // 01 00 00 00, by hand
+    again(field({ value: machine('AQAAAA=='), docValue: machine('AQAAAA=='), ...withOptions({ rows: nopEol as api.OptionRow[], padding: 2, length: 2 }) }), { doc: emptyDoc() })
+    expect(screen.getByRole('combobox', { name: 'Add option' })).toHaveValue('')
+    expect(screen.queryByRole('textbox', { name: 'Other option number' })).toBeNull()
+  })
+
+  // A browser drops focus from a control when it is disabled; jsdom keeps it there and ignores blur() on a disabled control, so
+  // dropFocus puts focus on the body as the browser does: a removed focused element leaves document.activeElement the body.
+  const dropFocus = () => { const t = document.body.appendChild(document.createElement('input')); t.focus(); t.remove() }
+  it('gives focus back to the control that committed once the controls are on again', async () => {
+    let resolve!: (v: { binary: string }) => void
+    vi.mocked(api.encodeOptions).mockReturnValue(new Promise((r) => { resolve = r }))
+    const { again } = setup()
+    const up = screen.getByRole('button', { name: 'Move option 3 up' })
+    await userEvent.click(up)
+    expect(up).toBeDisabled()
+    dropFocus()
+    // The reply and the build it starts land in one render, as React batches the commit with the editor's pending state.
+    await act(async () => { resolve(encodeFixture.routerAlert); again(field(), { pending: true }) })
+    expect(document.activeElement).toBe(document.body)
+    again(field())
+    expect(document.activeElement).toBe(up)
+  })
+
+  it('leaves focus alone when the user moved it during the commit', async () => {
+    let resolve!: (v: { binary: string }) => void
+    vi.mocked(api.encodeOptions).mockReturnValue(new Promise((r) => { resolve = r }))
+    const outside = document.body.appendChild(document.createElement('input'))
+    try {
+      const { again } = setup()
+      await userEvent.click(screen.getByRole('button', { name: 'Move option 3 up' }))
+      outside.focus()
+      await act(async () => { resolve(encodeFixture.routerAlert); again(field(), { pending: true }) })
+      again(field())
+      expect(document.activeElement).toBe(outside)
+    } finally { outside.remove() }
+  })
+
+  it('focuses the editor when the control that committed is gone', async () => {
+    let resolve!: (v: { binary: string }) => void
+    vi.mocked(api.encodeOptions).mockReturnValue(new Promise((r) => { resolve = r }))
+    const { again } = setup()
+    const up = screen.getByRole('button', { name: 'Move option 3 up' })
+    await userEvent.click(up)
+    dropFocus()
+    await act(async () => { resolve(encodeFixture.routerAlert); again(field(), { pending: true }) })
+    // The tree the commit's build brings has two rows, so the third row's buttons are gone: Router Alert, EOL
+    // (94 04 00 00 00 00 00 00, by hand: no fixture holds it).
+    const rows = [{ name: 'Router_Alert', number: 148, fields: { alert: 0 }, raw: 'lAQAAA==' }, { name: 'EOL', number: 0, fields: {}, raw: 'AA==' }]
+    again(field({ value: machine('lAQAAAAAAAA='), docValue: machine('lAQAAAAAAAA='), ...withOptions({ rows: rows as api.OptionRow[], padding: 3, length: 5 }) }))
+    expect(up.isConnected).toBe(false)
+    expect(document.activeElement).toBe(document.querySelector('.options-editor'))
+  })
+
+  it('sizes a name-list input to its longest name and leaves the other field inputs at their width', () => {
+    setup(field({ ...withOptions({ rows: [...(built.options as api.DecodedOptions).rows, { name: 'RR', number: 7, fields: { pointer: 4, routers: [] } }] }) }))
+    const alert = screen.getByRole('combobox', { name: 'option 2 alert' })
+    expect(alert.style.width).toBe(`calc(${'router_shall_examine_packet'.length}ch + 2.5rem)`)
+    expect(screen.getByRole('textbox', { name: 'option 4 pointer' }).style.width).toBe('')
+    expect(screen.getByRole('textbox', { name: 'option 4 routers' }).style.width).toBe('')
+  })
+
   it('refuses an other number of 1 locally, adding or editing', async () => {
     const { onCommit } = setup(field({ ...withOptions({ rows: [{ name: null, number: 25, fields: { value: '0102' }, raw: 'GQQBAg==' }], padding: 0, length: 4 }) }))
     await userEvent.selectOptions(screen.getByRole('combobox', { name: 'Add option' }), '*other')
@@ -292,7 +360,7 @@ describe('OptionsEditor', () => {
   it('disables the remove button of an EOL that only padding follows', () => {
     setup()   // NOP, Router Alert, EOL, padding 2
     expect(screen.getByRole('button', { name: 'Remove option 3' })).toBeDisabled()
-    expect(screen.getByRole('button', { name: 'Remove option 3' })).toHaveAttribute('title', 'End of Options before the padding: removing it pads to the same bytes')
+    expect(screen.getByRole('button', { name: 'Remove option 3' })).toHaveAttribute('title', 'End of Options last: removing it pads back to the same bytes')
     expect(screen.getByRole('button', { name: 'Remove option 1' })).toBeEnabled()
   })
 
@@ -327,5 +395,34 @@ describe('OptionsEditor', () => {
     ]
     setup(field({ value: machine('lAQAAAAAAAA='), docValue: machine('lAQAAAAAAAA='), ...withOptions({ rows: rows as api.OptionRow[], padding: 3, length: 5 }) }))
     expect(screen.getByRole('button', { name: 'Remove option 2' })).toBeEnabled()
+  })
+
+  it('disables the remove button of a last EOL that the padding to 4 alone puts back', () => {
+    // NOP, NOP, NOP, EOL (01 01 01 00), no padding: without the EOL the codec pads the three NOPs with the same zero.
+    // No recorded fixture holds it, so the codec's decode shape is written by hand.
+    const rows = [1, 2, 3].map(() => ({ name: 'NOP', number: 1, fields: {}, raw: 'AQ==' })).concat([{ name: 'EOL', number: 0, fields: {}, raw: 'AA==' }])
+    setup(field({ value: machine('AQEBAA=='), docValue: machine('AQEBAA=='), ...withOptions({ rows: rows as api.OptionRow[], padding: 0, length: 4 }) }))
+    expect(screen.getByRole('button', { name: 'Remove option 4' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Remove option 3' })).toBeEnabled()
+  })
+
+  it('appends an added row after the rows when there is no EOL', async () => {
+    vi.mocked(api.encodeOptions).mockResolvedValue(encodeFixture.routerAlert)
+    // NOP, Router Alert (01 94 04 00 00 01 01 01 -> rows written by hand: no fixture has options with no EOL)
+    const rows = [{ name: 'NOP', number: 1, fields: {}, raw: 'AQ==' }, { name: 'Router_Alert', number: 148, fields: { alert: 0 }, raw: 'lAQAAA==' }]
+    setup(field({ value: machine('AZQEAAA='), docValue: machine('AZQEAAA='), ...withOptions({ rows: rows as api.OptionRow[], padding: 0, length: 5 }) }))
+    await userEvent.selectOptions(screen.getByRole('combobox', { name: 'Add option' }), 'RR')
+    await userEvent.click(screen.getByRole('button', { name: 'Add' }))
+    expect(sentRows().map((r) => r.name)).toEqual(['NOP', 'Router_Alert', 'RR'])
+  })
+
+  it('inserts an added row before the first of two EOLs', async () => {
+    vi.mocked(api.encodeOptions).mockResolvedValue(encodeFixture.routerAlert)
+    // EOL, NOP, EOL (00 01 00 00): an option after the first EOL is listed (the codec's walk), so this shape is written by hand.
+    const rows = [{ name: 'EOL', number: 0, fields: {}, raw: 'AA==' }, { name: 'NOP', number: 1, fields: {}, raw: 'AQ==' }, { name: 'EOL', number: 0, fields: {}, raw: 'AA==' }]
+    setup(field({ value: machine('AAEAAA=='), docValue: machine('AAEAAA=='), ...withOptions({ rows: rows as api.OptionRow[], padding: 1, length: 3 }) }))
+    await userEvent.selectOptions(screen.getByRole('combobox', { name: 'Add option' }), 'RR')
+    await userEvent.click(screen.getByRole('button', { name: 'Add' }))
+    expect(sentRows().map((r) => r.name)).toEqual(['RR', 'EOL', 'NOP', 'EOL'])
   })
 })

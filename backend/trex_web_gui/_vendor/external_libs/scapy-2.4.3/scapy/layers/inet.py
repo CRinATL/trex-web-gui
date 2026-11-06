@@ -207,6 +207,7 @@ class IPOption_MTU_Reply(IPOption_MTU_Probe):
 
 class IPOption_Traceroute(IPOption):
     name = "IP Option Traceroute"
+    optclass = 2
     option = 18
     fields_desc = [_IPOption_HDR,
                    ByteField("length", 12),

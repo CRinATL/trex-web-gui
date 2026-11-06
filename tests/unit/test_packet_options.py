@@ -217,6 +217,20 @@ def test_kinds_list_known_options_without_id_fields() -> None:
     assert tcp["Mood"]["fields"][0]["kind"] == "hex"
 
 
+def test_traceroute_is_type_82_and_type_18_is_an_other_row() -> None:
+    # RFC 1393 type 82 (0x52), from vendor patch 16; Scapy 2.4.3's own 0x12 is no option an RFC names.
+    tr = bytes.fromhex("520c000100020003c0000201")   # Traceroute: id 1, outbound 2, return 3, from 192.0.2.1
+    d = po.decode("IP", tr)
+    assert [r["name"] for r in d["rows"]] == ["Traceroute"] and d["rows"][0]["number"] == 0x52
+    assert d["rows"][0]["fields"]["originator_ip"] == "192.0.2.1"
+    assert {k["name"]: k for k in po.option_kinds("IP")}["Traceroute"]["number"] == 0x52
+    row = {"name": "Traceroute", "number": 0x52, "fields": d["rows"][0]["fields"], "edited": True}
+    added = po.encode("IP", [row], 0, 0)
+    assert added == tr
+    old = po.decode("IP", bytes.fromhex("120c000100020003c0000201"))
+    assert [(r["name"], r["number"]) for r in old["rows"]] == [(None, 0x12)]
+
+
 def test_option_kinds_hands_out_copies() -> None:
     po.option_kinds("TCP")[0]["name"] = "changed"
     assert po.option_kinds("TCP")[0]["name"] == "EOL"

@@ -1,4 +1,7 @@
 {
+  "alertEdited": {
+    "binary": "AZQEAAEAAAA="
+  },
   "badOption": {
     "error": "bad_option",
     "message": "'Bogus' is not a known IP option"
