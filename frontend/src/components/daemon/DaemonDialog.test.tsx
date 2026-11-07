@@ -293,12 +293,29 @@ describe('DaemonDialog', () => {
     expect(api.daemonLog).toHaveBeenCalledTimes(n)
   })
 
-  it('shows the root-daemon warning in the connect bar', async () => {
+  it('shows the exposure warning until the daemon is connected', async () => {
+    await open({ daemon: null })
+    const note = screen.getByRole('note')
+    expect(note).toHaveTextContent(/runs as root with no authentication and binds 0\.0\.0\.0 by default/)
+    expect(note).toHaveTextContent(/before using daemon control on a shared network/)
+    expect(note).not.toHaveClass('ok')
+  })
+
+  it('shows the green banner while connected', async () => {
     await open()
-    const note = screen.getByRole('note', { name: '' })
-    expect(note).toHaveTextContent(/The TRex daemon runs as root with no authentication and binds 0\.0\.0\.0 by default/)
-    expect(note).toHaveTextContent(/restrict 8090 .* before using daemon control outside the test VM/)
-    expect(screen.getAllByText(/runs as root with no authentication/)).toHaveLength(1)
+    const note = screen.getByRole('note')
+    expect(note).toHaveClass('ok')
+    expect(note).toHaveTextContent('Connected to the TRex daemon at 127.0.0.1:8090. It runs as root and takes commands from anyone who can reach port 8090; keep that port restricted.')
+    expect(screen.queryByText(/runs as root with no authentication/)).toBeNull()
+  })
+
+  it('goes back to the warning on an error', async () => {
+    const { rerender } = await open()
+    setApp({ daemon: { ...idle, state: 'error', last_error: 'unreachable' } })
+    rerender(<DaemonDialog onClose={() => undefined} />)
+    const note = screen.getByRole('note')
+    expect(note).toHaveTextContent(/runs as root with no authentication/)
+    expect(note).not.toHaveClass('ok')
   })
 
   it('Connect sends the host and port, and opening reconnects to the last target', async () => {

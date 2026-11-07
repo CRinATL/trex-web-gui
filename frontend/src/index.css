@@ -293,6 +293,9 @@ button[data-run][data-on] { border-color: var(--run); box-shadow: inset 0 0 0 1p
 .banner.alert { color: var(--fg); border: 0; border-left: 4px solid var(--attention); border-radius: 4px; width: fit-content; max-width: 100%;
   background: color-mix(in srgb, var(--attention) var(--alert-tint), var(--bg)); padding: .45rem .75rem; margin: 0 0 .75rem; }
 .banner.alert strong { color: var(--warn); font-weight: 600; }
+/* The daemon dialog's connected state: the same edge-and-tint shape as .banner.alert, in the ok colour. */
+.banner.ok { color: var(--fg); border: 0; border-left: 4px solid var(--ok); border-radius: 4px; width: fit-content; max-width: 100%;
+  background: color-mix(in srgb, var(--ok) var(--alert-tint), var(--bg)); padding: .45rem .75rem; margin: 0 0 .75rem; }
 
 .trend { display: inline-block; width: 1em; margin-left: .35rem; font-size: .8em; text-align: center; }
 .trend-weak { color: var(--muted); }

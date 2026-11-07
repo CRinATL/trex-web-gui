@@ -1411,7 +1411,8 @@ README's "Daemon exposure" before using it outside the test VM. While the dialog
 - **Port** (`--daemon-port`, 8090 by default);
 - **Connect** (`Host is required`, `Port must be 1–65535`), **Disconnect**.
 
-Opening the dialog again reconnects to the last daemon. Under it the exposure warning, then
+Opening the dialog again reconnects to the last daemon. Under it the exposure warning (shown until the dialog is
+connected to the daemon, and again after an error), then
 `State: <not connected | connected | error: …> · <version> · running since <time>`. Tabs **Config**, **YAML**, **Run**
 (the first shown), **Logs**.
 
