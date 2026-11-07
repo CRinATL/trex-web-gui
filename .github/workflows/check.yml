@@ -12,10 +12,14 @@ concurrency:
   group: check-${{ github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
+# `make check`'s seven steps, run as parallel jobs: the same make targets with the same arguments, so nothing is
+# dropped. A hosted runner has no systemd user manager, so neither pytest nor vitest gets the Makefile's systemd-run
+# memory cap (PYTEST= and VITEST_CAP=, as `make check` was run here before).
 jobs:
-  check:
+  static:
+    name: lint, typecheck, build, citations, docstrings
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -28,6 +32,59 @@ jobs:
           cache-dependency-path: frontend/package-lock.json
       - run: uv sync --project backend --locked
       - run: npm --prefix frontend ci
-      # A hosted runner has no systemd user manager, so neither pytest nor vitest gets the Makefile's
-      # systemd-run memory cap.
-      - run: make check PYTEST="uv run --project backend --locked pytest" VITEST_CAP=
+      - run: make lint typecheck build citations docstrings
+
+  test-js:
+    name: vitest
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm --prefix frontend ci
+      - run: make test-js VITEST_CAP=
+
+  # pytest in three shards. The shards are complements, not lists: "rest" ignores tests/contract, and the two
+  # contract shards each ignore the other's files, so a new test directory or file always runs (a contract file
+  # outside both globs would run twice, never zero times). The split by first letter halves the contract suite's
+  # time (measured 2026-11-06: about 170 of 346 worker-seconds in test_[a-e]*).
+  test-py:
+    name: pytest (${{ matrix.shard }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - shard: rest
+            args: --ignore=tests/contract
+          - shard: contract a-e
+            args: tests/contract '--ignore-glob=tests/contract/test_[f-z]*'
+          - shard: contract f-z
+            args: tests/contract '--ignore-glob=tests/contract/test_[a-e]*'
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+      - run: uv sync --project backend --locked
+      - run: make test-py PYTEST="uv run --project backend --locked pytest ${{ matrix.args }}"
+
+  # The ruleset on main requires a status named "check" (it was the one job's name): this job reports it, and passes
+  # only when every job above passed. `if: always()` makes it report a failure, not stay pending, when one fails.
+  check:
+    name: check
+    if: always()
+    needs: [static, test-js, test-py]
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - run: |
+          echo 'static=${{ needs.static.result }} test-js=${{ needs.test-js.result }} test-py=${{ needs.test-py.result }}'
+          test '${{ needs.static.result }}' = success && test '${{ needs.test-js.result }}' = success && test '${{ needs.test-py.result }}' = success
