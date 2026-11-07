@@ -5,12 +5,11 @@ traffic generator. It brings traffic control, statistics, packet capture, profil
 control of the TRex emulation server (EMU) into one application, replacing the separate `trex-stateless-gui`,
 `trex-packet-editor` and `trex-qt-gui` tools.
 
-The backend runs on Linux with Python 3.12 or newer. Traffic control targets TRex v3.08 in stateless (STL) mode, STL API
-5.1. The passive Monitor also shows what stateful (`-f`) runs publish.
+<!-- Product screenshot: added after the full re-shoot (readme-restructure spec, step 7). -->
 
-[Before you start](#before-you-start) · [Install](#install) · [Quick start](#quick-start) ·
+[Getting started](#getting-started) · [Install](#install) · [First launch](#first-launch) ·
 [Access](#access-single-user-localhost-only) · [Command-line options](#command-line-options) ·
-[Documentation](#documentation) · [Development](#development)
+[Documentation](#documentation)
 
 ## What you can do
 
@@ -42,7 +41,12 @@ The backend runs on Linux with Python 3.12 or newer. Traffic control targets TRe
   - run stateful profiles;
   - read its logs.
 
-## Before you start
+## Getting started
+
+### What you need
+
+Traffic control targets TRex v3.08 in stateless (STL) mode, STL API 5.1. The passive Monitor also shows what stateful
+(`-f`) runs publish.
 
 trex-web-gui is a single-user application. The backend listens on loopback only, and every logged-in browser tab shares
 its one TRex session. Each start makes a new login URL.
@@ -57,7 +61,6 @@ The browser, the backend and the TRex server can be on three different machines:
 - **The TRex server** is a TRex v3.08 in stateless mode, already running
   ([Starting the TRex server](#starting-the-trex-server)).
   - The backend host must be able to reach its command and event ports, 4501 and 4500 by default.
-  - The vendored client is in the wheel. No trex-core checkout is needed.
   - Optional, on the TRex host: the TRex daemon (`trex_daemon_server`) for the daemon dialog.
 - **The browser** is a current browser, on the backend host or on another machine through an SSH tunnel
   ([Access](#access-single-user-localhost-only)).
@@ -68,8 +71,6 @@ Three common layouts, from one host to three:
    listens on 4501, 4500 and the daemon's 8090 on every interface, so on a shared network block them with the
    host's firewall.
 
-   ![One host: the browser, the trex-web-gui backend on 127.0.0.1:8765 and the TRex server on ports 4501 and 4500, all on one Linux host](docs/images/topology-one-host.svg)
-
 2. **Remote browser,** the usual lab shape. The backend runs on the TRex host, and a browser on your workstation
    reaches it through an SSH tunnel. Only SSH needs to face the network.
 
@@ -79,7 +80,13 @@ Three common layouts, from one host to three:
    It must reach the TRex server's ports 4501 and 4500 over the network, and that ZeroMQ (ZMQ) traffic has no encryption
    or authentication, so use this layout only on a trusted test network.
 
-   ![Three hosts: a browser machine tunnels over SSH to the backend host, which reaches the TRex server on a third host over unencrypted, unauthenticated ZMQ on ports 4501 and 4500](docs/images/topology-three-hosts.svg)
+<details><summary>Other layouts: one host, three hosts</summary>
+
+![One host: the browser, the trex-web-gui backend on 127.0.0.1:8765 and the TRex server on ports 4501 and 4500, all on one Linux host](docs/images/topology-one-host.svg)
+
+![Three hosts: a browser machine tunnels over SSH to the backend host, which reaches the TRex server on a third host over unencrypted, unauthenticated ZMQ on ports 4501 and 4500](docs/images/topology-three-hosts.svg)
+
+</details>
 
 trex-web-gui does not start TRex or `trex-console`. It takes `trex-console`'s place as a client of a TRex server that is
 already running in stateless mode, on its command and event ports (`--server`). Only the **TRex daemon…** dialog
@@ -91,10 +98,9 @@ Restrict access to the TRex daemon before using daemon control outside a trusted
 ([Daemon exposure](#daemon-exposure)). [`SECURITY.md`](SECURITY.md) says what protects the backend and what does
 not.
 
-## Install
+### Install
 
 trex-web-gui is not on PyPI. One command installs the latest release with [`uv`](https://docs.astral.sh/uv/).
-Other methods, older releases and offline hosts are under [Other ways to install](#other-ways-to-install).
 
 **Install uv first** if `uv --version` finds none. uv's standalone installer needs no `sudo`:
 
@@ -136,44 +142,14 @@ does two more things:
   the directory says so instead of asking uv again.
 
 The terminal you installed from keeps its old `PATH`
-([The `trex-web-gui` command and `PATH`](#the-trex-web-gui-command-and-path)). Next: the [Quick start](#quick-start).
+([The `trex-web-gui` command and `PATH`](docs/install.md#the-trex-web-gui-command-and-path)).
+Next: the [First launch](#first-launch).
 
-### Where the install puts things
+Pinned or older versions, offline hosts and the install internals are in [`docs/install.md`](docs/install.md).
 
-`uv tool install` installs for the user who runs it, with no `sudo`:
+<a id="offline-host"></a>**Offline host:** see [Offline host](docs/install.md#offline-host).
 
-- trex-web-gui and its dependencies go into their own environment,
-  `~/.local/share/uv/tools/trex-web-gui/` (`uv tool dir`; `UV_TOOL_DIR` moves it);
-- the `trex-web-gui` command is linked into `~/.local/bin` (`uv tool dir --bin`; `UV_TOOL_BIN_DIR` moves it), which must
-  be on `PATH` ([The `trex-web-gui` command and `PATH`](#the-trex-web-gui-command-and-path));
-- the packages also land in uv's cache, `~/.cache/uv/` (`uv cache dir`);
-- the environment runs on the Python 3.12 that `--python 3.12` found, uv's own under `~/.local/share/uv/python/`
-  (`uv python dir`) or the system's `python3.12`, so that Python has to stay installed.
-
-`uv tool uninstall trex-web-gui` removes the environment and the command.
-
-### The `trex-web-gui` command and `PATH`
-
-The command is in `~/.local/bin` (`uv tool dir --bin` prints the directory). If `trex-web-gui` answers
-`command not found`, that directory is not on your `PATH`.
-
-The installer adds it to your shell profile, but a script run as `curl … | sh` cannot change the `PATH` of the
-terminal that started it. If the installer said it updated your profile, open a new terminal, or run the
-`export PATH=…` line it printed in the current one.
-
-Otherwise, add the directory to your shell profile yourself, in one of two ways:
-
-- Run `uv tool update-shell`. It adds the directory to your shell's startup files.
-- Or add this line yourself, to `~/.profile` for a login shell, `~/.bashrc` for bash, or `~/.zshenv` for zsh:
-
-  ```
-  export PATH="$HOME/.local/bin:$PATH"
-  ```
-
-Then open a new terminal, or run that line in the current one. `command -v trex-web-gui` prints the command's path
-once it is found. Until then, `~/.local/bin/trex-web-gui` runs it by its full path.
-
-## Quick start
+### First launch
 
 After the install, on the machine that can reach the TRex server ([Install](#install)):
 
@@ -182,8 +158,6 @@ After the install, on the machine that can reach the TRex server ([Install](#ins
    ```
    trex-web-gui
    ```
-
-   1.1.0 and earlier need `trex-web-gui serve` ([Older releases](#older-releases)).
 2. **Open the login URL it prints**, `Open: http://127.0.0.1:8765/api/auth/login?token=...`, in a browser on that
    host. Each start makes a new URL.
    - **From another machine** (your workstation), run there the SSH tunnel command the backend prints, and open the
@@ -204,15 +178,15 @@ For a worked example, with the test topology and how to confirm the frames arriv
 If the backend does not start:
 
 - **`command not found`** means `~/.local/bin` is not on your `PATH`. Run `~/.local/bin/trex-web-gui` for now, and
-  see [The `trex-web-gui` command and `PATH`](#the-trex-web-gui-command-and-path).
+  see [The `trex-web-gui` command and `PATH`](docs/install.md#the-trex-web-gui-command-and-path).
 - **`ssh <host> trex-web-gui` answers `command not found`** even when a login finds it. A command given to `ssh`
   runs in a shell that is neither a login shell nor interactive, and Ubuntu's `~/.bashrc` stops early for such a
   shell, so no startup file adds the directory. Log in and start it there, or give the full path:
   `ssh <host> '~/.local/bin/trex-web-gui'`.
-- **Don't use `uv run --project backend trex-web-gui` here.** That form is for a source checkout only. On an
-  installed host it fails with ``Project directory `backend` does not exist``.
 
-**As a service.** Fetch [`docs/trex-web-gui.service`](docs/trex-web-gui.service) into your user units and start it:
+### Run it as a service
+
+Fetch [`docs/trex-web-gui.service`](docs/trex-web-gui.service) into your user units and start it:
 
 ```
 mkdir -p ~/.config/systemd/user
@@ -224,7 +198,7 @@ systemctl --user enable --now trex-web-gui
 Read the login URL with `journalctl --user -u trex-web-gui`. A user unit has no display, and Wireshark needs one: see
 the comments in the unit.
 
-### Starting the TRex server
+## Starting the TRex server
 
 On the TRex host, start TRex in interactive stateless mode (`-i`) from its install directory (here
 `/opt/trex/v3.08`), as root:
@@ -258,86 +232,6 @@ sudo ./t-rex-64 -i --cfg /etc/trex_cfg.yaml
 If the TRex daemon (`trex_daemon_server`) runs on the TRex host, the **TRex daemon…** dialog can start TRex instead.
 It starts it in stateless mode, adding `-i` itself ([Daemon exposure](#daemon-exposure)).
 
-## Other ways to install
-
-### Read the script first
-
-To read the script before running any of it, or on a host with no terminal:
-
-```
-curl -fLO https://github.com/CRinATL/trex-web-gui/releases/latest/download/install.sh
-```
-
-Read it, and compare its `sha256=` line with the sha256 the release page it names lists next to the wheel. Then run:
-
-```
-sh install.sh
-```
-
-GitHub computes the release page's sha256 from the uploaded wheel, so a match shows that the script and the wheel
-belong to the same published release, and that neither was swapped or damaged on the way. It does not show that the
-release itself is good: the signed tag (`git verify-tag`) and the release notes are the record of that.
-
-### Pin a version
-
-To install v1.0.0, or to pin a version, install the wheel of a
-[GitHub release](https://github.com/CRinATL/trex-web-gui/releases) by its address. Replace `<tag>` with the release's
-tag (for example `v1.0.0`) and `<version>` with the same in PEP 440 form (`1.0.0`):
-
-```
-uv tool install --python 3.12 https://github.com/CRinATL/trex-web-gui/releases/download/<tag>/trex_web_gui-<version>-py3-none-any.whl
-```
-
-Then start it with `trex-web-gui serve`, which works on every release ([Older releases](#older-releases)), and the
-[Command-line options](#command-line-options) you need.
-
-With the [GitHub CLI](https://cli.github.com/), `gh release download <tag> -R CRinATL/trex-web-gui --pattern '*.whl'`
-fetches the wheel instead, and `uv tool install --python 3.12 ./trex_web_gui-<version>-py3-none-any.whl` installs it.
-`make wheel` builds one from a checkout.
-
-A host without Python 3.12 (Ubuntu 22.04 has 3.10) needs nothing more: uv downloads a Python 3.12 from GitHub and the
-dependencies from PyPI.
-
-### Older releases
-
-- **1.1.0 and earlier need the `serve` command:** `trex-web-gui serve [options]`, and `trex-web-gui serve --help`
-  for the options. Without it they stop with `the following arguments are required: cmd`. 1.1.1 and later serve by
-  default and still accept `serve`, so `trex-web-gui serve` works on every release.
-- **The 1.1.0 installer does not add `~/.local/bin` to your `PATH`.** Re-run the installer, which installs the latest
-  release and adds the directory, or see
-  [The `trex-web-gui` command and `PATH`](#the-trex-web-gui-command-and-path).
-- **v1.0.0 has no installer.** Install it by its wheel ([Pin a version](#pin-a-version)).
-
-### Offline host
-
-A host that cannot reach PyPI installs from a wheelhouse, a directory of the wheel and its dependencies.
-
-1. On a connected machine, build the wheelhouse:
-
-   ```
-   uvx pip download --dest wheelhouse --only-binary=:all: --python-version 3.12 --implementation cp \
-     --platform manylinux_2_28_x86_64 --platform manylinux2014_x86_64 ./trex_web_gui-<version>-py3-none-any.whl
-   ```
-
-   The wheel ends up inside it, as `wheelhouse/trex_web_gui-<version>-py3-none-any.whl`. Copy `wheelhouse/` to the host.
-
-2. Give the host a Python 3.12, one of:
-   - if it reaches GitHub: `uv python install 3.12` on the host, the only step that uses the network;
-   - if it does not: on a connected machine, `uv python install 3.12`, then
-     `cd "$(uv python dir)" && tar -czf ~/cpython-3.12.tar.gz cpython-3.12.*-linux-x86_64-gnu`; copy the tarball
-     to the host and unpack it there with
-     `mkdir -p "$(uv python dir)" && tar -xzf cpython-3.12.tar.gz -C "$(uv python dir)"`
-     (uv's Pythons can move, so the two machines' paths and user names may differ);
-   - or the distribution's `python3.12` package, where it has one, from local media.
-
-3. On the host, from the directory that holds `wheelhouse/` (both paths below are relative):
-
-   ```
-   uv tool install --offline --no-index --find-links wheelhouse --python 3.12 wheelhouse/trex_web_gui-<version>-py3-none-any.whl
-   ```
-
-   `wheelhouse/` is not needed after the install.
-
 ## Access: single user, localhost only
 
 The backend binds `127.0.0.1` and checks the `Host` and `Origin` headers. Each launch makes an access token and prints a
@@ -369,10 +263,7 @@ Installed with `install.sh` or `uv tool install`:
 trex-web-gui [options]
 ```
 
-`trex-web-gui --help` lists the options. From a source checkout, see [Development](#development).
-
-Serving is the default and only command, and `trex-web-gui serve [options]` does the same
-([Older releases](#older-releases)).
+`trex-web-gui --help` lists the options. From a source checkout, see [Development](CONTRIBUTING.md#getting-started).
 
 | Option | What it does |
 |---|---|
@@ -464,6 +355,7 @@ Within trex-web-gui:
   arrive.
 - [`docs/howto-emu.md`](docs/howto-emu.md): a walk-through of the EMU page with a stock EMU profile.
 - [`docs/gui-guide.md`](docs/gui-guide.md): the user's guide to every page, dialog, menu and shortcut.
+- [`docs/install.md`](docs/install.md): other ways to install, offline hosts, where the install puts things.
 - [`docs/gui-inventory/README.md`](docs/gui-inventory/README.md): every screen, with the screenshots in
   `docs/gui-inventory/screens/`.
 - [`docs/api.md`](docs/api.md): the REST and WebSocket reference, every HTTP route with its parameters, request body
@@ -472,29 +364,6 @@ Within trex-web-gui:
 - [Release notes](https://github.com/CRinATL/trex-web-gui/releases): what changed in each release.
 - [`CONTRIBUTING.md`](CONTRIBUTING.md): building from a checkout, the checks, the conventions, the repository layout.
 - [`SECURITY.md`](SECURITY.md): the security model and how to report a problem.
-
-## Development
-
-The backend is Python (FastAPI) and drives a vendored, patched copy of the TRex Python client. The frontend is React +
-TypeScript + Vite.
-
-To build it from a checkout:
-
-- [`uv`](https://docs.astral.sh/uv/), and Node.js with npm at a version `frontend/package.json` accepts
-  ([`CONTRIBUTING.md`](CONTRIBUTING.md)). Only building needs Node.js: the release wheel already holds the built
-  UI, so installing and running a release needs neither Node.js nor npm.
-- `npm --prefix frontend install`, then `make build` builds the UI that `trex-web-gui` serves.
-- Then run it from the checkout, with the [options](#command-line-options) above:
-
-  ```
-  uv run --project backend trex-web-gui [options]
-  ```
-
-  One more option is for development only: `--dev` serves the API only, and the UI comes from the Vite dev server on
-  `:5173` (see `make dev`).
-
-How to set up a checkout, run the GUI from source, and run the checks, and a map of the repository:
-[`CONTRIBUTING.md`](CONTRIBUTING.md).
 
 ## Help and contact
 
