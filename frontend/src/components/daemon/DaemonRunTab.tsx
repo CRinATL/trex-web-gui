@@ -224,7 +224,7 @@ export function DaemonRunTab({ daemon, pushed, onModal }: { daemon: DaemonMsg | 
 
       {note && <p role="status" className="muted">{note}</p>}
       <div className="dialog-footer daemon-actions" role="group" aria-label="Run actions">
-        <RunButton kind="go" lit={running} litLabel="TRex running" disabled={!startOk} onClick={() => { if (body && timeoutN !== null && preview?.text) { setStartSnap({ body, timeout: timeoutN, text: preview.text, ...(mode === 'stl' ? { rpcPort: Number(portText) } : {}) }); setConfirm('start') } }}>Start</RunButton>
+        <RunButton kind="go" lit={running} litLabel="TRex running" disabled={!startOk} onClick={() => { if (body && timeoutN !== null && preview?.text) { setStartSnap({ body, timeout: timeoutN, text: preview.text, ...(mode === 'stl' && intIn(portText, 1, 65535) !== null ? { rpcPort: Number(portText) } : {}) }); setConfirm('start') } }}>Start</RunButton>
         <RunButton kind="stop" disabled={!stopOk} onClick={() => setConfirm('stop')}>Stop</RunButton>
         {canForce && <RunButton kind="stop" onClick={() => setConfirm('force')}>Force stop</RunButton>}
       </div>

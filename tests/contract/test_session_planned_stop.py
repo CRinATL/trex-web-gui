@@ -477,3 +477,20 @@ def test_forget_ended_publishes_only_when_there_was_one(fake_trex, new_session) 
         s.forget_ended()
         assert len(rec.msgs) == n + 1
     new_session.run(run())
+
+
+def test_a_second_reconnect_start_does_not_orphan_the_task(fake_trex, new_session) -> None:
+    f = fake_trex()
+
+    async def run() -> None:
+        s = new_session(Recorder())
+        await planned_stop(s, f)
+        f.stop()
+        s.reconnect_after_start(30)
+        await asyncio.sleep(0.1)
+        task = s._reconnect_task
+        s.reconnect_after_start(30)                      # refused while the first runs
+        assert s._reconnect_task is task
+        await s.cancel_reconnect()
+        assert task.done()
+    new_session.run(run())

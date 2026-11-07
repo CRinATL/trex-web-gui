@@ -80,6 +80,16 @@ describe('DaemonDialog', () => {
     expect(start.mock.calls[0][0].rpc_port).toBe(4701)   // serverPorts.sync_port, the Run tab's command port
   })
 
+  it('an invalid command port is not sent, and Start still works', async () => {
+    const start = vi.spyOn(api, 'daemonStart').mockResolvedValue({ seq: 7, command_preview: PREVIEW, run: ours.run! })
+    await open()
+    fireEvent.change(screen.getByLabelText('TRex command port'), { target: { value: '70000' } })
+    await userEvent.click(screen.getByRole('button', { name: 'Start' }))
+    await userEvent.click(within(dialog('Start TRex')).getByRole('button', { name: 'Start' }))
+    expect(start).toHaveBeenCalledTimes(1)
+    expect(start.mock.calls[0][0]).not.toHaveProperty('rpc_port')
+  })
+
   it('a stateful Start sends no command port', async () => {
     const stfRun = { ...stfRunning.run!, started_at: Date.now() / 1000 }
     const start = vi.spyOn(api, 'daemonStart').mockResolvedValue({ seq: 44, command_preview: STF_PREVIEW, run: stfRun })

@@ -471,3 +471,39 @@ def test_api_disconnect_cancels_the_reconnect(tmp_path: Path, fake_trex: Any) ->
         snap = c.get("/api/session").json()
         assert snap["state"] == "disconnected" and snap["ended"] is None
         assert _times_connected(published) == before + 1
+
+
+def test_daemon_start_with_rpc_port_reconnects_control(tmp_path: Path, fake_daemon: Any,
+                                                       fake_trex: Any) -> None:
+    """Stop (planned) then Start with the command port: Control reconnects to the TRex left running. Needs
+    the body's rpc_port, the route passing it and the app's started hook."""
+    d, f = fake_daemon(), fake_trex()
+    with authed(create_app(tmp_path, token=TEST_TOKEN)) as c:
+        _control_and_daemon(c, f, d, f.host)
+        r = c.post("/api/daemon/stop", json={"rpc_port": f.rpc_port, "confirm": True})
+        assert r.status_code == 200 and c.get("/api/session").json()["ended"] is not None, r.text
+        r = c.post("/api/daemon/start", json={"cfg_path": CFG, "options": {}, "trex_args": "", "timeout": 20,
+                                              "confirm": True, "rpc_port": f.rpc_port})
+        assert r.status_code == 200, r.text
+        end = time.monotonic() + 15
+        snap = c.get("/api/session").json()
+        while snap["state"] != "connected":
+            assert time.monotonic() < end and (snap["ended"] or {}).get("recovery", {}).get("kind") == \
+                "reconnecting", snap
+            time.sleep(0.1)
+            snap = c.get("/api/session").json()
+        assert snap["ended"] is None
+
+
+def test_failed_api_connect_forgets_the_planned_stop(tmp_path: Path, fake_daemon: Any,
+                                                     fake_trex: Any) -> None:
+    """A failed user Connect (502) after a planned stop still clears `ended`: the route forgets it first."""
+    d, f = fake_daemon(), fake_trex()
+    with authed(create_app(tmp_path, token=TEST_TOKEN)) as c:
+        _control_and_daemon(c, f, d, f.host)
+        assert c.post("/api/daemon/stop", json={"rpc_port": f.rpc_port, "confirm": True}).status_code == 200
+        assert c.get("/api/session").json()["ended"] is not None
+        r = c.post("/api/session/connect", json={"host": f.host, "sync_port": free_port(),
+                                                  "async_port": free_port(), "timeout_s": 1})
+        assert r.status_code == 502, r.text
+        assert c.get("/api/session").json()["ended"] is None

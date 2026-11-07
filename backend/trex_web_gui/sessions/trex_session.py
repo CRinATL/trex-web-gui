@@ -19,7 +19,7 @@ from concurrent.futures import Future, ThreadPoolExecutor
 from dataclasses import dataclass
 from enum import StrEnum
 from pathlib import Path
-from typing import Any, TypeVar
+from typing import Any, Literal, TypeVar
 
 from trex_web_gui import trexapi
 from trex_web_gui.hostinfo import read_cfg, resolve
@@ -304,8 +304,8 @@ class TrexSession(PortConfigCommands, CaptureCommands):
             self._ended = None
             self._publish(self.snapshot())
 
-    async def daemon_started(self, daemon: str, rpc_port: int | None, mode: str, timeout_s: float,
-                             ends_at: float | None) -> None:
+    async def daemon_started(self, daemon: str, rpc_port: int | None, mode: Literal["stl", "stf"],
+                             timeout_s: float, ends_at: float | None) -> None:
         """A TRex was started through `daemon` ("host:port"). Cancels any reconnect first. With `ended` set
         for that daemon: a stateful start sets recovery `stf_run`; a stateless one on this session's command
         port starts the reconnect. Anything else changes nothing."""
@@ -320,8 +320,10 @@ class TrexSession(PortConfigCommands, CaptureCommands):
 
     def reconnect_after_start(self, timeout_s: float) -> None:
         """Publish recovery `reconnecting` (deadline now + timeout_s + RECONNECT_WINDOW_S) and start the one
-        reconnect task, which probes the command port and connects; see _reconnect_loop. Needs `ended`."""
-        if self._ended is None:
+        reconnect task, which probes the command port and connects; see _reconnect_loop. Needs `ended`. Does
+        nothing while a reconnect task still runs: the caller cancels it first (cancel_reconnect), so no task
+        is ever orphaned."""
+        if self._ended is None or (self._reconnect_task is not None and not self._reconnect_task.done()):
             return
         window = timeout_s + RECONNECT_WINDOW_S
         self.set_recovery({"kind": "reconnecting", "deadline": time.time() + window})
