@@ -246,7 +246,8 @@ def daemon_router(daemon: Callable[[], DaemonSession]) -> APIRouter:
         flight), `not_ours` (Stop when this backend holds no run, or a stateful run it did not start),
         `owners_unknown` (the port owners cannot be read; Force stop lifts it with
         `owners_unknown_ack`), `in_use` (another user owns a port; never lifted), or `not_daemon_run` (Force
-        stop while the daemon has no run of its own: a TRex started by hand, which the daemon cannot stop).
+        stop while the daemon has no run of its own: a TRex started by hand, which the daemon cannot stop;
+        answered first, before any port owner read or `owners_unknown_ack`).
         502 when the daemon cannot be reached or faults."""
         return await _answer(lambda: daemon().stop(b.rpc_port, b.confirm, b.force, b.owners_unknown_ack))
 

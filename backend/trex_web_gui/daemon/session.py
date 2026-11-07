@@ -588,12 +588,14 @@ class DaemonSession:
     async def stop(self, rpc_port: int, confirm: bool, force: bool = False,
                    owners_unknown_ack: bool = False) -> dict[str, Any]:
         """Stop (or Force stop) TRex; returns {running, stop_s}. Refusals before any state-changing call:
-        confirm_required; for a stateful run that is not ours, not_ours (Stop) or owners_unknown (Force stop,
+        confirm_required; not_daemon_run first when Force stop would find no daemon run (the daemon is Idle
+        and we hold no run, or the run is a stateful one that is not ours: its force_trex_kill stops only a
+        run the daemon started, never a TRex started by hand, so no owner read or ack comes first); for a
+        stateful run that is not ours, not_ours (Stop) or owners_unknown (Force stop,
         lifted by `owners_unknown_ack`); in_use when another user owns a port (never lifted);
         owners_unknown when the owners cannot be read (lifted only for Force stop with the ack); not_ours
-        when no run of ours is held and `force` is not set; last, not_daemon_run when Force stop would kill
-        while the daemon is Idle (its force_trex_kill stops only a run the daemon started, never a TRex
-        started by hand). Our own STF run is stopped without a port read (D12)."""
+        when no run of ours is held and `force` is not set. Our own STF run is stopped without a port read
+        (D12)."""
         if confirm is not True:
             raise DaemonRefused("confirm_required", "Stopping TRex needs confirm.")
         client = self._need_client()
@@ -604,7 +606,12 @@ class DaemonSession:
             ours = self._is_our_stf_run(cmds)
             cause: str | None = None
             kill_only = False
-            if not ours and any(_is_stf(cmd) for _pid, cmd in cmds):
+            foreign_stf = not ours and any(_is_stf(cmd) for _pid, cmd in cmds)
+            if force and (self._running_seq is None or foreign_stf):
+                status = await self._call(client.running_status)
+                if _state_name(status.get("state")) == "Idle":
+                    raise DaemonRefused("not_daemon_run", _NOT_DAEMON_RUN)
+            if foreign_stf:
                 if not force:
                     raise DaemonRefused("not_ours", "A stateful (-f) TRex run is going that this backend did "
                                         "not start; Stop never stops a run it did not start.")
@@ -618,10 +625,6 @@ class DaemonSession:
             if not (seq is not None and not kill_only) and not force:
                 raise DaemonRefused("not_ours", "This backend holds no run to stop; Stop never stops a run "
                                     "it did not start. Force stop can.")
-            if seq is None or kill_only:
-                status = await self._call(client.running_status)
-                if _state_name(status.get("state")) == "Idle":
-                    raise DaemonRefused("not_daemon_run", _NOT_DAEMON_RUN)
             return await self._send_stop(client, host, rpc_port, seq, kill_only, cause)
         finally:
             self._end_op()

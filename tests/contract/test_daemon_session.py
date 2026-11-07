@@ -325,7 +325,7 @@ def test_stop_refuses_when_owners_cannot_be_read(fake_daemon: Any) -> None:
 
 def test_force_stop_refuses_unknown_owners_without_the_ack(fake_daemon: Any) -> None:
     """Force stop on an unreadable port, no ack: owners_unknown, with the hint, and no force_trex_kill."""
-    d = fake_daemon()
+    d = fake_daemon("--daemon-run")
     dead = free_port()
 
     async def body(s: DaemonSession, rec: Recorder) -> None:
@@ -358,7 +358,7 @@ def test_force_stop_with_the_ack_kills_once(fake_daemon: Any) -> None:
 def test_owners_unknown_ack_does_not_override_in_use(fake_daemon: Any, fake_trex: Any,
                                                      foreign_client: Any) -> None:
     """Another user owns port 0: Force stop with the ack is in_use and kills nothing."""
-    d, f = fake_daemon(), fake_trex()
+    d, f = fake_daemon("--daemon-run"), fake_trex()
     foreign_client(f, "console-b").acquire(ports=[0], force=False)
 
     async def body(s: DaemonSession, rec: Recorder) -> None:
@@ -434,6 +434,32 @@ def test_force_stop_without_a_daemon_run_is_refused(fake_daemon: Any, fake_trex:
         assert changed(d) == set()
         assert hooks.calls == []
     drive(body, hooks=hooks)
+
+
+def test_force_stop_without_a_daemon_run_skips_the_owner_read(fake_daemon: Any) -> None:
+    """Force stop with no run of ours, the daemon Idle, at a dead command port and no ack: not_daemon_run
+    (the running_status read comes before the owner read, which would be owners_unknown)."""
+    d = fake_daemon("--foreign")
+
+    async def body(s: DaemonSession, rec: Recorder) -> None:
+        """Connect, Force stop without the ack."""
+        await s.connect(d.host, d.port)
+        await refused(s.stop(free_port(), True, force=True), "not_daemon_run")
+        assert changed(d) == set()
+    drive(body)
+
+
+def test_force_stop_of_a_hand_started_stf_run_needs_no_ack_to_refuse(fake_daemon: Any) -> None:
+    """A -f run started by hand, the daemon Idle: Force stop without the ack is not_daemon_run, not
+    owners_unknown."""
+    d = fake_daemon("--foreign-stf")
+
+    async def body(s: DaemonSession, rec: Recorder) -> None:
+        """Connect, Force stop without the ack."""
+        await s.connect(d.host, d.port)
+        await refused(s.stop(free_port(), True, force=True), "not_daemon_run")
+        assert changed(d) == set()
+    drive(body)
 
 
 def test_force_stop_whose_kill_finds_no_run_cancels(fake_daemon: Any, fake_trex: Any) -> None:
