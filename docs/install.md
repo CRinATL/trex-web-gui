@@ -6,13 +6,13 @@ The common case is in the README's [Install](../README.md#install).
 
 To read the script before running any of it, or on a host with no terminal:
 
-```
+```sh
 curl -fLO https://github.com/CRinATL/trex-web-gui/releases/latest/download/install.sh
 ```
 
 Read it, and compare its `sha256=` line with the sha256 the release page it names lists next to the wheel. Then run:
 
-```
+```sh
 sh install.sh
 ```
 
@@ -26,7 +26,7 @@ To install v1.0.0, or to pin a version, install the wheel of a
 [GitHub release](https://github.com/CRinATL/trex-web-gui/releases) by its address. Replace `<tag>` with the release's
 tag (for example `v1.0.0`) and `<version>` with the same in PEP 440 form (`1.0.0`):
 
-```
+```sh
 uv tool install --python 3.12 https://github.com/CRinATL/trex-web-gui/releases/download/<tag>/trex_web_gui-<version>-py3-none-any.whl
 ```
 
@@ -60,7 +60,7 @@ and x86_64 Linux, as the `--platform` flags below say), and a Python 3.12. Anoth
 
 1. On a connected machine, build the wheelhouse:
 
-   ```
+   ```sh
    uvx pip download --dest wheelhouse --only-binary=:all: --python-version 3.12 --implementation cp \
      --platform manylinux_2_28_x86_64 --platform manylinux2014_x86_64 ./trex_web_gui-<version>-py3-none-any.whl
    ```
@@ -78,7 +78,7 @@ and x86_64 Linux, as the `--platform` flags below say), and a Python 3.12. Anoth
 
 3. On the host, from the directory that holds `wheelhouse/` (both paths below are relative):
 
-   ```
+   ```sh
    uv tool install --offline --no-index --find-links wheelhouse --python 3.12 wheelhouse/trex_web_gui-<version>-py3-none-any.whl
    ```
 
@@ -115,7 +115,7 @@ of the terminal that started it, so what to do depends on which of three things 
   for this terminal. To keep it, run `uv tool update-shell`, or add this line yourself, to `~/.profile` for a
   login shell, `~/.bashrc` for bash, or `~/.zshenv` for zsh:
 
-  ```
+  ```sh
   export PATH="$HOME/.local/bin:$PATH"
   ```
 

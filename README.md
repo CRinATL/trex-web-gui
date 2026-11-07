@@ -90,7 +90,7 @@ trex-web-gui is not on PyPI. One command installs the latest release with [`uv`]
 
 **Install uv first** if `uv --version` finds none. uv's standalone installer needs no `sudo`:
 
-```
+```sh
 curl -LsSf https://astral.sh/uv/install.sh | sh
 ```
 
@@ -101,7 +101,7 @@ curl -LsSf https://astral.sh/uv/install.sh | sh
 
 Then install trex-web-gui:
 
-```
+```sh
 curl -fsSL https://github.com/CRinATL/trex-web-gui/releases/latest/download/install.sh | sh
 ```
 
@@ -141,7 +141,7 @@ After the install, on the machine that can reach the TRex server ([Install](#ins
 
 1. Start the backend (on the backend host):
 
-   ```
+   ```sh
    trex-web-gui
    ```
 2. **Open the login URL it prints**, `Open: http://127.0.0.1:8765/api/auth/login?token=...`, in a browser on that
@@ -174,7 +174,7 @@ If the backend does not start:
 
 Fetch [`docs/trex-web-gui.service`](docs/trex-web-gui.service) into your user units and start it:
 
-```
+```sh
 mkdir -p ~/.config/systemd/user
 curl -fLo ~/.config/systemd/user/trex-web-gui.service https://raw.githubusercontent.com/CRinATL/trex-web-gui/main/docs/trex-web-gui.service
 systemctl --user daemon-reload
@@ -189,7 +189,7 @@ the comments in the unit.
 On the TRex host, start TRex in interactive stateless mode (`-i`) from its install directory (here
 `/opt/trex/v3.08`), as root:
 
-```
+```sh
 cd /opt/trex/v3.08
 sudo ./t-rex-64 -i --cfg /etc/trex_cfg.yaml
 ```
@@ -209,7 +209,7 @@ sudo ./t-rex-64 -i --cfg /etc/trex_cfg.yaml
 - **The command stays in the foreground** and shows TRex's own console. To leave it running after you log out, run
   it detached instead:
 
-  ```
+  ```sh
   sudo sh -c 'cd /opt/trex/v3.08 && setsid nohup ./t-rex-64 -i --cfg /etc/trex_cfg.yaml >/tmp/trex.log 2>&1 </dev/null &'
   ```
 
@@ -245,7 +245,7 @@ leak. What to do about it:
 
 Installed with `install.sh` or `uv tool install`:
 
-```
+```sh
 trex-web-gui [options]
 ```
 
@@ -378,7 +378,7 @@ fail to read, virtual-function ports), the probe collects what each port lists a
 attach to an issue. It is one file, not part of the install: download it on the TRex host, read it, and run it with
 the Python trex-web-gui is installed under (any release):
 
-```
+```sh
 curl -fLO https://raw.githubusercontent.com/CRinATL/trex-web-gui/main/scripts/trex_probe.py
 "$(uv tool dir)/trex-web-gui/bin/python" trex_probe.py --out trex-probe.json
 ```
