@@ -575,7 +575,7 @@ export interface StfProfileInfo { path: string; duration: number | null; templat
 export const daemonConnect = (host: string, port: number) => call<Record<string, unknown>>('POST', '/api/daemon/connect', { host, port })
 export const daemonDisconnect = () => call<DaemonMsg>('POST', '/api/daemon/disconnect')
 export const daemonStartPreview = (b: StartBody) => call<{ command_preview: string }>('POST', '/api/daemon/start/preview', b)
-export const daemonStart = (b: StartBody & { timeout: number; confirm: boolean }) =>
+export const daemonStart = (b: StartBody & { timeout: number; confirm: boolean; rpc_port?: number }) =>
   call<{ seq: number; command_preview: string; run: DaemonRun }>('POST', '/api/daemon/start', b)
 export const daemonStop = (b: { rpc_port: number; confirm: boolean; force: boolean; owners_unknown_ack: boolean }) =>
   call<{ running: boolean; stop_s: number | null }>('POST', '/api/daemon/stop', b)

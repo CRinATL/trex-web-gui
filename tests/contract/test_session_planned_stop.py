@@ -1,11 +1,15 @@
 """TrexSession's planned-stop record: a daemon stop of the server it is connected to ends the session
 as DISCONNECTED with `ended`, never as LOST, and sends no RPC to the gone server."""
+import asyncio
+import dataclasses
+import socket
 import time
 
 import pytest
-from helpers import Recorder
-from trex_web_gui.sessions import ConnectParams
-from trex_web_gui.trexapi import ClientEvent, TrexApiError
+from helpers import Recorder, wait_for
+from trex_web_gui import trexapi
+from trex_web_gui.sessions import ConnectParams, trex_session
+from trex_web_gui.trexapi import ClientEvent, ServerUnreachable, TrexApiError
 from trex_web_gui.trexproc import silence_message
 
 DAEMON = "h:8090"
@@ -249,4 +253,227 @@ def test_expect_stop_arms_from_lost(fake_trex, new_session) -> None:
         s.planned_stop_done()
         snap = s.snapshot()
         assert snap["state"] == "disconnected" and snap["error"] is None and snap["ended"]["daemon"] == DAEMON
+    new_session.run(run())
+
+
+# -- the reconnect after a daemon start ----------------------------------------------------------
+
+
+def connecting(rec: Recorder) -> int:
+    """How many `connecting` session messages `rec` recorded."""
+    return rec.states().count("connecting")
+
+
+async def planned_stop(s, f) -> None:
+    """Connect `s` to `f`, then end the session as a planned stop (the fake keeps running)."""
+    await s.connect(params(f))
+    assert await s.expect_stop(f.host, f.rpc_port, DAEMON)
+    s.planned_stop_done()
+
+
+def test_reconnect_after_start_succeeds(fake_trex, new_session) -> None:
+    f, rec = fake_trex(), Recorder()
+
+    async def run() -> None:
+        s = new_session(rec)
+        await planned_stop(s, f)
+        seq = s.snapshot()["connect_seq"]
+        n = len(rec.msgs)
+        s.reconnect_after_start(5)
+        first = sessions(rec)[-1]
+        assert rec.msgs[n] is first and first["ended"]["recovery"]["kind"] == "reconnecting"
+        assert first["ended"]["recovery"]["deadline"] > time.time() + 20
+        await wait_for(lambda: s.snapshot()["state"] == "connected", 10)
+        snap = s.snapshot()
+        assert snap["ended"] is None and snap["connect_seq"] != seq
+        assert snap["connect_seq"].split(":")[1] == str(int(seq.split(":")[1]) + 1)
+        await s._reconnect_task
+    new_session.run(run())
+
+
+def test_reconnect_times_out(fake_trex, new_session, monkeypatch) -> None:
+    f, rec = fake_trex(), Recorder()
+    monkeypatch.setattr(trex_session, "RECONNECT_WINDOW_S", 0.5)
+
+    async def run() -> None:
+        s = new_session(rec)
+        await planned_stop(s, f)
+        f.stop()
+        before = connecting(rec)
+        s.reconnect_after_start(0.1)
+        await s._reconnect_task
+        snap = s.snapshot()
+        rcv = snap["ended"]["recovery"]
+        assert rcv["kind"] == "reconnect_failed" and rcv["error"], rcv
+        assert snap["state"] == "disconnected" and connecting(rec) == before
+    new_session.run(run())
+
+
+def test_unreachable_attempt_goes_back_to_probing(fake_trex, new_session, monkeypatch) -> None:
+    f, rec = fake_trex(), Recorder()
+    monkeypatch.setattr(trex_session, "RECONNECT_RETRY_S", 0.05)
+
+    async def run() -> None:
+        s = new_session(rec)
+        await planned_stop(s, f)
+        real, calls = s.connect, []
+
+        async def flaky(p):
+            """The first attempt finds the server unreachable; later ones are real."""
+            calls.append(p)
+            if len(calls) == 1:
+                raise ServerUnreachable("not yet")
+            return await real(p)
+        monkeypatch.setattr(s, "connect", flaky)
+        s.reconnect_after_start(5)
+        await s._reconnect_task
+        assert len(calls) == 2 and s.snapshot()["state"] == "connected"
+    new_session.run(run())
+
+
+def test_loss_during_attempt_goes_back_to_probing(fake_trex, new_session, monkeypatch) -> None:
+    f, rec = fake_trex(), Recorder()
+    monkeypatch.setattr(trex_session, "RECONNECT_RETRY_S", 0.05)
+
+    async def run() -> None:
+        s = new_session(rec)
+        await planned_stop(s, f)
+        real, calls = s.connect, []
+
+        async def lossy(p):
+            """The first attempt ends LOST; later ones are real."""
+            calls.append(p)
+            if len(calls) == 1:
+                s._state = trex_session.SessionState.LOST
+                raise TrexApiError("Connection lost during connect: x")
+            return await real(p)
+        monkeypatch.setattr(s, "connect", lossy)
+        s.reconnect_after_start(5)
+        await s._reconnect_task
+        assert len(calls) == 2 and s.snapshot()["state"] == "connected"
+    new_session.run(run())
+
+
+def test_cancel_during_an_unreachable_attempt_ends_the_task(fake_trex, new_session, monkeypatch) -> None:
+    f, rec = fake_trex(), Recorder()
+    monkeypatch.setattr(trex_session, "RECONNECT_RETRY_S", 0.05)
+    mute = socket.socket()
+    mute.bind(("127.0.0.1", 0))
+    mute.listen()                                        # accepts the TCP connect and never answers
+
+    async def run() -> None:
+        s = new_session(rec)
+        await planned_stop(s, f)
+        s._params = dataclasses.replace(s._params, sync_port=mute.getsockname()[1], timeout_s=1.0)
+        s.reconnect_after_start(30)
+        await wait_for(lambda: connecting(rec) == 1, 5)
+        t0 = time.monotonic()
+        await s.cancel_reconnect()
+        assert time.monotonic() - t0 < 1.0 + 2
+        assert s._reconnect_task.done()
+        await asyncio.sleep(0.5)                         # ten probe periods: a task not ended would try again
+        assert connecting(rec) == 1
+        assert s.snapshot()["ended"]["recovery"] == {"kind": "none"}
+    try:
+        new_session.run(run())
+    finally:
+        mute.close()
+
+
+def test_a_later_stop_or_start_cancels_the_reconnect(fake_trex, new_session) -> None:
+    f, rec = fake_trex(), Recorder()
+
+    async def run() -> None:
+        s = new_session(rec)
+        await planned_stop(s, f)
+        f.stop()                                         # nothing to reconnect to: the task keeps waiting
+        s.reconnect_after_start(30)
+        await asyncio.sleep(0.1)
+        task = s._reconnect_task
+        assert not task.done() and s.snapshot()["ended"]["recovery"]["kind"] == "reconnecting"
+        assert await s.expect_stop(f.host, f.rpc_port, DAEMON) is False
+        assert task.done() and s.snapshot()["ended"]["recovery"] == {"kind": "none"}
+        s.reconnect_after_start(30)
+        await asyncio.sleep(0.1)
+        task, ended = s._reconnect_task, s.snapshot()["ended"]
+        assert not task.done()
+        await s.daemon_started("other:8090", f.rpc_port, "stl", 30, None)
+        assert task.done()
+        assert s.snapshot()["ended"] == {**ended, "recovery": {"kind": "none"}}
+    new_session.run(run())
+
+
+def test_a_refusal_ends_the_reconnect_at_once(fake_trex, new_session, monkeypatch) -> None:
+    f, rec = fake_trex(), Recorder()
+
+    async def run() -> None:
+        s = new_session(rec)
+        await planned_stop(s, f)
+        before = connecting(rec)
+        monkeypatch.setattr(trexapi, "SUPPORTED_VERSION", "v0.0")
+        s.reconnect_after_start(30)
+        await asyncio.wait_for(s._reconnect_task, 5)
+        rcv = s.snapshot()["ended"]["recovery"]
+        assert rcv["kind"] == "reconnect_failed" and rcv["error"], rcv
+        assert connecting(rec) == before + 1
+    new_session.run(run())
+
+
+def test_started_needs_a_record_and_a_match(fake_trex, new_session) -> None:
+    f, rec = fake_trex(), Recorder()
+
+    async def run() -> None:
+        s = new_session(rec)
+        n = len(rec.msgs)
+        await s.daemon_started(DAEMON, f.rpc_port, "stl", 5, None)       # no record
+        assert s._reconnect_task is None and rec.msgs[n:] == []
+        await planned_stop(s, f)
+        await s.daemon_started(DAEMON, f.rpc_port + 1, "stl", 5, None)   # another command port
+        assert s._reconnect_task is None
+        assert s.snapshot()["ended"]["recovery"] == {"kind": "none"}
+        await s.daemon_started(DAEMON, f.rpc_port, "stl", 5, None)       # the match
+        assert s._reconnect_task is not None
+        await wait_for(lambda: s.snapshot()["state"] == "connected", 10)
+    new_session.run(run())
+
+
+def test_stf_start_sets_stf_run(fake_trex, new_session) -> None:
+    f = fake_trex()
+
+    async def run() -> None:
+        s = new_session(Recorder())
+        await planned_stop(s, f)
+        await s.daemon_started("h:8090", None, "stf", 40, ends_at=123.0)
+        assert s.snapshot()["ended"]["recovery"] == {"kind": "stf_run", "ends_at": 123.0}
+        assert s._reconnect_task is None
+    new_session.run(run())
+
+
+def test_close_awaits_the_reconnect(fake_trex, new_session) -> None:
+    f = fake_trex()
+
+    async def run() -> None:
+        s = new_session(Recorder())
+        await planned_stop(s, f)
+        f.stop()
+        s.reconnect_after_start(30)
+        await asyncio.sleep(0.1)
+        task = s._reconnect_task
+        assert not task.done()
+        await s.close()
+        assert task.done()
+    new_session.run(run())
+
+
+def test_forget_ended_publishes_only_when_there_was_one(fake_trex, new_session) -> None:
+    f, rec = fake_trex(), Recorder()
+
+    async def run() -> None:
+        s = new_session(rec)
+        await planned_stop(s, f)
+        n = len(rec.msgs)
+        s.forget_ended()
+        assert s.snapshot()["ended"] is None and rec.msgs[n:] == [s.snapshot()]
+        s.forget_ended()
+        assert len(rec.msgs) == n + 1
     new_session.run(run())

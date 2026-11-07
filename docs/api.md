@@ -550,7 +550,8 @@ any `trex_args`). 409 with
 `not_connected` (no daemon connection), `confirm_required`, `busy` (another daemon operation is in
 flight), `already_running`, `reserved`, or `foreign_trex` (a TRex this daemon did not start is
 running), and `invalid_profile` for a stateful profile that is refused. 502 when the daemon cannot
-be reached or faults.
+be reached or faults. `rpc_port` (optional, 1-65535) is the started TRex's command port: after a
+daemon Stop of the TRex Control was connected to, Control reconnects to it.
 
 **Request body** (`application/json`, schema `daemon.StartBody`)
 
@@ -563,6 +564,7 @@ be reached or faults.
 | `stf` | `StfBody \| null` | no | - | - |
 | `timeout` | `number` | no | `40` | minimum=5, maximum=300 |
 | `confirm` | `boolean` | no | `false` | - |
+| `rpc_port` | `integer \| null` | no | - | minimum=1, maximum=65535 |
 
 **Responses**
 
@@ -1463,7 +1465,9 @@ The session's snapshot.
 ### POST /api/session/connect
 
 Connects the session to a TRex server; returns {info: ServerInfo}. 409 busy while a session is
-connecting, connected or changing, 422 unsupported_version, 502 unreachable or trex_error.
+connecting, connected or changing, 422 unsupported_version, 502 unreachable or trex_error. Cancels a
+pending reconnect after a daemon stop first (answering with its result when it had just reached this
+server) and forgets the stop's record.
 
 **Request body** (`application/json`, schema `app.ConnectBody`)
 
@@ -1487,7 +1491,8 @@ connecting, connected or changing, 422 unsupported_version, 502 unreachable or t
 ### POST /api/session/disconnect
 
 Disconnects the session: stops and removes its own monitor capture, releases its ports
-(TrexSession.disconnect default) and returns the snapshot.
+(TrexSession.disconnect default) and returns the snapshot. Cancels a pending reconnect first and
+forgets a planned stop's record.
 
 **Responses**
 
@@ -2781,6 +2786,7 @@ POST /api/daemon/start.
 | `stf` | `StfBody \| null` | no | - | - |
 | `timeout` | `number` | no | `40` | minimum=5, maximum=300 |
 | `confirm` | `boolean` | no | `false` | - |
+| `rpc_port` | `integer \| null` | no | - | minimum=1, maximum=65535 |
 
 ### monitor.ConnectBody
 

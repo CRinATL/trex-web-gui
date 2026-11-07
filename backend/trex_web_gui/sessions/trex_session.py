@@ -34,6 +34,8 @@ _T = TypeVar("_T")
 RPC_BODY_MAX = 64 * 1024               # most body JSON characters published; RpcConsole.tsx says "64 KB"
 _PROCESS_START_NS = time.time_ns()     # prefix of connect_seq: a GUI restart never repeats a value
 Publish = Callable[[dict[str, object]], None]
+RECONNECT_RETRY_S = 1.0                # the reconnect after a daemon start probes the command port this often
+RECONNECT_WINDOW_S = 20.0              # ... for the start's own timeout plus this
 
 
 class SessionState(StrEnum):
@@ -121,6 +123,7 @@ class TrexSession(PortConfigCommands, CaptureCommands):
         self._stop_daemon: str | None = None           # loop thread; "host:port" of the daemon stop expected
         self._held_loss: str | None = None             # loop thread; a loss seen while a stop was expected
         self._held_msgs: list[dict[str, object]] = []  # loop thread; that loss's `event` and `log` messages
+        self._reconnect_task: asyncio.Task[None] | None = None   # loop thread; the reconnect after a start
 
     # -- public -------------------------------------------------------------------------------
     def snapshot(self) -> dict[str, object]:
@@ -283,7 +286,89 @@ class TrexSession(PortConfigCommands, CaptureCommands):
                 self._ending = False
 
     async def cancel_reconnect(self) -> None:
-        """Stop a pending reconnect after a planned stop; a stub until the reconnect exists (Task 3)."""
+        """Cancel the reconnect task and wait for it to end (an attempt in flight finishes first, so a
+        cancel never leaves a CONNECTED session without its loops), then reset a `reconnecting` recovery to
+        none, publishing. Does nothing when no reconnect runs and the recovery is not `reconnecting`."""
+        task = self._reconnect_task
+        if task is not None and not task.done():
+            task.cancel()
+            await asyncio.wait([task])                   # the task's own cancel is not ours to re-raise
+        e = self._ended
+        if e is not None and isinstance(e["recovery"], dict) and e["recovery"].get("kind") == "reconnecting":
+            self.set_recovery({"kind": "none"})
+
+    def forget_ended(self) -> None:
+        """Clear `ended` (an API connect or disconnect does, after cancel_reconnect), publishing `session`
+        when there was one."""
+        if self._ended is not None:
+            self._ended = None
+            self._publish(self.snapshot())
+
+    async def daemon_started(self, daemon: str, rpc_port: int | None, mode: str, timeout_s: float,
+                             ends_at: float | None) -> None:
+        """A TRex was started through `daemon` ("host:port"). Cancels any reconnect first. With `ended` set
+        for that daemon: a stateful start sets recovery `stf_run`; a stateless one on this session's command
+        port starts the reconnect. Anything else changes nothing."""
+        await self.cancel_reconnect()
+        e, p = self._ended, self._params
+        if e is None or e["daemon"] != daemon:
+            return
+        if mode == "stf":
+            self.set_recovery({"kind": "stf_run", "ends_at": ends_at})
+        elif mode == "stl" and p is not None and rpc_port == p.sync_port:
+            self.reconnect_after_start(timeout_s)
+
+    def reconnect_after_start(self, timeout_s: float) -> None:
+        """Publish recovery `reconnecting` (deadline now + timeout_s + RECONNECT_WINDOW_S) and start the one
+        reconnect task, which probes the command port and connects; see _reconnect_loop. Needs `ended`."""
+        if self._ended is None:
+            return
+        window = timeout_s + RECONNECT_WINDOW_S
+        self.set_recovery({"kind": "reconnecting", "deadline": time.time() + window})
+        self._reconnect_task = asyncio.create_task(self._reconnect_loop(window))
+
+    async def _reconnect_loop(self, window: float) -> None:
+        """Every RECONNECT_RETRY_S try a TCP connect to the command port; when it accepts, connect(). An
+        unreachable server or a loss during the attempt goes back to probing; any other failure (a version or
+        mode refusal) ends at once with `reconnect_failed`, as does the end of `window` seconds. A cancel
+        waits for an attempt in flight (_await_done) and is re-raised, so no probe follows it."""
+        end = time.monotonic() + window
+        last: str | None = None
+        p = self._params
+        try:
+            while p is not None and time.monotonic() < end:
+                p = self._params or p
+                if await self._port_accepts(p.host, p.sync_port):
+                    try:
+                        await self._await_done(asyncio.ensure_future(self.connect(p)))
+                        return                           # CONNECTED: connect() cleared `ended`
+                    except trexapi.ServerUnreachable as ex:
+                        last = ex.message
+                    except TrexApiError as ex:
+                        if self._state != SessionState.LOST:
+                            self._fail_reconnect(ex.message)
+                            return
+                        last = ex.message
+                await asyncio.sleep(RECONNECT_RETRY_S)
+            where = f"{p.host}:{p.sync_port}" if p is not None else "the server"
+            self._fail_reconnect(last or f"TRex did not answer on {where}")
+        except Exception as ex:                          # never BaseException: a cancel must propagate
+            log.exception("the reconnect after a daemon start failed")
+            self._fail_reconnect(str(ex) or type(ex).__name__)
+
+    def _fail_reconnect(self, error: str) -> None:
+        """Publish recovery `reconnect_failed` with `error`."""
+        self.set_recovery({"kind": "reconnect_failed", "error": error})
+
+    @staticmethod
+    async def _port_accepts(host: str, port: int) -> bool:
+        """Whether a TCP connect to host:port succeeds within RECONNECT_RETRY_S; the socket is closed."""
+        try:
+            _r, w = await asyncio.wait_for(asyncio.open_connection(host, port), RECONNECT_RETRY_S)
+        except (OSError, TimeoutError):
+            return False
+        w.close()
+        return True
 
     async def expect_stop(self, host: str, sync_port: int, daemon: str) -> bool:
         """A daemon stop of `daemon` ("host:port") is about to happen. Awaits cancel_reconnect(), then arms
@@ -357,6 +442,7 @@ class TrexSession(PortConfigCommands, CaptureCommands):
         for t in list(self._bg):              # a closed loop's task cannot be cancelled (call_soon raises)
             if t.get_loop() is loop:
                 t.cancel()
+        await self.cancel_reconnect()         # an attempt in flight ends first; no new one starts
         await self._kill_wireshark()          # first: disconnect may wait out a silent server
         try:
             await self.disconnect(release=self._release_on_exit())

@@ -149,6 +149,11 @@ class StopHooks(Protocol):
     def cancel(self) -> None:
         """The stop did not end TRex (still running, or it raised)."""
 
+    async def started(self, daemon: str, rpc_port: int | None, mode: Literal["stl", "stf"], timeout_s: float,
+                      ends_at: float | None) -> None:
+        """A TRex was started through `daemon` (host:port); `rpc_port` is its command port when the caller
+        gave one, `ends_at` the epoch second a stateful run ends."""
+
 
 class DaemonSession:
     """At most one daemon connection. All methods run on the loop; the daemon calls go to `daemon-rpc`."""
@@ -504,11 +509,13 @@ class DaemonSession:
                               "uploaded to the daemon")
 
     async def start(self, cfg_path: str, options: dict[str, int], trex_args: str, timeout_s: float,
-                    confirm: bool, stf: StfOptions | None = None) -> dict[str, Any]:
+                    confirm: bool, stf: StfOptions | None = None,
+                    rpc_port: int | None = None) -> dict[str, Any]:
         """Start TRex. Refusals, in order, all before `start_trex`: confirm_required, already_running,
         reserved, foreign_trex, then (with `stf`) the bounds and empty trex_args (ValueError) and
         invalid_profile. Returns {seq, command_preview, run}. A daemon fault (a bad config, say) propagates
-        as DaemonFault and leaves the run record alone."""
+        as DaemonFault and leaves the run record alone. After `start_trex` returns, tells the hooks
+        (`started`, with `rpc_port`) so the Control session can reconnect to the TRex it lost."""
         if confirm is not True:
             raise DaemonRefused("confirm_required", "Starting TRex needs confirm.")
         client = self._need_client()
@@ -542,6 +549,9 @@ class DaemonSession:
                          "profile": None if stf is None else stf.profile,
                          "duration_s": None if stf is None else stf.d, "started_at": time.time(),
                          "state": "running", "outcome": None}
+            if self._hooks is not None:
+                await self._hooks.started(f"{client.host}:{client.port}", rpc_port, self._run["mode"],
+                                          timeout_s, None if stf is None else self._run["started_at"] + stf.d)
             return {"seq": seq, "command_preview": preview, "run": dict(self._run)}
         finally:
             self._end_op()

@@ -42,6 +42,12 @@ class Hooks:
         """No calls yet."""
         self.calls: list[str] = []
         self.expected: tuple[str, int, str] | None = None
+        self.started_with: tuple[Any, ...] | None = None
+
+    async def started(self, daemon: str, rpc_port: int | None, mode: str, timeout_s: float,
+                      ends_at: float | None) -> None:
+        """Record the call and its arguments."""
+        self.started_with = (daemon, rpc_port, mode, timeout_s, ends_at)
 
     async def expect(self, host: str, rpc_port: int, daemon: str) -> None:
         """Record the call and its arguments."""
@@ -420,6 +426,30 @@ def test_force_stop_calls_the_hooks(fake_daemon: Any, fake_trex: Any) -> None:
         out = await s.stop(f.rpc_port, True, force=True)
         assert out["running"] is False
         assert hooks.calls == ["expect", "done"]
+    drive(body, hooks=hooks)
+
+
+def test_start_tells_the_hooks(fake_daemon: Any) -> None:
+    """A stateless start reports the daemon, the command port the caller gave, the mode and the timeout."""
+    d, hooks = fake_daemon(), Hooks()
+
+    async def body(s: DaemonSession, rec: Recorder) -> None:
+        """Connect, start stateless with a port."""
+        await s.connect(d.host, d.port)
+        await s.start(CFG, {}, "", 20, True, None, 4701)
+        assert hooks.started_with == (f"{d.host}:{d.port}", 4701, "stl", 20, None)
+    drive(body, hooks=hooks)
+
+
+def test_stf_start_tells_the_hooks_when_it_ends(fake_daemon: Any) -> None:
+    """A stateful start reports mode stf, no command port and ends_at = started_at + d."""
+    d, hooks = fake_daemon("--stf-scale", "0.05"), Hooks()
+
+    async def body(s: DaemonSession, rec: Recorder) -> None:
+        """Connect, start stateful."""
+        await s.connect(d.host, d.port)
+        out = await s.start(CFG, {}, "", 40, True, SFR2)
+        assert hooks.started_with == (f"{d.host}:{d.port}", None, "stf", 40, out["run"]["started_at"] + 20)
     drive(body, hooks=hooks)
 
 
