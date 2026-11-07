@@ -4,12 +4,17 @@ export interface ServerInfo { version: string; mode: string; build_date: string;
 // What the backend resolved for one port (backend hostinfo.PortIface). kernel_name is set only when confirmed against the port.
 export interface PortIface { port: number; cfg_entry: string | null; kind: 'af_packet' | 'pci' | 'dummy' | 'vdev' | null; kernel_name: string | null
   pci_addr: string | null; driver: string | null; vendor_device: string | null; model: string | null; confirmed: boolean; note: string | null }
+// What the backend does after a daemon Stop it recognised as Control's own server (backend trex_session.py snapshot "ended").
+export type Recovery = { kind: 'none' } | { kind: 'reconnecting'; deadline: number } | { kind: 'stf_run'; ends_at: number } | { kind: 'reconnect_failed'; error: string }
+export interface Ended { by: 'daemon_stop'; at: number; daemon: string; recovery: Recovery }
 export interface SessionSnapshot { type: 'session'; state: SessionState; params: ConnectParams | null; info: ServerInfo | null; error: string | null; rpc_console: boolean; include_polling: boolean
   // "<ns>:<n>", changes on every connect attempt and never repeats across a GUI restart (backend trex_session.py snapshot)
   // optional only so the many hand-built snapshots in older tests still type-check; the backend always sends it
   connect_seq?: string
   // optional for the same reason; the backend always sends both
-  ifaces?: PortIface[]; ifaces_note?: string | null }
+  ifaces?: PortIface[]; ifaces_note?: string | null
+  // set while a planned stop (the user's daemon Stop) is the cause of the disconnect, in any state, LOST included; null or absent otherwise
+  ended?: Ended | null }
 export interface ClientEventMsg { type: 'event'; name: string; args: unknown[]; message: string | null; ts: number; level: string }
 // monitor_only and monitor_target are optional only so the many hand-built hellos in older tests still type-check; the backend always sends both.
 export interface HelloMsg { type: 'hello'; app_version: string; server_hint: string | null; server_ports: { sync_port: number; async_port: number } | null
@@ -575,7 +580,7 @@ export interface StfProfileInfo { path: string; duration: number | null; templat
 export const daemonConnect = (host: string, port: number) => call<Record<string, unknown>>('POST', '/api/daemon/connect', { host, port })
 export const daemonDisconnect = () => call<DaemonMsg>('POST', '/api/daemon/disconnect')
 export const daemonStartPreview = (b: StartBody) => call<{ command_preview: string }>('POST', '/api/daemon/start/preview', b)
-export const daemonStart = (b: StartBody & { timeout: number; confirm: boolean }) =>
+export const daemonStart = (b: StartBody & { timeout: number; confirm: boolean; rpc_port?: number }) =>
   call<{ seq: number; command_preview: string; run: DaemonRun }>('POST', '/api/daemon/start', b)
 export const daemonStop = (b: { rpc_port: number; confirm: boolean; force: boolean; owners_unknown_ack: boolean }) =>
   call<{ running: boolean; stop_s: number | null }>('POST', '/api/daemon/stop', b)

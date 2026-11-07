@@ -117,6 +117,7 @@ class StartBody(StartPreviewBody):
     """POST /api/daemon/start."""
     timeout: Annotated[float, Field(strict=True, ge=5, le=300)] = 40
     confirm: StrictBool = False
+    rpc_port: int | None = Field(None, ge=1, le=65535)    # command port of the started TRex
 
 
 class StopBody(BaseModel):
@@ -233,9 +234,10 @@ def daemon_router(daemon: Callable[[], DaemonSession]) -> APIRouter:
         `not_connected` (no daemon connection), `confirm_required`, `busy` (another daemon operation is in
         flight), `already_running`, `reserved`, or `foreign_trex` (a TRex this daemon did not start is
         running), and `invalid_profile` for a stateful profile that is refused. 502 when the daemon cannot
-        be reached or faults."""
+        be reached or faults. `rpc_port` (optional, 1-65535) is the started TRex's command port: after a
+        daemon Stop of the TRex Control was connected to, Control reconnects to it."""
         return await _answer(lambda: daemon().start(
-            b.cfg_path, dict(b.options), b.trex_args, b.timeout, b.confirm, b.stf_options()))
+            b.cfg_path, dict(b.options), b.trex_args, b.timeout, b.confirm, b.stf_options(), b.rpc_port))
 
     @router.post("/api/daemon/stop", response_model=None, responses=answers(*DAEMON_ANSWERS))
     async def stop(b: StopBody) -> Any:

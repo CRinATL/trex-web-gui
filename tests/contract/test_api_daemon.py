@@ -1,10 +1,13 @@
 """/api/daemon/* (spec §6.4, D1-D3, D5, D13) over DaemonSession and tests/fake/fake_daemon.py."""
+import time
 from pathlib import Path
 from typing import Any
 
 import pytest
 from support import TEST_TOKEN, authed, free_port
 from trex_web_gui.api.app import create_app
+from trex_web_gui.daemon import session as daemon_session
+from trex_web_gui.trexapi import ClientEvent
 
 CFG = "/tmp/trex_files/a.yaml"
 STATE_CHANGING = {"push_file", "start_trex", "stop_trex", "force_trex_kill"}
@@ -342,3 +345,181 @@ def test_upload_routes(tmp_path: Path, fake_daemon: Any) -> None:
         assert again["pushed"] == [] and len(again["skipped"]) == 2
         bad = c.post("/api/daemon/stf/upload/preview", json={"path": str(tmp_path / "nope.yaml")})
         assert bad.status_code == 409 and bad.json()["error"] == "invalid_profile"
+
+
+def _control_and_daemon(c: Any, f: Any, d: Any, control_host: str) -> None:
+    """Connect Control to fake_trex as `control_host`, the daemon dialog to fake_daemon, start a run."""
+    r = c.post("/api/session/connect", json={"host": control_host, "sync_port": f.rpc_port,
+                                              "async_port": f.pub_port, "timeout_s": 2})
+    assert r.status_code == 200, r.text
+    connect(c, d)
+    r = c.post("/api/daemon/start", json={"cfg_path": CFG, "options": {}, "trex_args": "", "timeout": 20,
+                                          "confirm": True})
+    assert r.status_code == 200, r.text
+
+
+def test_daemon_stop_of_our_trex_ends_planned(tmp_path: Path, fake_daemon: Any, fake_trex: Any) -> None:
+    """A daemon Stop of the TRex Control is connected to (same host text, same command port) leaves Control
+    disconnected with ended.by daemon_stop."""
+    d, f = fake_daemon(), fake_trex()
+    with authed(create_app(tmp_path, token=TEST_TOKEN)) as c:
+        _control_and_daemon(c, f, d, f.host)
+        r = c.post("/api/daemon/stop", json={"rpc_port": f.rpc_port, "confirm": True})
+        assert r.status_code == 200 and r.json()["running"] is False, r.text
+        snap = c.get("/api/session").json()
+        assert snap["state"] == "disconnected" and snap["ended"]["by"] == "daemon_stop"
+
+
+def test_stop_of_another_host_name_is_not_planned(tmp_path: Path, fake_daemon: Any, fake_trex: Any) -> None:
+    """Control connected as `localhost` while the daemon stop names 127.0.0.1: no name resolution, so the stop
+    is not planned (ended None, Control still connected)."""
+    d, f = fake_daemon(), fake_trex()
+    with authed(create_app(tmp_path, token=TEST_TOKEN)) as c:
+        _control_and_daemon(c, f, d, "localhost")
+        r = c.post("/api/daemon/stop", json={"rpc_port": f.rpc_port, "confirm": True})
+        assert r.status_code == 200, r.text
+        snap = c.get("/api/session").json()
+        assert snap["ended"] is None and snap["state"] == "connected"
+
+
+def test_daemon_stop_still_running_keeps_control(tmp_path: Path, fake_daemon: Any, fake_trex: Any,
+                                                 monkeypatch: pytest.MonkeyPatch) -> None:
+    """A stop after which the daemon still reports TRex running changes nothing for Control: still connected,
+    no ended, and a loss afterwards is published as LOST (the expectation is not left armed)."""
+    d, f = fake_daemon("--stop-keeps-running"), fake_trex()
+    monkeypatch.setattr(daemon_session, "STOP_WAIT_S", 0.5)
+    app = create_app(tmp_path, token=TEST_TOKEN)
+    with authed(app) as c:
+        _control_and_daemon(c, f, d, f.host)
+        r = c.post("/api/daemon/stop", json={"rpc_port": f.rpc_port, "confirm": True})
+        assert r.status_code == 200 and r.json()["running"] is True, r.text
+        snap = c.get("/api/session").json()
+        assert snap["state"] == "connected" and snap["ended"] is None
+        loss = ClientEvent("subscriber timeout", [], "subscriber timeout", 1.0, level="warning")
+        c.portal.call(lambda: app.state.session._handle_event(loss))
+        snap = c.get("/api/session").json()
+        assert snap["state"] == "lost" and snap["ended"] is None
+
+
+def _times_connected(published: list[dict]) -> int:
+    """How many times the session entered `connected` (a run of connected messages counts once)."""
+    states = [m["state"] for m in published]
+    return sum(1 for i, st in enumerate(states) if st == "connected" and states[i - 1:i] != ["connected"])
+
+
+def _waiting_reconnect(c: Any, app: Any, f: Any, published: list[dict]) -> Any:
+    """Connect Control to `f`, end it as a planned stop, and start a reconnect whose attempt is in flight (the
+    fake's slow replies keep it holding the session lock). Every `session` message goes to `published`.
+    Returns the reconnect task."""
+    s = app.state.session
+    inner = s._publish
+
+    def record(m: dict) -> None:
+        """Keep each session message, then publish it as before."""
+        if m["type"] == "session":
+            published.append(m)
+        inner(m)
+    s._publish = record
+    r = c.post("/api/session/connect", json={"host": f.host, "sync_port": f.rpc_port,
+                                              "async_port": f.pub_port, "timeout_s": 60})
+    assert r.status_code == 200, r.text
+
+    async def plan() -> None:
+        """Arm and confirm a planned stop of `f`, then start the reconnect."""
+        assert await s.expect_stop(f.host, f.rpc_port, "h:8090")
+        s.planned_stop_done()
+        s.reconnect_after_start(30)
+    c.portal.call(plan)
+    end = time.monotonic() + 10
+    while c.get("/api/session").json()["state"] != "connecting":
+        assert time.monotonic() < end, "the reconnect never began an attempt"
+        time.sleep(0.05)
+    return s._reconnect_task
+
+
+def test_api_connect_cancels_the_reconnect(tmp_path: Path, fake_trex: Any) -> None:
+    """Connect pressed while the reconnect's attempt holds the lock: 200, one connection, the task gone and
+    `ended` cleared."""
+    f = fake_trex("--delay-ms", "300")
+    app = create_app(tmp_path, token=TEST_TOKEN)
+    with authed(app) as c:
+        published: list[dict] = []
+        task = _waiting_reconnect(c, app, f, published)
+        before = _times_connected(published)
+        r = c.post("/api/session/connect", json={"host": f.host, "sync_port": f.rpc_port,
+                                                  "async_port": f.pub_port, "timeout_s": 60})
+        assert r.status_code == 200 and r.json()["info"]["version"], r.text
+        snap = c.get("/api/session").json()
+        assert snap["state"] == "connected" and snap["ended"] is None
+        assert _times_connected(published) == before + 1
+        assert c.portal.call(task.done)
+
+
+def test_api_connect_with_other_params_does_not_take_the_reconnect(tmp_path: Path, fake_trex: Any) -> None:
+    """A read-only Connect landing during the reconnect attempt to the same host and ports is not answered
+    with the read-write session the attempt made: the 200 is only for an identical request."""
+    f = fake_trex("--delay-ms", "300")
+    app = create_app(tmp_path, token=TEST_TOKEN)
+    with authed(app) as c:
+        published: list[dict] = []
+        _waiting_reconnect(c, app, f, published)
+        r = c.post("/api/session/connect", json={"host": f.host, "sync_port": f.rpc_port,
+                                                  "async_port": f.pub_port, "timeout_s": 60,
+                                                  "read_only": True})
+        assert r.status_code == 409 and r.json()["error"] == "busy", r.text
+        snap = c.get("/api/session").json()
+        assert snap["state"] == "connected" and snap["params"]["read_only"] is False
+
+
+def test_api_disconnect_cancels_the_reconnect(tmp_path: Path, fake_trex: Any) -> None:
+    """Disconnect pressed while the reconnect's attempt holds the lock: the task ends, nothing reconnects
+    afterwards, `ended` is cleared and the session is disconnected."""
+    f = fake_trex("--delay-ms", "300")
+    app = create_app(tmp_path, token=TEST_TOKEN)
+    with authed(app) as c:
+        published: list[dict] = []
+        task = _waiting_reconnect(c, app, f, published)
+        before = _times_connected(published)
+        r = c.post("/api/session/disconnect")
+        assert r.status_code == 200 and r.json()["state"] == "disconnected" and r.json()["ended"] is None
+        assert c.portal.call(task.done)
+        time.sleep(1.5)                                  # a task left running would reconnect by now
+        snap = c.get("/api/session").json()
+        assert snap["state"] == "disconnected" and snap["ended"] is None
+        assert _times_connected(published) == before + 1
+
+
+def test_daemon_start_with_rpc_port_reconnects_control(tmp_path: Path, fake_daemon: Any,
+                                                       fake_trex: Any) -> None:
+    """Stop (planned) then Start with the command port: Control reconnects to the TRex left running. Needs
+    the body's rpc_port, the route passing it and the app's started hook."""
+    d, f = fake_daemon(), fake_trex()
+    with authed(create_app(tmp_path, token=TEST_TOKEN)) as c:
+        _control_and_daemon(c, f, d, f.host)
+        r = c.post("/api/daemon/stop", json={"rpc_port": f.rpc_port, "confirm": True})
+        assert r.status_code == 200 and c.get("/api/session").json()["ended"] is not None, r.text
+        r = c.post("/api/daemon/start", json={"cfg_path": CFG, "options": {}, "trex_args": "", "timeout": 20,
+                                              "confirm": True, "rpc_port": f.rpc_port})
+        assert r.status_code == 200, r.text
+        end = time.monotonic() + 15
+        snap = c.get("/api/session").json()
+        while snap["state"] != "connected":
+            assert time.monotonic() < end and (snap["ended"] or {}).get("recovery", {}).get("kind") == \
+                "reconnecting", snap
+            time.sleep(0.1)
+            snap = c.get("/api/session").json()
+        assert snap["ended"] is None
+
+
+def test_failed_api_connect_forgets_the_planned_stop(tmp_path: Path, fake_daemon: Any,
+                                                     fake_trex: Any) -> None:
+    """A failed user Connect (502) after a planned stop still clears `ended`: the route forgets it first."""
+    d, f = fake_daemon(), fake_trex()
+    with authed(create_app(tmp_path, token=TEST_TOKEN)) as c:
+        _control_and_daemon(c, f, d, f.host)
+        assert c.post("/api/daemon/stop", json={"rpc_port": f.rpc_port, "confirm": True}).status_code == 200
+        assert c.get("/api/session").json()["ended"] is not None
+        r = c.post("/api/session/connect", json={"host": f.host, "sync_port": free_port(),
+                                                  "async_port": free_port(), "timeout_s": 1})
+        assert r.status_code == 502, r.text
+        assert c.get("/api/session").json()["ended"] is None

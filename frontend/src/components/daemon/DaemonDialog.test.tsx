@@ -68,8 +68,36 @@ describe('DaemonDialog', () => {
     expect(within(confirm).getByText(/127\.0\.0\.1/)).toBeInTheDocument()
     expect(start).not.toHaveBeenCalled()
     await userEvent.click(within(confirm).getByRole('button', { name: 'Start' }))
-    expect(start).toHaveBeenCalledWith({ cfg_path: '/etc/trex_cfg.yaml', options: {}, trex_args: '', mode: 'stl', timeout: 40, confirm: true })
+    expect(start).toHaveBeenCalledWith({ cfg_path: '/etc/trex_cfg.yaml', options: {}, trex_args: '', mode: 'stl', rpc_port: 4701, timeout: 40, confirm: true })
     expect(screen.queryByRole('dialog', { name: 'Start TRex' })).toBeNull()
+  })
+
+  it('Start sends the command port', async () => {
+    const start = vi.spyOn(api, 'daemonStart').mockResolvedValue({ seq: 7, command_preview: PREVIEW, run: ours.run! })
+    await open()
+    await userEvent.click(screen.getByRole('button', { name: 'Start' }))
+    await userEvent.click(within(dialog('Start TRex')).getByRole('button', { name: 'Start' }))
+    expect(start.mock.calls[0][0].rpc_port).toBe(4701)   // serverPorts.sync_port, the Run tab's command port
+  })
+
+  it('an invalid command port is not sent, and Start still works', async () => {
+    const start = vi.spyOn(api, 'daemonStart').mockResolvedValue({ seq: 7, command_preview: PREVIEW, run: ours.run! })
+    await open()
+    fireEvent.change(screen.getByLabelText('TRex command port'), { target: { value: '70000' } })
+    await userEvent.click(screen.getByRole('button', { name: 'Start' }))
+    await userEvent.click(within(dialog('Start TRex')).getByRole('button', { name: 'Start' }))
+    expect(start).toHaveBeenCalledTimes(1)
+    expect(start.mock.calls[0][0]).not.toHaveProperty('rpc_port')
+  })
+
+  it('a stateful Start sends no command port', async () => {
+    const stfRun = { ...stfRunning.run!, started_at: Date.now() / 1000 }
+    const start = vi.spyOn(api, 'daemonStart').mockResolvedValue({ seq: 44, command_preview: STF_PREVIEW, run: stfRun })
+    await open()
+    await pickStateful()
+    await userEvent.click(screen.getByRole('button', { name: 'Start' }))
+    await userEvent.click(within(dialog('Start TRex')).getByRole('button', { name: 'Start' }))
+    expect(start.mock.calls[0][0]).not.toHaveProperty('rpc_port')
   })
 
   it('a refusal stays in the dialog', async () => {
@@ -293,12 +321,29 @@ describe('DaemonDialog', () => {
     expect(api.daemonLog).toHaveBeenCalledTimes(n)
   })
 
-  it('shows the root-daemon warning in the connect bar', async () => {
+  it('shows the exposure warning until the daemon is connected', async () => {
+    await open({ daemon: null })
+    const note = screen.getByRole('note')
+    expect(note).toHaveTextContent(/runs as root with no authentication and binds 0\.0\.0\.0 by default/)
+    expect(note).toHaveTextContent(/before using daemon control on a shared network/)
+    expect(note).not.toHaveClass('ok')
+  })
+
+  it('shows the green banner while connected', async () => {
     await open()
-    const note = screen.getByRole('note', { name: '' })
-    expect(note).toHaveTextContent(/The TRex daemon runs as root with no authentication and binds 0\.0\.0\.0 by default/)
-    expect(note).toHaveTextContent(/restrict 8090 .* before using daemon control outside the test VM/)
-    expect(screen.getAllByText(/runs as root with no authentication/)).toHaveLength(1)
+    const note = screen.getByRole('note')
+    expect(note).toHaveClass('ok')
+    expect(note).toHaveTextContent('Connected to the TRex daemon at 127.0.0.1:8090. It runs as root and takes commands from anyone who can reach port 8090; keep that port restricted.')
+    expect(screen.queryByText(/runs as root with no authentication/)).toBeNull()
+  })
+
+  it('goes back to the warning on an error', async () => {
+    const { rerender } = await open()
+    setApp({ daemon: { ...idle, state: 'error', last_error: 'unreachable' } })
+    rerender(<DaemonDialog onClose={() => undefined} />)
+    const note = screen.getByRole('note')
+    expect(note).toHaveTextContent(/runs as root with no authentication/)
+    expect(note).not.toHaveClass('ok')
   })
 
   it('Connect sends the host and port, and opening reconnects to the last target', async () => {
@@ -343,7 +388,7 @@ describe('DaemonDialog', () => {
     fireEvent.change(screen.getByLabelText('Start timeout (s)'), { target: { value: '99' } })
     expect(within(dialog('Start TRex')).getByText(PREVIEW).tagName).toBe('CODE')
     await userEvent.click(within(dialog('Start TRex')).getByRole('button', { name: 'Start' }))
-    expect(start).toHaveBeenCalledWith({ cfg_path: '/etc/trex_cfg.yaml', options: {}, trex_args: '', mode: 'stl', timeout: 40, confirm: true })
+    expect(start).toHaveBeenCalledWith({ cfg_path: '/etc/trex_cfg.yaml', options: {}, trex_args: '', mode: 'stl', rpc_port: 4701, timeout: 40, confirm: true })
   })
 
   it('the stateful Start confirm is a snapshot too', async () => {

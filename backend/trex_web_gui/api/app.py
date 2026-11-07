@@ -8,7 +8,7 @@ import socket
 from collections.abc import AsyncIterator, Awaitable, Callable
 from contextlib import asynccontextmanager
 from pathlib import Path
-from typing import Annotated, Any
+from typing import Annotated, Any, Literal
 
 from fastapi import Depends, FastAPI, Request, Response, WebSocket, WebSocketDisconnect
 from fastapi.exceptions import RequestValidationError
@@ -239,7 +239,7 @@ def create_app(data_dir: Path, server_hint: str | None = None, static_dir: Path 
             hub.publish, release_on_exit=lambda: store.load().preferences.release_on_exit,
             trex_cfg_path=lambda: store.load().preferences.trex_cfg_path, spool_dir=data_dir / "captures")
         state["monitor"] = app.state.monitor = MonitorSession(hub.publish)
-        state["daemon"] = app.state.daemon = DaemonSession(hub.publish, session_owned)
+        state["daemon"] = app.state.daemon = DaemonSession(hub.publish, session_owned, StopToSession())
         state["emu"] = app.state.emu = EmuSession(hub.publish)
         store.load()
         scapy_exec.warm_up()      # before any session connects: construction swaps sys.stdout
@@ -378,6 +378,26 @@ def create_app(data_dir: Path, server_hint: str | None = None, static_dir: Path 
 
     app.state.session_owned = session_owned
 
+    class StopToSession:
+        """DaemonSession's StopHooks, forwarded to the Control TrexSession's planned-stop record."""
+
+        async def expect(self, host: str, rpc_port: int, daemon: str) -> None:
+            """Arm the Control session for a stop of host:rpc_port (it arms only on an exact match)."""
+            await session().expect_stop(host, rpc_port, daemon)
+
+        def done(self) -> None:
+            """The stop worked: end the Control session as planned."""
+            session().planned_stop_done()
+
+        def cancel(self) -> None:
+            """The stop did not end TRex: put the Control session back."""
+            session().expect_stop_cancel()
+
+        async def started(self, daemon: str, rpc_port: int | None, mode: Literal["stl", "stf"],
+                          timeout_s: float, ends_at: float | None) -> None:
+            """A TRex was started: let the Control session reconnect to it or show the stateful run."""
+            await session().daemon_started(daemon, rpc_port, mode, timeout_s, ends_at)
+
     def settings_json() -> dict[str, Any]:
         """The current settings, the store's load_error and the data dir: the body of GET and PUT
         /api/settings, and the payload of the `settings` WebSocket message."""
@@ -515,7 +535,19 @@ def create_app(data_dir: Path, server_hint: str | None = None, static_dir: Path 
                   (502, "unreachable", "the server is unreachable")))
     async def connect(body: ConnectBody) -> dict[str, Any] | JSONResponse:
         """Connects the session to a TRex server; returns {info: ServerInfo}. 409 busy while a session is
-        connecting, connected or changing, 422 unsupported_version, 502 unreachable or trex_error."""
+        connecting, connected or changing, 422 unsupported_version, 502 unreachable or trex_error. Cancels a
+        pending reconnect after a daemon stop first (answering with its result when it had just reached this
+        server with the same parameters) and forgets the stop's record."""
+        was_connected = session().snapshot()["state"] == "connected"
+        await session().cancel_reconnect()
+        session().forget_ended()
+        snap = session().snapshot()
+        p = snap["params"]
+        wanted = {"host": body.host, "sync_port": body.sync_port, "async_port": body.async_port,
+                  "timeout_s": body.timeout_s, "read_only": body.read_only}
+        if (snap["state"] == "connected" and not was_connected and isinstance(p, dict)
+                and snap["info"] is not None and {k: p.get(k) for k in wanted} == wanted):
+            return {"info": snap["info"]}     # the cancelled attempt made this very session
         try:
             params = ConnectParams(body.host, body.sync_port, body.async_port, body.timeout_s, body.read_only)
             info = await session().connect(params)
@@ -532,7 +564,10 @@ def create_app(data_dir: Path, server_hint: str | None = None, static_dir: Path 
     @app.post("/api/session/disconnect")
     async def disconnect() -> dict[str, object]:
         """Disconnects the session: stops and removes its own monitor capture, releases its ports
-        (TrexSession.disconnect default) and returns the snapshot."""
+        (TrexSession.disconnect default) and returns the snapshot. Cancels a pending reconnect first and
+        forgets a planned stop's record."""
+        await session().cancel_reconnect()
+        session().forget_ended()
         await session().disconnect()
         return session().snapshot()
 

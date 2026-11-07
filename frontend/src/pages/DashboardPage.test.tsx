@@ -204,6 +204,12 @@ describe('DashboardPage lost banner', () => {
     render(<DashboardPage />)
     expect(screen.queryByText(/Connection lost/)).toBeNull()
   })
+  it('stays silent for a planned stop, even in state lost', () => {
+    const ended: api.Ended = { by: 'daemon_stop', at: 1, daemon: 'h:8090', recovery: { kind: 'none' } }
+    vi.spyOn(state, 'useAppState').mockReturnValue({ ...state.initialState, session: { ...session('lost'), ended } })
+    render(<DashboardPage />)
+    expect(screen.queryByText(/Connection lost/)).toBeNull()
+  })
   it('shows while the session is lost', () => {
     vi.spyOn(state, 'useAppState').mockReturnValue({ ...state.initialState, session: session('lost') })
     render(<DashboardPage />)

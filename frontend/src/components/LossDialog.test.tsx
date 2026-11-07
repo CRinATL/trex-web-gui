@@ -26,6 +26,17 @@ function open(session: api.SessionSnapshot) {
 const dialog = () => screen.queryByRole('dialog', { name: 'Connection to TRex lost' })
 
 describe('LossDialog', () => {
+  it('has the error theme', () => {
+    open(lost('p:1'))
+    expect(dialog()).toHaveClass('error-theme')
+  })
+  it('a planned stop is not a loss, disconnected or lost', () => {
+    const ended: api.Ended = { by: 'daemon_stop', at: 1, daemon: '127.0.0.1:8090', recovery: { kind: 'none' } }
+    const { again } = open({ ...lost('p:1'), state: 'disconnected', ended })
+    expect(dialog()).toBeNull()
+    again({ ...lost('p:1'), ended })   // a loss during an internal reconnect attempt leaves LOST with ended set
+    expect(dialog()).toBeNull()
+  })
   it('opens on a loss with its cause, Reconnect focused', () => {
     open(lost('p:1'))
     expect(dialog()).toBeInTheDocument()

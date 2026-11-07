@@ -38,7 +38,7 @@ export function DaemonRunTab({ daemon, pushed, onModal }: { daemon: DaemonMsg | 
   const [confirm, setConfirm] = useState<Confirm | null>(null)
   const [note, setNote] = useState<string | null>(null)
   const [endsAt, setEndsAt] = useState<{ seq: number; ms: number } | null>(null)   // the end time belongs to one run
-  const [startSnap, setStartSnap] = useState<{ body: StartBody; timeout: number; text: string } | null>(null)   // what the Start confirm shows and sends
+  const [startSnap, setStartSnap] = useState<{ body: StartBody; timeout: number; text: string; rpcPort?: number } | null>(null)   // what the Start confirm shows and sends
   const [now, setNow] = useState(() => Date.now())
   const [finalLog, setFinalLog] = useState<{ seq: number; text: string } | null>(null)
 
@@ -114,8 +114,9 @@ export function DaemonRunTab({ daemon, pushed, onModal }: { daemon: DaemonMsg | 
   // Start: a stateful run also attaches the Monitor to its publisher and remembers when it ends.
   async function doStart() {
     if (!startSnap) return
-    const { body, timeout } = startSnap
-    const r = await daemonStart({ ...body, timeout, confirm: true })
+    const { body, timeout, rpcPort } = startSnap
+    // The command port of a stateless start lets Control find the restarted TRex; a stateful run has none.
+    const r = await daemonStart({ ...body, ...(rpcPort ? { rpc_port: rpcPort } : {}), timeout, confirm: true })
     setConfirm(null); setStartSnap(null); setNote(null)
     if (r.run.mode !== 'stf' || !body.stf) return
     const ends = Date.now() + body.stf.d * 1000
@@ -223,7 +224,7 @@ export function DaemonRunTab({ daemon, pushed, onModal }: { daemon: DaemonMsg | 
 
       {note && <p role="status" className="muted">{note}</p>}
       <div className="dialog-footer daemon-actions" role="group" aria-label="Run actions">
-        <RunButton kind="go" lit={running} litLabel="TRex running" disabled={!startOk} onClick={() => { if (body && timeoutN !== null && preview?.text) { setStartSnap({ body, timeout: timeoutN, text: preview.text }); setConfirm('start') } }}>Start</RunButton>
+        <RunButton kind="go" lit={running} litLabel="TRex running" disabled={!startOk} onClick={() => { if (body && timeoutN !== null && preview?.text) { setStartSnap({ body, timeout: timeoutN, text: preview.text, ...(mode === 'stl' && intIn(portText, 1, 65535) !== null ? { rpcPort: Number(portText) } : {}) }); setConfirm('start') } }}>Start</RunButton>
         <RunButton kind="stop" disabled={!stopOk} onClick={() => setConfirm('stop')}>Stop</RunButton>
         {canForce && <RunButton kind="stop" onClick={() => setConfirm('force')}>Force stop</RunButton>}
       </div>

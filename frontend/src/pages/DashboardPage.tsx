@@ -61,7 +61,7 @@ export function DashboardPage() {
   return (
     <section>
       <h1>Dashboard</h1>
-      {session.state === 'lost' && <p role="status" aria-label="Connection lost" className="banner alert"><strong>Connection lost:</strong> values are the last received</p>}
+      {session.state === 'lost' && !session.ended && <p role="status" aria-label="Connection lost" className="banner alert"><strong>Connection lost:</strong> values are the last received</p>}
       <ServiceModeBanner ports={ports} canAct={session.state === 'connected' && !session.params?.read_only} />
       <Tabs label="Dashboard" idPrefix="dash" tabs={TABS} selected={tab} onSelect={setTab}
         end={<button type="button" disabled={session.state !== 'connected'} title={CLEAR_STATS_HINT} onClick={clearAll}>Clear stats</button>} />

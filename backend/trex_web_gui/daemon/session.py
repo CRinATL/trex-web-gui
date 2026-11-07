@@ -17,7 +17,7 @@ import time
 from collections.abc import Callable
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
-from typing import Any, Literal
+from typing import Any, Literal, Protocol
 
 from .. import stfyaml
 from ..sessions.trex_session import Publish
@@ -136,13 +136,33 @@ def _check_stf(stf: StfOptions, trex_args: str) -> None:
         raise ValueError("trex_args must be empty for a stateful run")
 
 
+class StopHooks(Protocol):
+    """What DaemonSession.stop tells the Control session about a stop it is about to send: `expect` before
+    the stopping call, then `done` when TRex is gone or `cancel` when it is not (or the stop raised)."""
+
+    async def expect(self, host: str, rpc_port: int, daemon: str) -> None:
+        """A stop of the TRex at host:rpc_port, through `daemon` (host:port), is about to be sent."""
+
+    def done(self) -> None:
+        """The stop ended with TRex no longer running."""
+
+    def cancel(self) -> None:
+        """The stop did not end TRex (still running, or it raised)."""
+
+    async def started(self, daemon: str, rpc_port: int | None, mode: Literal["stl", "stf"], timeout_s: float,
+                      ends_at: float | None) -> None:
+        """A TRex was started through `daemon` (host:port); `rpc_port` is its command port when the caller
+        gave one, `ends_at` the epoch second a stateful run ends."""
+
+
 class DaemonSession:
     """At most one daemon connection. All methods run on the loop; the daemon calls go to `daemon-rpc`."""
 
-    def __init__(self, publish: Publish, session_owned: Callable[[str, int], set[int] | None]) -> None:
+    def __init__(self, publish: Publish, session_owned: Callable[[str, int], set[int] | None],
+                 hooks: StopHooks | None = None) -> None:
         """Disconnected, with no run. `session_owned(host, sync_port)` is the ids of the ports this backend's
-        TrexSession owns when it is connected to that server, else None."""
-        self._publish, self._session_owned = publish, session_owned
+        TrexSession owns when it is connected to that server, else None. `hooks` hears of each stop."""
+        self._publish, self._session_owned, self._hooks = publish, session_owned, hooks
         self._executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix="daemon-rpc")
         self._client: DaemonClient | None = None
         self._target: dict[str, Any] | None = None
@@ -234,7 +254,7 @@ class DaemonSession:
         try:
             await self._drop()
             gen = self._gen
-            client = DaemonClient(host, port)
+            client = DaemonClient(host, port, CALL_TIMEOUT_S)
             version = await self._call(client.version)
             config_yaml = await self._call(client.config_text)
             metadata = await self._call(client.metadata)
@@ -489,11 +509,13 @@ class DaemonSession:
                               "uploaded to the daemon")
 
     async def start(self, cfg_path: str, options: dict[str, int], trex_args: str, timeout_s: float,
-                    confirm: bool, stf: StfOptions | None = None) -> dict[str, Any]:
+                    confirm: bool, stf: StfOptions | None = None,
+                    rpc_port: int | None = None) -> dict[str, Any]:
         """Start TRex. Refusals, in order, all before `start_trex`: confirm_required, already_running,
         reserved, foreign_trex, then (with `stf`) the bounds and empty trex_args (ValueError) and
         invalid_profile. Returns {seq, command_preview, run}. A daemon fault (a bad config, say) propagates
-        as DaemonFault and leaves the run record alone."""
+        as DaemonFault and leaves the run record alone. After `start_trex` returns, tells the hooks
+        (`started`, with `rpc_port`) so the Control session can reconnect to the TRex it lost."""
         if confirm is not True:
             raise DaemonRefused("confirm_required", "Starting TRex needs confirm.")
         client = self._need_client()
@@ -527,6 +549,9 @@ class DaemonSession:
                          "profile": None if stf is None else stf.profile,
                          "duration_s": None if stf is None else stf.d, "started_at": time.time(),
                          "state": "running", "outcome": None}
+            if self._hooks is not None:
+                await self._hooks.started(f"{client.host}:{client.port}", rpc_port, self._run["mode"],
+                                          timeout_s, None if stf is None else self._run["started_at"] + stf.d)
             return {"seq": seq, "command_preview": preview, "run": dict(self._run)}
         finally:
             self._end_op()
@@ -587,19 +612,37 @@ class DaemonSession:
             elif not ours:
                 cause = await self._check_owners(host, rpc_port, force, owners_unknown_ack)
             seq = self._running_seq
+            if not (seq is not None and not kill_only) and not force:
+                raise DaemonRefused("not_ours", "This backend holds no run to stop; Stop never stops a run "
+                                    "it did not start. Force stop can.")
+            return await self._send_stop(client, host, rpc_port, seq, kill_only, cause)
+        finally:
+            self._end_op()
+
+    async def _send_stop(self, client: DaemonClient, host: str, rpc_port: int, seq: int | None,
+                         kill_only: bool, cause: str | None) -> dict[str, Any]:
+        """The stopping call and the wait for it, after every refusal: tell the hooks first (`expect`), then
+        `done` when TRex stopped, else `cancel`; `cancel` too when anything raises after `expect`."""
+        hooks = self._hooks
+        if hooks is not None:
+            await hooks.expect(host, rpc_port, f"{client.host}:{client.port}")
+        settled = False
+        try:
             if seq is not None and not kill_only:
                 await self._call(client.stop_trex, seq)
-            elif force:
+            else:
                 if cause is not None:
                     self._log_warning(f"Force stop on {host}:{rpc_port} with owners_unknown_ack: {cause}")
                 await self._call(client.force_trex_kill)
-            else:
-                raise DaemonRefused("not_ours", "This backend holds no run to stop; Stop never stops a run "
-                                    "it did not start. Force stop can.")
             self._stop_sent = True
-            return await self._wait_stopped(client)
+            out = await self._wait_stopped(client)
+            settled = True
+            if hooks is not None:
+                (hooks.cancel if out["running"] else hooks.done)()
+            return out
         finally:
-            self._end_op()
+            if hooks is not None and not settled:
+                hooks.cancel()
 
     async def _wait_stopped(self, client: DaemonClient) -> dict[str, Any]:
         """Poll is_running until false, for up to STOP_WAIT_S; then fold in one status read so a stopped run

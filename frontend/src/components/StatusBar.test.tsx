@@ -16,6 +16,68 @@ function bar(session: SessionSnapshot, o: { backendOnline?: boolean; owned?: num
 }
 
 describe('StatusBar', () => {
+  describe('planned stop', () => {
+    const at = 1_700_000_000
+    const when = new Date(at * 1000).toLocaleTimeString()
+    const ended = (recovery: api.Recovery): api.Ended => ({ by: 'daemon_stop', at, daemon: 'h:8090', recovery })
+    it('planned stop text', () => {
+      bar({ ...base, state: 'disconnected', params, ended: ended({ kind: 'none' }) })
+      expect(screen.getByRole('status')).toHaveTextContent(`TRex stopped from the daemon dialog at ${when}`)
+      expect(screen.getByRole('status')).not.toHaveTextContent('Connection lost')
+      expect(screen.getByRole('status').textContent).not.toMatch(/reconnecting/)
+    })
+    it('ends with reconnecting while it is', () => {
+      bar({ ...base, state: 'disconnected', params, ended: ended({ kind: 'reconnecting', deadline: at + 30 }) })
+      expect(screen.getByRole('status').textContent).toBe(`TRex stopped from the daemon dialog at ${when} · reconnecting`)
+    })
+    it('a planned stop keeps the normal colour class, even LOST', () => {
+      const { container, unmount } = bar({ ...base, state: 'lost', params, error: 'x', ended: ended({ kind: 'none' }) })
+      expect(container.querySelector('footer')).not.toHaveClass('state-lost')
+      expect(container.querySelector('footer')).toHaveClass('state-disconnected')
+      unmount()
+      const again = bar({ ...base, state: 'lost', params, error: 'x' })
+      expect(again.container.querySelector('footer')).toHaveClass('state-lost')
+    })
+    it('the ended text wins over an error, and over a loss during an attempt', () => {
+      const { unmount } = bar({ ...base, state: 'disconnected', params, error: 'attempt failed', ended: ended({ kind: 'none' }) })
+      expect(screen.getByRole('status')).toHaveTextContent('TRex stopped from the daemon dialog')
+      expect(screen.getByRole('status')).not.toHaveTextContent('attempt failed')
+      unmount()
+      bar({ ...base, state: 'lost', params, error: 'heartbeat', ended: ended({ kind: 'none' }) })
+      expect(screen.getByRole('status')).toHaveTextContent('TRex stopped from the daemon dialog')
+      expect(screen.getByRole('status')).not.toHaveTextContent('Connection lost')
+    })
+    const failed = () => ended({ kind: 'reconnect_failed', error: 'TRex did not answer on 127.0.0.1:4501' })
+    it('reconnect failed suffix', () => {
+      bar({ ...base, state: 'disconnected', error: null, params: null, ended: failed() })
+      expect(screen.getByRole('status').textContent).toBe(`TRex stopped from the daemon dialog at ${when} · reconnect failed`)
+      expect(screen.getByRole('status')).toHaveAttribute('title', 'TRex did not answer on 127.0.0.1:4501')
+    })
+    it('reconnect failed after a loss keeps the normal colour', () => {
+      const { container } = bar({ ...base, state: 'lost', error: 'Subscriber timeout', params: null, ended: failed() })
+      expect(screen.getByRole('status').textContent).toBe(`TRex stopped from the daemon dialog at ${when} · reconnect failed`)
+      expect(screen.getByRole('status')).toHaveAttribute('title', 'TRex did not answer on 127.0.0.1:4501')
+      expect(container.querySelector('footer')).toHaveClass('state-disconnected')
+      expect(container.querySelector('footer')).not.toHaveClass('state-lost')
+    })
+    it('reconnect failed offers the way back', async () => {
+      const connect = vi.spyOn(api, 'connect').mockResolvedValue({} as never)
+      const { unmount } = bar({ ...base, state: 'disconnected', error: null, params, ended: failed() })
+      expect(screen.getByRole('link', { name: 'See Events' })).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: 'Connect…' })).toBeInTheDocument()
+      await userEvent.click(screen.getByRole('button', { name: 'Reconnect' }))
+      expect(connect).toHaveBeenCalledWith(params)
+      unmount()
+      bar({ ...base, state: 'disconnected', error: null, params: null, ended: failed() })
+      expect(screen.queryByRole('button', { name: 'Reconnect' })).toBeNull()
+      expect(screen.getByRole('button', { name: 'Connect…' })).toBeInTheDocument()
+    })
+    it('reconnecting has no tooltip', () => {
+      bar({ ...base, state: 'disconnected', params, ended: ended({ kind: 'reconnecting', deadline: at + 30 }) })
+      expect(screen.getByRole('status').textContent).toMatch(/ · reconnecting$/)
+      expect(screen.getByRole('status')).not.toHaveAttribute('title')
+    })
+  })
   it('shows the backend version at its end, outside the status text, and not while the backend is offline', () => {
     const { unmount } = bar({ ...base, params, info }, { appVersion: '9.8.7' })
     expect(screen.getByText('trex-web-gui 9.8.7')).toBeInTheDocument()

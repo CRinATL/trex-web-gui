@@ -115,7 +115,10 @@ export function DaemonDialog({ onClose, initialPushed }: { onClose: () => void; 
         <button type="submit" disabled={busy}>Connect</button>
         <button type="button" disabled={busy || !connected} onClick={() => void disconnect()}>Disconnect</button>
       </form>
-      <p role="note" className="banner">The TRex daemon runs as root with no authentication and binds 0.0.0.0 by default, and push_file and prepare_astf_profile let anyone who reaches port 8090 run code as root, whatever trex-web-gui does; restrict 8090 (firewall to the GUI host, or --trex-host 127.0.0.1 plus an SSH tunnel) before using daemon control outside the test VM.</p>
+      {/* One note, two states: the exposure warning until the daemon is connected, then a green reminder (user, 2026-11-07). */}
+      {connected && daemon?.target
+        ? <p role="note" className="banner ok">Connected to the TRex daemon at {daemon.target.host}:{daemon.target.port}. It runs as root and takes commands from anyone who can reach port {daemon.target.port}; keep that port restricted.</p>
+        : <p role="note" className="banner">The TRex daemon runs as root with no authentication and binds 0.0.0.0 by default, and push_file and prepare_astf_profile let anyone who reaches port 8090 run code as root, whatever trex-web-gui does; restrict 8090 (firewall to the GUI host, or --trex-host 127.0.0.1 plus an SSH tunnel) before using daemon control on a shared network.</p>}
       {error && <p role="alert" className="error">{error}</p>}
       <p role="status" className="daemon-status">
         State: {stateText}{version && ` · ${version}`}{runningSince && ` · running since ${runningSince}`}

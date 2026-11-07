@@ -229,6 +229,11 @@ button[data-run][data-on] { border-color: var(--run); box-shadow: inset 0 0 0 1p
 .modal-backdrop { position: fixed; inset: 0; z-index: 40; background: rgb(0 0 0 / .25); }
 .modal.loss-dialog { width: min(36rem, 95vw); box-sizing: border-box; }
 .modal.loss-dialog h2 { margin-top: 0; }
+/* The two dialogs' themes: the edge-and-tint shape of .banner.alert, text stays --fg. Information is --accent, a loss --bad. */
+.modal.planned-stop { width: min(36rem, 95vw); box-sizing: border-box; color: var(--fg); border-left: 4px solid var(--accent);
+  background: color-mix(in srgb, var(--accent) var(--alert-tint), var(--bg)); }
+.modal.planned-stop h2 { margin-top: 0; }
+.modal.loss-dialog.error-theme { color: var(--fg); border-left: 4px solid var(--bad); background: color-mix(in srgb, var(--bad) var(--alert-tint), var(--bg)); }
 .modal.browse { z-index: 41; width: min(40rem, 95vw); height: min(36rem, 80vh); box-sizing: border-box;
   display: flex; flex-direction: column; gap: .5rem; }
 .modal.browse h2 { margin: 0; }
@@ -293,6 +298,9 @@ button[data-run][data-on] { border-color: var(--run); box-shadow: inset 0 0 0 1p
 .banner.alert { color: var(--fg); border: 0; border-left: 4px solid var(--attention); border-radius: 4px; width: fit-content; max-width: 100%;
   background: color-mix(in srgb, var(--attention) var(--alert-tint), var(--bg)); padding: .45rem .75rem; margin: 0 0 .75rem; }
 .banner.alert strong { color: var(--warn); font-weight: 600; }
+/* The daemon dialog's connected state: the same edge-and-tint shape as .banner.alert, in the ok colour. */
+.banner.ok { color: var(--fg); border: 0; border-left: 4px solid var(--ok); border-radius: 4px; width: fit-content; max-width: 100%;
+  background: color-mix(in srgb, var(--ok) var(--alert-tint), var(--bg)); padding: .45rem .75rem; margin: 0 0 .75rem; }
 
 .trend { display: inline-block; width: 1em; margin-left: .35rem; font-size: .8em; text-align: center; }
 .trend-weak { color: var(--muted); }
