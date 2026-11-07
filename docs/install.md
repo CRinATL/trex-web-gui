@@ -54,6 +54,10 @@ dependencies from PyPI.
 
 A host that cannot reach PyPI installs from a wheelhouse, a directory of the wheel and its dependencies.
 
+The host needs three things staged: uv, the wheelhouse (the trex-web-gui wheel and its dependencies, for Python 3.12
+and x86_64 Linux, as the `--platform` flags below say), and a Python 3.12. Another architecture changes the
+`--platform` values.
+
 1. On a connected machine, build the wheelhouse:
 
    ```
@@ -97,20 +101,25 @@ A host that cannot reach PyPI installs from a wheelhouse, a directory of the whe
 ## The `trex-web-gui` command and `PATH`
 
 The command is in `~/.local/bin` (`uv tool dir --bin` prints the directory). If `trex-web-gui` answers
-`command not found`, that directory is not on your `PATH`.
+`command not found`, that directory is not on your `PATH`. A script run as `curl … | sh` cannot change the `PATH`
+of the terminal that started it, so what to do depends on which of three things the installer printed at its end:
 
-The installer adds it to your shell profile, but a script run as `curl … | sh` cannot change the `PATH` of the
-terminal that started it. If the installer said it updated your profile, open a new terminal, or run the
-`export PATH=…` line it printed in the current one.
-
-Otherwise, add the directory to your shell profile yourself, in one of two ways:
-
-- Run `uv tool update-shell`. It adds the directory to your shell's startup files.
-- Or add this line yourself, to `~/.profile` for a login shell, `~/.bashrc` for bash, or `~/.zshenv` for zsh:
+- **"Your shell profile already adds … to PATH, but this terminal has not read it yet."** An earlier run, or
+  you, already put the directory in a startup file. Open a new terminal, or run the `export PATH=…` line the
+  installer printed in the current one.
+- **"Your shell profile now adds … to PATH".** The installer ran `uv tool update-shell`, which adds the directory
+  to your shell's startup files. This terminal keeps its old `PATH`: open a new terminal, or run the `export
+  PATH=…` line it printed.
+- **"… is not on your PATH".** The installer did not change your profile, because you set
+  `TREX_WEB_GUI_NO_MODIFY_PATH=1` or `uv tool update-shell` failed. Run the `export PATH=…` line it printed
+  for this terminal. To keep it, run `uv tool update-shell`, or add this line yourself, to `~/.profile` for a
+  login shell, `~/.bashrc` for bash, or `~/.zshenv` for zsh:
 
   ```
   export PATH="$HOME/.local/bin:$PATH"
   ```
 
-Then open a new terminal, or run that line in the current one. `command -v trex-web-gui` prints the command's path
-once it is found. Until then, `~/.local/bin/trex-web-gui` runs it by its full path.
+  In fish, run `fish_add_path "$HOME/.local/bin"`.
+
+`command -v trex-web-gui` prints the command's path once it is found. Until then, `~/.local/bin/trex-web-gui` runs
+it by its full path.
