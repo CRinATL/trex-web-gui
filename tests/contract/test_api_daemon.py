@@ -409,8 +409,8 @@ def _times_connected(published: list[dict]) -> int:
 
 def _waiting_reconnect(c: Any, app: Any, f: Any, published: list[dict]) -> Any:
     """Connect Control to `f`, end it as a planned stop, and start a reconnect whose attempt is in flight (the
-    fake's slow replies keep it holding the session lock). Every `session` message goes to `published`.
-    Returns the reconnect task."""
+    fake's 1.5 s get_system_info reply, --delay-method, keeps it holding the session lock). Every `session`
+    message goes to `published`. Returns the reconnect task."""
     s = app.state.session
     inner = s._publish
 
@@ -440,7 +440,7 @@ def _waiting_reconnect(c: Any, app: Any, f: Any, published: list[dict]) -> Any:
 def test_api_connect_cancels_the_reconnect(tmp_path: Path, fake_trex: Any) -> None:
     """Connect pressed while the reconnect's attempt holds the lock: 200, one connection, the task gone and
     `ended` cleared."""
-    f = fake_trex("--delay-ms", "300")
+    f = fake_trex("--delay-method", "get_system_info:1500")
     app = create_app(tmp_path, token=TEST_TOKEN)
     with authed(app) as c:
         published: list[dict] = []
@@ -458,7 +458,7 @@ def test_api_connect_cancels_the_reconnect(tmp_path: Path, fake_trex: Any) -> No
 def test_api_connect_with_other_params_does_not_take_the_reconnect(tmp_path: Path, fake_trex: Any) -> None:
     """A read-only Connect landing during the reconnect attempt to the same host and ports is not answered
     with the read-write session the attempt made: the 200 is only for an identical request."""
-    f = fake_trex("--delay-ms", "300")
+    f = fake_trex("--delay-method", "get_system_info:1500")
     app = create_app(tmp_path, token=TEST_TOKEN)
     with authed(app) as c:
         published: list[dict] = []
@@ -474,7 +474,7 @@ def test_api_connect_with_other_params_does_not_take_the_reconnect(tmp_path: Pat
 def test_api_disconnect_cancels_the_reconnect(tmp_path: Path, fake_trex: Any) -> None:
     """Disconnect pressed while the reconnect's attempt holds the lock: the task ends, nothing reconnects
     afterwards, `ended` is cleared and the session is disconnected."""
-    f = fake_trex("--delay-ms", "300")
+    f = fake_trex("--delay-method", "get_system_info:1500")
     app = create_app(tmp_path, token=TEST_TOKEN)
     with authed(app) as c:
         published: list[dict] = []

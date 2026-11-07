@@ -75,6 +75,11 @@ class FakeTrex:
                 self.proc.kill()
                 self._tail = self.proc.communicate()[0]
 
+    def toggle_drop(self) -> None:
+        """Send SIGHUP: the fake starts (or stops) answering its --drop-on-sighup methods as unknown.
+        Asynchronous: nothing waits for it."""
+        self.proc.send_signal(signal.SIGHUP)
+
     def arm_seq_gap(self) -> None:
         """Send SIGUSR1: the fake serves seq 5 then 7 to every subscriber until it restarts."""
         # every subscriber's next polls carry seq 5, then 7, until the fake restarts

@@ -33,14 +33,16 @@ export function StatusBar({ backendOnline, session, owned, onConnect, appVersion
     try { await action() } catch (x) { setFailure(failText(x)) } finally { flight.current = false; setBusy(false) }
   }
   let text: string
-  // the failed automatic reconnect's error, as the status text's tooltip (shown only while the planned-stop text is)
-  const failedReconnect = backendOnline && session.ended && session.state !== 'connected' && session.ended.recovery.kind === 'reconnect_failed' ? session.ended.recovery.error : undefined
+  // the planned-stop record, only while it decides the status text: one condition for the text and its tooltip
+  const planned = backendOnline && session.state !== 'connected' ? session.ended : null
+  // the failed automatic reconnect's error, as the status text's tooltip
+  const failedReconnect = planned?.recovery.kind === 'reconnect_failed' ? planned.recovery.error : undefined
   if (!backendOnline) text = 'Backend offline, reconnecting…'
-  else if (session.ended && session.state !== 'connected') {
+  else if (planned) {
     // a planned stop wins over the failed internal attempt's error and over a loss during it
-    const kind = session.ended.recovery.kind
+    const kind = planned.recovery.kind
     const rec = kind === 'reconnecting' ? ' · reconnecting' : kind === 'reconnect_failed' ? ' · reconnect failed' : ''
-    text = `TRex stopped from the daemon dialog at ${new Date(session.ended.at * 1000).toLocaleTimeString()}${rec}`
+    text = `TRex stopped from the daemon dialog at ${new Date(planned.at * 1000).toLocaleTimeString()}${rec}`
   }
   else if (session.state === 'connected') {
     // params/info can be null in a transient snapshot; say "Connected" with whatever is known

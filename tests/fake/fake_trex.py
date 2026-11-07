@@ -12,7 +12,8 @@ PUB message D + U(-J, J) ms (floored at 0) after it was produced, one FIFO per p
 ROUTER, one queue per identity; PUB is one queue), so jitter never reorders a peer's stream and two clients'
 delays overlap instead of adding up. U comes from random.Random(--seed), which defaults to the bound
 rpc port; the ready line prints delay_ms, jitter_ms and seed. With D = J = 0 a reply goes out in the same
-loop iteration, as before.
+loop iteration, as before. --delay-method METHOD:MS (repeatable) adds MS to a reply that answers METHOD (in a
+batch, the largest such delay), so a test can hold one call in flight without slowing every reply.
 
 Known divergences from the real server:
 - link, LED and flow-control changes are accepted; the measured net_af_packet port reports them
@@ -197,6 +198,8 @@ ap.add_argument("--manual-clock", action="store_true",
                      "(deterministic wire fixtures)")
 ap.add_argument("--delay-ms", type=int, default=0,
                 help="hold every reply and PUB message this long (a remote backend)")
+ap.add_argument("--delay-method", action="append", default=[], metavar="METHOD:MS",
+                help="add MS to the reply to METHOD only; repeatable")
 ap.add_argument("--jitter-ms", type=int, default=0,
                 help="uniform +/- jitter on --delay-ms, order kept per peer")
 ap.add_argument("--seed", type=int, help="seed for the jitter draws (default: the bound rpc port)")
@@ -209,7 +212,11 @@ ap.add_argument("--pub-names", type=int, default=0, help="every 2 s send N extra
 ap.add_argument("--pub-big", type=int, default=0,
                 help="every 2 s send one raw (uncompressed) frame named big, BYTES long on the wire")
 ap.add_argument("--drop", action="append", default=[], help="answer METHOD as unknown (negative control)")
+ap.add_argument("--drop-on-sighup", action="append", default=[], metavar="METHOD",
+                help="each SIGHUP toggles answering METHOD as unknown, as --drop does; repeatable")
 a = ap.parse_args()
+# --delay-method METHOD:MS, as a method -> extra milliseconds map
+METHOD_DELAY_MS = {m: int(ms) for m, _, ms in (d.rpartition(":") for d in a.delay_method)}
 
 def _due(now, last_due, d, j, rng):
     """When a message produced at `now` goes out: now + D + U(-J, J) ms (floored at 0), never before the
@@ -1162,6 +1169,17 @@ def on_restart(*_):
 
 signal.signal(signal.SIGUSR2, on_restart)
 
+sighup_drop = False                        # SIGHUP toggles: --drop-on-sighup methods answered as unknown
+
+
+def on_sighup(*_):
+    """SIGHUP handler: toggle whether the --drop-on-sighup methods are answered as unknown."""
+    global sighup_drop
+    sighup_drop = not sighup_drop
+
+
+signal.signal(signal.SIGHUP, on_sighup)
+
 served = collections.Counter()
 def err_like(name, req_id, method=None, client_ver=None, server_ver=None):
     """The recorded negative `name` as a response to `req_id`; the method name and the client and server
@@ -1199,7 +1217,7 @@ def answer(req):
     elif p["api_h"] != API_H:
         return recorded_error("api_h_mismatch", rid)
     served[m] += 1
-    if m in a.drop:
+    if m in a.drop or (sighup_drop and m in a.drop_on_sighup):
         return err_like("unknown_method", rid, method=m)
     if m == "push_pkts":
         return err_like("unknown_method", rid, method=m)
@@ -1392,6 +1410,9 @@ while True:
         req = json.loads(raw)
         if restart_pending:        # once per incoming message, before a single request or a whole batch
             do_restart()
+        qs = req if isinstance(req, list) else [req]
+        extra_ms = max((METHOD_DELAY_MS.get(q.get("method"), 0) for q in qs if isinstance(q, dict)),
+                       default=0)
         if isinstance(req, list):
             resp = [answer(q) for q in req]
             if len(resp) == 1:
@@ -1400,7 +1421,8 @@ while True:
             resp = answer(req)
         out = json.dumps(resp).encode()
         who = frames[0]
-        peer_due[who] = due = _due(time.monotonic(), peer_due.get(who, 0.0), a.delay_ms, a.jitter_ms, rep_rng)
+        peer_due[who] = due = _due(time.monotonic(), peer_due.get(who, 0.0), a.delay_ms + extra_ms,
+                                   a.jitter_ms, rep_rng)
         heapq.heappush(outq, (due, out_seq, [*frames[:-1], zipb(out) if zipped else out]))
         out_seq += 1
     while outq and outq[0][0] <= time.monotonic():

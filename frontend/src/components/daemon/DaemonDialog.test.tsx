@@ -337,6 +337,15 @@ describe('DaemonDialog', () => {
     expect(screen.queryByText(/runs as root with no authentication/)).toBeNull()
   })
 
+  it('keeps the warning while connected with no target to name', async () => {
+    const { rerender } = await open()
+    setApp({ daemon: { ...idle, target: null } })
+    rerender(<DaemonDialog onClose={() => undefined} />)
+    const note = screen.getByRole('note')
+    expect(note).toHaveTextContent(/runs as root with no authentication/)
+    expect(note).not.toHaveClass('ok')
+  })
+
   it('goes back to the warning on an error', async () => {
     const { rerender } = await open()
     setApp({ daemon: { ...idle, state: 'error', last_error: 'unreachable' } })
