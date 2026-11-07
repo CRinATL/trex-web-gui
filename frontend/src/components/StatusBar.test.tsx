@@ -30,6 +30,14 @@ describe('StatusBar', () => {
       bar({ ...base, state: 'disconnected', params, ended: ended({ kind: 'reconnecting', deadline: at + 30 }) })
       expect(screen.getByRole('status').textContent).toBe(`TRex stopped from the daemon dialog at ${when} · reconnecting`)
     })
+    it('a planned stop keeps the normal colour class, even LOST', () => {
+      const { container, unmount } = bar({ ...base, state: 'lost', params, error: 'x', ended: ended({ kind: 'none' }) })
+      expect(container.querySelector('footer')).not.toHaveClass('state-lost')
+      expect(container.querySelector('footer')).toHaveClass('state-disconnected')
+      unmount()
+      const again = bar({ ...base, state: 'lost', params, error: 'x' })
+      expect(again.container.querySelector('footer')).toHaveClass('state-lost')
+    })
     it('the ended text wins over an error, and over a loss during an attempt', () => {
       const { unmount } = bar({ ...base, state: 'disconnected', params, error: 'attempt failed', ended: ended({ kind: 'none' }) })
       expect(screen.getByRole('status')).toHaveTextContent('TRex stopped from the daemon dialog')

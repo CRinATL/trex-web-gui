@@ -59,6 +59,25 @@ describe('PlannedStopDialog', () => {
     r.rerender(page({ ...base, state: 'connected', connect_seq: 'p:2', ended: null }))
     expect(dialog()).toBeNull()
   })
+  it('a recovery change while open restarts the countdown from now', () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(1_700_000_000_000)
+    const r = render(page(stopped({ kind: 'none' })))
+    act(() => { vi.advanceTimersByTime(7000) })
+    r.rerender(page(stopped({ kind: 'reconnecting', deadline: 1_700_000_037 })))
+    expect(dialog()).toHaveTextContent('within 30 s')
+  })
+  it('describes itself by the cause line', () => {
+    render(page(stopped({ kind: 'none' })))
+    expect(dialog()).toHaveAccessibleDescription(/^You stopped TRex on 127\.0\.0\.1:8090/)
+  })
+  it('focus: Reconnect when offered, else Close', () => {
+    const r = render(page(stopped({ kind: 'reconnect_failed', error: 'e' })))
+    expect(screen.getByRole('button', { name: 'Reconnect' })).toHaveFocus()
+    r.unmount()
+    render(page(stopped({ kind: 'none' })))
+    expect(screen.getByRole('button', { name: 'Close' })).toHaveFocus()
+  })
   it('has the information theme', () => {
     render(page(stopped({ kind: 'none' })))
     expect(dialog()).toHaveClass('planned-stop')

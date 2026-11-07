@@ -34,6 +34,13 @@ describe('ControlPage', () => {
     render(<ControlPage />)
     expect(screen.getByText('Not connected. Use Connect… in the status bar (Ctrl+Shift+C).')).toBeInTheDocument()
   })
+  it('lost with a planned stop (ended set), the connection-lost line is not shown', async () => {
+    const state = await import('../state')
+    const ended = { by: 'daemon_stop' as const, at: 1, daemon: 'h:8090', recovery: { kind: 'none' as const } }
+    vi.spyOn(state, 'useAppState').mockReturnValue({ ...state.initialState, backendOnline: true, session: { ...connected, state: 'lost', error: 'x', ended }, ports: [port0] })
+    render(<ControlPage onConnect={() => {}} />)
+    expect(screen.queryByText(/Connection lost/)).toBeNull()
+  })
   it('lost, the line gives the cause and points at Reconnect, and a selected port panel stays below it', async () => {
     const state = await import('../state')
     vi.spyOn(state, 'useAppState').mockReturnValue({ ...state.initialState, backendOnline: true, session: { ...connected, state: 'lost', error: 'x' }, ports: [port0] })

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { NavLink } from 'react-router-dom'
-import { connect, type Ended, type SessionSnapshot } from '../api'
+import { connect, type Ended, type Recovery as RecoveryInfo, type SessionSnapshot } from '../api'
 import { useHotkey } from '../keys'
 import { useDialogFocus } from './useDialogFocus'
 
@@ -17,6 +17,9 @@ function useSecondsLeft(deadline: number | null): number {
   }, [deadline])
   return deadline === null ? 0 : Math.max(0, Math.ceil(deadline - now / 1000))
 }
+
+// Remounts the recovery line when the kind or the deadline changes, so its countdown starts from a fresh clock reading.
+const recoveryKey = (r: RecoveryInfo) => (r.kind === 'reconnecting' ? `${r.kind}:${r.deadline}` : r.kind)
 
 // The recovery line for the stop's kind, with its action where the spec gives one.
 function Recovery({ ended, session, onClose }: { ended: Ended; session: SessionSnapshot; onClose: () => void }) {
@@ -43,15 +46,17 @@ function Recovery({ ended, session, onClose }: { ended: Ended; session: SessionS
 function Dialog({ session, ended, onClose }: { session: SessionSnapshot; ended: Ended; onClose: () => void }) {
   const ref = useDialogFocus<HTMLDivElement>('[data-autofocus]')
   useHotkey('escape', onClose)
+  const offersReconnect = ended.recovery.kind === 'reconnect_failed' && !!session.params
   return createPortal(
     <div className="modal-backdrop">
-      <div role="dialog" aria-modal="true" aria-labelledby="planned-stop-title" className="modal planned-stop" ref={ref}>
+      <div role="dialog" aria-modal="true" aria-labelledby="planned-stop-title" aria-describedby="planned-stop-cause" className="modal planned-stop" ref={ref}>
         <h2 id="planned-stop-title">TRex stopped</h2>
-        <p>You stopped TRex on {ended.daemon} from the TRex daemon dialog at {timeOf(ended.at)}.</p>
+        <p id="planned-stop-cause">You stopped TRex on {ended.daemon} from the TRex daemon dialog at {timeOf(ended.at)}.</p>
         <p>Control is disconnected.</p>
-        <Recovery ended={ended} session={session} onClose={onClose} />
+        <Recovery key={recoveryKey(ended.recovery)} ended={ended} session={session} onClose={onClose} />
         <div className="dialog-footer">
-          <button type="button" data-autofocus onClick={onClose}>Close</button>
+          {/* Reconnect holds the focus when it is offered; Close otherwise */}
+          <button type="button" data-autofocus={offersReconnect ? undefined : true} onClick={onClose}>Close</button>
         </div>
       </div>
     </div>,

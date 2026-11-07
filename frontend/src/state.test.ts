@@ -120,6 +120,12 @@ describe('reducer (P2)', () => {
     expect(s.log.map((e) => e.message)).toEqual(['Connected to h:4501', 'a', 'b', 'c', 'Connection lost: x', 'Connected to h:4501'])
     expect(s.log.filter((e) => e.kind === 'MARK')).toHaveLength(3)
   })
+  it('a planned stop that leaves the session lost leaves no loss mark', () => {
+    let s = reducer(initialState, { kind: 'msg', msg: connected })
+    const ended = { by: 'daemon_stop' as const, at: 1, daemon: 'h:8090', recovery: { kind: 'none' as const } }
+    s = reducer(s, { kind: 'msg', msg: { ...connected, state: 'lost', error: 'gone', ended } })
+    expect(s.log.map((e) => e.message)).toEqual(['Connected to TRex'])
+  })
   it('a lost session without an error says unknown cause', () => {
     let s = reducer(initialState, { kind: 'msg', msg: connected })
     s = reducer(s, { kind: 'msg', msg: { ...connected, state: 'lost', error: null } })

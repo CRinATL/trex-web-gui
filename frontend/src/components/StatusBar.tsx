@@ -50,6 +50,8 @@ export function StatusBar({ backendOnline, session, owned, onConnect, appVersion
   else if (session.state === 'connecting') text = 'Connecting…'
   else if (session.state === 'disconnected' && session.error) text = `Disconnected: ${session.error}`
   else text = 'Disconnected'
+  // a planned stop reads in the normal colour, not the loss colour, even while the session is LOST
+  const barState = !backendOnline ? 'offline' : session.ended && session.state === 'lost' ? 'disconnected' : session.state
   const connectButton = <button type="button" data-run="go" disabled={!backendOnline} onClick={onConnect}>Connect…</button>
   let buttons: React.ReactNode
   if (!backendOnline) buttons = connectButton
@@ -68,7 +70,7 @@ export function StatusBar({ backendOnline, session, owned, onConnect, appVersion
     )
   }
   return (
-    <footer className={`statusbar state-${backendOnline ? session.state : 'offline'}`}>
+    <footer className={`statusbar state-${barState}`}>
       <span role="status">{text}</span>
       {failure && <span role="alert" className="error">{failure}</span>}
       {/* the backend's version, outside the status text: it is not news, so a screen reader does not hear it on every change */}

@@ -119,7 +119,7 @@ function appendLog(s: AppState, e: LogEntry): AppState {
 // The divider text for a session transition, or null when the snapshot is not one the user needs to see.
 function connectionMark(m: SessionSnapshot, prev: SessionSnapshot['state'], newConnect: boolean): string | null {
   if (m.state === 'connected' && (newConnect || prev !== 'connected')) return `Connected to ${m.params ? `${m.params.host}:${m.params.sync_port}` : 'TRex'}`
-  if (m.state === 'lost' && prev !== 'lost') return `Connection lost: ${m.error ?? 'unknown cause'}`
+  if (m.state === 'lost' && prev !== 'lost' && !m.ended) return `Connection lost: ${m.error ?? 'unknown cause'}`
   if (m.state === 'disconnected' && prev === 'connected') return 'Disconnected'
   return null
 }

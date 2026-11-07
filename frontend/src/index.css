@@ -230,6 +230,8 @@ button[data-run][data-on] { border-color: var(--run); box-shadow: inset 0 0 0 1p
 .modal.loss-dialog { width: min(36rem, 95vw); box-sizing: border-box; }
 .modal.loss-dialog h2 { margin-top: 0; }
 /* The two dialogs' themes: the edge-and-tint shape of .banner.alert, text stays --fg. Information is --accent, a loss --bad. */
+.modal.planned-stop { width: min(36rem, 95vw); box-sizing: border-box; }
+.modal.planned-stop h2 { margin-top: 0; }
 .modal.planned-stop { color: var(--fg); border-left: 4px solid var(--accent); background: color-mix(in srgb, var(--accent) var(--alert-tint), var(--bg)); }
 .modal.loss-dialog.error-theme { color: var(--fg); border-left: 4px solid var(--bad); background: color-mix(in srgb, var(--bad) var(--alert-tint), var(--bg)); }
 .modal.browse { z-index: 41; width: min(40rem, 95vw); height: min(36rem, 80vh); box-sizing: border-box;
