@@ -112,11 +112,34 @@ def test_service_unit_sample() -> None:
     assert "systemctl --user import-environment DISPLAY WAYLAND_DISPLAY" in text
 
 
-def test_readme_install_section() -> None:
+def readme_and_its_pages() -> str:
+    """The README and every repo Markdown page it links to, as one text: what a reader reaches in one
+    click."""
     text = (ROOT / "README.md").read_text()
-    # Requirements first, then the install, then the first start (the README study's order, 2026-11-02).
-    assert text.index("## Before you start") < text.index("## Install") < text.index("## Quick start")
-    assert "## Requirements" not in text
-    for needle in ("uv tool install", "journalctl --user -u trex-web-gui", "### Offline host",
-                   "--no-index --find-links", "docs/api.md"):
+    pages = {m.split("#")[0] for m in re.findall(r"\]\(([^)\s:]+\.md)(?:#[^)]*)?\)", text)}
+    return "\n".join([text, *((ROOT / p).read_text() for p in sorted(pages) if (ROOT / p).is_file())])
+
+
+def test_readme_keeps_the_install_facts() -> None:
+    # Relaxed 2026-11-06 (doc-audit review): the README's order and headings are free to change; what
+    # must stay reachable from it, in the README or a page it links to, is how to install, where the logs
+    # are, the offline install and the API reference. Links and anchors are `make links`' job
+    # (scripts/check_links.py).
+    text = readme_and_its_pages()
+    for needle in ("uv tool install", "journalctl --user -u trex-web-gui", "--no-index --find-links",
+                   "docs/api.md"):
         assert needle in text, needle
+
+
+def test_shipped_code_links_a_readme_heading_that_exists() -> None:
+    # pages.py builds its README link from parts, so `make links` cannot see it; a wheel already
+    # installed keeps pointing at this anchor, so the README keeps the heading.
+    from trex_web_gui.api import pages
+
+    spec = importlib.util.spec_from_file_location("check_links", ROOT / "scripts" / "check_links.py")
+    assert spec and spec.loader
+    check_links = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(check_links)
+    url, _, anchor = pages.ACCESS_URL.partition("#")
+    assert url == check_links.REPO_URL
+    assert anchor in check_links.anchors((ROOT / "README.md").read_text())

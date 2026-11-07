@@ -26,11 +26,11 @@ PYTEST_DIST ?= worksteal
 # vmThreads keeps every vitest worker in one process, so test-js gets the same cap as pytest; CI empties it.
 VITEST_CAP ?= systemd-run --user --scope -q -p MemoryMax=8G -p MemorySwapMax=0 --
 PYTEST  := systemd-run --user --scope -q -p MemoryMax=8G -p MemorySwapMax=0 -- $(UV) pytest
-.PHONY: FORCE check check-golden lint typecheck test test-py test-js build check-py check-real check-real-all check-daemon-real check-emu-real record-p2 record-p3 record-p3a record-p3b record-p3b-v6 record-p3c record-p5 record-p5-stf record-p7 record-netem vendor dev wire-fixtures citations deferred docstrings api-docs wheel install-smoke install-smoke-run release-rc release release-rc-publish release-build release-publish parity parity-sync
+.PHONY: FORCE check check-golden lint typecheck test test-py test-js build check-py check-real check-real-all check-daemon-real check-emu-real record-p2 record-p3 record-p3a record-p3b record-p3b-v6 record-p3c record-p5 record-p5-stf record-p7 record-netem vendor dev wire-fixtures citations links deferred docstrings api-docs wheel install-smoke install-smoke-run release-rc release release-rc-publish release-build release-publish parity parity-sync
 
 # The gates below run their steps one at a time through scripts/gate.py: each step's usual time, the expected end,
 # a status file (`python3 -I scripts/gate.py status`) and a timing history in .superpowers/gate/.
-check:            # lint typecheck test-py test-js build citations docstrings
+check:            # lint typecheck test-py test-js build citations links docstrings
 	@python3 -I scripts/gate.py run check
 
 lint:
@@ -154,6 +154,9 @@ deferred:         # every open ledger entry is in DEFERRED.md (run at a final ga
 
 citations:        # resolve every file:line citation and check its quoted snippet (part of make check since 2026-10-18)
 	$(UV) python -I -B scripts/check_citations.py
+
+links:            # every internal link and anchor resolves (Markdown links, and this repo's GitHub URLs in any file)
+	$(UV) python -I -B scripts/check_links.py
 
 parity:           # the v1.0 parity checklist against the inventory (PARITY_GATE=1: fail on any ?)
 	$(UV) python -I -B scripts/parity.py check --plans $(TREX_PLANS) $(if $(PARITY_GATE),--gate,)

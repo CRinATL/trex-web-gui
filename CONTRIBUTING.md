@@ -25,7 +25,7 @@ response-time promise. Questions about TRex itself belong upstream, at
 
 ```
 npm --prefix frontend install        # once after cloning, and again when frontend/package.json changes
-make check                           # lint, typecheck, Python and frontend tests, build, citations, docstrings
+make check                           # lint, typecheck, Python and frontend tests, build, citations, links, docstrings
 ```
 
 To work on the GUI, run two processes, the backend and the Vite dev server:
@@ -46,13 +46,14 @@ Then open the `:5173` login URL that `make dev` prints. To run the GUI as a user
 | `make build` | Builds the UI that `trex-web-gui serve` serves |
 | `make wheel` | Builds the one wheel in `dist/`, with the UI built first and carried inside it |
 | `make install-smoke` | Installs the wheel from `dist/` into a throwaway `uv tool` directory on Python 3.12 and 3.14 and exercises it |
-| `make check` | Runs lint, the typecheck, the unit and contract tests (against a fake TRex, including the check that `docs/api.md` is current) and the frontend tests, builds the frontend, then checks the `file:line` citations and the docstrings. Each step prints its usual time and when the gate should end, and a table at the end compares them; the last line is `gate check rc=N in <time>`. pytest runs on every core; `PYTEST_WORKERS=0` runs it in one process |
+| `make check` | Runs lint, the typecheck, the unit and contract tests (against a fake TRex, including the check that `docs/api.md` is current) and the frontend tests, builds the frontend, then checks the `file:line` citations, the internal links and the docstrings. Each step prints its usual time and when the gate should end, and a table at the end compares them; the last line is `gate check rc=N in <time>`. pytest runs on every core; `PYTEST_WORKERS=0` runs it in one process |
 | `make test-py` / `make test-js` | The backend tests alone, or the frontend tests alone (`make test` runs both) |
 | `make check-py` | Runs the unit tests on Python 3.12, 3.13 and 3.14, one step each |
 | `python3 -I scripts/gate.py status` | Where a running `make check`, `check-py` or `install-smoke` is: the step, how long it has run against its usual time, and when it should end. `gate.py times` lists each step's usual time |
 | `make check-golden` | Checks every stock stateless profile against the snapshots in `tests/golden/stl` (`WRITE_GOLDEN=1` rewrites them) |
 | `make dev` | Starts the backend on `127.0.0.1:8765` without the UI (`trex-web-gui --dev`). Run `npm --prefix frontend run dev` to serve the UI on `:5173`, then open the `:5173` login URL the backend prints |
 | `make citations` | Checks every `file:line` citation in code, tests and docs |
+| `make links` | Checks that every internal link resolves: each relative Markdown link to a file and heading, and each link to this repository on GitHub, in any file |
 | `python3 -I scripts/check_reflow.py --rev REV [--allow FILE] PATH…` | Checks that a layout-only edit of a Markdown file kept its facts: words, negations, code spans, numbers, symbols, links, fenced blocks, headings and table rows |
 | `make docstrings` | Checks that every project function has a docstring or a real comment |
 | `make api-docs` | Regenerates [`docs/api.md`](docs/api.md), the HTTP API reference, from the routes' docstrings and models |
@@ -108,7 +109,7 @@ tests/
   fake/fake_trex.py    the fake TRex server, seeded from the recordings in tests/fixtures/
   fixtures/            recordings made against real TRex in the test VM
   real/                the `real` tier, against TRex in the test VM
-scripts/               the checks `make` runs (citations, docstrings, deferred, api-docs), the install smoke and the release script
+scripts/               the checks `make` runs (citations, links, docstrings, deferred, api-docs), the install smoke and the release script
 vm/                    the test VM scripts (launch.sh, real.sh, demo.sh, ...), the fixture recorders (record_*.py) and shoot_inventory.py
 docs/
   gui-guide.md         the user's guide to the GUI

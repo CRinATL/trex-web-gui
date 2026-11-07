@@ -25,13 +25,13 @@ from typing import Any, TextIO
 ROOT = Path(__file__).resolve().parent.parent
 STATE = ROOT / ".superpowers" / "gate"
 GATES = {
-    "check": ["lint", "typecheck", "test-py", "test-js", "build", "citations", "docstrings"],
+    "check": ["lint", "typecheck", "test-py", "test-js", "build", "citations", "links", "docstrings"],
     "check-py": ["check-py-3.12", "check-py-3.13", "check-py-3.14"],
     "install-smoke": ["install-smoke-run"],
 }
 # Seconds, measured on this laptop 2026-10-26 (these numbers are the record): used until a step has
 # passing runs of its own. test-py is the 12-worker figure of 2026-10-28.
-SEED = {"lint": 17, "typecheck": 27, "test-py": 65, "test-js": 48, "build": 9, "citations": 2,
+SEED = {"lint": 17, "typecheck": 27, "test-py": 65, "test-js": 48, "build": 9, "citations": 2, "links": 1,
         "docstrings": 1, "check-py-3.12": 100, "check-py-3.13": 100, "check-py-3.14": 100}
 RECENT = 5
 
