@@ -37,6 +37,11 @@ def sessions(rec: Recorder) -> list[dict]:
     return [m for m in rec.msgs if m["type"] == "session"]
 
 
+def held_loss_text(rec: Recorder) -> list[dict]:
+    """The `event` messages and the reader's `log` messages `rec` recorded: the text a loss shows."""
+    return [m for m in rec.msgs if m["type"] == "event" or (m["type"] == "log" and "Reader" in m["message"])]
+
+
 def no_gone_rpcs(f) -> None:
     """The fake (stopped to read its counts) was sent none of the RPCs a planned stop must not send."""
     f.stop()
@@ -50,15 +55,25 @@ def test_planned_stop_goes_disconnected_with_ended(fake_trex, new_session) -> No
     async def run() -> None:
         s = new_session(rec)
         await s.connect(params(f))
-        await s.acquire([0])
+        await s.acquire([0, 1])
+        await s.set_service([1], True)
+        assert (await s.monitor_start([], [1], "", 100)).id
+        assert s.capture_snapshot()["monitor"] is not None
         assert await s.expect_stop(f.host, f.rpc_port, DAEMON) is True
+        n = len(rec.msgs)
         s.planned_stop_done()
+        captures = [m for m in rec.msgs[n:] if m["type"] == "capture"]
+        assert len(captures) == 1 and captures[0]["monitor"] is None
+        snap = s.snapshot()
+        cap = s.capture_snapshot()
+        assert cap["monitor"] is None and cap["captures"] == []
         snap = s.snapshot()
         assert snap["state"] == "disconnected" and snap["error"] is None
         ended = snap["ended"]
         assert ended["by"] == "daemon_stop" and ended["daemon"] == DAEMON
         assert ended["recovery"] == {"kind": "none"} and isinstance(ended["at"], float)
         assert s.ports() == [] and rec.msgs[-2:] == [{"type": "ports", "ports": []}, sessions(rec)[-1]]
+        assert [m["type"] for m in rec.msgs[n:]] == ["capture", "ports", "session"]
         assert "lost" not in rec.states()
         await s.disconnect()
         f.stop()
@@ -76,9 +91,26 @@ def test_loss_while_stop_expected_is_held(fake_trex, new_session, lose) -> None:
         assert await s.expect_stop(f.host, f.rpc_port, DAEMON)
         lose(s)
         assert s.snapshot()["state"] == "connected" and "lost" not in rec.states()
+        assert held_loss_text(rec) == []                 # neither the warning event nor the reader's log
         s.planned_stop_done()
         assert s.snapshot()["state"] == "disconnected" and s.snapshot()["ended"] is not None
-        assert "lost" not in rec.states()
+        assert "lost" not in rec.states() and held_loss_text(rec) == []
+    new_session.run(run())
+
+
+@pytest.mark.parametrize("lose", [lose_control, lose_reader])
+def test_held_loss_text_is_published_on_cancel(fake_trex, new_session, lose) -> None:
+    f, rec = fake_trex(), Recorder()
+
+    async def run() -> None:
+        s = new_session(rec)
+        await s.connect(params(f))
+        assert await s.expect_stop(f.host, f.rpc_port, DAEMON)
+        lose(s)
+        assert held_loss_text(rec) == []
+        s.expect_stop_cancel()
+        assert held_loss_text(rec) != [] and s.snapshot()["state"] == "lost"
+        assert rec.msgs[-1]["type"] == "session"         # the held text first, then LOST
     new_session.run(run())
 
 
@@ -157,6 +189,7 @@ def test_expect_stop_needs_an_exact_match(fake_trex, new_session) -> None:
         s.planned_stop_done()
         assert s.snapshot()["state"] == "connected"      # nothing was armed
         await s.disconnect()
+        assert await s.expect_stop(f.host, f.rpc_port, DAEMON) is False      # params kept, not connected
         await s.connect(ConnectParams("localhost", f.rpc_port, f.pub_port, 2.0))
         assert await s.expect_stop("127.0.0.1", f.rpc_port, DAEMON) is False
         s.planned_stop_done()
@@ -201,4 +234,19 @@ def test_set_recovery_publishes(fake_trex, new_session) -> None:
         last = sessions(rec)[-1]
         assert rec.msgs[-1] is last
         assert last["ended"]["recovery"] == {"kind": "reconnecting", "deadline": 5.0}
+    new_session.run(run())
+
+
+def test_expect_stop_arms_from_lost(fake_trex, new_session) -> None:
+    f, rec = fake_trex(), Recorder()
+
+    async def run() -> None:
+        s = new_session(rec)
+        await s.connect(params(f))
+        lose_control(s)
+        assert s.snapshot()["state"] == "lost"
+        assert await s.expect_stop(f.host, f.rpc_port, DAEMON) is True
+        s.planned_stop_done()
+        snap = s.snapshot()
+        assert snap["state"] == "disconnected" and snap["error"] is None and snap["ended"]["daemon"] == DAEMON
     new_session.run(run())
