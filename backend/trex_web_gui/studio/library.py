@@ -257,7 +257,9 @@ class ProfileLibrary:
                 if src is None or src["kind"] != "py" or src["path"] != path:
                     return None
             return LibraryLabel(slug, side["name"])
-        except (OSError, ValueError, LibraryNotFound):
+        # RuntimeError is for Path.resolve() on a symlink loop under Python 3.12 only (3.13 raises OSError);
+        # nothing else here raises one, and no loss or refusal class derives from it.
+        except (OSError, ValueError, RuntimeError, LibraryNotFound):
             return None
 
     def _editable(self, slug: str, expect_rev: str) -> tuple[_Loaded, Sidecar]:
