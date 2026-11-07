@@ -10,7 +10,7 @@ from typing import Any
 import pytest
 from packaging.requirements import Requirement
 from packaging.version import Version
-from support import ROOT
+from support import ROOT, load_script
 
 PYPROJECT = ROOT / "backend" / "pyproject.toml"
 RUNTIME = {"fastapi", "uvicorn", "websockets", "pyzmq", "pyyaml", "tomli-w"}
@@ -121,25 +121,27 @@ def readme_and_its_pages() -> str:
 
 
 def test_readme_keeps_the_install_facts() -> None:
-    # Relaxed 2026-11-06 (doc-audit review): the README's order and headings are free to change; what
-    # must stay reachable from it, in the README or a page it links to, is how to install, where the logs
-    # are, the offline install and the API reference. Links and anchors are `make links`' job
+    # Relaxed 2026-11-06 (doc-audit review): the README's order and headings are free to change. The README
+    # itself keeps the install command and a link to the API reference; where the logs are and the offline
+    # install may move to a page it links to. Links and anchors are `make links`' job
     # (scripts/check_links.py).
-    text = readme_and_its_pages()
-    for needle in ("uv tool install", "journalctl --user -u trex-web-gui", "--no-index --find-links",
-                   "docs/api.md"):
-        assert needle in text, needle
+    readme = (ROOT / "README.md").read_text()
+    assert "uv tool install" in readme
+    assert "](docs/api.md)" in readme
+    reachable = readme_and_its_pages()
+    for needle in ("journalctl --user -u trex-web-gui", "--no-index --find-links"):
+        assert needle in reachable, needle
 
 
-def test_shipped_code_links_a_readme_heading_that_exists() -> None:
-    # pages.py builds its README link from parts, so `make links` cannot see it; a wheel already
-    # installed keeps pointing at this anchor, so the README keeps the heading.
+def test_shipped_code_links_a_readme_heading_and_a_doc_that_exist() -> None:
+    # pages.py builds its links from parts, so `make links` cannot see them; a wheel already installed
+    # keeps pointing at them, so the README keeps the heading and docs/api.md stays where it is.
     from trex_web_gui.api import pages
 
-    spec = importlib.util.spec_from_file_location("check_links", ROOT / "scripts" / "check_links.py")
-    assert spec and spec.loader
-    check_links = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(check_links)
+    check_links = load_script("check_links")
     url, _, anchor = pages.ACCESS_URL.partition("#")
     assert url == check_links.REPO_URL
     assert anchor in check_links.anchors((ROOT / "README.md").read_text())
+    blob = check_links.REPO_URL + "/blob/main/"
+    assert pages.API_DOC_URL.startswith(blob)
+    assert (ROOT / pages.API_DOC_URL.removeprefix(blob)).is_file()

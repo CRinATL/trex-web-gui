@@ -33,6 +33,15 @@ assert _spec is not None and _spec.loader is not None
 guestenv = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(guestenv)
 
+
+def load_script(name: str) -> Any:
+    """scripts/<name>.py loaded by path (scripts/ is not a package), fresh on each call."""
+    spec = importlib.util.spec_from_file_location(name, ROOT / "scripts" / f"{name}.py")
+    assert spec is not None and spec.loader is not None
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod
+
 def warnings_in(root: Path) -> int:
     """How many SyntaxWarnings compiling every .py under root raises (compiled only, nothing imported)."""
     n = 0
