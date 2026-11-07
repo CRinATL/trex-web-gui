@@ -5,8 +5,6 @@ traffic generator. It brings traffic control, statistics, packet capture, profil
 control of the TRex emulation server (EMU) into one application, replacing the separate `trex-stateless-gui`,
 `trex-packet-editor` and `trex-qt-gui` tools.
 
-<!-- Product screenshot: added after the full re-shoot. -->
-
 [Getting started](#getting-started) · [Install](#install) · [First launch](#first-launch) ·
 [Access](#access-single-user-localhost-only) · [Command-line options](#command-line-options) ·
 [Documentation](#documentation)

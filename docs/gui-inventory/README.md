@@ -25,7 +25,7 @@ screens with them. New: [117](screens/117-connection-lost-dialog.png), the Conne
 redirect). A stream's inner tabs read **Stream settings** and **Stream packet** (were Properties and Packet), the packet
 editor's heading is the packet's name or `Untitled`, Control's buttons are **New in Editor…** and **Copy to Editor**, and the
 Traffic tab has an **In the profile** heading with a caption over its streams table. The shots show all of this since the
-2026-11-07 re-shoot; the text below, and the shot file names, still say Studio and Properties in places.
+2026-11-07 re-shoot; the text below and the shot file names were updated 2026-11-07.
 
 **EMU page (P7, 2026-11-05).** Shots [118](screens/118-emu-connected.png) and [119](screens/119-emu-namespace-clients-counters.png)
 were taken by `vm/shoot_inventory.py` (the `emu` step) against `tests/fake/fake_emu.py` on port 18510, seeded with three
@@ -59,7 +59,7 @@ at a 540 px tall window ([82](screens/82-manage-setups-540px.png) and
 what the screens are now; the design is recorded in the development records (private).
 
 **Re-shot for P4a (2026-10-24).** Every screen was shot again from the P4a (profiles) work against the same
-guest, which adds the Studio page ([5](#5-studio-page), shots `88` to `94`) and its links from Control and Settings, and
+guest, which adds the Studio page ([5](#5-editor-page), shots `88` to `94`) and its links from Control and Settings, and
 removes the Studio placeholder (old `51`). The script stages its own profiles in a scratch directory under `/var/tmp` and
 points Browse and the Workspace directory there, so no screen lists the home directory of the person running it; that
 scratch path shows in [22](screens/22-browse-dialog.png), [54](screens/54-settings-files.png),
@@ -125,11 +125,11 @@ times) are whatever the guest produced at that moment.
    - [2.17 Saved test setups](#217-saved-test-setups)
 3. [Dashboard page](#3-dashboard-page)
 4. [Capture page](#4-capture-page)
-5. [Studio page](#5-studio-page)
+5. [Editor page](#5-editor-page)
    - [5.1 Library](#51-library)
    - [5.2 Profile editor and stream table](#52-profile-editor-and-stream-table)
-   - [5.3 Properties tab](#53-properties-tab)
-   - [5.4 Packet tab](#54-packet-tab)
+   - [5.3 Stream settings tab](#53-stream-settings-tab)
+   - [5.4 Stream packet tab](#54-stream-packet-tab)
    - [5.5 Import dialog and the pcap options](#55-import-dialog-and-the-pcap-options)
    - [5.6 Simulate dialog](#56-simulate-dialog)
    - [5.6a Packet editor (P4b)](#56a-packet-editor-p4b)
@@ -161,13 +161,13 @@ Source: `frontend/src/App.tsx`, `frontend/src/components/StatusBar.tsx`, `fronte
 
 - **Always shown** (when authorised), on every page; see any screenshot below.
 - **Contents:** the app name "trex-web-gui" (bold, not a link); the nav links **Control**, **Dashboard**, **Capture**,
-  **Studio**, **Monitor**, **Events**, **Settings** (the current one is underlined). Nothing at the right: the About button is gone.
+  **Editor**, **Monitor**, **Events**, **Settings** (the current one is underlined). Nothing at the right: the About button is gone.
 - **Events badge:** a red count beside **Events** of the errors and warnings that arrived since the Events page was last
   open (visible in [58](screens/58-settings-changed-on-server.png) and [77](screens/77-manage-setups-run-failed-start.png));
   opening the page clears it.
-- `/` redirects to `/control`. The Control, Capture and Studio pages stay mounted while hidden (their state survives
+- `/` redirects to `/control`. The Control, Capture and Editor pages stay mounted while hidden (their state survives
   page switches), and so does the packet editor page (`/studio/packet`) once it has been visited. **Monitor** ([5.7](#57-monitor))
-  is a link between **Studio** and **Events**.
+  is a link between **Editor** and **Events**.
 
 ### 1.3 Status bar
 
@@ -205,7 +205,7 @@ its right (all three controls fit at 1400 px):
 - Other keys live with their screens: the stream table's Ctrl+Z, Ctrl+Y, Ctrl+C, Ctrl+V, Del, Alt+↑/↓ and F2
   ([5.2](#52-profile-editor-and-stream-table)); the packet editor's Ctrl+Z, Ctrl+Y (or Ctrl+R) and Ctrl+D, and Ctrl+O and
   Ctrl+S on its page ([5.6a](#56a-packet-editor-p4b)); the arrow keys on the capture packet table, the Test setups list
-  and the Studio library list.
+  and the Editor library list.
 
 ## 2. Control page
 
@@ -453,8 +453,8 @@ Source: `frontend/src/components/TrafficTab.tsx`, `frontend/src/components/Profi
     trex-web-gui serve, not the browser's; `.py` profiles run as code on `<host>`); the note floats under the ⓘ. After Inspect:
     a tunables form built from the profile's argparse arguments plus **Extra arguments**. `.yaml`, `.yml` and `.json`
     profiles inspect by themselves when picked in Browse (TRex reads them as data); a `.py` only fills the path, and Inspect
-    stays explicit. Under the path, **New in Studio…** (an inline Name field, then **Create**) and **Copy to Studio** (the
-    inspected profile, with its tunables for a `.py`) each make a library entry and open it in [Studio](#5-studio-page)
+    stays explicit. Under the path, **New in Editor…** (an inline Name field, then **Create**) and **Copy to Editor** (the
+    inspected profile, with its tunables for a `.py`) each make a library entry and open it in [Editor](#5-editor-page)
     (A3.6's New and Duplicate).
   - **What it holds:** the streams table (**#**, **Name**, **Enabled**, **Mode**, **Rate**, **Packet**, **Length**, **VM**),
     the **Show rate at ×1** button, "At ×1: max …, L2 …, …% line utilisation", and a collapsed **Full validate response**.
@@ -498,7 +498,7 @@ inspects it at once, as Browse does for a data file. Footer: **Cancel**.
 
 ### 2.13 Browse for a profile dialog
 
-Source: `frontend/src/components/BrowseDialog.tsx` (also used by the Studio import dialog, the packet editor's pcap picker
+Source: `frontend/src/components/BrowseDialog.tsx` (also used by the Editor import dialog, the packet editor's pcap picker
 and the stateful run's upload).
 
 - **How to open:** **Browse…** in the Traffic tab.
@@ -903,16 +903,16 @@ Stopping leaves service mode on; Turn service mode off appears here once stopped
 
 ![LLDP](screens/50-capture-lldp.png)
 
-## 5. Studio page
+## 5. Editor page
 
-Route `/studio`. Source: `frontend/src/pages/StudioPage.tsx` and `frontend/src/components/studio/`. Built in P4a: the profile
+Route `/editor` (`/studio` redirects here). Source: `frontend/src/pages/StudioPage.tsx` and `frontend/src/components/studio/`. Built in P4a: the profile
 library on the backend host, edited offline, exported, simulated and assigned from Control; the packet itself is edited in the
 embedded packet editor (P4b, [5.6a](#56a-packet-editor-p4b)). The page stays mounted while hidden, like Control and Capture, so the selected profile and stream survive a page
 switch.
 
-Layout: heading "Studio"; at the left a side list of the library with its actions under it; at the right the editor of the
+Layout: heading "Editor"; at the left a side list of the library with its actions under it; at the right the editor of the
 selected profile: an information line, the profile's action bar, the stream table with its own action bar, then the
-**Properties** and **Packet** tabs of the one selected stream.
+**Stream settings** and **Stream packet** tabs of the one selected stream.
 
 ### 5.1 Library
 
@@ -931,7 +931,7 @@ Source: `frontend/src/components/studio/ProfileLibrary.tsx`, `frontend/src/compo
 
 The library with three entries, a `.py` one selected (no stream selected yet):
 
-![Studio library](screens/88-studio-library.png)
+![Editor library](screens/88-editor-library.png)
 
 ### 5.2 Profile editor and stream table
 
@@ -955,13 +955,13 @@ Source: `frontend/src/components/studio/ProfileEditor.tsx`, `frontend/src/compon
 - The table is framed; a row lights up under the pointer and ends in `›`, and the open row has an accent bar.
 - Until one stream is open, a dashed placeholder: "Click a stream to edit its properties and packet." and "⌘-click or
   Shift-click selects several, for Copy, Duplicate and Delete." (Ctrl off a Mac); with several selected, "N streams
-  selected. Click one to edit it." ([88](screens/88-studio-library.png)).
+  selected. Click one to edit it." ([88](screens/88-editor-library.png)).
 
-One stream selected, its Properties tab below:
+One stream selected, its Stream settings tab below:
 
-![Studio, a stream selected](screens/89-studio-stream-selected.png)
+![Editor, a stream selected](screens/89-editor-stream-selected.png)
 
-### 5.3 Properties tab
+### 5.3 Stream settings tab
 
 Source: `frontend/src/components/studio/StreamProperties.tsx`, `frontend/src/components/studio/streamForm.ts`.
 
@@ -978,9 +978,9 @@ Source: `frontend/src/components/studio/StreamProperties.tsx`, `frontend/src/com
 
 The whole form (the page scrolled):
 
-![Studio, Properties](screens/90-studio-properties.png)
+![Editor, Stream settings](screens/90-editor-stream-settings.png)
 
-### 5.4 Packet tab
+### 5.4 Stream packet tab
 
 Source: `frontend/src/components/studio/PacketPane.tsx`.
 
@@ -989,7 +989,7 @@ Source: `frontend/src/components/studio/PacketPane.tsx`.
   [embedded packet editor](#56a-packet-editor-p4b); disabled with no usable packet, no writer, while the table is locked or
   while it opens), **Export ▾** (this stream as **pcap**, written by the browser, or **YAML**).
 
-![Studio, Packet](screens/91-studio-packet.png)
+![Editor, Stream packet](screens/91-editor-stream-packet.png)
 
 ### 5.5 Import dialog and the pcap options
 
@@ -1008,7 +1008,7 @@ Source: `frontend/src/components/studio/ImportDialog.tsx`, `frontend/src/compone
 
 A pcap from the backend host, 3 loops, the source address rewritten over a count of 2:
 
-![Studio, import a pcap](screens/92-studio-import-pcap.png)
+![Editor, import a pcap](screens/92-editor-import-pcap.png)
 
 ### 5.6 Simulate dialog
 
@@ -1024,7 +1024,7 @@ Source: `frontend/src/components/studio/SimulateDialog.tsx` (the report is the b
 
 The pcap profile imported above, a two-stream loop run 3 times (6 packets; the guest sent 6):
 
-![Studio, Simulate](screens/93-studio-simulate.png)
+![Editor, Simulate](screens/93-editor-simulate.png)
 
 ### 5.6a Packet editor (P4b)
 
@@ -1032,7 +1032,7 @@ Source: `frontend/src/pages/PacketPage.tsx`, `frontend/src/components/packet/` (
 `FieldEngine.tsx`, `HexView.tsx`, `PayloadEditor.tsx`, `PresetsDialog.tsx`, `Templates.tsx`, `PcapPicker.tsx`,
 `AddToProfileDialog.tsx`), `frontend/src/components/studio/PacketPane.tsx`, `SourceDialog.tsx`.
 
-Route `/studio/packet` (the **Packet editor** link on the Studio page): a title with the packet's name (a dot after it while
+Route `/editor/packet` (the **Packets** tab of the Editor page): a title with the packet's name (a dot after it while
 there are unsaved changes), **File ▾** (New, Open .trp…, Save, Save as template…, Open pcap…, Save as pcap, Add to profile as a
 new stream…), **New**, **Templates…** and **Presets…**, then the editor: Undo, Redo, Expand all, Collapse all, the tabs **Packet** and
 **Field engine**, the layer panes (a field is its name, a control for its type, the user-set dot and reset ×, and its byte
@@ -1050,7 +1050,7 @@ range), **Add layer…**, and the hex view under them.
   the one picked ([111](screens/111-packet-pcap-picker.png)).
 - **Add to profile…** chooses a library profile; a `.py` profile carries a muted note that editor changes to it are not sent
   ([112](screens/112-packet-add-to-profile.png)).
-- In Studio, a stream's Packet tab has **Edit packet**: the same editor with **Presets…**, **Cancel** and **Save** above it
+- In the Editor, a stream's Stream packet tab has **Edit packet**: the same editor with **Presets…**, **Cancel** and **Save** above it
   ([113](screens/113-studio-embedded-packet-editor.png)); a `.py` profile's information bar has **View source…**
   ([114](screens/114-studio-py-source.png)).
 
@@ -1059,7 +1059,7 @@ range), **Add layer…**, and the hex view under them.
 Source: `frontend/src/pages/MonitorPage.tsx`, `frontend/src/components/monitor/` (`MonitorConnect.tsx`, `MonitorStatus.tsx`,
 `MonitorPanel.tsx`, `MonitorGlobal.tsx`, `MonitorPorts.tsx`), `frontend/src/monitorStore.ts`.
 
-Route `/monitor`, with a top-bar link after Studio: the page that watches a TRex publisher (a SUB socket the backend
+Route `/monitor`, with a top-bar link after Editor: the page that watches a TRex publisher (a SUB socket the backend
 holds, independent of the Control session). A connect bar (Host with the last ten used, Port, Connect, Disconnect), the
 connection LED with its state in text, then collapsible **Global** (Tx, Rx, Flows and System tiles, a CPU meter, the
 drop counts, three charts) and **Ports** (rates first, bytes folded away) panels, which stay hidden until the first
@@ -1265,10 +1265,10 @@ After Apply with Preferences skipped, Test setups merged and the theme not appli
   section with errors, "Ignored sections", an invalid theme, a failed Apply); "Imported: … (theme applied)"; a file over 4 MiB or
   not a settings file; the Settings page's red load-error line. **System** theme with a dark operating system.
 - **The pop-out Events window** (a second browser window): not captured.
-- **Studio, not shot:** the Assign to port dialog; a library row with a load error or "source missing"; the inline Name field
+- **Editor, not shot:** the Assign to port dialog; a library row with a load error or "source missing"; the inline Name field
   of New, Rename and Duplicate, and the Delete confirmations; the stale-write "Reload" line; the warning of an enabled stream
   whose Next is disabled; a multi-stream selection; the import dialog for a `.py` (Tunables, Inspect) or from this computer;
-  a round trip that differs; Properties with a burst mode, a latency rule or an invalid field.
+  a round trip that differs; Stream settings with a burst mode, a latency rule or an invalid field.
 
 ## 8. Checks against the spec
 
@@ -1315,26 +1315,26 @@ start: ..."), and after a disconnect the right column keeps no stale "Port 0 is 
 Also noted, not a mismatch: the Control tab is still taller than 900 px ([15](screens/15-port-control-bottom.png) is scrolled), and
 the Capture, Dashboard and Settings pages leave most of a wide window empty, as before.
 
-**Studio (P4a re-shoot, 2026-10-24).** Shots [88](screens/88-studio-library.png)-[94](screens/94-control-library-pick.png)
+**Studio (P4a re-shoot, 2026-10-24).** Shots [88](screens/88-editor-library.png)-[94](screens/94-control-library-pick.png)
 were checked against spec §2 by the controller, which found five defects, fixed in Task 12d before
 this re-shoot:
 - Simulate showed a total of 0 for rates it cannot know offline (a percentage of the line rate); it now shows a dash and one
-  muted line on what the totals leave out ([93](screens/93-studio-simulate.png)).
-- Simulate repeated the upper-bound sentence; it now says it once, in the notes ([93](screens/93-studio-simulate.png)).
+  muted line on what the totals leave out ([93](screens/93-editor-simulate.png)).
+- Simulate repeated the upper-bound sentence; it now says it once, in the notes ([93](screens/93-editor-simulate.png)).
 - The pcap options' Timing choices shared one line with their fields; each is now its own line
-  ([92](screens/92-studio-import-pcap.png)).
-- The rewrite's count field had no label; it reads **Count** ([92](screens/92-studio-import-pcap.png)).
+  ([92](screens/92-editor-import-pcap.png)).
+- The rewrite's count field had no label; it reads **Count** ([92](screens/92-editor-import-pcap.png)).
 - Screens listed the home directory of the person running the shooter (Browse opened there); the shooter now stages its
   profiles in a scratch directory and points Browse and the Workspace directory at it ([22](screens/22-browse-dialog.png),
   [54](screens/54-settings-files.png)).
 
-What holds now: the library is a side list with its own action bars ([88](screens/88-studio-library.png)); the editor separates
+What holds now: the library is a side list with its own action bars ([88](screens/88-editor-library.png)); the editor separates
 information (the Source line), the profile's tools (one bar) and the table with its own bar; Properties is one aligned form with
 long help behind ⓘ, one action bar (Previous, Next, Cancel, Save) and no second place for the name
-([90](screens/90-studio-properties.png)); the Packet tab is information then one bar ([91](screens/91-studio-packet.png)); the
+([90](screens/90-editor-stream-settings.png)); the Packet tab is information then one bar ([91](screens/91-editor-stream-packet.png)); the
 import and simulate dialogs keep **Cancel** at the left of the main action, or a lone **Close**
-([92](screens/92-studio-import-pcap.png), [93](screens/93-studio-simulate.png)); Studio has its top-bar link (every shot with a top bar).
-Also noted, not a mismatch: Properties is taller than 900 px ([90](screens/90-studio-properties.png) is scrolled).
+([92](screens/92-editor-import-pcap.png), [93](screens/93-editor-simulate.png)); Studio has its top-bar link (every shot with a top bar).
+Also noted, not a mismatch: Properties is taller than 900 px ([90](screens/90-editor-stream-settings.png) is scrolled).
 **Parked in the development records (private):** the Traffic tab's Profile block now has a second button row, **New in Studio…** and **Copy to
 Studio**, under the path's own buttons ([21](screens/21-port-traffic-empty.png), against "one action bar
 per block"); a burst in an endless loop chain shows a Packets total of 0 rather than a dash.
@@ -1368,7 +1368,7 @@ Mismatches found:
 `01` not authorised · `02` Control disconnected · `03`-`07` Connect dialog · `08` root selected · `09`, `10` context menus · `11` Start all
 · `12` profile row · `13`-`15` Control tab · `16`, `17` Config · `18`-`20` Tools · `21`, `23`-`25` Traffic · `22` Browse · `26`, `27` Counters ·
 `28`-`30`, `33` Events · `31`, `32`, `117` connection lost · `34`-`42` Dashboard · `43`-`50` Capture · `52` Monitor disconnected, `95`-`99` Monitor (`97`-`99` on recorded stateful frames), `100`-`104` daemon dialog, `120` TRex stopped, `105` stateful run, `106` Connect with a stateful run · `53`-`58` Settings ·
-`59`, `60` themes · `61`-`63`, `84` import · `64`-`82` setups menu, Save and Test setups dialogs · `83` backend offline · `85`-`87` State chips · `88`-`93` Studio · `94` Control's library pick · `115` the Traffic tab's floating ⓘ note · `116` Settings' unsaved-changes list.
+`59`, `60` themes · `61`-`63`, `84` import · `64`-`82` setups menu, Save and Test setups dialogs · `83` backend offline · `85`-`87` State chips · `88`-`93` Editor · `94` Control's library pick · `115` the Traffic tab's floating ⓘ note · `116` Settings' unsaved-changes list.
 `51` (the Studio placeholder) is gone since P4a; `74` is unused (a Run in progress was not caught); `85` to `87` are crops of the status line.
 
 **Packet editor (P4b, 2026-10-25).** Shots [107](screens/107-packet-standalone-template.png)-[114](screens/114-studio-py-source.png)

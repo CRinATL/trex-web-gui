@@ -934,7 +934,7 @@ Route `/editor`, the **Profiles** tab of the Editor page (`/studio` redirects he
 **Editor** and two tabs, **Profiles** and **Packets**; the Packets tab is [10](#10-packet-editor). The profile library:
 TRex profiles kept as files on the backend host, edited offline (no session needed), simulated, exported, and
 assigned from Control. Layout: the library list at the left with its actions under it; the selected
-profile's editor at the right ([88](gui-inventory/screens/88-studio-library.png)).
+profile's editor at the right ([88](gui-inventory/screens/88-editor-library.png)).
 
 ### 9.1 The library
 
@@ -966,7 +966,7 @@ profiles are listed in red, not selectable. `No profiles yet. New… or Import�
 ### 9.2 Import dialog
 
 **Import a profile** from the library, or **Import streams from pcap** from the editor
-([92](gui-inventory/screens/92-studio-import-pcap.png)).
+([92](gui-inventory/screens/92-editor-import-pcap.png)).
 
 - **Source**: **On the backend host** (**Path** with **Browse…**) or **From this computer** (a **File**
   chooser; the file is uploaded to the backend, at most 64 MiB, 8 uploads kept for an hour).
@@ -988,7 +988,7 @@ profiles are listed in red, not selectable. `No profiles yet. New… or Import�
 
 ### 9.3 The profile editor
 
-[89](gui-inventory/screens/89-studio-stream-selected.png). An information line, `Source: <kind> <path> · saved
+[89](gui-inventory/screens/89-editor-stream-selected.png). An information line, `Source: <kind> <path> · saved
 <UTC time> · N streams`; for a `.py`, `Control assigns the .py source with its tunables; edits here are not
 sent.`; `Imported for port 0; port 1's streams differ.` for a profile whose ports differ.
 
@@ -1034,7 +1034,7 @@ selects several, for Copy, Duplicate and Delete.` (Ctrl-click off a Mac); with s
 
 ### 9.5 Stream settings tab
 
-[90](gui-inventory/screens/90-studio-properties.png).
+[90](gui-inventory/screens/90-editor-stream-settings.png).
 
 - **Mode** (Continuous; Single burst with **Packets**; Multi-burst with **Packets per burst**, **Bursts**,
   **IBG (µs)**);
@@ -1072,7 +1072,7 @@ there is a change and while a field is invalid. Each field it would send is mark
 
 ### 9.6 Stream packet tab
 
-[91](gui-inventory/screens/91-studio-packet.png).
+[91](gui-inventory/screens/91-editor-stream-packet.png).
 
 - the packet summary, `N bytes (N+4 with FCS)`, `Field engine: N instructions`;
 - **View packet…** (the packet viewer, [8.2](#82-packet-viewer));
@@ -1094,7 +1094,7 @@ Cancel with unsaved edits asks `Discard the packet edits?` Editor-moving table a
 
 ### 9.7 Simulate
 
-An offline check with no server ([93](gui-inventory/screens/93-studio-simulate.png)):
+An offline check with no server ([93](gui-inventory/screens/93-editor-simulate.png)):
 
 - `Round trip: identical` or `differs` with the differences (the profile through the TRex client and back);
 - a table **#**, **Name**, **Length**, **Mode**, **Rate as given**, **pps**, **bps L1**, **bps L2**, **Packets** (the
