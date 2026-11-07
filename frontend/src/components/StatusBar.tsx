@@ -33,6 +33,11 @@ export function StatusBar({ backendOnline, session, owned, onConnect, appVersion
   }
   let text: string
   if (!backendOnline) text = 'Backend offline, reconnecting…'
+  else if (session.ended && session.state !== 'connected') {
+    // a planned stop wins over the failed internal attempt's error and over a loss during it
+    const rec = session.ended.recovery.kind === 'reconnecting' ? ' · reconnecting' : ''
+    text = `TRex stopped from the daemon dialog at ${new Date(session.ended.at * 1000).toLocaleTimeString()}${rec}`
+  }
   else if (session.state === 'connected') {
     // params/info can be null in a transient snapshot; say "Connected" with whatever is known
     const parts = [session.params ? `Connected to ${session.params.host}:${session.params.sync_port}` : 'Connected']

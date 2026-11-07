@@ -16,6 +16,30 @@ function bar(session: SessionSnapshot, o: { backendOnline?: boolean; owned?: num
 }
 
 describe('StatusBar', () => {
+  describe('planned stop', () => {
+    const at = 1_700_000_000
+    const when = new Date(at * 1000).toLocaleTimeString()
+    const ended = (recovery: api.Recovery): api.Ended => ({ by: 'daemon_stop', at, daemon: 'h:8090', recovery })
+    it('planned stop text', () => {
+      bar({ ...base, state: 'disconnected', params, ended: ended({ kind: 'none' }) })
+      expect(screen.getByRole('status')).toHaveTextContent(`TRex stopped from the daemon dialog at ${when}`)
+      expect(screen.getByRole('status')).not.toHaveTextContent('Connection lost')
+      expect(screen.getByRole('status').textContent).not.toMatch(/reconnecting/)
+    })
+    it('ends with reconnecting while it is', () => {
+      bar({ ...base, state: 'disconnected', params, ended: ended({ kind: 'reconnecting', deadline: at + 30 }) })
+      expect(screen.getByRole('status').textContent).toBe(`TRex stopped from the daemon dialog at ${when} · reconnecting`)
+    })
+    it('the ended text wins over an error, and over a loss during an attempt', () => {
+      const { unmount } = bar({ ...base, state: 'disconnected', params, error: 'attempt failed', ended: ended({ kind: 'none' }) })
+      expect(screen.getByRole('status')).toHaveTextContent('TRex stopped from the daemon dialog')
+      expect(screen.getByRole('status')).not.toHaveTextContent('attempt failed')
+      unmount()
+      bar({ ...base, state: 'lost', params, error: 'heartbeat', ended: ended({ kind: 'none' }) })
+      expect(screen.getByRole('status')).toHaveTextContent('TRex stopped from the daemon dialog')
+      expect(screen.getByRole('status')).not.toHaveTextContent('Connection lost')
+    })
+  })
   it('shows the backend version at its end, outside the status text, and not while the backend is offline', () => {
     const { unmount } = bar({ ...base, params, info }, { appVersion: '9.8.7' })
     expect(screen.getByText('trex-web-gui 9.8.7')).toBeInTheDocument()

@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { Navigate, NavLink, Route, Routes, useLocation, useMatch, useNavigate } from 'react-router-dom'
 import { StatusBar } from './components/StatusBar'
 import { LossDialog } from './components/LossDialog'
+import { PlannedStopDialog } from './components/PlannedStopDialog'
 import { MonitorStatus } from './components/monitor/MonitorStatus'
 import { ConnectDialog } from './components/ConnectDialog'
 import { useHotkey } from './keys'
@@ -118,6 +119,7 @@ export function AppShell() {
       </main>
       <StatusBar backendOnline={backendOnline} appVersion={appVersion} session={session} owned={ports.filter((p) => p.owned).map((p) => p.id)} onConnect={openConnect} />
       <LossDialog session={session} />
+      <PlannedStopDialog session={session} />
       {connectOpen && <ConnectDialog initialHost={serverHint ?? '127.0.0.1'} initialPorts={serverPorts} initialParams={session.params} onClose={() => setConnectOpen(false)} />}
     </div>
   )
