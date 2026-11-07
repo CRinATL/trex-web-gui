@@ -160,6 +160,16 @@ def test_readme_raw_urls_name_files_that_exist() -> None:
         assert (ROOT / path).is_file(), path
 
 
+def test_readme_top_has_no_development_material() -> None:
+    # The product comes first: nothing a contributor or an edge-case installer needs sits above it.
+    readme = (ROOT / "README.md").read_text()
+    top, sep, _ = readme.partition("\n## Getting started\n")
+    assert sep, "README has no '## Getting started' heading"
+    for needle in ("vendored", "wheelhouse", "offline host", "uv run --project", "make ",
+                   "trex-web-gui serve", "](contributing.md"):
+        assert needle not in top.casefold(), needle
+
+
 def test_shipped_code_links_a_readme_heading_and_a_doc_that_exist() -> None:
     # pages.py builds its links from parts, so `make links` cannot see them; a wheel already installed
     # keeps pointing at them, so the README keeps the heading and docs/api.md stays where it is.

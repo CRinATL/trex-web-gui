@@ -5,12 +5,11 @@ traffic generator. It brings traffic control, statistics, packet capture, profil
 control of the TRex emulation server (EMU) into one application, replacing the separate `trex-stateless-gui`,
 `trex-packet-editor` and `trex-qt-gui` tools.
 
-The backend runs on Linux with Python 3.12 or newer. Traffic control targets TRex v3.08 in stateless (STL) mode, STL API
-5.1. The passive Monitor also shows what stateful (`-f`) runs publish.
+<!-- Product screenshot: added after the full re-shoot (readme-restructure spec, step 7). -->
 
-[Before you start](#before-you-start) · [Install](#install) · [Quick start](#quick-start) ·
+[Getting started](#getting-started) · [Install](#install) · [First launch](#first-launch) ·
 [Access](#access-single-user-localhost-only) · [Command-line options](#command-line-options) ·
-[Documentation](#documentation) · [Development](CONTRIBUTING.md#getting-started)
+[Documentation](#documentation)
 
 ## What you can do
 
@@ -42,7 +41,12 @@ The backend runs on Linux with Python 3.12 or newer. Traffic control targets TRe
   - run stateful profiles;
   - read its logs.
 
-## Before you start
+## Getting started
+
+### What you need
+
+Traffic control targets TRex v3.08 in stateless (STL) mode, STL API 5.1. The passive Monitor also shows what stateful
+(`-f`) runs publish.
 
 trex-web-gui is a single-user application. The backend listens on loopback only, and every logged-in browser tab shares
 its one TRex session. Each start makes a new login URL.
@@ -67,8 +71,6 @@ Three common layouts, from one host to three:
    listens on 4501, 4500 and the daemon's 8090 on every interface, so on a shared network block them with the
    host's firewall.
 
-   ![One host: the browser, the trex-web-gui backend on 127.0.0.1:8765 and the TRex server on ports 4501 and 4500, all on one Linux host](docs/images/topology-one-host.svg)
-
 2. **Remote browser,** the usual lab shape. The backend runs on the TRex host, and a browser on your workstation
    reaches it through an SSH tunnel. Only SSH needs to face the network.
 
@@ -78,7 +80,13 @@ Three common layouts, from one host to three:
    It must reach the TRex server's ports 4501 and 4500 over the network, and that ZeroMQ (ZMQ) traffic has no encryption
    or authentication, so use this layout only on a trusted test network.
 
-   ![Three hosts: a browser machine tunnels over SSH to the backend host, which reaches the TRex server on a third host over unencrypted, unauthenticated ZMQ on ports 4501 and 4500](docs/images/topology-three-hosts.svg)
+<details><summary>Other layouts: one host, three hosts</summary>
+
+![One host: the browser, the trex-web-gui backend on 127.0.0.1:8765 and the TRex server on ports 4501 and 4500, all on one Linux host](docs/images/topology-one-host.svg)
+
+![Three hosts: a browser machine tunnels over SSH to the backend host, which reaches the TRex server on a third host over unencrypted, unauthenticated ZMQ on ports 4501 and 4500](docs/images/topology-three-hosts.svg)
+
+</details>
 
 trex-web-gui does not start TRex or `trex-console`. It takes `trex-console`'s place as a client of a TRex server that is
 already running in stateless mode, on its command and event ports (`--server`). Only the **TRex daemon…** dialog
@@ -90,7 +98,7 @@ Restrict access to the TRex daemon before using daemon control outside a trusted
 ([Daemon exposure](#daemon-exposure)). [`SECURITY.md`](SECURITY.md) says what protects the backend and what does
 not.
 
-## Install
+### Install
 
 trex-web-gui is not on PyPI. One command installs the latest release with [`uv`](https://docs.astral.sh/uv/).
 
@@ -135,14 +143,13 @@ does two more things:
 
 The terminal you installed from keeps its old `PATH`
 ([The `trex-web-gui` command and `PATH`](docs/install.md#the-trex-web-gui-command-and-path)).
-Next: the [Quick start](#quick-start).
+Next: the [First launch](#first-launch).
 
 Pinned or older versions, offline hosts and the install internals are in [`docs/install.md`](docs/install.md).
 
-<a id="offline-host"></a>**Offline host:** a host that cannot reach PyPI installs from a wheelhouse, as
-[Offline host](docs/install.md#offline-host) says.
+<a id="offline-host"></a>**Offline host:** see [Offline host](docs/install.md#offline-host).
 
-## Quick start
+### First launch
 
 After the install, on the machine that can reach the TRex server ([Install](#install)):
 
@@ -177,7 +184,9 @@ If the backend does not start:
   shell, so no startup file adds the directory. Log in and start it there, or give the full path:
   `ssh <host> '~/.local/bin/trex-web-gui'`.
 
-**As a service.** Fetch [`docs/trex-web-gui.service`](docs/trex-web-gui.service) into your user units and start it:
+### Run it as a service
+
+Fetch [`docs/trex-web-gui.service`](docs/trex-web-gui.service) into your user units and start it:
 
 ```
 mkdir -p ~/.config/systemd/user
@@ -189,7 +198,7 @@ systemctl --user enable --now trex-web-gui
 Read the login URL with `journalctl --user -u trex-web-gui`. A user unit has no display, and Wireshark needs one: see
 the comments in the unit.
 
-### Starting the TRex server
+## Starting the TRex server
 
 On the TRex host, start TRex in interactive stateless mode (`-i`) from its install directory (here
 `/opt/trex/v3.08`), as root:
@@ -346,6 +355,7 @@ Within trex-web-gui:
   arrive.
 - [`docs/howto-emu.md`](docs/howto-emu.md): a walk-through of the EMU page with a stock EMU profile.
 - [`docs/gui-guide.md`](docs/gui-guide.md): the user's guide to every page, dialog, menu and shortcut.
+- [`docs/install.md`](docs/install.md): other ways to install, offline hosts, where the install puts things.
 - [`docs/gui-inventory/README.md`](docs/gui-inventory/README.md): every screen, with the screenshots in
   `docs/gui-inventory/screens/`.
 - [`docs/api.md`](docs/api.md): the REST and WebSocket reference, every HTTP route with its parameters, request body
