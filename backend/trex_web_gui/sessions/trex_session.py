@@ -566,7 +566,7 @@ class TrexSession(PortConfigCommands, CaptureCommands):
             self._log("warning", f"{label}: {e.message}")
             raise
         except Exception as e:
-            err = trexapi.translate(e)
+            err = self._translate_failure(e)
             self._log("error", f"{label}: {err.message}")
             if isinstance(err, trexapi.ServerUnreachable | trexapi.ServerRestarted):
                 self._mark_lost(err.message)
@@ -889,9 +889,20 @@ class TrexSession(PortConfigCommands, CaptureCommands):
         if self.busy() != before:                    # every claim is shown, Apply included
             self._publish({"type": "busy", "ports": self.busy()})
 
+    def _translate_failure(self, e: Exception) -> TrexApiError:
+        """Loop thread: a failed job's error, translated; a loss-class one becomes ServerRestarted with the
+        restart cause when the RPC tap saw one. A restarted server fails the subscriber's poll at once, which
+        marks the connection lost as a "subscriber timeout" before the loop handles that loss event, so a job
+        run in between fails on the client's lost-connection guard; the tap's note was queued before that
+        mark, so it is already here (ci-flake-1)."""
+        err = trexapi.translate(e)
+        if isinstance(err, trexapi.ServerUnreachable) and self._restart_cause is not None:
+            return trexapi.ServerRestarted(self._restart_cause)
+        return err
+
     def _note_failure(self, label: str, e: Exception) -> TrexApiError:
         """Log a failed job and mark the session lost on a loss-class error; returns the translated error."""
-        err = trexapi.translate(e)
+        err = self._translate_failure(e)
         self._log("error", f"{label}: {err.message}")
         if isinstance(err, trexapi.ServerUnreachable | trexapi.ServerRestarted):
             self._mark_lost(err.message)

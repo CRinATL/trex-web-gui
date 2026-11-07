@@ -64,9 +64,10 @@ def mode_refusal(mode: str) -> str:
 
 
 def translate(exc: BaseException) -> TrexApiError:
-    """A TrexApiError unchanged; anything else classified by the server's wording: UnsupportedServerVersion,
-    ServerRestarted, ServerUnreachable, the mode refusal (the server's "RPC configuration mismatch", built in
-    trex-core's src/rpc-server/trex_rpc_cmd_api.h:101), or a plain TrexApiError carrying the cleaned text."""
+    """A TrexApiError unchanged; anything else classified by the server's (or the client's) wording:
+    UnsupportedServerVersion, ServerRestarted, ServerUnreachable, the mode refusal (the server's "RPC
+    configuration mismatch", built in trex-core's src/rpc-server/trex_rpc_cmd_api.h:101), or a plain
+    TrexApiError carrying the cleaned text."""
     if isinstance(exc, TrexApiError):
         return exc
     text = _clean(str(exc))
@@ -83,6 +84,10 @@ def translate(exc: BaseException) -> TrexApiError:
     # trex_req_resp_client.py:36/180/389: the client gave up reconnecting to a server that stopped answering;
     # :323 and :338 ("Failed to send message to server[ general exception]"): the send failed
     if "Bad server or port name" in text:
+        return ServerUnreachable(f"Cannot reach the TRex server: {text}")
+    # trex_api_annotators.py:45 and :56: an API call after the subscriber thread marked the connection for
+    # disconnect (its poll failed: a stopped server, or a restarted one, which it reports as a timeout)
+    if "connection to the server had been lost" in text:
         return ServerUnreachable(f"Cannot reach the TRex server: {text}")
     if "Failed to get server response" in text or "Not connected to server" in text \
             or "Failed to send message to server" in text:
