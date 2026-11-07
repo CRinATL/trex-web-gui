@@ -13,33 +13,19 @@ control of the TRex emulation server (EMU) into one application, replacing the s
 
 ## What you can do
 
-- **Control**:
-  - connect to a TRex server;
-  - acquire and release ports;
-  - assign profiles (`.py`, YAML, JSON);
-  - start, pause, update and stop traffic;
-  - configure ports (L2/L3, VLAN, IPv6, ARP, service mode, attributes);
-  - ping;
-  - scan IPv6 neighbours;
-  - read extended counters;
-  - save and re-run multi-port test setups.
-- **Dashboard**: global, per-port, per-stream (packet group ID, PG ID) and latency statistics with charts; CPU and mbuf
-  utilization.
-- **Capture**:
-  - a live capture monitor with a packet viewer, whose packets can also go to Wireshark on the backend host;
-  - server-side recorders saved as pcap on the backend host;
-  - LLDP neighbours.
-- **Editor**: a **Profiles** tab, a library of stream profiles edited offline (import `.py`, YAML, JSON or pcap; edit
-  streams; simulate; export), and a **Packets** tab, a packet editor (layers, fields, payloads, Field Engine, presets,
-  templates).
-- **EMU**: load an EMU profile and read its namespaces, clients and counters.
-- **Monitor**: a passive view of what a TRex server publishes on its event port, independent of the control
-  connection, also as a wall display.
-- **TRex daemon**, through TRex's optional daemon (`trex_daemon_server`):
-  - write a TRex config;
-  - start and stop TRex;
-  - run stateful profiles;
-  - read its logs.
+- **Control**: connect to a TRex server, acquire ports, assign profiles, start and stop traffic and configure ports
+  ([guide](docs/gui-guide.md#3-control-page)).
+- **Dashboard**: global, per-port, per-stream and latency statistics with charts
+  ([guide](docs/gui-guide.md#6-dashboard)).
+- **Capture**: watch packets live, record them on the server and save them as pcap
+  ([guide](docs/gui-guide.md#8-capture)).
+- **Editor**: build and edit stream profiles and packets offline
+  ([guide](docs/gui-guide.md#9-editor), [packet editor](docs/gui-guide.md#10-packet-editor)).
+- **EMU**: load an EMU profile and read its namespaces, clients and counters ([guide](docs/gui-guide.md#11a-emu)).
+- **Monitor**: watch what a TRex server publishes, independent of the control connection
+  ([guide](docs/gui-guide.md#11-monitor)).
+- **TRex daemon**: write a TRex config, start and stop TRex, run stateful profiles and read its logs
+  ([guide](docs/gui-guide.md#12-trex-daemon-dialog)).
 
 ## Getting started
 
