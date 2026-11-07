@@ -85,6 +85,9 @@ def test_refusals_map_to_409_with_code(tmp_path: Path, fake_daemon: Any) -> None
         connect(c, foreign)
         r = c.post("/api/daemon/start", json={**start, "confirm": True})
         assert r.status_code == 409 and r.json()["error"] == "foreign_trex" and "2662" in r.json()["message"]
+        r = c.post("/api/daemon/stop", json={"rpc_port": dead, "confirm": True, "force": True,
+                                             "owners_unknown_ack": True})
+        assert r.status_code == 409 and r.json()["error"] == "not_daemon_run"   # the daemon is Idle
         assert changed(foreign) == set()
 
 

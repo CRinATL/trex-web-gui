@@ -62,6 +62,7 @@ code of that family. Sorted by family, then code.
 | `invalid_config` | daemon | 409 | the config to push is invalid |
 | `invalid_profile` | daemon | 409 | the profile is not a stock profile, or does not load, or changed during the upload |
 | `not_connected` | daemon | 409 | not connected to a TRex daemon |
+| `not_daemon_run` | daemon | 409 | the daemon has no run of its own (a TRex started by hand), so Force stop cannot stop it |
 | `not_ours` | daemon | 409 | the run is not one this backend started, so Stop does not stop it |
 | `owners_unknown` | daemon | 409 | who owns the ports cannot be told; acknowledge to go on |
 | `plan_changed` | daemon | 409 | the target or files changed since the preview |
@@ -687,8 +688,10 @@ nothing.
 Stop (or, with `force`, Force stop) TRex; needs confirm; returns {running, stop_s}. 409 with
 `confirm_required`, `not_connected` (no daemon connection), `busy` (another daemon operation is in
 flight), `not_ours` (Stop when this backend holds no run, or a stateful run it did not start),
-`owners_unknown` (the port owners cannot be read; Force stop lifts it with `owners_unknown_ack`), or
-`in_use` (another user owns a port; never lifted). 502 when the daemon cannot be reached or faults.
+`owners_unknown` (the port owners cannot be read; Force stop lifts it with
+`owners_unknown_ack`), `in_use` (another user owns a port; never lifted), or `not_daemon_run` (Force
+stop while the daemon has no run of its own: a TRex started by hand, which the daemon cannot stop).
+502 when the daemon cannot be reached or faults.
 
 **Request body** (`application/json`, schema `StopBody`)
 

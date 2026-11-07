@@ -206,7 +206,10 @@ export function DaemonRunTab({ daemon, pushed, onModal }: { daemon: DaemonMsg | 
             {daemon && daemon.trex_cmds.length > 0
               ? <ul aria-label="TRex processes on the host">{daemon.trex_cmds.map((c) => <li key={c.pid}>pid {c.pid}: <code>{c.cmd}</code></li>)}</ul>
               : <p className="muted">No TRex process on the host.</p>}
-            <p className="muted">A TRex the daemon did not start blocks Start.</p>
+            {/* force_trex_kill stops only the daemon's own run, so with the daemon Idle a listed TRex was started by hand. */}
+            {daemon && !running && daemon.trex_cmds.length > 0
+              ? <p>The daemon did not start this TRex, so neither Stop nor Force stop can stop it. Stop it on the host (pid {daemon.trex_cmds.map((c) => c.pid).join(', ')}). Until then it blocks Start.</p>
+              : <p className="muted">A TRex the daemon did not start blocks Start.</p>}
           </>
         )}
       </section>

@@ -49,6 +49,8 @@ REFUSALS: dict[tuple[Family, str], tuple[int, str]] = {
     ("daemon", "invalid_profile"): (409, "the profile is not a stock profile, or does not load, or changed "
                                        "during the upload"),
     ("daemon", "not_ours"): (409, "the run is not one this backend started, so Stop does not stop it"),
+    ("daemon", "not_daemon_run"): (409, "the daemon has no run of its own (a TRex started by hand), so Force "
+                                       "stop cannot stop it"),
     ("daemon", "owners_unknown"): (409, "who owns the ports cannot be told; acknowledge to go on"),
     ("daemon", "plan_changed"): (409, "the target or files changed since the preview"),
     ("daemon", "reserved"): (409, "the daemon is reserved"),
