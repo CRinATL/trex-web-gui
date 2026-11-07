@@ -1191,9 +1191,10 @@ async def step_monitor_stateful(c):
 
 
 async def step_daemon(c):
-    """100-106: the TRex daemon dialog against the guest's daemon (`vm/daemon.sh start`): Config, YAML, the
-    Run tab with its preview, the Run tab in Stateful mode with cap2/sfr2.yaml picked, the Start
-    confirmation, the run mid-countdown (the guest's TRex is stopped first), and the Connect dialog's
+    """100-106 and 120: the TRex daemon dialog against the guest's daemon (`vm/daemon.sh start`): Config,
+    YAML, the Run tab with its preview, the TRex stopped dialog (the guest's TRex is stopped, the daemon
+    starts a stateless run, Control connects to it and the Run tab stops it), the Run tab in Stateful mode
+    with cap2/sfr2.yaml picked, the Start confirmation, the run mid-countdown, and the Connect dialog's
     stateful-run message. The daemon is always stopped afterwards."""
     b, api = c.b, c.api
     vm_script("daemon.sh", "start")
@@ -1213,6 +1214,31 @@ async def step_daemon(c):
         await b.click("Run", "[role=tab]", "[role=dialog]")
         await b.wait("document.querySelector('.command-preview') !== null", 20, "command preview")
         await b.shot("102-daemon-run")
+        # 120: a daemon Stop stops only the daemon's own run, so the guest's TRex (vm/mode.sh's) gives way
+        # to a stateless run the daemon starts; Control connects to that run, and the Stop opens TRex stopped
+        api.post("/api/session/disconnect")
+        vm_script("mode.sh", "stop")
+        await b.wait("[...document.querySelectorAll('.daemon-run button')]"
+                     ".some((x) => S.name(x) === 'Start' && !x.disabled)", 40, "Start enabled")
+        await b.click("Start", "button", ".daemon-actions")
+        await b.wait_for("Start TRex", "h2, h3", "[role=dialog]")
+        await b.click("Start", "button", "[role=dialog]")
+        await b.wait("[...document.querySelectorAll('.daemon-run button')]"
+                     ".some((x) => S.name(x) === 'Stop' && !x.disabled)", 60, "Stop enabled")
+        await b.click("Close", "button", "[role=dialog]")
+        await b.click("Connect…", "button")
+        await b.wait_for("Connect to TRex", "h2", "[role=dialog]")
+        await b.click("Connect", "button", "[role=dialog] .dialog-footer")
+        await b.wait_for("Disconnect", "button", timeout=60)
+        await b.click("TRex daemon…", "button")
+        await b.click("Run", "[role=tab]", "[role=dialog]")
+        await b.click("Stop", "button", ".daemon-actions")
+        await b.wait_for("Stop TRex", "h2, h3", "[role=dialog]")
+        await b.click("Stop", "button", "[role=dialog]")
+        await b.wait_for("TRex stopped", "h2", ".planned-stop", timeout=30)
+        await b.wait_text("Nothing restarts it.")
+        await b.shot("120-trex-stopped-dialog")
+        await b.click("Close", "button", ".planned-stop")
         await b.click("Stateful run (-f)", "input[type=radio]", "[role=dialog]")
         await b.wait("[...document.querySelectorAll('#stf-profile option')]"
                      ".some((o) => o.value === 'cap2/sfr2.yaml')", 20, "sfr2 in the stock list")
@@ -1221,9 +1247,8 @@ async def step_daemon(c):
         await b.wait("(document.querySelector('.command-preview') || {}).textContent"
                      "?.includes('-f cap2/sfr2.yaml')", 20, "stateful command preview")
         await b.shot("103-daemon-run-stateful")
-        # a stateful run needs the guest's own TRex gone: end the Control session, then stop it
+        # the guest's own TRex is already gone (120); a disconnect clears the TRex stopped record
         api.post("/api/session/disconnect")
-        vm_script("mode.sh", "stop")
         await b.wait("[...document.querySelectorAll('.daemon-run button')]"
                      ".some((x) => S.name(x) === 'Start' && !x.disabled)", 40, "Start enabled")
         await b.fill("Duration -d (s)", "90", "[role=dialog]")

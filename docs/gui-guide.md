@@ -108,6 +108,7 @@ never opens it. Screens:
 [08](gui-inventory/screens/08-control-root-connected.png),
 [31](gui-inventory/screens/31-control-connection-lost.png),
 [117](gui-inventory/screens/117-connection-lost-dialog.png) (the dialog),
+[120](gui-inventory/screens/120-trex-stopped-dialog.png) (the TRex stopped dialog),
 [32](gui-inventory/screens/32-statusbar-reconnect-failed.png),
 [83](gui-inventory/screens/83-statusbar-backend-offline.png).
 
@@ -1683,8 +1684,8 @@ A port held under your own user name by another session reads `Port N is held by
 
 `01` not authorised · `02` Control disconnected · `03`–`07` Connect dialog · `08` root selected · `09`, `10`
 context menus · `11` Start all · `12` profile row · `13`–`15` Control tab · `16`, `17` Config · `18`–`20` Tools
-· `21`, `23`–`25` Traffic · `22` Browse · `26`, `27` Counters · `28`–`30`, `33` Events · `31`, `32` connection
-lost · `34`–`42` Dashboard · `43`–`50` Capture · `52`, `95`–`99` Monitor · `53`–`58` Settings · `59`, `60`
+· `21`, `23`–`25` Traffic · `22` Browse · `26`, `27` Counters · `28`–`30`, `33` Events · `31`, `32`, `117`
+connection lost · `120` TRex stopped · `34`–`42` Dashboard · `43`–`50` Capture · `52`, `95`–`99` Monitor · `53`–`58` Settings · `59`, `60`
 themes · `61`–`63`, `84` import · `64`–`82` setups · `83` backend offline · `85`–`87` state chips · `88`–`93`
 Editor, Profiles tab · `94` library pick · `100`–`105` daemon · `106` Connect with a stateful run · `107`–`112` packet
 editor · `113` the embedded editor in Stream packet · `114` a .py source · `118`, `119` EMU. (`51` and `74` are unused.)
