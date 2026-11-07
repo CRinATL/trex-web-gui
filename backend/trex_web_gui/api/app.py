@@ -537,7 +537,7 @@ def create_app(data_dir: Path, server_hint: str | None = None, static_dir: Path 
         """Connects the session to a TRex server; returns {info: ServerInfo}. 409 busy while a session is
         connecting, connected or changing, 422 unsupported_version, 502 unreachable or trex_error. Cancels a
         pending reconnect after a daemon stop first (answering with its result when it had just reached this
-        server) and forgets the stop's record."""
+        server with the same parameters) and forgets the stop's record."""
         was_connected = session().snapshot()["state"] == "connected"
         await session().cancel_reconnect()
         session().forget_ended()

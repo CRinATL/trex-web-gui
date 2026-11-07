@@ -78,7 +78,7 @@ The footer on every page states the connection and offers the actions that chang
 | `Connecting…` | a connect is in flight | **Disconnect** |
 | `Connected to <host>:<port> · TRex <version> · <n> ports · you own 0, 1` (`you own 12 of 16` above four ports) · `read-only` when the session is an observer | a live session | **Disconnect** |
 | `Connection lost: <reason>` | the backend lost the server (it keeps the last port list) | **See Events**, **Reconnect**, **Connect…** |
-| `TRex stopped from the daemon dialog at <time>` (with ` · reconnecting` while Control is waiting to reconnect) | you stopped the TRex Control was connected to, from the TRex daemon dialog ([12.3](#123-run-tab)); this is not a loss | **Connect…**; **Disconnect** while an automatic reconnect attempt is in flight; **See Events**, **Reconnect**, **Connect…** after an attempt failed or the connection was lost during one |
+| `TRex stopped from the daemon dialog at <time>` (with ` · reconnecting` while Control is waiting to reconnect, ` · reconnect failed` when the automatic reconnect failed, with the error as the text's tooltip) | you stopped the TRex Control was connected to, from the TRex daemon dialog ([12.3](#123-run-tab)); this is not a loss | **Connect…**; **Disconnect** while an automatic reconnect attempt is in flight; **See Events**, **Reconnect**, **Connect…** after an attempt failed, the automatic reconnect failed, or the connection was lost during one |
 | `Disconnected: <error>` | a connect or Reconnect failed | **See Events**, **Reconnect** (when the failed parameters are known), **Connect…** |
 | `Backend offline, reconnecting…` | the browser lost the backend's WebSocket | **Connect…**, disabled |
 

@@ -1467,7 +1467,7 @@ The session's snapshot.
 Connects the session to a TRex server; returns {info: ServerInfo}. 409 busy while a session is
 connecting, connected or changing, 422 unsupported_version, 502 unreachable or trex_error. Cancels a
 pending reconnect after a daemon stop first (answering with its result when it had just reached this
-server) and forgets the stop's record.
+server with the same parameters) and forgets the stop's record.
 
 **Request body** (`application/json`, schema `app.ConnectBody`)
 

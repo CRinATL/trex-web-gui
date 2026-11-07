@@ -13,7 +13,8 @@ function ownedText(owned: number[], total: number | undefined): string {
 const failText = (x: unknown) => (x instanceof ApiError ? x.message : String(x))
 
 // The connection state and, at the right, the actions that change it. A failed Reconnect leaves the session disconnected with
-// the error (the backend does not keep it lost), and reads and acts like lost. Connect… is the page-independent entry (the dialog is the app's).
+// the error (the backend does not keep it lost), and reads and acts like lost; so does a disconnected session whose
+// automatic reconnect after a daemon stop failed (no error, `ended.recovery` is reconnect_failed). Connect… is the page-independent entry (the dialog is the app's).
 export function StatusBar({ backendOnline, session, owned, onConnect, appVersion = null }: { backendOnline: boolean; session: SessionSnapshot; owned: number[]; onConnect: () => void; appVersion?: string | null }) {
   const [failure, setFailure] = useState<string | null>(null)
   // A failed Disconnect or Reconnect stays until the next attempt or any change of session state; adjusting state during render, as ControlPage does.
@@ -32,10 +33,13 @@ export function StatusBar({ backendOnline, session, owned, onConnect, appVersion
     try { await action() } catch (x) { setFailure(failText(x)) } finally { flight.current = false; setBusy(false) }
   }
   let text: string
+  // the failed automatic reconnect's error, as the status text's tooltip (shown only while the planned-stop text is)
+  const failedReconnect = backendOnline && session.ended && session.state !== 'connected' && session.ended.recovery.kind === 'reconnect_failed' ? session.ended.recovery.error : undefined
   if (!backendOnline) text = 'Backend offline, reconnecting…'
   else if (session.ended && session.state !== 'connected') {
     // a planned stop wins over the failed internal attempt's error and over a loss during it
-    const rec = session.ended.recovery.kind === 'reconnecting' ? ' · reconnecting' : ''
+    const kind = session.ended.recovery.kind
+    const rec = kind === 'reconnecting' ? ' · reconnecting' : kind === 'reconnect_failed' ? ' · reconnect failed' : ''
     text = `TRex stopped from the daemon dialog at ${new Date(session.ended.at * 1000).toLocaleTimeString()}${rec}`
   }
   else if (session.state === 'connected') {
@@ -56,10 +60,11 @@ export function StatusBar({ backendOnline, session, owned, onConnect, appVersion
   let buttons: React.ReactNode
   if (!backendOnline) buttons = connectButton
   else if (session.state === 'connected' || session.state === 'connecting') buttons = <button type="button" disabled={disconnecting} onClick={() => void attempt(disconnectInFlight, setDisconnecting, disconnect)}>Disconnect</button>
-  else if (session.state === 'disconnected' && !session.error) buttons = connectButton
+  else if (session.state === 'disconnected' && !session.error && session.ended?.recovery.kind !== 'reconnect_failed') buttons = connectButton
   else {
-    // lost, or disconnected with an error: only a failed or cancelled connect leaves one (a user Disconnect clears it),
-    // so the lost session's way back is offered in both
+    // lost, disconnected with an error, or disconnected after a failed automatic reconnect (no error, ended says
+    // reconnect_failed): only a failed or cancelled connect leaves one (a user Disconnect clears it), so the lost
+    // session's way back is offered in all three
     const params = session.params
     buttons = (
       <>
@@ -71,7 +76,7 @@ export function StatusBar({ backendOnline, session, owned, onConnect, appVersion
   }
   return (
     <footer className={`statusbar state-${barState}`}>
-      <span role="status">{text}</span>
+      <span role="status" title={failedReconnect}>{text}</span>
       {failure && <span role="alert" className="error">{failure}</span>}
       {/* the backend's version, outside the status text: it is not news, so a screen reader does not hear it on every change */}
       <span className="end">{backendOnline && appVersion && <span className="muted app-version">trex-web-gui {appVersion}</span>}{buttons}</span>
