@@ -78,7 +78,7 @@ The footer on every page states the connection and offers the actions that chang
 | `Connecting…` | a connect is in flight | **Disconnect** |
 | `Connected to <host>:<port> · TRex <version> · <n> ports · you own 0, 1` (`you own 12 of 16` above four ports) · `read-only` when the session is an observer | a live session | **Disconnect** |
 | `Connection lost: <reason>` | the backend lost the server (it keeps the last port list) | **See Events**, **Reconnect**, **Connect…** |
-| `TRex stopped from the daemon dialog at <time>` (with ` · reconnecting` while Control is waiting to reconnect) | you stopped the TRex Control was connected to, from the TRex daemon dialog ([12.3](#123-run-tab)); this is not a loss | **Connect…** |
+| `TRex stopped from the daemon dialog at <time>` (with ` · reconnecting` while Control is waiting to reconnect) | you stopped the TRex Control was connected to, from the TRex daemon dialog ([12.3](#123-run-tab)); this is not a loss | **Connect…**; **Disconnect** while an automatic reconnect attempt is in flight; **See Events**, **Reconnect**, **Connect…** after an attempt failed or the connection was lost during one |
 | `Disconnected: <error>` | a connect or Reconnect failed | **See Events**, **Reconnect** (when the failed parameters are known), **Connect…** |
 | `Backend offline, reconnecting…` | the browser lost the backend's WebSocket | **Connect…**, disabled |
 
@@ -123,9 +123,9 @@ daemon dialog at <time>.`, `Control is disconnected.`, then one of four lines, a
 | the error, with **Reconnect** (focused) | the automatic reconnect failed |
 
 The stop counts as yours only when the daemon dialog's host equals Control's host and the stop's command port equals
-Control's command port, written the same way: `localhost` is not `127.0.0.1`. Any other loss is the lost dialog above.
+Control's command port, written the same way: `localhost` is not `127.0.0.1`. A loss of any other TRex is the lost dialog above. While the stop's record is set (until Control is connected again, or you press **Connect…** or **Disconnect**), a loss during the automatic reconnect keeps the **TRex stopped** dialog, and a failed reconnect shows its error there with **Reconnect**.
 Control reconnects by itself after a stateless Start from the daemon dialog on the same host and command port, within
-the Start timeout plus 20 s; **Connect…** or **Disconnect** cancels that, and the dialog goes when Control is
+the Start timeout plus 20 s; **Connect…** or **Disconnect** cancels that, as does a later daemon Stop or a Start that does not match, and the dialog goes when Control is
 connected again. A second browser tab shows the same dialog.
 
 **Disconnect** always releases the ports you own. The **Release my ports when trex-web-gui exits** setting
