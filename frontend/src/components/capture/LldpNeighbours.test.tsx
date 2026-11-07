@@ -36,6 +36,21 @@ describe('LldpNeighbours', () => {
     expect(scoped(rows[1]).getByText('00:11:22:33:44:55').closest('td')).toHaveAttribute('title', 'Chassis ID subtype: MAC address')
     expect(scoped(rows[1]).getByText('Gi1/0/1').closest('td')).toHaveAttribute('title', 'Port ID subtype: interface name')
   })
+  it('the Port column names each port as the rest of the GUI does: a saved name, else its confirmed interface name', async () => {
+    const iface = (p: number, name: string): api.PortIface => ({ port: p, cfg_entry: '12:00.0', kind: 'pci', kernel_name: name,
+      pci_addr: '0000:12:00.0', driver: 'mlx5_core', vendor_device: null, model: null, confirmed: true, note: null })
+    const params = { host: '127.0.0.1', sync_port: 4501 } as api.ConnectParams
+    const withMac = (p: api.PortView, m: string) => ({ ...p, info: { hw_mac: m } }) as api.PortView
+    mockState({ ...lldpMonitor(), session: session({ params, ifaces: [iface(0, 'ens1f0np0'), iface(1, 'ens1f1np1')] }),
+      ports: [withMac(port(0, true), '02:00:00:00:00:00'), withMac(port(1, true), '02:00:00:00:00:01')],
+      portLabels: { '127.0.0.1:4501': { '02:00:00:00:00:01': { name: 'to the DUT', description: '' } } } })
+    render(<LldpNeighbours />)
+    const table = await screen.findByRole('table', { name: 'LLDP neighbours' })
+    const rows = scoped(table).getAllByRole('row').slice(1)
+    expect(scoped(rows[0]).getAllByRole('cell')[0].textContent).toBe('0 — ens1f0np0')
+    expect(scoped(rows[1]).getAllByRole('cell')[0].textContent).toBe('1 — to the DUT')
+  })
+
   it('a MAC port ID shows no subtype, and each management address has its own line', async () => {
     const n = { ...reply.neighbours[1], port_id: '02:00:00:00:00:0a', port_id_subtype: 'MAC address',
       management_addresses: ['192.0.2.1', 'fe80::1'] }
