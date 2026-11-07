@@ -78,6 +78,7 @@ The footer on every page states the connection and offers the actions that chang
 | `Connecting…` | a connect is in flight | **Disconnect** |
 | `Connected to <host>:<port> · TRex <version> · <n> ports · you own 0, 1` (`you own 12 of 16` above four ports) · `read-only` when the session is an observer | a live session | **Disconnect** |
 | `Connection lost: <reason>` | the backend lost the server (it keeps the last port list) | **See Events**, **Reconnect**, **Connect…** |
+| `TRex stopped from the daemon dialog at <time>` (with ` · reconnecting` while Control is waiting to reconnect) | you stopped the TRex Control was connected to, from the TRex daemon dialog ([12.3](#123-run-tab)); this is not a loss | **Connect…** |
 | `Disconnected: <error>` | a connect or Reconnect failed | **See Events**, **Reconnect** (when the failed parameters are known), **Connect…** |
 | `Backend offline, reconnecting…` | the browser lost the backend's WebSocket | **Connect…**, disabled |
 
@@ -109,6 +110,23 @@ never opens it. Screens:
 [117](gui-inventory/screens/117-connection-lost-dialog.png) (the dialog),
 [32](gui-inventory/screens/32-statusbar-reconnect-failed.png),
 [83](gui-inventory/screens/83-statusbar-backend-offline.png).
+
+The **Connection to TRex lost** dialog has the error theme (red). A stop from the daemon dialog does not open it.
+That stop opens the **TRex stopped** dialog instead, once per stop: `You stopped TRex on <daemon> from the TRex
+daemon dialog at <time>.`, `Control is disconnected.`, then one of four lines, and **Close** (or Escape):
+
+| Line | When |
+|---|---|
+| `Nothing restarts it. Start TRex from the TRex daemon dialog to reconnect.` | the usual case |
+| `TRex is starting. Control reconnects by itself, within <n> s.` | a stateless Start from the daemon dialog followed the stop; the seconds count down |
+| `A stateful run has no command port. It ends at <time>; then nothing runs until TRex is started again.` with **Open Monitor** | a stateful Start followed the stop |
+| the error, with **Reconnect** (focused) | the automatic reconnect failed |
+
+The stop counts as yours only when the daemon dialog's host equals Control's host and the stop's command port equals
+Control's command port, written the same way: `localhost` is not `127.0.0.1`. Any other loss is the lost dialog above.
+Control reconnects by itself after a stateless Start from the daemon dialog on the same host and command port, within
+the Start timeout plus 20 s; **Connect…** or **Disconnect** cancels that, and the dialog goes when Control is
+connected again. A second browser tab shows the same dialog.
 
 **Disconnect** always releases the ports you own. The **Release my ports when trex-web-gui exits** setting
 ([13.3](#133-session)) decides what a backend shutdown does.
@@ -1411,8 +1429,10 @@ README's "Daemon exposure" before using it outside the test VM. While the dialog
 - **Port** (`--daemon-port`, 8090 by default);
 - **Connect** (`Host is required`, `Port must be 1–65535`), **Disconnect**.
 
-Opening the dialog again reconnects to the last daemon. Under it the exposure warning (shown until the dialog is
-connected to the daemon, and again after an error), then
+Opening the dialog again reconnects to the last daemon. Under it one banner in two states: until the dialog is
+connected to the daemon (and again after an error) the amber exposure warning, ending `before using daemon control on
+a shared network`; while connected a green one, `Connected to the TRex daemon at <host>:<port>. It runs as root and
+takes commands from anyone who can reach port <port>; keep that port restricted.` Then
 `State: <not connected | connected | error: …> · <version> · running since <time>`. Tabs **Config**, **YAML**, **Run**
 (the first shown), **Logs**.
 
@@ -1494,6 +1514,12 @@ be read it asks once more, `Force stop anyway?`
 `A stateful (-f) run has no command port, so the GUI cannot see who is using it…`).
 
 `TRex is still running after the stop.` when the daemon reports so.
+
+A stop of the TRex Control is connected to (same host and command port as the Control session) is not a loss:
+Control shows the **TRex stopped** dialog ([1.3](#13-the-status-bar)), and a later stateless Start from this dialog
+on the same host and command port reconnects Control by itself, within the Start timeout plus 20 s. A stateful Start
+shows when the run ends instead. A failed Stop, or one after which the daemon still reports TRex running, changes
+nothing for Control.
 
 ### 12.4 Logs tab
 
