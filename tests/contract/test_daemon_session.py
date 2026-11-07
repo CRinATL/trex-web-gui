@@ -35,12 +35,35 @@ STATE_CHANGING = {"push_file", "start_trex", "stop_trex", "force_trex_kill"}
 Body = Callable[[DaemonSession, Recorder], Awaitable[None]]
 
 
-def drive(body: Body, owned: Callable[[str, int], set[int] | None] = lambda h, p: None) -> None:
+class Hooks:
+    """StopHooks that record each call, in order, with expect's arguments."""
+
+    def __init__(self) -> None:
+        """No calls yet."""
+        self.calls: list[str] = []
+        self.expected: tuple[str, int, str] | None = None
+
+    async def expect(self, host: str, rpc_port: int, daemon: str) -> None:
+        """Record the call and its arguments."""
+        self.calls.append("expect")
+        self.expected = (host, rpc_port, daemon)
+
+    def done(self) -> None:
+        """Record the call."""
+        self.calls.append("done")
+
+    def cancel(self) -> None:
+        """Record the call."""
+        self.calls.append("cancel")
+
+
+def drive(body: Body, owned: Callable[[str, int], set[int] | None] = lambda h, p: None,
+          hooks: Any = None) -> None:
     """Run `body(session, recorder)` under asyncio.run and close the session in that loop, raised or not."""
     async def wrapped() -> None:
         """The body, then close."""
         rec = Recorder()
-        s = DaemonSession(rec, owned)
+        s = DaemonSession(rec, owned, hooks)
         try:
             await body(s, rec)
         finally:
@@ -369,6 +392,79 @@ def test_stop_reply_reports_running(fake_daemon: Any, fake_trex: Any,
         assert await s.stop(f.rpc_port, True) == {"running": True, "stop_s": None}
         assert s.snapshot()["run"]["state"] == "running"
     drive(body)
+
+
+def test_stop_calls_the_hooks_in_order(fake_daemon: Any, fake_trex: Any) -> None:
+    """A stop that ends TRex tells the hooks expect, then done; expect carries the TRex command target and the
+    daemon's host:port."""
+    d, f, hooks = fake_daemon(), fake_trex(), Hooks()
+
+    async def body(s: DaemonSession, rec: Recorder) -> None:
+        """Connect, start, stop."""
+        await s.connect(d.host, d.port)
+        await started(s)
+        assert (await s.stop(f.rpc_port, True))["running"] is False
+        assert hooks.calls == ["expect", "done"]
+        assert hooks.expected == (d.host, f.rpc_port, f"{d.host}:{d.port}")
+    drive(body, hooks=hooks)
+
+
+def test_force_stop_calls_the_hooks(fake_daemon: Any, fake_trex: Any) -> None:
+    """Force stop beside a foreign TRex: the fake's force_trex_kill ends the run (is_running turns false), so
+    the hooks hear expect, then done."""
+    d, f, hooks = fake_daemon("--foreign"), fake_trex(), Hooks()
+
+    async def body(s: DaemonSession, rec: Recorder) -> None:
+        """Connect, Force stop."""
+        await s.connect(d.host, d.port)
+        out = await s.stop(f.rpc_port, True, force=True)
+        assert out["running"] is False
+        assert hooks.calls == ["expect", "done"]
+    drive(body, hooks=hooks)
+
+
+def test_stop_still_running_cancels(fake_daemon: Any, fake_trex: Any,
+                                    monkeypatch: pytest.MonkeyPatch) -> None:
+    """A stop after which the daemon still reports running ends in cancel, never done."""
+    d, f, hooks = fake_daemon("--stop-keeps-running"), fake_trex(), Hooks()
+    monkeypatch.setattr(session_mod, "STOP_WAIT_S", 0.5)
+
+    async def body(s: DaemonSession, rec: Recorder) -> None:
+        """Connect, start, stop."""
+        await s.connect(d.host, d.port)
+        await started(s)
+        assert (await s.stop(f.rpc_port, True))["running"] is True
+        assert hooks.calls == ["expect", "cancel"]
+    drive(body, hooks=hooks)
+
+
+def test_stop_that_raises_after_expect_cancels(fake_daemon: Any, fake_trex: Any,
+                                               monkeypatch: pytest.MonkeyPatch) -> None:
+    """A stop_trex that never answers raises after expect; the hooks hear cancel."""
+    d, f, hooks = fake_daemon("--hang", "stop_trex"), fake_trex(), Hooks()
+    monkeypatch.setattr(session_mod, "CALL_TIMEOUT_S", 1.0)
+
+    async def body(s: DaemonSession, rec: Recorder) -> None:
+        """Connect, start, stop into the hang."""
+        await s.connect(d.host, d.port)
+        await started(s)
+        with pytest.raises(DaemonUnreachable):
+            await s.stop(f.rpc_port, True)
+        assert hooks.calls == ["expect", "cancel"]
+    drive(body, hooks=hooks)
+
+
+def test_stop_refused_never_expects(fake_daemon: Any, fake_trex: Any) -> None:
+    """A stop refused before the stopping call (no confirm; no run of ours without force) reaches no hook."""
+    d, f, hooks = fake_daemon(), fake_trex(), Hooks()
+
+    async def body(s: DaemonSession, rec: Recorder) -> None:
+        """Both refusals."""
+        await s.connect(d.host, d.port)
+        await refused(s.stop(f.rpc_port, False), "confirm_required")
+        await refused(s.stop(f.rpc_port, True), "not_ours")
+        assert hooks.calls == []
+    drive(body, hooks=hooks)
 
 
 def test_daemon_message_is_published_while_connected(fake_daemon: Any) -> None:

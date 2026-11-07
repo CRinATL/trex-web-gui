@@ -239,7 +239,7 @@ def create_app(data_dir: Path, server_hint: str | None = None, static_dir: Path 
             hub.publish, release_on_exit=lambda: store.load().preferences.release_on_exit,
             trex_cfg_path=lambda: store.load().preferences.trex_cfg_path, spool_dir=data_dir / "captures")
         state["monitor"] = app.state.monitor = MonitorSession(hub.publish)
-        state["daemon"] = app.state.daemon = DaemonSession(hub.publish, session_owned)
+        state["daemon"] = app.state.daemon = DaemonSession(hub.publish, session_owned, StopToSession())
         state["emu"] = app.state.emu = EmuSession(hub.publish)
         store.load()
         scapy_exec.warm_up()      # before any session connects: construction swaps sys.stdout
@@ -377,6 +377,21 @@ def create_app(data_dir: Path, server_hint: str | None = None, static_dir: Path 
         return {p["id"] for p in session().ports() if p["owned"]}
 
     app.state.session_owned = session_owned
+
+    class StopToSession:
+        """DaemonSession's StopHooks, forwarded to the Control TrexSession's planned-stop record."""
+
+        async def expect(self, host: str, rpc_port: int, daemon: str) -> None:
+            """Arm the Control session for a stop of host:rpc_port (it arms only on an exact match)."""
+            await session().expect_stop(host, rpc_port, daemon)
+
+        def done(self) -> None:
+            """The stop worked: end the Control session as planned."""
+            session().planned_stop_done()
+
+        def cancel(self) -> None:
+            """The stop did not end TRex: put the Control session back."""
+            session().expect_stop_cancel()
 
     def settings_json() -> dict[str, Any]:
         """The current settings, the store's load_error and the data dir: the body of GET and PUT

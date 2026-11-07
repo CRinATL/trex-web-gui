@@ -342,3 +342,38 @@ def test_upload_routes(tmp_path: Path, fake_daemon: Any) -> None:
         assert again["pushed"] == [] and len(again["skipped"]) == 2
         bad = c.post("/api/daemon/stf/upload/preview", json={"path": str(tmp_path / "nope.yaml")})
         assert bad.status_code == 409 and bad.json()["error"] == "invalid_profile"
+
+
+def _control_and_daemon(c: Any, f: Any, d: Any, control_host: str) -> None:
+    """Connect Control to fake_trex as `control_host`, the daemon dialog to fake_daemon, start a run."""
+    r = c.post("/api/session/connect", json={"host": control_host, "sync_port": f.rpc_port,
+                                              "async_port": f.pub_port, "timeout_s": 2})
+    assert r.status_code == 200, r.text
+    connect(c, d)
+    r = c.post("/api/daemon/start", json={"cfg_path": CFG, "options": {}, "trex_args": "", "timeout": 20,
+                                          "confirm": True})
+    assert r.status_code == 200, r.text
+
+
+def test_daemon_stop_of_our_trex_ends_planned(tmp_path: Path, fake_daemon: Any, fake_trex: Any) -> None:
+    """A daemon Stop of the TRex Control is connected to (same host text, same command port) leaves Control
+    disconnected with ended.by daemon_stop."""
+    d, f = fake_daemon(), fake_trex()
+    with authed(create_app(tmp_path, token=TEST_TOKEN)) as c:
+        _control_and_daemon(c, f, d, f.host)
+        r = c.post("/api/daemon/stop", json={"rpc_port": f.rpc_port, "confirm": True})
+        assert r.status_code == 200 and r.json()["running"] is False, r.text
+        snap = c.get("/api/session").json()
+        assert snap["state"] == "disconnected" and snap["ended"]["by"] == "daemon_stop"
+
+
+def test_stop_of_another_host_name_is_not_planned(tmp_path: Path, fake_daemon: Any, fake_trex: Any) -> None:
+    """Control connected as `localhost` while the daemon stop names 127.0.0.1: no name resolution, so the stop
+    is not planned (ended None, Control still connected)."""
+    d, f = fake_daemon(), fake_trex()
+    with authed(create_app(tmp_path, token=TEST_TOKEN)) as c:
+        _control_and_daemon(c, f, d, "localhost")
+        r = c.post("/api/daemon/stop", json={"rpc_port": f.rpc_port, "confirm": True})
+        assert r.status_code == 200, r.text
+        snap = c.get("/api/session").json()
+        assert snap["ended"] is None and snap["state"] == "connected"
