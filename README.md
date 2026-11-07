@@ -5,7 +5,7 @@ traffic generator. It brings traffic control, statistics, packet capture, profil
 control of the TRex emulation server (EMU) into one application, replacing the separate `trex-stateless-gui`,
 `trex-packet-editor` and `trex-qt-gui` tools.
 
-<!-- Product screenshot: added after the full re-shoot (readme-restructure spec, step 7). -->
+<!-- Product screenshot: added after the full re-shoot. -->
 
 [Getting started](#getting-started) · [Install](#install) · [First launch](#first-launch) ·
 [Access](#access-single-user-localhost-only) · [Command-line options](#command-line-options) ·
@@ -24,8 +24,8 @@ control of the TRex emulation server (EMU) into one application, replacing the s
 - **EMU**: load an EMU profile and read its namespaces, clients and counters ([guide](docs/gui-guide.md#11a-emu)).
 - **Monitor**: watch what a TRex server publishes, independent of the control connection
   ([guide](docs/gui-guide.md#11-monitor)).
-- **TRex daemon**: write a TRex config, start and stop TRex, run stateful profiles and read its logs
-  ([guide](docs/gui-guide.md#12-trex-daemon-dialog)).
+- **TRex daemon**: through TRex's optional daemon (`trex_daemon_server`), write a TRex config, start and stop TRex,
+  run stateful profiles and read its logs ([guide](docs/gui-guide.md#12-trex-daemon-dialog)).
 
 ## Getting started
 
@@ -129,11 +129,10 @@ does two more things:
 
 The terminal you installed from keeps its old `PATH`
 ([The `trex-web-gui` command and `PATH`](docs/install.md#the-trex-web-gui-command-and-path)).
-Next: the [First launch](#first-launch).
 
-Pinned or older versions, offline hosts and the install internals are in [`docs/install.md`](docs/install.md).
+<a id="offline-host"></a>Pinned or older versions, [offline hosts](docs/install.md#offline-host) and the install internals are in [`docs/install.md`](docs/install.md).
 
-<a id="offline-host"></a>**Offline host:** see [Offline host](docs/install.md#offline-host).
+Next: [First launch](#first-launch).
 
 ### First launch
 
@@ -144,6 +143,7 @@ After the install, on the machine that can reach the TRex server ([Install](#ins
    ```sh
    trex-web-gui
    ```
+
 2. **Open the login URL it prints**, `Open: http://127.0.0.1:8765/api/auth/login?token=...`, in a browser on that
    host. Each start makes a new URL.
    - **From another machine** (your workstation), run there the SSH tunnel command the backend prints, and open the
@@ -172,7 +172,8 @@ If the backend does not start:
 
 ### Run it as a service
 
-Fetch [`docs/trex-web-gui.service`](docs/trex-web-gui.service) into your user units and start it:
+On the backend host, fetch [`docs/trex-web-gui.service`](docs/trex-web-gui.service) into your user units and start
+it:
 
 ```sh
 mkdir -p ~/.config/systemd/user
@@ -249,7 +250,8 @@ Installed with `install.sh` or `uv tool install`:
 trex-web-gui [options]
 ```
 
-`trex-web-gui --help` lists the options. From a source checkout, see [Development](CONTRIBUTING.md#getting-started).
+`trex-web-gui --help` lists the options. From a source checkout, see [CONTRIBUTING's Getting
+started](CONTRIBUTING.md#getting-started).
 
 | Option | What it does |
 |---|---|

@@ -225,3 +225,6 @@ def test_install_page_path_entry_mirrors_the_installer() -> None:
                    "~/.zshenv", "fish_add_path"):
         assert needle in release.INSTALL_SCRIPT, needle
         assert needle in section, needle
+    for stem in ("but this terminal has not read it yet", "now adds", "is not on your PATH"):
+        assert stem in release.INSTALL_SCRIPT, stem
+        assert stem in section, stem

@@ -56,7 +56,7 @@ A host that cannot reach PyPI installs from a wheelhouse, a directory of the whe
 
 The host needs three things staged: uv, the wheelhouse (the trex-web-gui wheel and its dependencies, for Python 3.12
 and x86_64 Linux, as the `--platform` flags below say), and a Python 3.12. Another architecture changes the
-`--platform` values.
+`--platform` values and step 2's uv tarball name (`linux-x86_64-gnu`).
 
 1. On a connected machine, build the wheelhouse:
 
@@ -112,8 +112,8 @@ of the terminal that started it, so what to do depends on which of three things 
   PATH=…` line it printed.
 - **"… is not on your PATH".** The installer did not change your profile, because you set
   `TREX_WEB_GUI_NO_MODIFY_PATH=1` or `uv tool update-shell` failed. Run the `export PATH=…` line it printed
-  for this terminal. To keep it, run `uv tool update-shell`, or add this line yourself, to `~/.profile` for a
-  login shell, `~/.bashrc` for bash, or `~/.zshenv` for zsh:
+  for this terminal. To keep it, add this line yourself, to `~/.profile` for a login shell, `~/.bashrc` for bash,
+  or `~/.zshenv` for zsh (if you set `TREX_WEB_GUI_NO_MODIFY_PATH=1`, `uv tool update-shell` does it for you):
 
   ```sh
   export PATH="$HOME/.local/bin:$PATH"
