@@ -2,6 +2,13 @@
 
 ## Scope
 
+**Re-shot after 1.3.1 (2026-11-07).** Every screen was shot again on `main` after 1.3.1 (About,
+[57](screens/57-settings-about.png), shows `1.3.1` and 17 vendor patches), against the same guest, and the HOWTO's and
+the EMU HOWTO's screens with them. Every top bar now reads **Editor**, and the Editor shots show the Profiles and
+Packets tabs and a stream's **Stream settings** and **Stream packet** tabs (the paragraph below). New:
+[120](screens/120-trex-stopped-dialog.png), the **TRex stopped** dialog, which the `daemon` step shoots after 102: the
+guest's TRex is stopped, the daemon starts a stateless run, Control connects to it, and Stop on the Run tab stops it.
+
 **Re-shot for 1.1.4 (2026-11-04).** Every screen was shot again on `main` after the 1.1.4 release (About,
 [57](screens/57-settings-about.png), shows `1.1.4` and 14 vendor patches), against the same guest, and the HOWTO's
 screens with them. New: [117](screens/117-connection-lost-dialog.png), the Connection to TRex lost dialog, which
@@ -15,17 +22,16 @@ screens with them. New: [117](screens/117-connection-lost-dialog.png), the Conne
 
 **The Studio page is the Editor page (2026-11-06).** The nav item and page title read **Editor**, with the tabs **Profiles**
 (the old Studio page, route `/editor`) and **Packets** (the packet editor, `/editor/packet`; `/studio` and `/studio/packet`
-redirect). Every existing shot's top bar still reads "Studio" until the re-shoot. A stream's inner tabs read **Stream settings** and **Stream packet** (were Properties and Packet), the packet
+redirect). A stream's inner tabs read **Stream settings** and **Stream packet** (were Properties and Packet), the packet
 editor's heading is the packet's name or `Untitled`, Control's buttons are **New in Editor…** and **Copy to Editor**, and the
-Traffic tab has an **In the profile** heading with a caption over its streams table. The text below, and the shot file names, still
-say Studio and Properties for the shots taken before this change; `vm/shoot_inventory.py` and `vm/shoot_howto.py` now click the
-new names. **Not re-shot yet:** `21`, `23`-`25` (Traffic caption), `88`-`94`, `107`-`114` and the HOWTO's `10`-`17`.
+Traffic tab has an **In the profile** heading with a caption over its streams table. The shots show all of this since the
+2026-11-07 re-shoot; the text below, and the shot file names, still say Studio and Properties in places.
 
 **EMU page (P7, 2026-11-05).** Shots [118](screens/118-emu-connected.png) and [119](screens/119-emu-namespace-clients-counters.png)
 were taken by `vm/shoot_inventory.py` (the `emu` step) against `tests/fake/fake_emu.py` on port 18510, seeded with three
 namespaces of four clients; 119 is a 1500 px tall window. The status bar's "Disconnected" line is the Control session: the
-step runs after the daemon step, which stopped the guest's TRex. Only these two shots were taken (`--until emu`); the
-others are those of the re-shoot below.
+step runs after the daemon step, which stopped the guest's TRex. They were first taken alone (`--until emu`) and are
+part of every full re-shoot since.
 
 **Re-shot for 1.1.1 (2026-11-02).** Every screen was shot again on `main` before the 1.1.1 release commit, so the
 version is still `1.1.0` (About, [57](screens/57-settings-about.png), shows that), against the same guest. The HOWTO's
@@ -1105,6 +1111,13 @@ Run, Stateless: the configuration, the command preview and the daemon's status (
 
 ![Daemon, Run](screens/102-daemon-run.png)
 
+A Stop from the Run tab of the TRex Control is connected to opens **TRex stopped** over the dialog ([1.3](#13-status-bar)):
+who stopped which TRex and when, `Control is disconnected.`, and `Nothing restarts it. …` with **Close**; the status bar
+reads `TRex stopped from the daemon dialog at <time>`. For this shot the guest's TRex was stopped and the Control session
+ended, the daemon started a stateless run, and Control connected to it before the Stop:
+
+![TRex stopped dialog](screens/120-trex-stopped-dialog.png)
+
 ### 5.9 A stateful run
 
 Source: `frontend/src/components/daemon/StfRunFields.tsx`, `DaemonRunTab.tsx`, `ConnectDialog.tsx`, `frontend/src/stfDetect.ts`.
@@ -1354,7 +1367,7 @@ Mismatches found:
 
 `01` not authorised · `02` Control disconnected · `03`-`07` Connect dialog · `08` root selected · `09`, `10` context menus · `11` Start all
 · `12` profile row · `13`-`15` Control tab · `16`, `17` Config · `18`-`20` Tools · `21`, `23`-`25` Traffic · `22` Browse · `26`, `27` Counters ·
-`28`-`30`, `33` Events · `31`, `32`, `117` connection lost · `34`-`42` Dashboard · `43`-`50` Capture · `52` Monitor disconnected, `95`-`99` Monitor (`97`-`99` on recorded stateful frames), `100`-`104` daemon dialog, `105` stateful run, `106` Connect with a stateful run · `53`-`58` Settings ·
+`28`-`30`, `33` Events · `31`, `32`, `117` connection lost · `34`-`42` Dashboard · `43`-`50` Capture · `52` Monitor disconnected, `95`-`99` Monitor (`97`-`99` on recorded stateful frames), `100`-`104` daemon dialog, `120` TRex stopped, `105` stateful run, `106` Connect with a stateful run · `53`-`58` Settings ·
 `59`, `60` themes · `61`-`63`, `84` import · `64`-`82` setups menu, Save and Test setups dialogs · `83` backend offline · `85`-`87` State chips · `88`-`93` Studio · `94` Control's library pick · `115` the Traffic tab's floating ⓘ note · `116` Settings' unsaved-changes list.
 `51` (the Studio placeholder) is gone since P4a; `74` is unused (a Run in progress was not caught); `85` to `87` are crops of the status line.
 
