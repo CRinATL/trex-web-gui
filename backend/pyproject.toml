@@ -1,7 +1,7 @@
 [project]
 name = "trex-web-gui"
 version = "1.4.0"
-description = "One TRex web GUI: Control, Studio, Monitor"
+description = "One TRex web GUI: Control, Editor, Monitor"
 license = "GPL-2.0-or-later"
 license-files = ["LICENSE", "NOTICE"]
 readme = "README.md"
