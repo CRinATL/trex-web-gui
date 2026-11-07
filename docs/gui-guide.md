@@ -1492,7 +1492,10 @@ A pushed file becomes the Run tab's config path.
       `the PUB port <host> reaches the run's publisher on`).
 
 **Command preview**: the exact command the daemon would run, refreshed as you type. **Status**: `is_running`,
-`running_seq`, the TRex processes on the host, and `A TRex the daemon did not start blocks Start.`
+`running_seq`, the TRex processes on the host, and `A TRex the daemon did not start blocks Start.` When the daemon
+is Idle but a TRex process is listed, that TRex was started by hand, and the line reads instead `The daemon did not
+start this TRex, so neither Stop nor Force stop can stop it. Stop it on the host (pid N). Until then it blocks Start.`
+The daemon's `force_trex_kill` stops only a run the daemon started, so Force stop is not offered then.
 
 **Start** (enabled when connected, nothing runs and the form previews; lit as **● TRex running** while a TRex runs)
 asks `Start TRex on <host> (daemon port N) with this command?` with the command; for a stateful run also `It runs as
@@ -1511,13 +1514,14 @@ The Monitor is attached to its publisher by itself (`The run started, but the Mo
 **Stop** (a TRex this GUI started) asks `Stop the TRex this GUI started on <host>? Every client connected to it,
 including this GUI's session, loses its connection.`
 
-**Force stop** (a TRex the daemon did not start) asks `This TRex was not started by this GUI. Force stop kills the
+**Force stop** (a run the daemon started for another client, not this GUI) asks `This TRex was not started by this GUI. Force stop kills the
 daemon's TRex on <host> whoever started it; it is still refused while another user owns a port.` When the owners cannot
 be read it asks once more, `Force stop anyway?`
 (`TRex's command port did not answer, so the GUI cannot see who owns its ports…`, or for a `-f` run
 `A stateful (-f) run has no command port, so the GUI cannot see who is using it…`).
 
-`TRex is still running after the stop.` when the daemon reports so.
+`TRex is still running after the stop.` when the daemon reports so. A Force stop that finds the daemon Idle (its run
+ended meanwhile) is refused with `The daemon did not start this TRex and cannot stop it…`.
 
 A stop of the TRex Control is connected to (same host and command port as the Control session) is not a loss:
 Control shows the **TRex stopped** dialog ([1.3](#13-the-status-bar)), and a later stateless Start from this dialog

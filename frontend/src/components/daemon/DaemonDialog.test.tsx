@@ -14,7 +14,8 @@ import { DaemonDialog } from './DaemonDialog'
 
 const idle = idleMsg as unknown as api.DaemonMsg
 const stfRunning = stfMsg as unknown as api.DaemonMsg
-// A TRex the daemon did not start is running: no running_seq, and not ours.
+// The daemon runs a TRex this GUI did not start: no running_seq, and not ours. (The `idle` fixture is a TRex
+// started by hand: the daemon Idle, pid 2662 listed.)
 const foreign: api.DaemonMsg = { ...idle, status: { state: 'Running', verbose: 'TRex is Running' }, running_seq: null }
 // A stateless run of ours.
 const ours: api.DaemonMsg = { ...foreign, running_seq: 68, run: { mode: 'stl', seq: 68, profile: null, duration_s: null, started_at: 1700000000, state: 'running', outcome: null } }
@@ -123,6 +124,17 @@ describe('DaemonDialog', () => {
     expect(screen.getByRole('button', { name: 'TRex running' })).toBeDisabled()
     expect(screen.getByRole('button', { name: 'Force stop' })).toHaveAttribute('data-run', 'stop')
     expect(screen.queryByRole('button', { name: 'Start' })).toBeNull()
+  })
+
+  it('says the daemon cannot stop a TRex started by hand (daemon-force-1)', async () => {
+    const note = /The daemon did not start this TRex, so neither Stop nor Force stop can stop it\. Stop it on the host \(pid 2662\)\./
+    const { rerender } = await open()
+    expect(screen.getByText(note)).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Force stop' })).toBeNull()
+    setApp({ daemon: foreign }); rerender(<DaemonDialog onClose={() => undefined} />)
+    expect(screen.queryByText(note)).toBeNull()
+    setApp({ daemon: { ...idle, trex_cmds: [] } }); rerender(<DaemonDialog onClose={() => undefined} />)
+    expect(screen.queryByText(note)).toBeNull()
   })
 
   it('Force stop asks again when the owners are unknown', async () => {

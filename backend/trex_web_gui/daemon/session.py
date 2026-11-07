@@ -59,12 +59,14 @@ _FILENAME_RE = re.compile(r"^[A-Za-z0-9_.-]{1,64}\.ya?ml$")
 _STATE_NAMES = {1: "Idle", 2: "Starting", 3: "Running"}
 _STF_NO_PORTS = "a stateful (-f) run has no command port, so its users cannot be seen"
 _FORCE_HINT = "Force stop can proceed if you acknowledge that the owners are unknown."
+_NOT_DAEMON_RUN = ("The daemon did not start this TRex and cannot stop it: force_trex_kill stops only the "
+                   "daemon's own run. Stop it on the host.")
 
 
 class DaemonRefused(TrexApiError):
     """A refusal made by trex-web-gui before any state-changing daemon call. `code` is one of
     confirm_required, not_connected, busy, already_running, foreign_trex, reserved, in_use, owners_unknown,
-    not_ours, invalid_config, invalid_profile and plan_changed."""
+    not_ours, not_daemon_run, invalid_config, invalid_profile and plan_changed."""
     def __init__(self, code: str, message: str) -> None:
         """Keep the short reason as .code beside the message."""
         super().__init__(message)
@@ -589,8 +591,9 @@ class DaemonSession:
         confirm_required; for a stateful run that is not ours, not_ours (Stop) or owners_unknown (Force stop,
         lifted by `owners_unknown_ack`); in_use when another user owns a port (never lifted);
         owners_unknown when the owners cannot be read (lifted only for Force stop with the ack); not_ours
-        when no run of ours is held and `force` is not set. Our own STF run is stopped without a port read
-        (D12)."""
+        when no run of ours is held and `force` is not set; last, not_daemon_run when Force stop would kill
+        while the daemon is Idle (its force_trex_kill stops only a run the daemon started, never a TRex
+        started by hand). Our own STF run is stopped without a port read (D12)."""
         if confirm is not True:
             raise DaemonRefused("confirm_required", "Stopping TRex needs confirm.")
         client = self._need_client()
@@ -615,6 +618,10 @@ class DaemonSession:
             if not (seq is not None and not kill_only) and not force:
                 raise DaemonRefused("not_ours", "This backend holds no run to stop; Stop never stops a run "
                                     "it did not start. Force stop can.")
+            if seq is None or kill_only:
+                status = await self._call(client.running_status)
+                if _state_name(status.get("state")) == "Idle":
+                    raise DaemonRefused("not_daemon_run", _NOT_DAEMON_RUN)
             return await self._send_stop(client, host, rpc_port, seq, kill_only, cause)
         finally:
             self._end_op()
@@ -623,7 +630,8 @@ class DaemonSession:
                          kill_only: bool, cause: str | None) -> dict[str, Any]:
         """The stopping call and the wait for it, after every refusal: tell the hooks first (`expect`), then
         `done` when TRex stopped, else `cancel`; `cancel` too when anything raises, `expect` itself included
-        (then no stop is sent)."""
+        (then no stop is sent). A force_trex_kill answering anything but True found no daemon run to stop
+        (it ended meanwhile): not_daemon_run, and the hooks cancel."""
         hooks = self._hooks
         settled = False
         try:
@@ -634,7 +642,8 @@ class DaemonSession:
             else:
                 if cause is not None:
                     self._log_warning(f"Force stop on {host}:{rpc_port} with owners_unknown_ack: {cause}")
-                await self._call(client.force_trex_kill)
+                if await self._call(client.force_trex_kill) is not True:
+                    raise DaemonRefused("not_daemon_run", _NOT_DAEMON_RUN)
             self._stop_sent = True
             out = await self._wait_stopped(client)
             settled = True

@@ -244,8 +244,10 @@ def daemon_router(daemon: Callable[[], DaemonSession]) -> APIRouter:
         """Stop (or, with `force`, Force stop) TRex; needs confirm; returns {running, stop_s}. 409 with
         `confirm_required`, `not_connected` (no daemon connection), `busy` (another daemon operation is in
         flight), `not_ours` (Stop when this backend holds no run, or a stateful run it did not start),
-        `owners_unknown` (the port owners cannot be read; Force stop lifts it with `owners_unknown_ack`), or
-        `in_use` (another user owns a port; never lifted). 502 when the daemon cannot be reached or faults."""
+        `owners_unknown` (the port owners cannot be read; Force stop lifts it with
+        `owners_unknown_ack`), `in_use` (another user owns a port; never lifted), or `not_daemon_run` (Force
+        stop while the daemon has no run of its own: a TRex started by hand, which the daemon cannot stop).
+        502 when the daemon cannot be reached or faults."""
         return await _answer(lambda: daemon().stop(b.rpc_port, b.confirm, b.force, b.owners_unknown_ack))
 
     @router.get("/api/daemon/stf/profiles", response_model=None, responses=answers(*DAEMON_ANSWERS))

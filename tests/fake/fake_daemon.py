@@ -16,7 +16,15 @@ fake did not start), --reserved, --start-fails, --stf-fails, --stf-scale F (an S
 --push-false (push_file answers false and writes nothing), --list-hides-pushed (get_files_list omits what
 push_file wrote),
 --hang METHOD (sleep 30 s), --drip METHOD (one byte per second), --huge METHOD (a 9 MiB reply), --redirect
-(302 to every call), --stop-keeps-running (stop_trex says True but the run goes on)."""
+(302 to every call), --stop-keeps-running (stop_trex says True but the run goes on), --daemon-run (the fake
+starts Running a stateless run of its own whose seq this backend never saw, as when another client started it
+through the daemon), --run-ends-before-kill (the run ends on its own just as force_trex_kill arrives, so the
+kill finds the daemon Idle).
+
+force_trex_kill stops only the daemon's own run: the real daemon's force_trex_kill and stop_trex both call
+CTRex.stop_trex (trex_server.py), which answers False while Idle and never touches a TRex the daemon did not
+start. So an idle kill answers the recorded idle stop_trex reply (p5-stf `stop_after_end`), and the --foreign
+processes stay listed."""
 import argparse
 import base64
 import json
@@ -84,6 +92,9 @@ class Daemon:
         self.outcome = "TRex is Idle"
         self.stf_run = False
         self.tmp = tempfile.TemporaryDirectory(prefix="fake-daemon-")
+        if args.daemon_run:
+            self.seq = self.run_seq = 1
+            self.run_cmd = STATELESS_CMD.format(cfg="/etc/trex_cfg.yaml", c="", args="")
 
     def _settle(self) -> None:
         """An STF run whose d*scale has passed is Idle with the recorded 'finished' outcome. Lock held."""
@@ -164,11 +175,16 @@ class Daemon:
         self.outcome = STF["outcomes"][how] if self.stf_run else "TRex is Idle"
         self.run_seq, self.end_at = None, None
 
-    def kill(self) -> bool:
-        """force_trex_kill: whatever this fake runs ends at once."""
+    def kill(self) -> Any:
+        """force_trex_kill: the fake's own run ends at once (True); while Idle it answers what stop_trex
+        answers while Idle (CTRex.stop_trex serves both), and the --foreign processes go on."""
         with self.lock:
-            if self.run_seq is not None:
+            if self.args.run_ends_before_kill and self.run_seq is not None:
                 self._end("stopped")
+        if self.state() == IDLE:
+            return STF["stop_after_end"]["result"]
+        with self.lock:
+            self._end("stopped")
         return True
 
     def pushed(self) -> list[str]:
@@ -298,6 +314,8 @@ def main() -> None:
     ap.add_argument("--huge")
     ap.add_argument("--redirect", action="store_true")
     ap.add_argument("--stop-keeps-running", action="store_true")
+    ap.add_argument("--daemon-run", action="store_true")
+    ap.add_argument("--run-ends-before-kill", action="store_true")
     args = ap.parse_args()
     daemon = Daemon(args)
     httpd = ThreadingHTTPServer(("127.0.0.1", args.port), make_handler(daemon, args))

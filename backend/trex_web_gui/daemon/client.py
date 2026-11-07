@@ -267,5 +267,6 @@ class DaemonClient:
         return res
 
     def force_trex_kill(self) -> bool:
-        """`force_trex_kill`: kill the daemon's run whoever started it."""
+        """`force_trex_kill`: kill the daemon's own run, whichever client asked for it; False while the daemon
+        is Idle, when it kills nothing (a TRex started by hand is not the daemon's run)."""
         return bool(self.call("force_trex_kill"))
