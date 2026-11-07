@@ -6,13 +6,13 @@ The common case is in the README's [Install](../README.md#install).
 
 To read the script before running any of it, or on a host with no terminal:
 
-```
+```sh
 curl -fLO https://github.com/CRinATL/trex-web-gui/releases/latest/download/install.sh
 ```
 
 Read it, and compare its `sha256=` line with the sha256 the release page it names lists next to the wheel. Then run:
 
-```
+```sh
 sh install.sh
 ```
 
@@ -26,7 +26,7 @@ To install v1.0.0, or to pin a version, install the wheel of a
 [GitHub release](https://github.com/CRinATL/trex-web-gui/releases) by its address. Replace `<tag>` with the release's
 tag (for example `v1.0.0`) and `<version>` with the same in PEP 440 form (`1.0.0`):
 
-```
+```sh
 uv tool install --python 3.12 https://github.com/CRinATL/trex-web-gui/releases/download/<tag>/trex_web_gui-<version>-py3-none-any.whl
 ```
 
@@ -54,9 +54,13 @@ dependencies from PyPI.
 
 A host that cannot reach PyPI installs from a wheelhouse, a directory of the wheel and its dependencies.
 
+The host needs three things staged: uv, the wheelhouse (the trex-web-gui wheel and its dependencies, for Python 3.12
+and x86_64 Linux, as the `--platform` flags below say), and a Python 3.12. Another architecture changes the
+`--platform` values and step 2's uv tarball name (`linux-x86_64-gnu`).
+
 1. On a connected machine, build the wheelhouse:
 
-   ```
+   ```sh
    uvx pip download --dest wheelhouse --only-binary=:all: --python-version 3.12 --implementation cp \
      --platform manylinux_2_28_x86_64 --platform manylinux2014_x86_64 ./trex_web_gui-<version>-py3-none-any.whl
    ```
@@ -74,7 +78,7 @@ A host that cannot reach PyPI installs from a wheelhouse, a directory of the whe
 
 3. On the host, from the directory that holds `wheelhouse/` (both paths below are relative):
 
-   ```
+   ```sh
    uv tool install --offline --no-index --find-links wheelhouse --python 3.12 wheelhouse/trex_web_gui-<version>-py3-none-any.whl
    ```
 
@@ -97,20 +101,25 @@ A host that cannot reach PyPI installs from a wheelhouse, a directory of the whe
 ## The `trex-web-gui` command and `PATH`
 
 The command is in `~/.local/bin` (`uv tool dir --bin` prints the directory). If `trex-web-gui` answers
-`command not found`, that directory is not on your `PATH`.
+`command not found`, that directory is not on your `PATH`. A script run as `curl … | sh` cannot change the `PATH`
+of the terminal that started it, so what to do depends on which of three things the installer printed at its end:
 
-The installer adds it to your shell profile, but a script run as `curl … | sh` cannot change the `PATH` of the
-terminal that started it. If the installer said it updated your profile, open a new terminal, or run the
-`export PATH=…` line it printed in the current one.
+- **"Your shell profile already adds … to PATH, but this terminal has not read it yet."** An earlier run, or
+  you, already put the directory in a startup file. Open a new terminal, or run the `export PATH=…` line the
+  installer printed in the current one.
+- **"Your shell profile now adds … to PATH".** The installer ran `uv tool update-shell`, which adds the directory
+  to your shell's startup files. This terminal keeps its old `PATH`: open a new terminal, or run the `export
+  PATH=…` line it printed.
+- **"… is not on your PATH".** The installer did not change your profile, because you set
+  `TREX_WEB_GUI_NO_MODIFY_PATH=1` or `uv tool update-shell` failed. Run the `export PATH=…` line it printed
+  for this terminal. To keep it, add this line yourself, to `~/.profile` for a login shell, `~/.bashrc` for bash,
+  or `~/.zshenv` for zsh (if you set `TREX_WEB_GUI_NO_MODIFY_PATH=1`, `uv tool update-shell` does it for you):
 
-Otherwise, add the directory to your shell profile yourself, in one of two ways:
-
-- Run `uv tool update-shell`. It adds the directory to your shell's startup files.
-- Or add this line yourself, to `~/.profile` for a login shell, `~/.bashrc` for bash, or `~/.zshenv` for zsh:
-
-  ```
+  ```sh
   export PATH="$HOME/.local/bin:$PATH"
   ```
 
-Then open a new terminal, or run that line in the current one. `command -v trex-web-gui` prints the command's path
-once it is found. Until then, `~/.local/bin/trex-web-gui` runs it by its full path.
+  In fish, run `fish_add_path "$HOME/.local/bin"`.
+
+`command -v trex-web-gui` prints the command's path once it is found. Until then, `~/.local/bin/trex-web-gui` runs
+it by its full path.

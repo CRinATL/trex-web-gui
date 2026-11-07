@@ -5,7 +5,7 @@ traffic generator. It brings traffic control, statistics, packet capture, profil
 control of the TRex emulation server (EMU) into one application, replacing the separate `trex-stateless-gui`,
 `trex-packet-editor` and `trex-qt-gui` tools.
 
-<!-- Product screenshot: added after the full re-shoot (readme-restructure spec, step 7). -->
+<!-- Product screenshot: added after the full re-shoot. -->
 
 [Getting started](#getting-started) · [Install](#install) · [First launch](#first-launch) ·
 [Access](#access-single-user-localhost-only) · [Command-line options](#command-line-options) ·
@@ -24,8 +24,8 @@ control of the TRex emulation server (EMU) into one application, replacing the s
 - **EMU**: load an EMU profile and read its namespaces, clients and counters ([guide](docs/gui-guide.md#11a-emu)).
 - **Monitor**: watch what a TRex server publishes, independent of the control connection
   ([guide](docs/gui-guide.md#11-monitor)).
-- **TRex daemon**: write a TRex config, start and stop TRex, run stateful profiles and read its logs
-  ([guide](docs/gui-guide.md#12-trex-daemon-dialog)).
+- **TRex daemon**: through TRex's optional daemon (`trex_daemon_server`), write a TRex config, start and stop TRex,
+  run stateful profiles and read its logs ([guide](docs/gui-guide.md#12-trex-daemon-dialog)).
 
 ## Getting started
 
@@ -90,7 +90,7 @@ trex-web-gui is not on PyPI. One command installs the latest release with [`uv`]
 
 **Install uv first** if `uv --version` finds none. uv's standalone installer needs no `sudo`:
 
-```
+```sh
 curl -LsSf https://astral.sh/uv/install.sh | sh
 ```
 
@@ -101,7 +101,7 @@ curl -LsSf https://astral.sh/uv/install.sh | sh
 
 Then install trex-web-gui:
 
-```
+```sh
 curl -fsSL https://github.com/CRinATL/trex-web-gui/releases/latest/download/install.sh | sh
 ```
 
@@ -129,11 +129,10 @@ does two more things:
 
 The terminal you installed from keeps its old `PATH`
 ([The `trex-web-gui` command and `PATH`](docs/install.md#the-trex-web-gui-command-and-path)).
-Next: the [First launch](#first-launch).
 
-Pinned or older versions, offline hosts and the install internals are in [`docs/install.md`](docs/install.md).
+<a id="offline-host"></a>Pinned or older versions, [offline hosts](docs/install.md#offline-host) and the install internals are in [`docs/install.md`](docs/install.md).
 
-<a id="offline-host"></a>**Offline host:** see [Offline host](docs/install.md#offline-host).
+Next: [First launch](#first-launch).
 
 ### First launch
 
@@ -141,9 +140,10 @@ After the install, on the machine that can reach the TRex server ([Install](#ins
 
 1. Start the backend (on the backend host):
 
-   ```
+   ```sh
    trex-web-gui
    ```
+
 2. **Open the login URL it prints**, `Open: http://127.0.0.1:8765/api/auth/login?token=...`, in a browser on that
    host. Each start makes a new URL.
    - **From another machine** (your workstation), run there the SSH tunnel command the backend prints, and open the
@@ -172,9 +172,10 @@ If the backend does not start:
 
 ### Run it as a service
 
-Fetch [`docs/trex-web-gui.service`](docs/trex-web-gui.service) into your user units and start it:
+On the backend host, fetch [`docs/trex-web-gui.service`](docs/trex-web-gui.service) into your user units and start
+it:
 
-```
+```sh
 mkdir -p ~/.config/systemd/user
 curl -fLo ~/.config/systemd/user/trex-web-gui.service https://raw.githubusercontent.com/CRinATL/trex-web-gui/main/docs/trex-web-gui.service
 systemctl --user daemon-reload
@@ -189,7 +190,7 @@ the comments in the unit.
 On the TRex host, start TRex in interactive stateless mode (`-i`) from its install directory (here
 `/opt/trex/v3.08`), as root:
 
-```
+```sh
 cd /opt/trex/v3.08
 sudo ./t-rex-64 -i --cfg /etc/trex_cfg.yaml
 ```
@@ -209,7 +210,7 @@ sudo ./t-rex-64 -i --cfg /etc/trex_cfg.yaml
 - **The command stays in the foreground** and shows TRex's own console. To leave it running after you log out, run
   it detached instead:
 
-  ```
+  ```sh
   sudo sh -c 'cd /opt/trex/v3.08 && setsid nohup ./t-rex-64 -i --cfg /etc/trex_cfg.yaml >/tmp/trex.log 2>&1 </dev/null &'
   ```
 
@@ -245,11 +246,12 @@ leak. What to do about it:
 
 Installed with `install.sh` or `uv tool install`:
 
-```
+```sh
 trex-web-gui [options]
 ```
 
-`trex-web-gui --help` lists the options. From a source checkout, see [Development](CONTRIBUTING.md#getting-started).
+`trex-web-gui --help` lists the options. From a source checkout, see [CONTRIBUTING's Getting
+started](CONTRIBUTING.md#getting-started).
 
 | Option | What it does |
 |---|---|
@@ -337,19 +339,23 @@ Within trex-web-gui:
 
 ## Documentation
 
-- [`docs/howto-first-stream.md`](docs/howto-first-stream.md): a walk-through that sends a first stream and watches it
-  arrive.
-- [`docs/howto-emu.md`](docs/howto-emu.md): a walk-through of the EMU page with a stock EMU profile.
-- [`docs/gui-guide.md`](docs/gui-guide.md): the user's guide to every page, dialog, menu and shortcut.
-- [`docs/install.md`](docs/install.md): other ways to install, offline hosts, where the install puts things.
-- [`docs/gui-inventory/README.md`](docs/gui-inventory/README.md): every screen, with the screenshots in
-  `docs/gui-inventory/screens/`.
-- [`docs/api.md`](docs/api.md): the REST and WebSocket reference, every HTTP route with its parameters, request body
-  and response codes, and the WebSocket's message types. trex-web-gui serves no OpenAPI page itself (the token
-  boundary), so the file is generated by `make api-docs`.
-- [Release notes](https://github.com/CRinATL/trex-web-gui/releases): what changed in each release.
-- [`CONTRIBUTING.md`](CONTRIBUTING.md): building from a checkout, the checks, the conventions, the repository layout.
-- [`SECURITY.md`](SECURITY.md): the security model and how to report a problem.
+- Send your first stream: [`docs/howto-first-stream.md`](docs/howto-first-stream.md), a walk-through that sends a first
+  stream and watches it arrive.
+- Load an EMU profile: [`docs/howto-emu.md`](docs/howto-emu.md), a walk-through of the EMU page with a stock EMU
+  profile.
+- Use the GUI, page by page: [`docs/gui-guide.md`](docs/gui-guide.md), the user's guide to every page, dialog, menu and
+  shortcut.
+- Install another way: [`docs/install.md`](docs/install.md), other ways to install, offline hosts, where the install
+  puts things.
+- See every screen: [`docs/gui-inventory/README.md`](docs/gui-inventory/README.md), every screen, with the screenshots
+  in `docs/gui-inventory/screens/`.
+- Automate with the API: [`docs/api.md`](docs/api.md), the REST and WebSocket reference, every HTTP route with its
+  parameters, request body and response codes, and the WebSocket's message types. trex-web-gui serves no OpenAPI page
+  itself (the token boundary), so the file is generated by `make api-docs`.
+- What changed: [Release notes](https://github.com/CRinATL/trex-web-gui/releases), what changed in each release.
+- Build from source and contribute: [`CONTRIBUTING.md`](CONTRIBUTING.md), building from a checkout, the checks, the
+  conventions, the repository layout.
+- Security: [`SECURITY.md`](SECURITY.md), the security model and how to report a problem.
 
 ## Help and contact
 
@@ -358,6 +364,15 @@ Within trex-web-gui:
 - Questions about TRex itself: upstream, at [trex-core](https://github.com/cisco-system-traffic-generator/trex-core).
 - A security problem: privately, as [`SECURITY.md`](SECURITY.md) says, not in a public issue.
 
+### Troubleshooting
+
+| Symptom | Where it is explained |
+|---|---|
+| `command not found` | [First launch](#first-launch) and [the command and its path](docs/install.md#the-trex-web-gui-command-and-path) |
+| The page shows **Not authorised** | [Access: single user, localhost only](#access-single-user-localhost-only) |
+| Connect fails with "Cannot reach the TRex server" | [Starting the TRex server](#starting-the-trex-server) |
+| Tx counts rise but Rx stays at zero | [`docs/howto-first-stream.md`](docs/howto-first-stream.md): "Without the loop the Rx check at the end of each part shows nothing" |
+
 ### Probe a server for a bug report
 
 When a TRex server behaves differently from what the GUI expects (a port that refuses an attribute, counters that
@@ -365,7 +380,7 @@ fail to read, virtual-function ports), the probe collects what each port lists a
 attach to an issue. It is one file, not part of the install: download it on the TRex host, read it, and run it with
 the Python trex-web-gui is installed under (any release):
 
-```
+```sh
 curl -fLO https://raw.githubusercontent.com/CRinATL/trex-web-gui/main/scripts/trex_probe.py
 "$(uv tool dir)/trex-web-gui/bin/python" trex_probe.py --out trex-probe.json
 ```

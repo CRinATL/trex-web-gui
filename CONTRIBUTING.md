@@ -31,27 +31,17 @@ make check                           # lint, typecheck, Python and frontend test
 To work on the GUI, run two processes, the backend and the Vite dev server:
 
 ```
-make dev                             # the backend on 127.0.0.1:8765, API only
+make dev                             # the backend on 127.0.0.1:8765, API only (--dev)
 npm --prefix frontend run dev        # the UI on :5173, reloading on every edit
 ```
 
-Then open the `:5173` login URL that `make dev` prints. To run the GUI as a user would, `make build` once, then
-`uv run --project backend trex-web-gui`.
+`make dev` runs the backend with `--dev`, which serves the API only, and the UI comes from the Vite dev server. Open
+the `:5173` login URL that `make dev` prints. To run the GUI as a user would, `make build` once, then
+`uv run --project backend trex-web-gui [options]`, with the [options](README.md#command-line-options).
 
-The backend is Python (FastAPI) and drives a vendored, patched copy of the TRex Python client. The frontend is React +
-TypeScript + Vite. Only building needs Node.js: the release wheel already holds the built UI, so installing and running
-a release needs neither Node.js nor npm.
-
-Run it from the checkout, with the [options](README.md#command-line-options):
-
-```
-uv run --project backend trex-web-gui [options]
-```
-
-One more option is for development only: `--dev` serves the API only, and the UI comes from the Vite dev server on
-`:5173` (see `make dev`).
-
-The vendored client is in the wheel. No trex-core checkout is needed.
+The backend is Python (FastAPI) and drives a vendored, patched copy of the TRex Python client, which the release wheel
+carries: no trex-core checkout is needed. The frontend is React + TypeScript + Vite. Only building needs Node.js: the
+wheel already holds the built UI, so installing and running a release needs neither Node.js nor npm.
 
 **Use `uv run --project backend trex-web-gui` from a checkout only.** On an installed host it fails with
 ``Project directory `backend` does not exist``.

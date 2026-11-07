@@ -212,3 +212,19 @@ def test_every_anchor_a_release_note_links_is_pinned() -> None:
         found = check_links.links(rel, note.read_text())
         linked |= {(target, anchor) for _, _, target, anchor in found if anchor}
     assert linked <= PUBLISHED_ANCHORS, sorted(linked - PUBLISHED_ANCHORS)
+
+
+def test_install_page_path_entry_mirrors_the_installer() -> None:
+    # install.sh's three PATH messages each name these; the install page's PATH entry names them too.
+    release = load_script("release")
+    page = (ROOT / "docs" / "install.md").read_text()
+    start = page.index("## The `trex-web-gui` command and `PATH`")
+    end = page.find("\n## ", start + 1)
+    section = page[start:] if end == -1 else page[start:end]
+    for needle in ("uv tool update-shell", "TREX_WEB_GUI_NO_MODIFY_PATH=1", "~/.profile", "~/.bashrc",
+                   "~/.zshenv", "fish_add_path"):
+        assert needle in release.INSTALL_SCRIPT, needle
+        assert needle in section, needle
+    for stem in ("but this terminal has not read it yet", "now adds", "is not on your PATH"):
+        assert stem in release.INSTALL_SCRIPT, stem
+        assert stem in section, stem
