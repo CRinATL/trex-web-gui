@@ -276,3 +276,109 @@ def test_link_regex_keeps_an_image_inside_link_text() -> None:
     """The inner '![alt](src)' stays part of the outer link's text, as before the ReDoS fix."""
     found = [m.groups() for m in cr.LINK_RE.finditer("[a ![i](x.png) b](y) and ![alt](p.png)")]
     assert found == [("", "a ![i](x.png) b", "y"), ("!", "alt", "p.png")]
+
+
+def test_merge_sums_counters_and_concatenates_lists() -> None:
+    """`merge` adds the Counters and joins the ordered lists in the order given."""
+    merged = cr.merge([cr.facts("# A\n\nx `c` 5\n"), cr.facts("# B\n\nx `c`\n")])
+    assert merged.code["c"] == 2 and merged.numbers["5"] == 1
+    assert merged.headings == ["# A", "# B"]
+
+
+@pytest.fixture
+def pool_run(repo: Path, capsys: pytest.CaptureFixture[str]):  # noqa: ANN201
+    """A `run(*argv)` returning (exit code, stdout) for `main`, over the `repo` fixture."""
+
+    def run(*argv: str) -> tuple[int, str]:
+        """Runs main and returns (exit code, stdout)."""
+        rc = cr.main(list(argv))
+        return rc, capsys.readouterr().out
+
+    return run
+
+
+def test_pool_extracts_each_file_on_its_own(repo: Path, pool_run) -> None:  # noqa: ANN001
+    """Backticks do not pair across files: a stray one in each old file is no code span."""
+    (repo / "a.md").write_text("Run `x\n")
+    (repo / "b.md").write_text("` now\n")
+    git(repo, "add", "a.md", "b.md")
+    git(repo, "commit", "-qm", "ab")
+    (repo / "a.md").write_text("Run `x` now\n")
+    (repo / "b.md").write_text("")
+    rc, out = pool_run("--pool", "--rev", "HEAD", "a.md", "b.md")
+    assert rc == 1 and "*: code + x\n" in out and "*: word - x\n" in out
+
+
+def test_pool_a_paragraph_moved_to_a_new_file_cancels_out(repo: Path, pool_run) -> None:  # noqa: ANN001
+    """A paragraph moved to a new, untracked file keeps its facts; an absent side reads as empty."""
+    (repo / "a.md").write_text("Open the browser now.\n\nThe browser shows ports.\n")
+    git(repo, "add", "a.md")
+    git(repo, "commit", "-qm", "a")
+    (repo / "a.md").write_text("Open the browser now.\n")
+    (repo / "b.md").write_text("The browser browser shows ports.\n")
+    rc, out = pool_run("--pool", "--rev", "HEAD", "a.md", "b.md")
+    assert rc == 0 and "b.md: absent at HEAD, read as empty\n" in out
+    assert "*: info: word browser 2->3\n" in out
+    assert out.endswith("check_reflow: pool(a.md b.md) ok\n")
+    assert pool_run("--rev", "HEAD", "a.md", "b.md")[0] == 2
+
+
+def test_pool_a_file_deleted_on_the_new_side_reads_as_empty(repo: Path, pool_run) -> None:  # noqa: ANN001
+    """A path absent from the work tree, or at --to, reads as empty."""
+    (repo / "a.md").write_text("Open the browser now.\n")
+    (repo / "b.md").write_text("The browser shows ports.\n")
+    git(repo, "add", "a.md", "b.md")
+    git(repo, "commit", "-qm", "ab")
+    (repo / "a.md").write_text("Open the browser now.\n\nThe browser shows ports.\n")
+    (repo / "b.md").unlink()
+    rc, out = pool_run("--pool", "--rev", "HEAD", "a.md", "b.md")
+    assert rc == 0 and "b.md: absent from the work tree, read as empty\n" in out
+    git(repo, "commit", "-qam", "merged")
+    rc, out = pool_run("--pool", "--rev", "HEAD~1", "--to", "HEAD", "a.md", "b.md")
+    assert rc == 0 and "b.md: absent at HEAD, read as empty\n" in out
+
+
+def _moved_without_browser(repo: Path) -> None:
+    """Commits a.md with two paragraphs, then moves the second, minus `browser`, to a new b.md."""
+    (repo / "a.md").write_text("Open it now.\n\nThe browser shows ports.\n")
+    git(repo, "add", "a.md")
+    git(repo, "commit", "-qm", "a")
+    (repo / "a.md").write_text("Open it now.\n")
+    (repo / "b.md").write_text("The shows ports.\n")
+
+
+def test_pool_reports_a_fact_lost_between_files(repo: Path, pool_run) -> None:  # noqa: ANN001
+    """A fact the moved text lost is reported once, for the pool."""
+    _moved_without_browser(repo)
+    rc, out = pool_run("--pool", "--rev", "HEAD", "a.md", "b.md")
+    assert rc == 1 and "*: word - browser\n" in out
+    assert out.endswith("check_reflow: pool(a.md b.md) 1 problem(s)\n")
+
+
+def test_pool_allow_lines(repo: Path, pool_run) -> None:  # noqa: ANN001
+    """Pool mode reads the `*` allow lines only; another path there is a usage error."""
+    _moved_without_browser(repo)
+    allow = repo / "allow.tsv"
+    args = ("--pool", "--rev", "HEAD", "--allow", str(allow), "a.md", "b.md")
+    allow.write_text("*\tword\t-\tbrowser\tmoved on purpose\n")
+    rc, out = pool_run(*args)
+    assert rc == 0 and "*: allowed word - browser (moved on purpose)\n" in out
+    allow.write_text("*\tword\t-\tbrowser\tr\n*\tword\t-\tother\tr\n")
+    rc, out = pool_run(*args)
+    assert rc == 1 and "*: unused allow: word - other\n" in out
+    allow.write_text("a.md\tword\t-\tbrowser\tr\n")
+    assert pool_run(*args)[0] == 2
+    allow.write_text("*\tword\t-\tbrowser\tr\n")           # outside pool mode a `*` line is neither used
+    (repo / "a.md").write_text("Open it now.\n\nThe shows ports.\n")
+    rc, out = pool_run("--rev", "HEAD", "--allow", str(allow), "a.md")
+    assert rc == 1 and "allowed" not in out and "unused" not in out and "a.md: word - browser\n" in out
+
+
+def test_pool_usage_errors(repo: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    """An unknown revision (either), and a path absent on both sides, are usage errors in pool mode."""
+    (repo / "a.md").write_text("Open it now.\n")
+    for argv, why in ((["--rev", "nosuchrev", "a.md"], "unknown revision 'nosuchrev'"),
+                      (["--rev", "HEAD", "--to", "nosuchrev", "doc.md"], "unknown revision 'nosuchrev'"),
+                      (["--rev", "HEAD", "nowhere.md", "a.md"], "nowhere.md: absent on both sides")):
+        assert cr.main(["--pool", *argv]) == 2
+        assert why in capsys.readouterr().err
