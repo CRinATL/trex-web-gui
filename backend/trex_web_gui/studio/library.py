@@ -257,8 +257,8 @@ class ProfileLibrary:
                 if src is None or src["kind"] != "py" or src["path"] != path:
                     return None
             return LibraryLabel(slug, side["name"])
-        # RuntimeError: Path.resolve() on a symlink loop (3.12 only; 3.13 raises OSError), or json.loads'
-        # RecursionError on a deeply nested sidecar; no loss or refusal class derives from it.
+        # RuntimeError: a non-strict Path.resolve() on a symlink loop (3.12 only; 3.13+ returns the path), or
+        # json.loads' RecursionError on a deeply nested sidecar; no loss or refusal class derives from it.
         except (OSError, ValueError, RuntimeError, LibraryNotFound):
             return None
 
