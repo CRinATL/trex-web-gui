@@ -9,9 +9,18 @@ has a reason.
 
 Usage
 -----
-    python3 -I scripts/check_reflow.py --rev REV [--to REV2] [--allow FILE] PATH [PATH ...]
+    python3 -I scripts/check_reflow.py --rev REV [--to REV2] [--allow FILE] [--pool] PATH [PATH ...]
 
 Run it from the repo top level; PATH is relative to it.
+
+With `--pool` the paths are one body of text, for a move of facts between files. Each path's old and new text
+is extracted on its own; the per-file facts of each side are then merged (counters summed, fences, headings
+and tables concatenated in PATH order) and the two merged sides are compared once, under the label `*`. Lines
+print as `*: <category> <sign> <token>`, `*: allowed ...` and `*: info: ...`, and the last line is
+`check_reflow: pool(PATH PATH ...) ok` or `... N problem(s)`. In pool mode a path absent at `--rev`, at
+`--to`, or (without `--to`) from the work tree reads as empty text, and says so
+(`PATH: absent at REV, read as empty`, `PATH: absent from the work tree, read as empty`); a path absent on
+both sides is a usage error. Without `--pool` a missing path is a usage error, as before.
 
 Categories (fenced blocks are removed first, then each is extracted)
 --------------------------------------------------------------------
@@ -43,17 +52,22 @@ occurs on both sides (function words and negations are left out).
 
 Allow file: one `PATH<TAB>CATEGORY<TAB>SIGN<TAB>TOKEN<TAB>REASON` per line; `#` and blank lines are skipped.
 One line covers one occurrence, and a line that matches nothing fails the run. Lines for another path are
-ignored for this path, neither used nor reported unused. In a printed TOKEN a newline
+ignored for this path, neither used nor reported unused. In pool mode the lines whose PATH is `*` are used,
+and a line with any other PATH is a usage error (a per-file allow file cannot be silently ignored); outside
+pool mode `*` lines are ignored like lines for another path. In a printed TOKEN a newline
 is `\\n` and a tab is `\\t`, so a printed difference can be copied into the allow file.
 
 Exit codes: 0 every path keeps its facts; 1 a difference not allowed, or an allow line not used; 2 a usage
-error (unknown revision, a path missing at either side, an unreadable or malformed allow file).
+error (unknown revision, `--to` too when given, each checked before any path is read in pool mode; a path
+missing at either side, or in pool mode on both; an unreadable or malformed allow file; in pool mode, an allow
+line whose PATH is not `*`).
 """
 import argparse
 import re
 import subprocess
 import sys
 from collections import Counter
+from collections.abc import Sequence
 from pathlib import Path
 from typing import NamedTuple
 
@@ -245,9 +259,27 @@ def _sequence(category: str, old: list[str], new: list[str]) -> list[Diff]:
     return out
 
 
+def merge(parts: Sequence[Facts]) -> Facts:
+    """One Facts from several: Counters summed, fences, headings and tables concatenated in order."""
+    merged: list[object] = []
+    for index, field in enumerate(Facts._fields):
+        if field in ("fences", "headings", "tables"):
+            merged.append([item for part in parts for item in part[index]])
+        else:
+            total: Counter[str] = Counter()
+            for part in parts:
+                total.update(part[index])
+            merged.append(total)
+    return Facts(*merged)  # type: ignore[arg-type]
+
+
 def compare(old: str, new: str) -> list[Diff]:
     """Every fact difference between two texts, sorted by category, sign and token."""
-    a, b = facts(old), facts(new)
+    return compare_facts(facts(old), facts(new))
+
+
+def compare_facts(a: Facts, b: Facts) -> list[Diff]:
+    """Every fact difference between two extracted Facts, sorted by category, sign and token."""
     out = [Diff("word", "-", w) for w in sorted(a.words.keys() - b.words.keys())]
     out += [Diff("word", "+", w) for w in sorted(b.words.keys() - a.words.keys())]
     out += _multiset("negation", a.negations, b.negations)
@@ -264,7 +296,11 @@ def compare(old: str, new: str) -> list[Diff]:
 
 def info(old: str, new: str) -> list[str]:
     """The `info:` lines (no path): bold spans added or dropped, and content words whose count changed."""
-    a, b = facts(old), facts(new)
+    return info_facts(facts(old), facts(new))
+
+
+def info_facts(a: Facts, b: Facts) -> list[str]:
+    """`info` over two extracted Facts."""
     lines = [f"info: bold - {t}" for t in sorted((a.bold - b.bold).elements())]
     lines += [f"info: bold + {t}" for t in sorted((b.bold - a.bold).elements())]
     for word in sorted(a.words.keys() & b.words.keys()):
@@ -314,6 +350,33 @@ def _git(*args: str, cwd: Path | None = None) -> str:
         raise UsageError(f"git {' '.join(args)}: not UTF-8 ({exc})") from exc
 
 
+def _report(label: str, diffs: list[Diff], infos: list[str], allows: list[Allow]) -> int:
+    """Prints each difference (allowed or not), unused allow lines and info lines under `label`; returns the
+    problem count. Only allow lines whose PATH is the label count."""
+    mine = Counter((a.category, a.sign, a.token) for a in allows if a.path == label)
+    reasons: dict[tuple[str, str, str], list[str]] = {}       # each line's own reason, in file order
+    for a in allows:
+        if a.path == label:
+            reasons.setdefault((a.category, a.sign, a.token), []).append(a.reason)
+    problems = 0
+    for diff in diffs:
+        key = (diff.category, diff.sign, _printable(diff.token))
+        text = f"{diff.category} {diff.sign} {key[2]}"
+        if mine[key] > 0:
+            mine[key] -= 1
+            print(f"{label}: allowed {text} ({reasons[key].pop(0)})")
+        else:
+            problems += 1
+            print(f"{label}: {text}")
+    for (category, sign, token), left in sorted(mine.items()):
+        for _ in range(left):
+            problems += 1
+            print(f"{label}: unused allow: {category} {sign} {token}")
+    for line in infos:
+        print(f"{label}: {line}")
+    return problems
+
+
 def _check_path(path: str, args: argparse.Namespace, top: Path, allows: list[Allow]) -> int:
     """Compares one path, prints its lines, returns its problem count."""
     old = _git("show", f"{args.rev}:{path}", cwd=top)
@@ -324,28 +387,63 @@ def _check_path(path: str, args: argparse.Namespace, top: Path, allows: list[All
             new = (top / path).read_bytes().decode().replace("\r\n", "\n")   # as _git reads the old side
         except (OSError, UnicodeDecodeError) as exc:
             raise UsageError(f"{path}: {exc}") from exc
-    mine = Counter((a.category, a.sign, a.token) for a in allows if a.path == path)
-    reasons: dict[tuple[str, str, str], list[str]] = {}       # each line's own reason, in file order
-    for a in allows:
-        if a.path == path:
-            reasons.setdefault((a.category, a.sign, a.token), []).append(a.reason)
-    problems = 0
-    for diff in compare(old, new):
-        key = (diff.category, diff.sign, _printable(diff.token))
-        text = f"{diff.category} {diff.sign} {key[2]}"
-        if mine[key] > 0:
-            mine[key] -= 1
-            print(f"{path}: allowed {text} ({reasons[key].pop(0)})")
-        else:
-            problems += 1
-            print(f"{path}: {text}")
-    for (category, sign, token), left in sorted(mine.items()):
-        for _ in range(left):
-            problems += 1
-            print(f"{path}: unused allow: {category} {sign} {token}")
-    for line in info(old, new):
-        print(f"{path}: {line}")
+    problems = _report(path, compare(old, new), info(old, new), allows)
     print(f"check_reflow: {path} " + (f"{problems} problem(s)" if problems else "ok"))
+    return problems
+
+
+def _verify_rev(rev: str, top: Path) -> None:
+    """Raises UsageError unless `rev` names a commit."""
+    proc = subprocess.run(["git", "rev-parse", "--verify", "--quiet", f"{rev}^{{commit}}"],
+                          capture_output=True, cwd=top)
+    if proc.returncode:
+        raise UsageError(f"unknown revision {rev!r}")
+
+
+def _in_rev(rev: str, path: str, top: Path) -> bool:
+    """True when `rev:path` exists (`git cat-file -e`); call it only after `rev` has verified."""
+    return subprocess.run(["git", "cat-file", "-e", f"{rev}:{path}"], capture_output=True,
+                          cwd=top).returncode == 0
+
+
+def _check_pool(args: argparse.Namespace, top: Path, allows: list[Allow]) -> int:
+    """Compares the paths as one pooled body of text under the label `*`; returns the problem count."""
+    for a in allows:
+        if a.path != "*":
+            raise UsageError(f"{args.allow}: allow line for {a.path!r}: in pool mode the PATH is `*`")
+    _verify_rev(args.rev, top)
+    if args.to:
+        _verify_rev(args.to, top)
+    olds: list[Facts] = []
+    news: list[Facts] = []
+    for path in args.paths:
+        old_here = _in_rev(args.rev, path, top)
+        if args.to:
+            new_here = _in_rev(args.to, path, top)
+        else:
+            new_here = (top / path).exists()
+        if not old_here and not new_here:
+            raise UsageError(f"{path}: absent on both sides")
+        if old_here:
+            olds.append(facts(_git("show", f"{args.rev}:{path}", cwd=top)))
+        else:
+            print(f"{path}: absent at {args.rev}, read as empty")
+            olds.append(facts(""))
+        if not new_here:
+            where = f"at {args.to}" if args.to else "from the work tree"
+            print(f"{path}: absent {where}, read as empty")
+            news.append(facts(""))
+        elif args.to:
+            news.append(facts(_git("show", f"{args.to}:{path}", cwd=top)))
+        else:
+            try:
+                news.append(facts((top / path).read_bytes().decode().replace("\r\n", "\n")))
+            except (OSError, UnicodeDecodeError) as exc:
+                raise UsageError(f"{path}: {exc}") from exc
+    a, b = merge(olds), merge(news)
+    problems = _report("*", compare_facts(a, b), info_facts(a, b), allows)
+    label = "pool(" + " ".join(args.paths) + ")"
+    print(f"check_reflow: {label} " + (f"{problems} problem(s)" if problems else "ok"))
     return problems
 
 
@@ -355,6 +453,8 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--rev", required=True, help="the revision holding the old text")
     ap.add_argument("--to", help="the revision holding the new text (default: the work-tree file)")
     ap.add_argument("--allow", help="allow file: PATH, CATEGORY, SIGN, TOKEN, REASON separated by tabs")
+    ap.add_argument("--pool", action="store_true",
+                    help="compare the paths as one body of text, under the label `*`")
     ap.add_argument("paths", nargs="+", metavar="PATH", help="Markdown files, relative to the repo top level")
     try:
         args = ap.parse_args(argv)
@@ -368,7 +468,10 @@ def main(argv: list[str] | None = None) -> int:
             except (OSError, UnicodeDecodeError, ValueError) as exc:
                 raise UsageError(f"{args.allow}: {exc}") from exc
         top = Path(_git("rev-parse", "--show-toplevel").strip())
-        problems = sum(_check_path(p, args, top, allows) for p in args.paths)
+        if args.pool:
+            problems = _check_pool(args, top, allows)
+        else:
+            problems = sum(_check_path(p, args, top, allows) for p in args.paths)
     except UsageError as exc:
         print(f"check_reflow: {exc}", file=sys.stderr)
         return 2
