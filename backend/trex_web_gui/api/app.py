@@ -543,9 +543,11 @@ def create_app(data_dir: Path, server_hint: str | None = None, static_dir: Path 
         session().forget_ended()
         snap = session().snapshot()
         p = snap["params"]
+        wanted = {"host": body.host, "sync_port": body.sync_port, "async_port": body.async_port,
+                  "timeout_s": body.timeout_s, "read_only": body.read_only}
         if (snap["state"] == "connected" and not was_connected and isinstance(p, dict)
-                and snap["info"] is not None and (p["host"], p["sync_port"]) == (body.host, body.sync_port)):
-            return {"info": snap["info"]}     # the cancelled reconnect's attempt just reached this server
+                and snap["info"] is not None and {k: p.get(k) for k in wanted} == wanted):
+            return {"info": snap["info"]}     # the cancelled attempt made this very session
         try:
             params = ConnectParams(body.host, body.sync_port, body.async_port, body.timeout_s, body.read_only)
             info = await session().connect(params)

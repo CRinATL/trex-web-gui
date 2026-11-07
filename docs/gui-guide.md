@@ -123,10 +123,13 @@ daemon dialog at <time>.`, `Control is disconnected.`, then one of four lines, a
 | the error, with **Reconnect** (focused) | the automatic reconnect failed |
 
 The stop counts as yours only when the daemon dialog's host equals Control's host and the stop's command port equals
-Control's command port, written the same way: `localhost` is not `127.0.0.1`. A loss of any other TRex is the lost dialog above. While the stop's record is set (until Control is connected again, or you press **Connect…** or **Disconnect**), a loss during the automatic reconnect keeps the **TRex stopped** dialog, and a failed reconnect shows its error there with **Reconnect**.
-Control reconnects by itself after a stateless Start from the daemon dialog on the same host and command port, within
-the Start timeout plus 20 s; **Connect…** or **Disconnect** cancels that, as does a later daemon Stop or a Start that does not match, and the dialog goes when Control is
-connected again. A second browser tab shows the same dialog.
+Control's command port, written the same way: `localhost` is not `127.0.0.1`. A loss of any other TRex is the lost
+dialog above. While the stop's record is set (until Control is connected again, or you press **Connect…** or
+**Disconnect**), a loss during the automatic reconnect keeps the **TRex stopped** dialog, and a failed reconnect shows
+its error there with **Reconnect**. Control reconnects by itself after a stateless Start from the daemon dialog on the
+same host and command port, within the Start timeout plus 20 s; **Connect…** or **Disconnect** cancels that, as does a
+later daemon Stop or a Start that does not match, and the dialog goes when Control is connected again. A second browser
+tab shows the same dialog.
 
 **Disconnect** always releases the ports you own. The **Release my ports when trex-web-gui exits** setting
 ([13.3](#133-session)) decides what a backend shutdown does.

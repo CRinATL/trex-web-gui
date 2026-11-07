@@ -455,6 +455,22 @@ def test_api_connect_cancels_the_reconnect(tmp_path: Path, fake_trex: Any) -> No
         assert c.portal.call(task.done)
 
 
+def test_api_connect_with_other_params_does_not_take_the_reconnect(tmp_path: Path, fake_trex: Any) -> None:
+    """A read-only Connect landing during the reconnect attempt to the same host and ports is not answered
+    with the read-write session the attempt made: the 200 is only for an identical request."""
+    f = fake_trex("--delay-ms", "300")
+    app = create_app(tmp_path, token=TEST_TOKEN)
+    with authed(app) as c:
+        published: list[dict] = []
+        _waiting_reconnect(c, app, f, published)
+        r = c.post("/api/session/connect", json={"host": f.host, "sync_port": f.rpc_port,
+                                                  "async_port": f.pub_port, "timeout_s": 60,
+                                                  "read_only": True})
+        assert r.status_code == 409 and r.json()["error"] == "busy", r.text
+        snap = c.get("/api/session").json()
+        assert snap["state"] == "connected" and snap["params"]["read_only"] is False
+
+
 def test_api_disconnect_cancels_the_reconnect(tmp_path: Path, fake_trex: Any) -> None:
     """Disconnect pressed while the reconnect's attempt holds the lock: the task ends, nothing reconnects
     afterwards, `ended` is cleared and the session is disconnected."""

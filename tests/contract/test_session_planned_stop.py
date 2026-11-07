@@ -68,7 +68,6 @@ def test_planned_stop_goes_disconnected_with_ended(fake_trex, new_session) -> No
         s.planned_stop_done()
         captures = [m for m in rec.msgs[n:] if m["type"] == "capture"]
         assert len(captures) == 1 and captures[0]["monitor"] is None
-        snap = s.snapshot()
         cap = s.capture_snapshot()
         assert cap["monitor"] is None and cap["captures"] == []
         snap = s.snapshot()
@@ -99,6 +98,45 @@ def test_loss_while_stop_expected_is_held(fake_trex, new_session, lose) -> None:
         s.planned_stop_done()
         assert s.snapshot()["state"] == "disconnected" and s.snapshot()["ended"] is not None
         assert "lost" not in rec.states() and held_loss_text(rec) == []
+    new_session.run(run())
+
+
+def poll_warnings(rec: Recorder) -> list[dict]:
+    """The `log` messages `rec` recorded that report a failed port status poll."""
+    return [m for m in rec.msgs if m["type"] == "log" and "Port status poll failed" in m["message"]]
+
+
+def test_port_poll_warning_is_held_while_stop_expected(fake_trex, new_session, monkeypatch) -> None:
+    f, rec = fake_trex(), Recorder()
+    failing, calls = [False], []
+    real = trexapi.sync_ports
+
+    def poll(c):
+        """The real poll, or a refused one once `failing` is set."""
+        if failing[0]:
+            calls.append(1)
+            raise TrexApiError("poll refused")
+        return real(c)
+    monkeypatch.setattr(trexapi, "sync_ports", poll)
+
+    async def run() -> None:
+        s = new_session(rec)
+        s._poll_s = 0.05
+        await s.connect(params(f))
+        assert await s.expect_stop(f.host, f.rpc_port, DAEMON)
+        failing[0] = True
+        await wait_for(lambda: len(calls) >= 2, 5)       # the poll failed more than once while armed
+        assert poll_warnings(rec) == []                  # held, not published
+        s.expect_stop_cancel()
+        assert len(poll_warnings(rec)) >= 1              # a cancel publishes what was held
+        failing[0] = False
+        assert await s.expect_stop(f.host, f.rpc_port, DAEMON)
+        failing[0] = True
+        n = len(calls)
+        await wait_for(lambda: len(calls) >= n + 2, 5)
+        shown = len(poll_warnings(rec))
+        s.planned_stop_done()
+        assert len(poll_warnings(rec)) == shown          # planned_stop_done drops them
     new_session.run(run())
 
 

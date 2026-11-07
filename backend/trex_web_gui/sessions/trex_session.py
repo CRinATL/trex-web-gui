@@ -920,7 +920,9 @@ class TrexSession(PortConfigCommands, CaptureCommands):
                 self._mark_lost(STOPPED if gone else e.message)
                 return
             except TrexApiError as e:
-                self._log("warning", f"Port status poll failed: {e.message}")
+                # while a stop is expected the warning waits with the loss text (a planned stop shows none)
+                self._log("warning", f"Port status poll failed: {e.message}",
+                          hold=self._stop_daemon is not None)
                 continue
             except Exception:            # CancelledError is a BaseException and still propagates
                 log.warning("Port status poll failed unexpectedly; polling continues", exc_info=True)

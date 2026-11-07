@@ -162,7 +162,7 @@ export function ControlPage({ active = true, onConnect }: { active?: boolean; on
   const connectHere = onConnect && <> or click <button type="button" data-run="go" onClick={onConnect}>Connect…</button></>
   const notConnected = session.state === 'disconnected'
     ? <>Not connected. Use {reconnectOffered ? 'Reconnect or Connect…' : 'Connect…'} in the status bar (Ctrl+Shift+C){connectHere}.</>
-      // a planned stop (ended set, even in state lost) is not a loss: the dialog and the status bar speak for it
+    // a planned stop (ended set, even in state lost) is not a loss: the dialog and the status bar speak for it
     : session.state === 'lost' && !session.ended ? `Connection lost: ${lostCause(session.error)} Reconnect is in the status bar.` : null
   const showPanel = !(notConnected && !selectedPortView)
   return (
