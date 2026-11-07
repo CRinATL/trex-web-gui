@@ -25,7 +25,7 @@ screens with them. New: [117](screens/117-connection-lost-dialog.png), the Conne
 redirect). A stream's inner tabs read **Stream settings** and **Stream packet** (were Properties and Packet), the packet
 editor's heading is the packet's name or `Untitled`, Control's buttons are **New in Editor…** and **Copy to Editor**, and the
 Traffic tab has an **In the profile** heading with a caption over its streams table. The shots show all of this since the
-2026-11-07 re-shoot; the text below and the shot file names were updated 2026-11-07.
+2026-11-07 re-shoot; the text below and the names of shots 88-93 were updated 2026-11-07.
 
 **EMU page (P7, 2026-11-05).** Shots [118](screens/118-emu-connected.png) and [119](screens/119-emu-namespace-clients-counters.png)
 were taken by `vm/shoot_inventory.py` (the `emu` step) against `tests/fake/fake_emu.py` on port 18510, seeded with three
@@ -166,7 +166,7 @@ Source: `frontend/src/App.tsx`, `frontend/src/components/StatusBar.tsx`, `fronte
   open (visible in [58](screens/58-settings-changed-on-server.png) and [77](screens/77-manage-setups-run-failed-start.png));
   opening the page clears it.
 - `/` redirects to `/control`. The Control, Capture and Editor pages stay mounted while hidden (their state survives
-  page switches), and so does the packet editor page (`/studio/packet`) once it has been visited. **Monitor** ([5.7](#57-monitor))
+  page switches), and so does the packet editor page (`/editor/packet`) once it has been visited. **Monitor** ([5.7](#57-monitor))
   is a link between **Editor** and **Events**.
 
 ### 1.3 Status bar
