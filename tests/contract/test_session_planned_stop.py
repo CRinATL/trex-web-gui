@@ -356,12 +356,12 @@ def test_unreachable_attempt_goes_back_to_probing(fake_trex, new_session, monkey
         await planned_stop(s, f)
         real, calls = s.connect, []
 
-        async def flaky(p):
+        async def flaky(p, **kw):
             """The first attempt finds the server unreachable; later ones are real."""
             calls.append(p)
             if len(calls) == 1:
                 raise ServerUnreachable("not yet")
-            return await real(p)
+            return await real(p, **kw)
         monkeypatch.setattr(s, "connect", flaky)
         s.reconnect_after_start(5)
         await s._reconnect_task
@@ -378,13 +378,13 @@ def test_loss_during_attempt_goes_back_to_probing(fake_trex, new_session, monkey
         await planned_stop(s, f)
         real, calls = s.connect, []
 
-        async def lossy(p):
+        async def lossy(p, **kw):
             """The first attempt ends LOST; later ones are real."""
             calls.append(p)
             if len(calls) == 1:
                 s._state = trex_session.SessionState.LOST
                 raise TrexApiError("Connection lost during connect: x")
-            return await real(p)
+            return await real(p, **kw)
         monkeypatch.setattr(s, "connect", lossy)
         s.reconnect_after_start(5)
         await s._reconnect_task
@@ -532,3 +532,107 @@ def test_a_second_reconnect_start_does_not_orphan_the_task(fake_trex, new_sessio
         await s.cancel_reconnect()
         assert task.done()
     new_session.run(run())
+
+
+class SynDropper:
+    """A listening port whose accept queue is full and never drained, so the kernel drops each new SYN: a
+    TCP connect to it neither succeeds nor is refused, as with a host that drops SYNs. Linux keeps
+    backlog + 1 connections queued; `listen(0)` and one queued client fill it."""
+
+    def __init__(self) -> None:
+        """Listen with backlog 0 and fill the queue with one client that is never accepted."""
+        self.listener = socket.socket()
+        self.listener.bind(("127.0.0.1", 0))
+        self.listener.listen(0)
+        self.port = self.listener.getsockname()[1]
+        self.filler = socket.create_connection(("127.0.0.1", self.port))
+
+    def close(self) -> None:
+        """Close the queued client and the listener."""
+        self.filler.close()
+        self.listener.close()
+
+
+def test_probe_period_holds_when_syns_are_dropped(fake_trex, new_session, monkeypatch) -> None:
+    # The probe has no fake server to count on: a dropped SYN never reaches one. The spy records when each
+    # probe starts and runs the real probe against a real dropping port.
+    f, rec = fake_trex(), Recorder()
+    drop = SynDropper()
+    monkeypatch.setattr(trex_session, "RECONNECT_RETRY_S", 0.2)
+    monkeypatch.setattr(trex_session, "RECONNECT_WINDOW_S", 2.0)
+    starts: list[float] = []
+
+    async def run() -> None:
+        s = new_session(rec)
+        await planned_stop(s, f)
+        s._params = dataclasses.replace(s._params, sync_port=drop.port, timeout_s=0.1)
+        real = s._port_accepts
+
+        async def spy(*a: object) -> bool:
+            """Record the probe's start time, then probe for real."""
+            starts.append(time.monotonic())
+            return await real(*a)
+        monkeypatch.setattr(s, "_port_accepts", spy)
+        s.reconnect_after_start(0)
+        await s._reconnect_task
+        assert s.snapshot()["ended"]["recovery"]["kind"] == "reconnect_failed"
+    try:
+        new_session.run(run())
+    finally:
+        drop.close()
+    gaps = sorted(b - a for a, b in zip(starts, starts[1:], strict=False))
+    assert len(gaps) >= 4, starts
+    assert gaps[len(gaps) // 2] < 0.3, gaps                # one period of 0.2 s, not timeout + sleep (0.4 s)
+
+
+def test_the_deadline_covers_an_attempt_at_the_window_end(fake_trex, new_session, monkeypatch) -> None:
+    f, rec = fake_trex(), Recorder()
+    monkeypatch.setattr(trex_session, "RECONNECT_WINDOW_S", 0.6)
+    mute = socket.socket()
+    mute.bind(("127.0.0.1", 0))
+    mute.listen()                                        # accepts the TCP connect and never answers
+
+    async def run() -> None:
+        s = new_session(rec)
+        await planned_stop(s, f)
+        s._params = dataclasses.replace(s._params, sync_port=mute.getsockname()[1], timeout_s=1.0)
+        before, t0 = connecting(rec), time.time()
+        s.reconnect_after_start(0)                       # a 0.6 s window, shorter than one 1.0 s attempt
+        deadline = s.snapshot()["ended"]["recovery"]["deadline"]
+        assert deadline >= t0 + 0.6 + 1.0
+        await s._reconnect_task
+        assert time.time() <= deadline                   # the attempt it started ran inside the countdown
+        assert connecting(rec) == before + 1
+        assert s.snapshot()["ended"]["recovery"]["kind"] == "reconnect_failed"
+    try:
+        new_session.run(run())
+    finally:
+        mute.close()
+
+
+def test_failed_attempts_are_info_and_the_failure_is_one_error(fake_trex, new_session, monkeypatch) -> None:
+    f, rec = fake_trex(), Recorder()
+    monkeypatch.setattr(trex_session, "RECONNECT_RETRY_S", 0.05)
+    monkeypatch.setattr(trex_session, "RECONNECT_WINDOW_S", 2.0)
+    mute = socket.socket()
+    mute.bind(("127.0.0.1", 0))
+    mute.listen()                                        # accepts the TCP connect and never answers
+
+    async def run() -> None:
+        s = new_session(rec)
+        await planned_stop(s, f)
+        s._params = dataclasses.replace(s._params, sync_port=mute.getsockname()[1], timeout_s=0.3)
+        n = len(rec.msgs)
+        s.reconnect_after_start(0)
+        await s._reconnect_task
+        logs = [m for m in rec.msgs[n:] if m["type"] == "log"]
+        attempts = [m for m in logs if m["message"].startswith("Connect to ")]
+        errors = [m for m in logs if m["level"] in ("error", "warning")]
+        assert len(attempts) >= 2 and {m["level"] for m in attempts} == {"info"}, logs
+        rcv = s.snapshot()["ended"]["recovery"]
+        assert rcv["kind"] == "reconnect_failed"
+        assert [m["message"] for m in errors] == [f"Automatic reconnect failed: {rcv['error']}"], logs
+    try:
+        new_session.run(run())
+    finally:
+        mute.close()

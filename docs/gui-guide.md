@@ -127,9 +127,10 @@ Control's command port, written the same way: `localhost` is not `127.0.0.1`. A 
 dialog above. While the stop's record is set (until Control is connected again, or you press **Connect…** or
 **Disconnect**), a loss during the automatic reconnect keeps the **TRex stopped** dialog, and a failed reconnect shows
 its error there with **Reconnect**. Control reconnects by itself after a stateless Start from the daemon dialog on the
-same host and command port, within the Start timeout plus 20 s; **Connect…** or **Disconnect** cancels that, as does a
-later daemon Stop or a Start that does not match, and the dialog goes when Control is connected again. A second browser
-tab shows the same dialog.
+same host and command port: it tries for the Start timeout plus 20 s, and the countdown adds one connect timeout for
+its last attempt. **Connect…** or **Disconnect** cancels that, as does a later daemon Stop or a Start that does not
+match, and the dialog goes when Control is connected again. Each failed attempt is an info line in Events; a failed
+reconnect is one error line, `Automatic reconnect failed: <error>`. A second browser tab shows the same dialog.
 
 **Disconnect** always releases the ports you own. The **Release my ports when trex-web-gui exits** setting
 ([13.3](#133-session)) decides what a backend shutdown does.
@@ -1520,7 +1521,8 @@ be read it asks once more, `Force stop anyway?`
 
 A stop of the TRex Control is connected to (same host and command port as the Control session) is not a loss:
 Control shows the **TRex stopped** dialog ([1.3](#13-the-status-bar)), and a later stateless Start from this dialog
-on the same host and command port reconnects Control by itself, within the Start timeout plus 20 s. A stateful Start
+on the same host and command port reconnects Control by itself, within the Start timeout plus 20 s plus one connect
+timeout. A stateful Start
 shows when the run ends instead. A failed Stop, or one after which the daemon still reports TRex running, changes
 nothing for Control.
 

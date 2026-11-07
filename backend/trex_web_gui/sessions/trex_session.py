@@ -137,7 +137,7 @@ class TrexSession(PortConfigCommands, CaptureCommands):
                 "ifaces": self._ifaces, "ifaces_note": self._ifaces_note,
                 "ended": self._ended}
 
-    async def connect(self, p: ConnectParams) -> ServerInfo:
+    async def connect(self, p: ConnectParams, failure_level: str = "error") -> ServerInfo:
         """Connect the control client and the reader at once, each on its own executor; returns the server
         info. Refused with TrexApiError once closed, and with SessionBusy while the lock is held or the
         session is CONNECTING or CONNECTED. Holds `_lock` throughout: disconnects a client left from a LOST
@@ -152,7 +152,9 @@ class TrexSession(PortConfigCommands, CaptureCommands):
         (publishing `ports`), looks up the interfaces off the loop (a failure becomes `ifaces_note`) and
         publishes `session`; then, only if still CONNECTED, lists the server's captures and starts the
         capture loop (a failure there is logged, not raised). Drops a stop expectation and its
-        held messages at entry; clears `ended` only on reaching CONNECTED, so a failed connect keeps it."""
+        held messages at entry; clears `ended` only on reaching CONNECTED, so a failed connect keeps it. A
+        failure before CONNECTED is logged to Events at `failure_level` (the reconnect loop's attempts pass
+        "info")."""
         if self._closed:
             raise TrexApiError("This session is closed; create a new one.")
         if self._lock.locked() or self._state in (SessionState.CONNECTING, SessionState.CONNECTED):
@@ -190,7 +192,7 @@ class TrexSession(PortConfigCommands, CaptureCommands):
                 raise asyncio.CancelledError
             if isinstance(control, BaseException):       # control error wins; it released its own client
                 err = trexapi.translate(control)
-                self._log_connect_failure(p, err)
+                self._log_connect_failure(p, err, failure_level)
                 if not isinstance(rdr, BaseException):
                     cleanup = self._reader_executor.submit(self._disconnect_blocking, rdr, False)
                     try:
@@ -205,7 +207,7 @@ class TrexSession(PortConfigCommands, CaptureCommands):
             client, info = control
             if isinstance(rdr, BaseException):
                 err = trexapi.translate(rdr)             # _connect_reader_blocking released the reader
-                self._log_connect_failure(p, err)
+                self._log_connect_failure(p, err, failure_level)
                 cleanup = self._executor.submit(self._disconnect_blocking, client, True)
                 try:
                     await self._await_done(asyncio.wrap_future(cleanup))
@@ -319,30 +321,41 @@ class TrexSession(PortConfigCommands, CaptureCommands):
             self.reconnect_after_start(timeout_s)
 
     def reconnect_after_start(self, timeout_s: float) -> None:
-        """Publish recovery `reconnecting` (deadline now + timeout_s + RECONNECT_WINDOW_S) and start the one
-        reconnect task, which probes the command port and connects; see _reconnect_loop. Needs `ended`. Does
-        nothing while a reconnect task still runs: the caller cancels it first (cancel_reconnect), so no task
-        is ever orphaned."""
+        """Publish recovery `reconnecting` and start the one reconnect task, which probes the command port and
+        connects for timeout_s + RECONNECT_WINDOW_S seconds; see _reconnect_loop. The deadline is that window
+        plus one connect timeout, so an attempt started at the window's end still finishes by it. Needs
+        `ended`. Does nothing while a reconnect task still runs: the caller cancels it first
+        (cancel_reconnect), so no task is ever orphaned."""
         if self._ended is None or (self._reconnect_task is not None and not self._reconnect_task.done()):
             return
         window = timeout_s + RECONNECT_WINDOW_S
-        self.set_recovery({"kind": "reconnecting", "deadline": time.time() + window})
+        last_attempt = self._params.timeout_s if self._params is not None else 0.0
+        self.set_recovery({"kind": "reconnecting", "deadline": time.time() + window + last_attempt})
         self._reconnect_task = asyncio.create_task(self._reconnect_loop(window))
 
     async def _reconnect_loop(self, window: float) -> None:
-        """Every RECONNECT_RETRY_S try a TCP connect to the command port; when it accepts, connect(). An
-        unreachable server or a loss during the attempt goes back to probing; any other failure (a version or
-        mode refusal) ends at once with `reconnect_failed`, as does the end of `window` seconds. A cancel
-        waits for an attempt in flight (_await_done) and is re-raised, so no probe follows it."""
+        """Every RECONNECT_RETRY_S, counted from one probe's start to the next, try a TCP connect to the
+        command port; when it accepts, connect(). Probes and attempts start only within `window` seconds; the
+        published deadline adds one connect timeout for the last attempt (reconnect_after_start), and a
+        connect of several slow replies can still run past it. An unreachable server or a
+        loss during the attempt goes back to probing; any other failure (a version or mode refusal) ends at
+        once with `reconnect_failed`, as does the end of probing. Each attempt's failure is logged at info;
+        the reconnect's own failure is the one error line (_fail_reconnect). A cancel waits for an attempt
+        in flight (_await_done) and is re-raised, so no probe follows it."""
         end = time.monotonic() + window
         last: str | None = None
         p = self._params
         try:
-            while p is not None and time.monotonic() < end:
+            while p is not None:
                 p = self._params or p
-                if await self._port_accepts(p.host, p.sync_port):
+                now = time.monotonic()
+                left = end - now                         # time a probe or an attempt may still start in
+                if left <= 0:
+                    break
+                next_probe = now + RECONNECT_RETRY_S
+                if await self._port_accepts(p.host, p.sync_port, min(RECONNECT_RETRY_S, left)):
                     try:
-                        await self._await_done(asyncio.ensure_future(self.connect(p)))
+                        await self._await_done(asyncio.ensure_future(self.connect(p, failure_level="info")))
                         return                           # CONNECTED: connect() cleared `ended`
                     except trexapi.ServerUnreachable as ex:
                         last = ex.message
@@ -351,7 +364,7 @@ class TrexSession(PortConfigCommands, CaptureCommands):
                             self._fail_reconnect(ex.message)
                             return
                         last = ex.message
-                await asyncio.sleep(RECONNECT_RETRY_S)
+                await asyncio.sleep(max(0.0, next_probe - time.monotonic()))
             where = f"{p.host}:{p.sync_port}" if p is not None else "the server"
             self._fail_reconnect(last or f"TRex did not answer on {where}")
         except Exception as ex:                          # never BaseException: a cancel must propagate
@@ -359,17 +372,21 @@ class TrexSession(PortConfigCommands, CaptureCommands):
             self._fail_reconnect(str(ex) or type(ex).__name__)
 
     def _fail_reconnect(self, error: str) -> None:
-        """Publish recovery `reconnect_failed` with `error`."""
+        """Log the failure to Events as an error and publish recovery `reconnect_failed` with `error`."""
+        self._log("error", f"Automatic reconnect failed: {error}")
         self.set_recovery({"kind": "reconnect_failed", "error": error})
 
     @staticmethod
-    async def _port_accepts(host: str, port: int) -> bool:
-        """Whether a TCP connect to host:port succeeds within RECONNECT_RETRY_S; the socket is closed."""
+    async def _port_accepts(host: str, port: int, timeout_s: float) -> bool:
+        """Whether a TCP connect to host:port succeeds within `timeout_s`; the socket is closed, and its close
+        awaited within the same bound (an error or timeout of the close is not the probe's answer)."""
         try:
-            _r, w = await asyncio.wait_for(asyncio.open_connection(host, port), RECONNECT_RETRY_S)
+            _r, w = await asyncio.wait_for(asyncio.open_connection(host, port), timeout_s)
         except (OSError, TimeoutError):
             return False
         w.close()
+        with contextlib.suppress(OSError, TimeoutError):
+            await asyncio.wait_for(w.wait_closed(), timeout_s)
         return True
 
     async def expect_stop(self, host: str, sync_port: int, daemon: str) -> bool:
@@ -1040,9 +1057,9 @@ class TrexSession(PortConfigCommands, CaptureCommands):
         else:
             self._publish(msg)
 
-    def _log_connect_failure(self, p: ConnectParams, err: TrexApiError) -> None:
-        """Put a failed connect in Events, not only in the dialog's error."""
-        self._log("error", f"Connect to {p.host}:{p.sync_port} failed: {err.message}")
+    def _log_connect_failure(self, p: ConnectParams, err: TrexApiError, level: str = "error") -> None:
+        """Put a failed connect in Events at `level`, not only in the dialog's error."""
+        self._log(level, f"Connect to {p.host}:{p.sync_port} failed: {err.message}")
 
     # -- executor side --------------------------------------------------------------------------
     def _resolve_ifaces_blocking(self, cfg_path: str, ports: list[dict[str, Any]],
