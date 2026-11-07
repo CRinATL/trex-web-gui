@@ -69,7 +69,7 @@ export function ProfileLibrary({ entries, loadErrors, selected, onSelect, onChan
     trafficStore.relink(old, entry)   // open Control forms follow the entry's new path, slug and name
     return entry.slug
   })
-  const doDelete = () => sel && run(async () => { await deleteProfile(sel.slug); return null })
+  const doDelete = () => sel && run(async () => { await deleteProfile(sel.slug); trafficStore.unlink({ slug: sel.slug, path: sel.path }); return null })
   const renamePinned = pinned && edit?.kind === 'rename'      // a Rename form opened while clean must not submit once the edits are unsaved
   // Saved test setups name a profile by its path; a rename moves the file, so they would no longer find it.
   const pointing = sel ? setups.filter((s) => s.ports.some((p) => p.profile.path === sel.path)).length : 0

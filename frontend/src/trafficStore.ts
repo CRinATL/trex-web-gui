@@ -71,6 +71,26 @@ class TrafficStore {
     this.publish()
   }
 
+  // A library delete (ruling D4): a form on the deleted entry's file path or linked to its slug is unlinked, and keeps its
+  // path, since a .py source outlives its entry. The name falls back to the file's basename only where it showed the
+  // entry (same test as relink). Other forms keep their identity.
+  unlink = (old: { slug: string; path: string }): void => {
+    let changed = false
+    const next: Record<number, TrafficForm> = {}
+    for (const [k, f] of Object.entries(this.forms)) {
+      const onPath = f.path === old.path || f.formPath === old.path || f.inspected?.path === old.path
+      if (!onPath && f.librarySlug !== old.slug) { next[Number(k)] = f; continue }
+      const named = onPath || linkedSlug(f) === old.slug
+      const patch: Partial<TrafficForm> = { librarySlug: null, libraryPy: null, libraryArgs: [] }
+      if (f.inspected && named) patch.inspected = { ...f.inspected, name: f.inspected.path.split('/').pop() || f.inspected.path }
+      next[Number(k)] = { ...f, ...patch }
+      changed = true
+    }
+    if (!changed) return
+    this.forms = next
+    this.publish()
+  }
+
   // Every port that has been touched, keyed by port id. A new record on every change.
   all = (): Record<number, TrafficForm> => this.forms
 
