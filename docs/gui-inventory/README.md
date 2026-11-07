@@ -161,13 +161,15 @@ Source: `frontend/src/App.tsx`, `frontend/src/components/StatusBar.tsx`, `fronte
 
 - **Always shown** (when authorised), on every page; see any screenshot below.
 - **Contents:** the app name "trex-web-gui" (bold, not a link); the nav links **Control**, **Dashboard**, **Capture**,
-  **Editor**, **Monitor**, **Events**, **Settings** (the current one is underlined). Nothing at the right: the About button is gone.
+  **Editor**, **Monitor**, **EMU**, **Events**, **Settings** (the current one is underlined). Nothing at the right: the
+  About button is gone.
 - **Events badge:** a red count beside **Events** of the errors and warnings that arrived since the Events page was last
   open (visible in [58](screens/58-settings-changed-on-server.png) and [77](screens/77-manage-setups-run-failed-start.png));
   opening the page clears it.
 - `/` redirects to `/control`. The Control, Capture and Editor pages stay mounted while hidden (their state survives
-  page switches), and so does the packet editor page (`/editor/packet`) once it has been visited. **Monitor** ([5.7](#57-monitor))
-  is a link between **Editor** and **Events**.
+  page switches), and so does the packet editor page (`/editor/packet`) once it has been visited. **Monitor**
+  ([5.7](#57-monitor)) is a link between **Editor** and **EMU**; **EMU** (the EMU page, shots 118 and 119) is between
+  **Monitor** and **Events**.
 
 ### 1.3 Status bar
 
