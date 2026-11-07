@@ -145,3 +145,33 @@ def test_shipped_code_links_a_readme_heading_and_a_doc_that_exist() -> None:
     blob = check_links.REPO_URL + "/blob/main/"
     assert pages.API_DOC_URL.startswith(blob)
     assert (ROOT / pages.API_DOC_URL.removeprefix(blob)).is_file()
+
+
+# The anchors published material links, as (file, anchor): a GitHub release's body is a copy of its
+# docs/releases note made at release time, and an installed wheel keeps pages.py's links, so neither changes
+# when the repo does. This list, not the notes' current text, is what pins them: editing an old note's link
+# must not free its anchor. A heading that moves keeps an `<a id="…">` stub.
+PUBLISHED_ANCHORS = {
+    ("README.md", "offline-host"),                       # docs/releases v1.0.0 to v1.3.1, "Offline host"
+    ("README.md", "access-single-user-localhost-only"),  # pages.ACCESS_URL, in every wheel since v1.1.4
+    ("docs/gui-guide.md", "11a-emu"),                    # docs/releases/v1.2.0.md
+    ("docs/gui-guide.md", "103-fields"),                 # docs/releases/v1.3.0.md
+}
+
+
+def test_published_anchors_exist() -> None:
+    check_links = load_script("check_links")
+    for path, anchor in sorted(PUBLISHED_ANCHORS):
+        offered = check_links.anchors((ROOT / path).read_text(), readme=path == "README.md")
+        assert anchor in offered, f"{path}#{anchor} is linked from published material; keep a heading or stub"
+
+
+def test_every_anchor_a_release_note_links_is_pinned() -> None:
+    # A new note that links an anchor adds it to PUBLISHED_ANCHORS in the same change.
+    check_links = load_script("check_links")
+    linked = set()
+    for note in sorted((ROOT / "docs" / "releases").glob("*.md")):
+        rel = note.relative_to(ROOT).as_posix()
+        found = check_links.links(rel, note.read_text())
+        linked |= {(target, anchor) for _, _, target, anchor in found if anchor}
+    assert linked <= PUBLISHED_ANCHORS, sorted(linked - PUBLISHED_ANCHORS)

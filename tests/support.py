@@ -42,6 +42,7 @@ def load_script(name: str) -> Any:
     spec.loader.exec_module(mod)
     return mod
 
+
 def warnings_in(root: Path) -> int:
     """How many SyntaxWarnings compiling every .py under root raises (compiled only, nothing imported)."""
     n = 0

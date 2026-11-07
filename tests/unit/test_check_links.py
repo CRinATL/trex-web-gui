@@ -75,6 +75,10 @@ def test_closing_hashes_and_indented_headings(cl) -> None:
     assert cl.anchors("## Foo ##\n   ### Bar\n    #### code, not a heading\n") == {"foo", "bar"}
 
 
+def test_an_html_anchor_does_not_shift_heading_numbers(cl) -> None:
+    assert cl.anchors('<a id="a"></a>\n# A\n') == {"a"}
+
+
 def test_readme_offers_githubs_readme_anchor(cl) -> None:
     assert "readme" in cl.anchors("# T\n", readme=True)
     assert "readme" not in cl.anchors("# T\n")
@@ -88,7 +92,11 @@ def test_good_links_pass(cl, tmp_path: Path) -> None:
                      "[t](docs/guide.md \"title\") [t2](docs/guide.md 'title') [a](<docs/guide.md>)\n"
                      "[![badge](docs/pic.svg)](docs/guide.md) [root](/docs/guide.md)\n"
                      "[sp](docs/my%20file.md)\n"
-                     "[ref]: docs/guide.md#part-two\n",
+                     "[ref]: docs/guide.md#part-two\n"
+                     "[ref2]: <docs/guide.md> \"title\"\n"
+                     "Text[^1][^2].\n\n[^1]: See the guide for details.\n[^2]: aside\n"
+                     "[ERROR]: something failed here\n"
+                     "1.  item\n\n    ```\n    [x](gone.md)\n    ```\n",
         "docs/guide.md": "# Guide\n## Part two\n[back](../README.md#top)\n",
         "docs/my file.md": "# M\n",
         "docs/pic.svg": "<svg/>",
@@ -96,6 +104,9 @@ def test_good_links_pass(cl, tmp_path: Path) -> None:
                     f'DOC = "{GH}/blob/main/docs/guide.md#part-two"\n'
                     f'DIR = "{GH}/tree/main/docs/"\n'
                     f'LINE = "{GH}/blob/main/README.md#L10"\n'
+                    f'LINES = "{GH}/blob/main/README.md#L10-L20"\n'
+                    f'COLS = "{GH}/blob/main/README.md#L10C5-L12C3"\n'
+                    f'SPACE = "{GH}/blob/main/docs/my%20file.md"\n'
                     f'PLAIN = "{GH}/blob/main/README.md?plain=1"\n'
                     f'HOME = "{GH}#readme"\n'
                     f'ISSUES = "{GH}/issues"\n'
@@ -131,6 +142,8 @@ def test_a_same_file_anchor_is_checked(cl, tmp_path: Path) -> None:
 @pytest.mark.parametrize(("line", "raw", "target"), [
     ("[![b](docs/p.svg)](docs/gone.md)", "docs/gone.md", "docs/gone.md"),
     ("[x](docs/gone.md 'title')", "docs/gone.md", "docs/gone.md"),
+    ('[x](docs/gone.md "title")', "docs/gone.md", "docs/gone.md"),
+    ("[r]: <docs/gone.md>", "docs/gone.md", "docs/gone.md"),
     ("[x](<docs/gone.md>)", "docs/gone.md", "docs/gone.md"),
     ("[x](/docs/gone.md)", "/docs/gone.md", "docs/gone.md"),
     ("[r]: docs/gone.md", "docs/gone.md", "docs/gone.md"),
@@ -138,6 +151,23 @@ def test_a_same_file_anchor_is_checked(cl, tmp_path: Path) -> None:
 def test_every_link_form_is_checked(cl, tmp_path: Path, line: str, raw: str, target: str) -> None:
     out = broken(cl, tmp_path, {"README.md": f"# T\n{line}\n", "docs/p.svg": "<svg/>"})
     assert out == [at("README.md", 2, f"{raw}: no such file {target}")]
+
+
+def test_a_badge_checks_its_image_and_its_link(cl, tmp_path: Path) -> None:
+    out = broken(cl, tmp_path, {"README.md": "# T\n[![b](docs/gone.svg)](docs/gone.md)\n"})
+    assert out == [at("README.md", 2, "docs/gone.md: no such file docs/gone.md"),
+                   at("README.md", 2, "docs/gone.svg: no such file docs/gone.svg")]
+
+
+def test_a_github_url_anchor_after_a_query_is_checked(cl, tmp_path: Path) -> None:
+    out = broken(cl, tmp_path, {"README.md": "# T\n",
+                                "x.py": f'U = "{GH}/blob/main/README.md?plain=1#nope"\n'})
+    assert out == [at("x.py", 1, f"{GH}/blob/main/README.md?plain=1#nope: README.md has no heading #nope")]
+
+
+def test_a_query_stops_at_a_closing_bracket(cl, tmp_path: Path) -> None:
+    out = broken(cl, tmp_path, {"README.md": f"# T\n<{GH}/blob/main/gone.md?plain=1>\n"})
+    assert out == [at("README.md", 2, f"{GH}/blob/main/gone.md?plain=1: no such file gone.md")]
 
 
 def test_a_github_url_anchor_into_the_readme_is_checked_in_any_file(cl, tmp_path: Path) -> None:
