@@ -10,7 +10,7 @@ from typing import Any
 import pytest
 from packaging.requirements import Requirement
 from packaging.version import Version
-from support import ROOT
+from support import ROOT, load_script
 
 PYPROJECT = ROOT / "backend" / "pyproject.toml"
 RUNTIME = {"fastapi", "uvicorn", "websockets", "pyzmq", "pyyaml", "tomli-w"}
@@ -112,11 +112,66 @@ def test_service_unit_sample() -> None:
     assert "systemctl --user import-environment DISPLAY WAYLAND_DISPLAY" in text
 
 
-def test_readme_install_section() -> None:
+def readme_and_its_pages() -> str:
+    """The README and every repo Markdown page it links to, as one text: what a reader reaches in one
+    click."""
     text = (ROOT / "README.md").read_text()
-    # Requirements first, then the install, then the first start (the README study's order, 2026-11-02).
-    assert text.index("## Before you start") < text.index("## Install") < text.index("## Quick start")
-    assert "## Requirements" not in text
-    for needle in ("uv tool install", "journalctl --user -u trex-web-gui", "### Offline host",
-                   "--no-index --find-links", "docs/api.md"):
-        assert needle in text, needle
+    pages = {m.split("#")[0] for m in re.findall(r"\]\(([^)\s:]+\.md)(?:#[^)]*)?\)", text)}
+    return "\n".join([text, *((ROOT / p).read_text() for p in sorted(pages) if (ROOT / p).is_file())])
+
+
+def test_readme_keeps_the_install_facts() -> None:
+    # Relaxed 2026-11-06 (doc-audit review): the README's order and headings are free to change. The README
+    # itself keeps the install command and a link to the API reference; where the logs are and the offline
+    # install may move to a page it links to. Links and anchors are `make links`' job
+    # (scripts/check_links.py).
+    readme = (ROOT / "README.md").read_text()
+    assert "uv tool install" in readme
+    assert "](docs/api.md)" in readme
+    reachable = readme_and_its_pages()
+    for needle in ("journalctl --user -u trex-web-gui", "--no-index --find-links"):
+        assert needle in reachable, needle
+
+
+def test_shipped_code_links_a_readme_heading_and_a_doc_that_exist() -> None:
+    # pages.py builds its links from parts, so `make links` cannot see them; a wheel already installed
+    # keeps pointing at them, so the README keeps the heading and docs/api.md stays where it is.
+    from trex_web_gui.api import pages
+
+    check_links = load_script("check_links")
+    url, _, anchor = pages.ACCESS_URL.partition("#")
+    assert url == check_links.REPO_URL
+    assert anchor in check_links.anchors((ROOT / "README.md").read_text())
+    blob = check_links.REPO_URL + "/blob/main/"
+    assert pages.API_DOC_URL.startswith(blob)
+    assert (ROOT / pages.API_DOC_URL.removeprefix(blob)).is_file()
+
+
+# The anchors published material links, as (file, anchor): a GitHub release's body is a copy of its
+# docs/releases note made at release time, and an installed wheel keeps pages.py's links, so neither changes
+# when the repo does. This list, not the notes' current text, is what pins them: editing an old note's link
+# must not free its anchor. A heading that moves keeps an `<a id="…">` stub.
+PUBLISHED_ANCHORS = {
+    ("README.md", "offline-host"),                       # docs/releases v1.0.0 to v1.3.1, "Offline host"
+    ("README.md", "access-single-user-localhost-only"),  # pages.ACCESS_URL, in every wheel since v1.1.4
+    ("docs/gui-guide.md", "11a-emu"),                    # docs/releases/v1.2.0.md
+    ("docs/gui-guide.md", "103-fields"),                 # docs/releases/v1.3.0.md
+}
+
+
+def test_published_anchors_exist() -> None:
+    check_links = load_script("check_links")
+    for path, anchor in sorted(PUBLISHED_ANCHORS):
+        offered = check_links.anchors((ROOT / path).read_text(), readme=path == "README.md")
+        assert anchor in offered, f"{path}#{anchor} is linked from published material; keep a heading or stub"
+
+
+def test_every_anchor_a_release_note_links_is_pinned() -> None:
+    # A new note that links an anchor adds it to PUBLISHED_ANCHORS in the same change.
+    check_links = load_script("check_links")
+    linked = set()
+    for note in sorted((ROOT / "docs" / "releases").glob("*.md")):
+        rel = note.relative_to(ROOT).as_posix()
+        found = check_links.links(rel, note.read_text())
+        linked |= {(target, anchor) for _, _, target, anchor in found if anchor}
+    assert linked <= PUBLISHED_ANCHORS, sorted(linked - PUBLISHED_ANCHORS)

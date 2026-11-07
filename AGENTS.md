@@ -16,8 +16,8 @@ do not "fix" them.
 
 - `npm --prefix frontend install` once after cloning, and again when `frontend/package.json` changes.
 - `make check` is the gate: lint, the typecheck, the Python and frontend tests, the frontend build, the citation
-  check and the docstring check. Its last line is `gate check rc=N in <time>`; a change is done when it reads
-  `rc=0`. Without a systemd user session, run
+  check, the link check and the docstring check. Its last line is `gate check rc=N in <time>`; a change is done
+  when it reads `rc=0`. Without a systemd user session, run
   `make check PYTEST="uv run --project backend --locked pytest" VITEST_CAP=`.
 - One frontend test file: `npm --prefix frontend test -- --run src/<file>.test.ts`. Run vitest this way, through
   the frontend's npm script; another way of starting it can skip the test environment.
