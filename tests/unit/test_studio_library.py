@@ -1,6 +1,7 @@
 """The profile library on disk (P4a Task 3)."""
 import json
 import os
+import sys
 import time
 from pathlib import Path
 from typing import Any
@@ -478,7 +479,11 @@ def test_label_of_is_none_on_a_symlink_loop_in_the_library(tmp_path: Path) -> No
     assert pl.label_of(str(a)) is None
 
 
-def test_label_of_is_none_when_the_entry_json_loops(tmp_path: Path) -> None:
+def test_label_of_never_raises_when_the_entry_json_loops(tmp_path: Path) -> None:
+    """The entry's JSON is a symlink loop and the path is its .py source. Python 3.12's non-strict
+    Path.resolve() raises RuntimeError there, which label_of turns into None; 3.13 and later do not raise
+    (measured 2026-11-07: 3.13.14, 3.14.7), so the sidecar's .py source matches and the entry's name
+    stands."""
     pl = mklib(tmp_path)
     py = tmp_path / "p.py"
     pl.create("A", [stream("a")], source=src_of("py", py))
@@ -486,7 +491,8 @@ def test_label_of_is_none_when_the_entry_json_loops(tmp_path: Path) -> None:
     entry.unlink()
     entry.symlink_to(loop2)
     loop2.symlink_to(entry)
-    assert pl.label_of(str(py), "a") is None
+    want = None if sys.version_info < (3, 13) else LibraryLabel("a", "A")
+    assert pl.label_of(str(py), "a") == want
 
 
 def test_display_name() -> None:
