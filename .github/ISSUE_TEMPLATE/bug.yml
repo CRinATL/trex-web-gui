@@ -11,7 +11,7 @@ body:
     id: version
     attributes:
       label: trex-web-gui version
-      description: The first line `trex-web-gui serve` prints, or the wheel's file name.
+      description: The first line `trex-web-gui` prints, or the wheel's file name.
       placeholder: trex-web-gui 1.0.0 for ...
     validations:
       required: true

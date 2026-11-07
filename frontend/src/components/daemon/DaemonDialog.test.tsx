@@ -457,7 +457,7 @@ describe('DaemonDialog', () => {
     expect(screen.queryByText(/Connect to a daemon/)).toBeNull()
   })
 
-  it('the command-port note names the trex-web-gui host, or the computer running trex-web-gui serve', async () => {
+  it('the command-port note names the trex-web-gui host, or the computer running trex-web-gui', async () => {
     vi.spyOn(api, 'getAbout').mockResolvedValue({ app_version: '1', trex_pin: { upstream_sha: 'x', patches: [] }, supported: 's', host: 'trex-host' })
     await open()
     expect(await screen.findByText(/^the port trex-host reaches the daemon's TRex on/)).toBeInTheDocument()
@@ -466,6 +466,6 @@ describe('DaemonDialog', () => {
   it('the command-port note falls back while the host is unknown', async () => {
     vi.spyOn(api, 'getAbout').mockReturnValue(new Promise(() => {}))
     await open()
-    expect(screen.getByText(/^the port the computer running trex-web-gui serve reaches the daemon's TRex on/)).toBeInTheDocument()
+    expect(screen.getByText(/^the port the computer running trex-web-gui reaches the daemon's TRex on/)).toBeInTheDocument()
   })
 })

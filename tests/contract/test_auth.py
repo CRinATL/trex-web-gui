@@ -14,7 +14,7 @@ from trex_web_gui.api.auth import cookie_name
 
 WS = "ws://127.0.0.1/api/ws"
 AUTH_ROUTES = {"/api/auth/login", "/api/auth/status", "/api/auth/logout"}
-UNAUTHENTICATED = {"error": "unauthenticated", "message": "Open the URL printed by trex-web-gui serve."}
+UNAUTHENTICATED = {"error": "unauthenticated", "message": "Open the URL printed by trex-web-gui."}
 
 # Built at collection time so the routes can parametrise the test. Its own static dir, with an index.html
 # as test_compression.py has, so that GET / is a real answer. The middleware answers before any handler,

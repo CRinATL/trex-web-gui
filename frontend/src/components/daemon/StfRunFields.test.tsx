@@ -165,6 +165,6 @@ describe('StfRunFields', () => {
   it('the Monitor-port note falls back while the host is unknown', () => {
     vi.spyOn(api, 'getAbout').mockReturnValue(new Promise(() => {}))
     render(<Harness />)
-    expect(screen.getByText("the PUB port the computer running trex-web-gui serve reaches the run's publisher on")).toBeInTheDocument()
+    expect(screen.getByText("the PUB port the computer running trex-web-gui reaches the run's publisher on")).toBeInTheDocument()
   })
 })

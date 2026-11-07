@@ -43,7 +43,7 @@ Then open the `:5173` login URL that `make dev` prints. To run the GUI as a user
 | Command | What it does |
 |---|---|
 | `npm --prefix frontend install` | Installs the UI's npm dependencies into `frontend/node_modules`. Run it once after cloning, and again when `frontend/package.json` changes, before `make build` or `make check` |
-| `make build` | Builds the UI that `trex-web-gui serve` serves |
+| `make build` | Builds the UI that `trex-web-gui` serves |
 | `make wheel` | Builds the one wheel in `dist/`, with the UI built first and carried inside it |
 | `make install-smoke` | Installs the wheel from `dist/` into a throwaway `uv tool` directory on Python 3.12 and 3.14 and exercises it |
 | `make check` | Runs lint, the typecheck, the unit and contract tests (against a fake TRex, including the check that `docs/api.md` is current) and the frontend tests, builds the frontend, then checks the `file:line` citations, the internal links and the docstrings. Each step prints its usual time and when the gate should end, and a table at the end compares them; the last line is `gate check rc=N in <time>`. pytest runs on every core; `PYTEST_WORKERS=0` runs it in one process |

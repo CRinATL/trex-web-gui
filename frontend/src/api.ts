@@ -109,7 +109,7 @@ async function reply<T>(r: Response): Promise<T> {
 // TypeError, whose text names neither the request nor a cause: Safari's is "Load failed", Chrome's "Failed to fetch"
 // (RC1-27). It becomes ApiError status 0, code no_reply, saying which request and what to check.
 export const noReplyText = (method: string, path: string, browser: string) =>
-  `No reply from trex-web-gui to ${method} ${path} (the browser says "${browser}"). Is trex-web-gui serve still running, and the SSH tunnel up?`
+  `No reply from trex-web-gui to ${method} ${path} (the browser says "${browser}"). Is trex-web-gui still running on the backend host, and the SSH tunnel up?`
 
 async function call<T>(method: string, path: string, body?: unknown): Promise<T> {
   let r: Response

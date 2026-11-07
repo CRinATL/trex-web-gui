@@ -44,12 +44,12 @@ every button is in [`api.md`](api.md).
 
 ### 1.1 The login URL
 
-`trex-web-gui serve` prints `Open: http://127.0.0.1:8765/api/auth/login?token=...`. Opening that URL sets the
+`trex-web-gui` prints `Open: http://127.0.0.1:8765/api/auth/login?token=...`. Opening that URL sets the
 session cookie and sends the browser to `/`, which the app redirects to `/control`. The token lives as long as
 the backend process: after a restart, open the new URL.
 
 A browser without the cookie sees the **Not authorised** page instead of the app: the heading "Not authorised"
-and one sentence, "Open the URL printed by `trex-web-gui serve` on the backend host; through a tunnel, the same
+and one sentence, "Open the URL printed by `trex-web-gui` on the backend host; through a tunnel, the same
 URL with `localhost`." Nothing else is on it ([01](gui-inventory/screens/01-not-authorised.png)).
 
 Between the cookie check and the first message from the backend the page shows only "Connecting…".
@@ -57,7 +57,7 @@ Between the cookie check and the first message from the backend the page shows o
 ### 1.2 The top bar
 
 On every page: the name **trex-web-gui** at the left, then the links **Control**, **Dashboard**, **Capture**,
-**Editor**, **Monitor**, **Events**, **Settings**. The current page is underlined. **Events** carries a red
+**Editor**, **Monitor**, **EMU**, **Events**, **Settings**. The current page is underlined. **Events** carries a red
 badge with the number of errors and warnings that arrived while the Events page was not open. Opening Events
 clears it.
 
@@ -434,9 +434,9 @@ Each port's form is kept while you switch ports, tabs and pages, and is emptied 
 **Profile**
 
 - **Profile path**: a path on the backend host (nothing is uploaded). Enter inspects it. The ⓘ names the
-  trex-web-gui host: `Paths are on <host>, the computer running trex-web-gui serve, not the one your browser is on.
+  trex-web-gui host: `Paths are on <host>, the computer running trex-web-gui, not the one your browser is on.
   Nothing is uploaded.` and `.py profiles run as code on <host>.` Until the host name is known it reads `Paths
-  are on the computer running trex-web-gui serve, …` and `.py profiles run as code there.`
+  are on the computer running trex-web-gui, …` and `.py profiles run as code there.`
 - **Browse…**: the backend host's file browser ([4.3.1](#431-browse-dialog)). Picking a `.yaml`, `.yml` or
   `.json` file inspects it at once. A `.py` only fills the path, and you press Inspect.
 - **Library…**: pick a profile from the Editor's library ([4.3.2](#432-pick-from-the-library-dialog)).
@@ -1236,7 +1236,7 @@ tab changes, and **Close** stays in view), each ending in **Open in editor**:
 
   It is the data plane only. TRex stateless mode holds no BGP session, so no EVPN routes are sent, and a switch
   that admits VXLAN only from VTEPs it learned over BGP may drop the traffic. Add the outer source address as a static
-  VTEP or flood-list entry on the switch first. The 108 screenshot predates this tab.
+  VTEP or flood-list entry on the switch first.
 
 A bad number says so beside the button (`Source port must be a whole number`). A refusal that arrives after you moved
 to another tab marks the preset's tab with `!` while another tab is showing, until its next **Open in editor**. A
@@ -1454,7 +1454,7 @@ A pushed file becomes the Run tab's config path.
     `--cfg`, `-i`, `--astf`, `-f`, `-d`, `-m`, `-l`, `--rx-check` and `--client_cfg` are refused, also abbreviated),
     **TRex command port** (prefilled from the pushed config's `zmq_rpc_port`, else the Control session's port, else
     4501; the ⓘ: `the port <host> reaches the daemon's TRex on; Stop reads its port owners first`, `<host>` being the
-    trex-web-gui host, or `the computer running trex-web-gui serve` until it is known);
+    trex-web-gui host, or `the computer running trex-web-gui` until it is known);
   - Stateful:
     - **Source** (Stock, Uploaded) with **Upload…** ([12.5](#125-uploading-a-stateful-profile));
     - **Profile** (the daemon's list), the profile's details as the daemon reads it (templates, YAML duration,

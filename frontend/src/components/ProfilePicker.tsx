@@ -53,7 +53,7 @@ export function ProfilePicker({ portId, path, onPath, onInspected, inputRef, dis
       <button type="button" disabled={disabled} onClick={() => setLibrary(true)}>Library…</button>
       <button type="button" disabled={disabled || busy || !path.trim()} onClick={() => void doInspect(path)}>Inspect</button>
       <Info label="profile paths">
-        <p>Paths are on {host ? `${host}, ` : ''}the computer running trex-web-gui serve, not the one your browser is on. Nothing is uploaded.</p>
+        <p>Paths are on {host ? `${host}, ` : ''}the computer running trex-web-gui, not the one your browser is on. Nothing is uploaded.</p>
         <p>.py profiles run as code {host ? `on ${host}` : 'there'}.</p>
       </Info>
       {error && (error.status === 422

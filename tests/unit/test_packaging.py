@@ -128,9 +128,36 @@ def test_readme_keeps_the_install_facts() -> None:
     readme = (ROOT / "README.md").read_text()
     assert "uv tool install" in readme
     assert "](docs/api.md)" in readme
+    assert "releases/latest/download/install.sh | sh" in readme
     reachable = readme_and_its_pages()
     for needle in ("journalctl --user -u trex-web-gui", "--no-index --find-links"):
         assert needle in reachable, needle
+
+
+def test_readme_service_procedure_is_complete() -> None:
+    # The README gives the whole user-service procedure, and the unit's own comment holds the same commands,
+    # so the two cannot drift.
+    readme = (ROOT / "README.md").read_text()
+    unit = (ROOT / "docs" / "trex-web-gui.service").read_text()
+    for needle in ("mkdir -p ~/.config/systemd/user",
+                   "systemctl --user daemon-reload",
+                   "systemctl --user enable --now trex-web-gui",
+                   "journalctl --user -u trex-web-gui",
+                   "raw.githubusercontent.com/CRinATL/trex-web-gui/main/docs/trex-web-gui.service"):
+        assert needle in readme, needle
+    for needle in ("systemctl --user daemon-reload", "systemctl --user enable --now trex-web-gui",
+                   "journalctl --user -u trex-web-gui"):
+        assert needle in unit, needle
+
+
+def test_readme_raw_urls_name_files_that_exist() -> None:
+    # `make links` skips raw.githubusercontent.com, so a raw URL to a moved or renamed file would go unseen.
+    readme = (ROOT / "README.md").read_text()
+    prefix = "https://raw.githubusercontent.com/CRinATL/trex-web-gui/main/"
+    paths = re.findall(re.escape(prefix) + r"([^\s)`'\"]+)", readme)
+    assert paths
+    for path in paths:
+        assert (ROOT / path).is_file(), path
 
 
 def test_shipped_code_links_a_readme_heading_and_a_doc_that_exist() -> None:

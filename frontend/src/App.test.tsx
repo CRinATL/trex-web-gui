@@ -20,7 +20,7 @@ describe('shell', () => {
     try {
       render(<state.AppStateProvider><MemoryRouter initialEntries={['/control']}><AppShell /></MemoryRouter></state.AppStateProvider>)
       expect(await screen.findByRole('alert')).toHaveTextContent(/Not authorised/)
-      expect(screen.getByRole('alert')).toHaveTextContent(/Open the URL printed by trex-web-gui serve on the backend host; through a tunnel, the same URL with localhost\./)
+      expect(screen.getByRole('alert')).toHaveTextContent(/Open the URL printed by trex-web-gui on the backend host; through a tunnel, the same URL with localhost\./)
       expect(screen.queryByRole('link', { name: 'Control' })).toBeNull()      // the shell is not rendered
     } finally { vi.unstubAllGlobals() }
   })
