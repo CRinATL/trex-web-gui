@@ -849,6 +849,45 @@ def test_restart_error_in_a_list_response_is_noted_with_the_console_off(fake_tre
     new_session.run(run())
 
 
+
+SUB_LOST = "Connection lost - Subscriber timeout: no data from TRex server for more than 2.0 seconds"
+
+
+def test_a_command_in_the_restart_window_reports_the_restart(fake_trex, new_session):
+    """ci-flake-1: a restarted server fails the subscriber's next get_async_events, so the subscriber thread
+    marks the connection lost (as a "subscriber timeout") and the RPC tap notes the restart, both before the
+    loop handles the loss event. A command run in that window reports the restart, not a 400 trex_error,
+    and the session goes LOST with it."""
+    f, rec = fake_trex(), Recorder()
+    async def run():
+        s = new_session(rec)
+        await s.connect(params(f))
+        s._on_rpc(trexapi.RpcRecord(
+            "response", {"id": 1, "error": {"code": -32000, "message": "API handler provided mismatch"}},
+            1.0, "t", poll=True))
+        await asyncio.sleep(0.05)                     # the tap's note lands on the loop
+        s._client.conn.mark_for_disconnect(SUB_LOST)  # the loss event itself is never delivered here
+        with pytest.raises(trexapi.ServerRestarted) as e:
+            await s.acquire([0], force=True)
+        assert "restarted" in e.value.message
+        assert s.snapshot()["state"] == "lost" and "restarted" in s.snapshot()["error"]
+    new_session.run(run())
+
+
+def test_a_command_on_a_connection_marked_lost_is_unreachable(fake_trex, new_session):
+    """With no restart noted, a command on a connection the subscriber marked lost raises ServerUnreachable
+    (502, not 400 trex_error) and the session goes LOST."""
+    f, rec = fake_trex(), Recorder()
+    async def run():
+        s = new_session(rec)
+        await s.connect(params(f))
+        s._client.conn.mark_for_disconnect(SUB_LOST)
+        with pytest.raises(trexapi.ServerUnreachable) as e:
+            await s.acquire([0], force=True)
+        assert "Subscriber timeout" in e.value.message
+        assert s.snapshot()["state"] == "lost"
+    new_session.run(run())
+
 def _foreign_flow_stats_stream():
     """A continuous 1 kpps UDP stream with flow stats (pg_id 12), built from the vendored API."""
     from trex.stl import api as t

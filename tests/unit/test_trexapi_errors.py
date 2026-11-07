@@ -81,3 +81,12 @@ def test_a_server_in_another_mode_is_refused_with_the_stl_check_text() -> None:
     assert type(e) is TrexApiError
     assert e.message == mode_refusal("ASTF")
     assert e.message == "The server runs in ASTF mode; trex-web-gui Control needs STL mode."
+
+
+def test_a_connection_marked_lost_is_unreachable() -> None:
+    # trex_api_annotators.py:45 and :56: an API call made after the subscriber thread marked the connection
+    # for disconnect (here for a failed get_async_events poll, which it reports as a subscriber timeout)
+    e = translate(FakeTRexError("'acquire' - connection to the server had been lost: 'Connection lost - "
+                                "Subscriber timeout: no data from TRex server for more than 2.0 seconds'"))
+    assert isinstance(e, ServerUnreachable)
+    assert "Subscriber timeout" in e.message and NOT_RUNNING_HINT not in e.message
