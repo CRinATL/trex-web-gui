@@ -1,10 +1,11 @@
 # trex-web-gui
 
 trex-web-gui is a web interface for controlling and observing a [Cisco TRex](https://github.com/cisco-system-traffic-generator/trex-core)
-traffic generator. It brings traffic control, statistics, packet capture, profile editing and passive monitoring into
-one application, replacing the separate `trex-stateless-gui`, `trex-packet-editor` and `trex-qt-gui` tools.
+traffic generator. It brings traffic control, statistics, packet capture, profile editing and passive monitoring, with
+the TRex emulation server (EMU), into one application, replacing the separate `trex-stateless-gui`, `trex-packet-editor`
+and `trex-qt-gui` tools.
 
-The backend runs on Linux with Python 3.12 or newer. Traffic control targets TRex v3.08 in stateless mode (STL API
+The backend runs on Linux with Python 3.12 or newer. Traffic control targets TRex v3.08 in stateless (STL) mode (STL API
 5.1). The passive Monitor also shows what stateful (`-f`) runs publish.
 
 [Before you start](#before-you-start) · [Install](#install) · [Quick start](#quick-start) ·
@@ -23,7 +24,7 @@ The backend runs on Linux with Python 3.12 or newer. Traffic control targets TRe
   - scan IPv6 neighbours;
   - read extended counters;
   - save and re-run multi-port test setups.
-- **Dashboard**: global, per-port, per-stream (PG ID) and latency statistics with charts; CPU and mbuf utilization.
+- **Dashboard**: global, per-port, per-stream (packet group ID, PG ID) and latency statistics with charts; CPU and mbuf utilization.
 - **Capture**:
   - a live capture monitor with a packet viewer, whose packets can also go to Wireshark on the backend host;
   - server-side recorders saved as pcap on the backend host;
@@ -31,6 +32,7 @@ The backend runs on Linux with Python 3.12 or newer. Traffic control targets TRe
 - **Editor**: a **Profiles** tab, a library of stream profiles edited offline (import `.py`, YAML, JSON or pcap; edit
   streams; simulate; export), and a **Packets** tab, a packet editor (layers, fields, payloads, Field Engine, presets,
   templates).
+- **EMU**: load an EMU profile and read its namespaces, clients and counters.
 - **Monitor**: a passive view of what a TRex server publishes on its event port, independent of the control
   connection, also as a wall display.
 - **TRex daemon**, through TRex's optional daemon (`trex_daemon_server`):
@@ -73,7 +75,7 @@ Three common layouts, from one host to three:
    ![Two hosts: a workstation browser reaches the backend through an encrypted SSH tunnel to 127.0.0.1:8765, and the backend and the TRex server share the TRex host](docs/images/topology-two-hosts.svg)
 
 3. **Dedicated backend host.** The backend runs on a third machine, for example one with a display for Wireshark.
-   It must reach the TRex server's ports 4501 and 4500 over the network, and that ZMQ traffic has no encryption
+   It must reach the TRex server's ports 4501 and 4500 over the network, and that ZeroMQ (ZMQ) traffic has no encryption
    or authentication, so use this layout only on a trusted test network.
 
    ![Three hosts: a browser machine tunnels over SSH to the backend host, which reaches the TRex server on a third host over unencrypted, unauthenticated ZMQ on ports 4501 and 4500](docs/images/topology-three-hosts.svg)
@@ -174,7 +176,7 @@ once it is found. Until then, `~/.local/bin/trex-web-gui` runs it by its full pa
 
 After the install, on the machine that can reach the TRex server ([Install](#install)):
 
-1. Start the backend:
+1. Start the backend, on the machine that can reach the TRex server (the backend host):
 
    ```
    trex-web-gui
@@ -183,15 +185,15 @@ After the install, on the machine that can reach the TRex server ([Install](#ins
    1.1.0 and earlier need `trex-web-gui serve` ([Older releases](#older-releases)).
 2. **Open the login URL it prints**, `Open: http://127.0.0.1:8765/api/auth/login?token=...`, in a browser on that
    host. Each start makes a new URL.
-   - **From another machine**, run the SSH tunnel command the backend prints, and open the URL it prints for the
+   - **From another machine**, run the SSH tunnel command the backend prints, on the workstation, and open the URL it prints for the
      other end ([Access: single user, localhost only](#access-single-user-localhost-only)).
    - A wall display uses the same tunnel ([Monitor and wall displays](#monitor-and-wall-displays)).
 3. **Connect to TRex.** In the GUI, press **Connect…**, enter the TRex server, and connect. TRex must be running in
-   stateless mode ([Starting the TRex server](#starting-the-trex-server)). `trex-web-gui --server HOST` prefills the
+   stateless mode ([Starting the TRex server](#starting-the-trex-server)). `trex-web-gui --server HOST`, run on the backend host, prefills the
    dialog. [Command-line options](#command-line-options) lists every option.
 4. Acquire the ports you will use, assign a traffic profile, and start traffic. Watch it on the **Dashboard**. Stop
    the traffic and release the ports when you are done.
-5. **Ctrl+C stops it.**
+5. **Ctrl+C in the backend's terminal stops the backend.**
 
 For a worked example, with the test topology and how to confirm the frames arrive, follow
 [`docs/howto-first-stream.md`](docs/howto-first-stream.md). **How to use the GUI, page by page:
@@ -208,9 +210,17 @@ If the backend does not start:
 - **Don't use `uv run --project backend trex-web-gui` here.** That form is for a source checkout only. On an
   installed host it fails with ``Project directory `backend` does not exist``.
 
-**As a service.** Copy [`docs/trex-web-gui.service`](docs/trex-web-gui.service) to `~/.config/systemd/user/`, then
-`systemctl --user enable --now trex-web-gui`. Read the login URL with `journalctl --user -u trex-web-gui`. A user unit
-has no display, and Wireshark needs one: see the comments in the unit.
+**As a service.** Fetch [`docs/trex-web-gui.service`](docs/trex-web-gui.service) into your user units and start it:
+
+```
+mkdir -p ~/.config/systemd/user
+curl -fLo ~/.config/systemd/user/trex-web-gui.service https://raw.githubusercontent.com/CRinATL/trex-web-gui/main/docs/trex-web-gui.service
+systemctl --user daemon-reload
+systemctl --user enable --now trex-web-gui
+```
+
+Read the login URL with `journalctl --user -u trex-web-gui`. A user unit has no display, and Wireshark needs one: see
+the comments in the unit.
 
 ### Starting the TRex server
 
@@ -223,7 +233,7 @@ sudo ./t-rex-64 -i --cfg /etc/trex_cfg.yaml
 ```
 
 - **`-i` is the mode trex-web-gui controls.** TRex v3.08's `--help` describes it as "Run TRex in 'stateless'
-  mode". Do not add `--astf`: ASTF is a different mode, and trex-web-gui does not control it. Do not start TRex
+  mode". Do not add `--astf`: advanced stateful (ASTF) is a different mode, and trex-web-gui does not control it. Do not start TRex
   with `-f <profile>` either: that is a stateful run, which has no command port, so only the Monitor works beside it
   ([Monitor and wall displays](#monitor-and-wall-displays)).
 - **`--cfg`** names the platform configuration: the ports, cores and addresses. TRex reads `/etc/trex_cfg.yaml`
@@ -368,7 +378,7 @@ Serving is the default and only command, and `trex-web-gui serve [options]` does
 | `--data-dir DIR` | Where the GUI keeps its own files (below). Default `$XDG_DATA_HOME/trex-web-gui`, else `~/.local/share/trex-web-gui`. |
 | `--server HOST[:SYNC[:ASYNC]]` | The TRex server the Connect dialog prefills, with its command and event ports (an omitted ASYNC is SYNC-1; an IPv6 host with ports is written `[::1]:4601:4600`). |
 | `--daemon-port PORT` | The TRex daemon port the daemon dialog prefills, on the `--server` host (default 8090). |
-| `--monitor HOST[:PORT]` | Connects the Monitor to this TRex PUB socket at start-up (default port 4500). Independent of `--monitor-only`; `--server` does not apply to it. |
+| `--monitor HOST[:PORT]` | Connects the Monitor to this TRex publish (PUB) socket at start-up (default port 4500). Independent of `--monitor-only`; `--server` does not apply to it. |
 | `--monitor-only` | Serves the Monitor alone; see [Monitor and wall displays](#monitor-and-wall-displays). |
 
 Ctrl+C closes the TRex session before the backend exits, which can take several seconds against a server that does not
@@ -398,7 +408,7 @@ saved connections, port names and test setups between backends as one JSON file.
 **Monitor** and **Settings** (the theme), and the backend answers 409 to every request that changes state and to the
 capture, Editor (`/api/studio`), daemon, profile and file-browser routes. `--monitor` connects it to a TRex PUB socket at start-up. A
 `--monitor-only` backend is still bound to `127.0.0.1`, so a wall screen on another machine reaches it through the same
-SSH tunnel ([Access: single user, localhost only](#access-single-user-localhost-only)). The Monitor opens no RPC
+SSH tunnel ([Access: single user, localhost only](#access-single-user-localhost-only)). The Monitor opens no remote procedure call (RPC)
 connection and changes nothing on the server, so it also works beside a stateful (`-f`) run, which has no command port.
 
 ## Daemon exposure

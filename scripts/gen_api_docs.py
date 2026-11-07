@@ -197,7 +197,7 @@ a built UI's fallback may answer those paths with its `index.html`): this file i
 
 ## Access
 
-- **Token and cookie.** `trex-web-gui serve` makes one access token per process and prints a login URL.
+- **Token and cookie.** `trex-web-gui` makes one access token per process and prints a login URL.
   `GET {login}?token=<token>` with the right token answers 303 to `/` and sets the session cookie
   (`HttpOnly`, `SameSite=Strict`, named `trex_web_gui_` plus eight hex characters derived from the token); a
   wrong one is 403 `bad_token`. Every other `/api` route, and the WebSocket, needs that cookie: without it a
