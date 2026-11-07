@@ -2,6 +2,7 @@
 as DISCONNECTED with `ended`, never as LOST, and sends no RPC to the gone server."""
 import asyncio
 import dataclasses
+import signal
 import socket
 import time
 
@@ -9,7 +10,7 @@ import pytest
 from helpers import Recorder, wait_for
 from trex_web_gui import trexapi
 from trex_web_gui.sessions import ConnectParams, trex_session
-from trex_web_gui.trexapi import ClientEvent, ServerUnreachable, TrexApiError
+from trex_web_gui.trexapi import ClientEvent, TrexApiError
 from trex_web_gui.trexproc import silence_message
 
 DAEMON = "h:8090"
@@ -84,6 +85,23 @@ def test_planned_stop_goes_disconnected_with_ended(fake_trex, new_session) -> No
     no_gone_rpcs(f)
 
 
+def test_planned_stop_sets_both_clients_to_fail_fast(fake_trex, new_session) -> None:
+    """planned_stop_done sets both clients to one RPC attempt, so a later call to the gone server fails at
+    once instead of retrying."""
+    f = fake_trex()
+
+    async def run() -> None:
+        s = new_session(Recorder())
+        await s.connect(params(f))
+        clients = (s._client, s._reader)
+        assert all(c.conn.rpc.retry_base > 0 for c in clients)
+        assert await s.expect_stop(f.host, f.rpc_port, DAEMON)
+        s.planned_stop_done()
+        assert [c.conn.rpc.retry_base for c in clients] == [0, 0]
+        await s.disconnect()
+    new_session.run(run())
+
+
 @pytest.mark.parametrize("lose", [lose_control, lose_reader])
 def test_loss_while_stop_expected_is_held(fake_trex, new_session, lose) -> None:
     f, rec = fake_trex(), Recorder()
@@ -106,34 +124,26 @@ def poll_warnings(rec: Recorder) -> list[dict]:
     return [m for m in rec.msgs if m["type"] == "log" and "Port status poll failed" in m["message"]]
 
 
-def test_port_poll_warning_is_held_while_stop_expected(fake_trex, new_session, monkeypatch) -> None:
-    f, rec = fake_trex(), Recorder()
-    failing, calls = [False], []
-    real = trexapi.sync_ports
+def held_poll_warnings(s) -> list[dict]:
+    """The failed port status poll warnings `s` holds with an expected stop."""
+    return [m for m in s._held_msgs if m["type"] == "log" and "Port status poll failed" in m["message"]]
 
-    def poll(c):
-        """The real poll, or a refused one once `failing` is set."""
-        if failing[0]:
-            calls.append(1)
-            raise TrexApiError("poll refused")
-        return real(c)
-    monkeypatch.setattr(trexapi, "sync_ports", poll)
+
+def test_port_poll_warning_is_held_while_stop_expected(fake_trex, new_session) -> None:
+    f, rec = fake_trex("--drop-on-sighup", "get_port_status"), Recorder()
 
     async def run() -> None:
         s = new_session(rec)
         s._poll_s = 0.05
         await s.connect(params(f))
         assert await s.expect_stop(f.host, f.rpc_port, DAEMON)
-        failing[0] = True
-        await wait_for(lambda: len(calls) >= 2, 5)       # the poll failed more than once while armed
+        f.toggle_drop()                                  # every poll is refused from now on
+        await wait_for(lambda: len(held_poll_warnings(s)) >= 2, 5)
         assert poll_warnings(rec) == []                  # held, not published
         s.expect_stop_cancel()
-        assert len(poll_warnings(rec)) >= 1              # a cancel publishes what was held
-        failing[0] = False
+        assert len(poll_warnings(rec)) >= 2              # a cancel publishes what was held
         assert await s.expect_stop(f.host, f.rpc_port, DAEMON)
-        failing[0] = True
-        n = len(calls)
-        await wait_for(lambda: len(calls) >= n + 2, 5)
+        await wait_for(lambda: len(held_poll_warnings(s)) >= 2, 5)
         shown = len(poll_warnings(rec))
         s.planned_stop_done()
         assert len(poll_warnings(rec)) == shown          # planned_stop_done drops them
@@ -347,48 +357,83 @@ def test_reconnect_times_out(fake_trex, new_session, monkeypatch) -> None:
     new_session.run(run())
 
 
+def attempt_failures(rec: Recorder) -> list[dict]:
+    """The `log` messages `rec` recorded for a failed reconnect attempt."""
+    return [m for m in rec.msgs if m["type"] == "log" and m["message"].startswith("Connect to ")]
+
+
 def test_unreachable_attempt_goes_back_to_probing(fake_trex, new_session, monkeypatch) -> None:
+    # SIGSTOP: the kernel still accepts the probe's TCP connect, and the attempt's RPCs get no answer
     f, rec = fake_trex(), Recorder()
     monkeypatch.setattr(trex_session, "RECONNECT_RETRY_S", 0.05)
 
     async def run() -> None:
         s = new_session(rec)
         await planned_stop(s, f)
-        real, calls = s.connect, []
-
-        async def flaky(p, **kw):
-            """The first attempt finds the server unreachable; later ones are real."""
-            calls.append(p)
-            if len(calls) == 1:
-                raise ServerUnreachable("not yet")
-            return await real(p, **kw)
-        monkeypatch.setattr(s, "connect", flaky)
-        s.reconnect_after_start(5)
-        await s._reconnect_task
-        assert len(calls) == 2 and s.snapshot()["state"] == "connected"
+        s._params = dataclasses.replace(s._params, timeout_s=0.3)
+        before = connecting(rec)
+        f.proc.send_signal(signal.SIGSTOP)
+        try:
+            s.reconnect_after_start(30)
+            await wait_for(lambda: attempt_failures(rec), 15)
+            assert "Cannot reach" in attempt_failures(rec)[0]["message"]
+            assert s.snapshot()["ended"]["recovery"]["kind"] == "reconnecting"
+        finally:
+            f.proc.send_signal(signal.SIGCONT)
+        await asyncio.wait_for(s._reconnect_task, 15)
+        assert s.snapshot()["state"] == "connected" and connecting(rec) >= before + 2
     new_session.run(run())
 
 
+def attempt_ended(rec: Recorder, n: int) -> bool:
+    """Whether a reconnect attempt begun after message `n` has ended: a `connecting` state followed by
+    `lost` or `disconnected` (a loss mid-connect takes either shape)."""
+    states = [m["state"] for m in rec.msgs[n:] if m["type"] == "session"]
+    pairs = zip(states, states[1:], strict=False)
+    return any(a == "connecting" and b in ("lost", "disconnected") for a, b in pairs)
+
+
 def test_loss_during_attempt_goes_back_to_probing(fake_trex, new_session, monkeypatch) -> None:
+    # g: the gap armed from its start, and the port sync near the end of each connect held 1 s, so a
+    # subscriber sees the gap while the attempt is still connecting
     f, rec = fake_trex(), Recorder()
+    g = fake_trex("--seq-gap-at-start", "--delay-method", "get_port_status:1000")
     monkeypatch.setattr(trex_session, "RECONNECT_RETRY_S", 0.05)
 
     async def run() -> None:
         s = new_session(rec)
         await planned_stop(s, f)
-        real, calls = s.connect, []
+        s._params = dataclasses.replace(s._params, sync_port=g.rpc_port, async_port=g.pub_port)
+        n = len(rec.msgs)
+        s.reconnect_after_start(30)
+        await wait_for(lambda: attempt_ended(rec, n), 15)
+        assert "SEQ ERROR 7 6" in str(rec.msgs[n:])
+        assert s.snapshot()["ended"]["recovery"]["kind"] == "reconnecting"
+        g.restart()                                      # disarms the gap
+        await asyncio.wait_for(s._reconnect_task, 20)
+        assert s.snapshot()["state"] == "connected"
+    new_session.run(run())
 
-        async def lossy(p, **kw):
-            """The first attempt ends LOST; later ones are real."""
-            calls.append(p)
-            if len(calls) == 1:
-                s._state = trex_session.SessionState.LOST
-                raise TrexApiError("Connection lost during connect: x")
-            return await real(p, **kw)
-        monkeypatch.setattr(s, "connect", lossy)
-        s.reconnect_after_start(5)
-        await s._reconnect_task
-        assert len(calls) == 2 and s.snapshot()["state"] == "connected"
+
+def test_restart_during_attempt_goes_back_to_probing(fake_trex, new_session, monkeypatch) -> None:
+    # the port sync held 1 s keeps the attempt in flight while the restart lands; its next RPC meets the new
+    # API handler
+    f, rec = fake_trex(), Recorder()
+    g = fake_trex("--delay-method", "get_port_status:1000")
+    monkeypatch.setattr(trex_session, "RECONNECT_RETRY_S", 0.05)
+
+    async def run() -> None:
+        s = new_session(rec)
+        await planned_stop(s, f)
+        s._params = dataclasses.replace(s._params, sync_port=g.rpc_port, async_port=g.pub_port)
+        n = len(rec.msgs)
+        s.reconnect_after_start(30)
+        await wait_for(lambda: s.snapshot()["state"] == "connecting", 10)
+        g.restart()
+        await asyncio.wait_for(s._reconnect_task, 20)
+        assert s.snapshot()["state"] == "connected"
+        failures = [m["message"] for m in rec.msgs[n:] if m in attempt_failures(rec)]
+        assert any("restarted" in t for t in failures), failures
     new_session.run(run())
 
 

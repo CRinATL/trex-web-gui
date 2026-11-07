@@ -337,8 +337,9 @@ class TrexSession(PortConfigCommands, CaptureCommands):
         """Every RECONNECT_RETRY_S, counted from one probe's start to the next, try a TCP connect to the
         command port; when it accepts, connect(). Probes and attempts start only within `window` seconds; the
         published deadline adds one connect timeout for the last attempt (reconnect_after_start), and a
-        connect of several slow replies can still run past it. An unreachable server or a
-        loss during the attempt goes back to probing; any other failure (a version or mode refusal) ends at
+        connect of several slow replies can still run past it. An unreachable server, a server that
+        restarted during the attempt, or a loss during the attempt (LOST, or a failed connect with a loss
+        recorded) goes back to probing; any other failure (a version or mode refusal) ends at
         once with `reconnect_failed`, as does the end of probing. Each attempt's failure is logged at info;
         the reconnect's own failure is the one error line (_fail_reconnect). A cancel waits for an attempt
         in flight (_await_done) and is re-raised, so no probe follows it."""
@@ -357,10 +358,12 @@ class TrexSession(PortConfigCommands, CaptureCommands):
                     try:
                         await self._await_done(asyncio.ensure_future(self.connect(p, failure_level="info")))
                         return                           # CONNECTED: connect() cleared `ended`
-                    except trexapi.ServerUnreachable as ex:
-                        last = ex.message
+                    except (trexapi.ServerUnreachable, trexapi.ServerRestarted) as ex:
+                        last = ex.message                # gone, or back under a new API handler: probe again
                     except TrexApiError as ex:
-                        if self._state != SessionState.LOST:
+                        # a loss seen during the attempt goes LOST, or fails the connect first and is only
+                        # recorded (_pending_loss); either way it is not a refusal
+                        if self._state != SessionState.LOST and self._pending_loss is None:
                             self._fail_reconnect(ex.message)
                             return
                         last = ex.message

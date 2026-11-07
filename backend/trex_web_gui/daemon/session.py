@@ -622,12 +622,13 @@ class DaemonSession:
     async def _send_stop(self, client: DaemonClient, host: str, rpc_port: int, seq: int | None,
                          kill_only: bool, cause: str | None) -> dict[str, Any]:
         """The stopping call and the wait for it, after every refusal: tell the hooks first (`expect`), then
-        `done` when TRex stopped, else `cancel`; `cancel` too when anything raises after `expect`."""
+        `done` when TRex stopped, else `cancel`; `cancel` too when anything raises, `expect` itself included
+        (then no stop is sent)."""
         hooks = self._hooks
-        if hooks is not None:
-            await hooks.expect(host, rpc_port, f"{client.host}:{client.port}")
         settled = False
         try:
+            if hooks is not None:
+                await hooks.expect(host, rpc_port, f"{client.host}:{client.port}")
             if seq is not None and not kill_only:
                 await self._call(client.stop_trex, seq)
             else:

@@ -20,7 +20,7 @@ from trex_web_gui.daemon.client import (
     DaemonUnreachable,
     StfOptions,
 )
-from trex_web_gui.daemon.session import DaemonRefused, DaemonSession
+from trex_web_gui.daemon.session import DaemonRefused, DaemonSession, StopHooks
 from trex_web_gui.sessions import ConnectParams
 
 FIXTURES = Path(__file__).resolve().parent.parent / "fixtures"
@@ -36,10 +36,12 @@ Body = Callable[[DaemonSession, Recorder], Awaitable[None]]
 
 
 class Hooks:
-    """StopHooks that record each call, in order, with expect's arguments."""
+    """StopHooks that record each call, in order, with expect's arguments; `expect_raises` makes expect
+    record its call and then raise RuntimeError."""
 
-    def __init__(self) -> None:
+    def __init__(self, expect_raises: bool = False) -> None:
         """No calls yet."""
+        self.expect_raises = expect_raises
         self.calls: list[str] = []
         self.expected: tuple[str, int, str] | None = None
         self.started_with: tuple[Any, ...] | None = None
@@ -53,6 +55,8 @@ class Hooks:
         """Record the call and its arguments."""
         self.calls.append("expect")
         self.expected = (host, rpc_port, daemon)
+        if self.expect_raises:
+            raise RuntimeError("expect failed")
 
     def done(self) -> None:
         """Record the call."""
@@ -64,7 +68,7 @@ class Hooks:
 
 
 def drive(body: Body, owned: Callable[[str, int], set[int] | None] = lambda h, p: None,
-          hooks: Any = None) -> None:
+          hooks: StopHooks | None = None) -> None:
     """Run `body(session, recorder)` under asyncio.run and close the session in that loop, raised or not."""
     async def wrapped() -> None:
         """The body, then close."""
@@ -465,6 +469,21 @@ def test_stop_still_running_cancels(fake_daemon: Any, fake_trex: Any,
         await started(s)
         assert (await s.stop(f.rpc_port, True))["running"] is True
         assert hooks.calls == ["expect", "cancel"]
+    drive(body, hooks=hooks)
+
+
+def test_an_expect_that_raises_cancels_and_sends_no_stop(fake_daemon: Any, fake_trex: Any) -> None:
+    """An expect that raises still ends in cancel, and the stop is never sent: TRex keeps running."""
+    d, f, hooks = fake_daemon(), fake_trex(), Hooks(expect_raises=True)
+
+    async def body(s: DaemonSession, rec: Recorder) -> None:
+        """Connect, start, stop into the raising expect."""
+        await s.connect(d.host, d.port)
+        await started(s)
+        with pytest.raises(RuntimeError, match="expect failed"):
+            await s.stop(f.rpc_port, True)
+        assert hooks.calls == ["expect", "cancel"]
+        assert await asyncio.to_thread(DaemonClient(d.host, d.port).is_running) is True
     drive(body, hooks=hooks)
 
 

@@ -72,6 +72,16 @@ describe('StatusBar', () => {
       expect(screen.queryByRole('button', { name: 'Reconnect' })).toBeNull()
       expect(screen.getByRole('button', { name: 'Connect…' })).toBeInTheDocument()
     })
+    it('connected or offline, a record still set shows neither the planned-stop text nor its tooltip', () => {
+      // the backend clears ended on reaching CONNECTED; a snapshot that still carries one must not win
+      const { unmount } = bar({ ...base, state: 'connected', params, ended: failed() })
+      expect(screen.getByRole('status').textContent).toBe('Connected to h:4501')
+      expect(screen.getByRole('status')).not.toHaveAttribute('title')
+      unmount()
+      bar({ ...base, state: 'disconnected', params, ended: failed() }, { backendOnline: false })
+      expect(screen.getByRole('status').textContent).toBe('Backend offline, reconnecting…')
+      expect(screen.getByRole('status')).not.toHaveAttribute('title')
+    })
     it('reconnecting has no tooltip', () => {
       bar({ ...base, state: 'disconnected', params, ended: ended({ kind: 'reconnecting', deadline: at + 30 }) })
       expect(screen.getByRole('status').textContent).toMatch(/ · reconnecting$/)
