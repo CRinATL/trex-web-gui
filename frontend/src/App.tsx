@@ -20,7 +20,7 @@ function NotAuthorised() {
   return (
     <main className="not-authorised" role="alert">
       <h1>Not authorised</h1>
-      <p>Open the URL printed by <code>trex-web-gui serve</code> on the backend host; through a tunnel, the same URL with <code>localhost</code>.</p>
+      <p>Open the URL printed by <code>trex-web-gui</code> on the backend host; through a tunnel, the same URL with <code>localhost</code>.</p>
     </main>
   )
 }

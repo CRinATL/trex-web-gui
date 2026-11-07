@@ -18,7 +18,7 @@ BROWSER = {"Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;
 # A fetch() from a page that happens to ask for HTML: still a script, still JSON.
 FETCH_HTML = {"Accept": "text/html", "Sec-Fetch-Dest": "empty", "Sec-Fetch-Mode": "cors"}
 JSON = {"Accept": "application/json"}
-UNAUTHENTICATED = {"error": "unauthenticated", "message": "Open the URL printed by trex-web-gui serve."}
+UNAUTHENTICATED = {"error": "unauthenticated", "message": "Open the URL printed by trex-web-gui."}
 STALE = "STALE-TOKEN-from-an-earlier-run-0123456789"
 
 

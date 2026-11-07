@@ -22,7 +22,7 @@ describe('ProfilePicker', () => {
   it('the help is behind ⓘ and names the trex-web-gui host', async () => {
     vi.spyOn(api, 'getAbout').mockResolvedValue(about('trex-host'))
     render(<Harness />)
-    const paths = await screen.findByText('Paths are on trex-host, the computer running trex-web-gui serve, not the one your browser is on. Nothing is uploaded.')
+    const paths = await screen.findByText('Paths are on trex-host, the computer running trex-web-gui, not the one your browser is on. Nothing is uploaded.')
     const run = screen.getByText('.py profiles run as code on trex-host.')
     expect(paths).not.toBeVisible()
     expect(run).not.toBeVisible()
@@ -30,10 +30,10 @@ describe('ProfilePicker', () => {
     expect(paths).toBeVisible()
     expect(run).toBeVisible()
   })
-  it('while the host is unknown the help names the computer running trex-web-gui serve', async () => {
+  it('while the host is unknown the help names the computer running trex-web-gui', async () => {
     vi.spyOn(api, 'getAbout').mockReturnValue(new Promise(() => {}))
     render(<Harness />)
-    expect(screen.getByText('Paths are on the computer running trex-web-gui serve, not the one your browser is on. Nothing is uploaded.')).toBeInTheDocument()
+    expect(screen.getByText('Paths are on the computer running trex-web-gui, not the one your browser is on. Nothing is uploaded.')).toBeInTheDocument()
     expect(screen.getByText('.py profiles run as code there.')).toBeInTheDocument()
   })
   it('a failed host lookup keeps the fallback and throws nothing', async () => {

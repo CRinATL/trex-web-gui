@@ -49,7 +49,7 @@ session cookie and sends the browser to `/`, which the app redirects to `/contro
 the backend process: after a restart, open the new URL.
 
 A browser without the cookie sees the **Not authorised** page instead of the app: the heading "Not authorised"
-and one sentence, "Open the URL printed by `trex-web-gui serve` on the backend host; through a tunnel, the same
+and one sentence, "Open the URL printed by `trex-web-gui` on the backend host; through a tunnel, the same
 URL with `localhost`." Nothing else is on it ([01](gui-inventory/screens/01-not-authorised.png)).
 
 Between the cookie check and the first message from the backend the page shows only "Connecting…".
@@ -434,9 +434,9 @@ Each port's form is kept while you switch ports, tabs and pages, and is emptied 
 **Profile**
 
 - **Profile path**: a path on the backend host (nothing is uploaded). Enter inspects it. The ⓘ names the
-  trex-web-gui host: `Paths are on <host>, the computer running trex-web-gui serve, not the one your browser is on.
+  trex-web-gui host: `Paths are on <host>, the computer running trex-web-gui, not the one your browser is on.
   Nothing is uploaded.` and `.py profiles run as code on <host>.` Until the host name is known it reads `Paths
-  are on the computer running trex-web-gui serve, …` and `.py profiles run as code there.`
+  are on the computer running trex-web-gui, …` and `.py profiles run as code there.`
 - **Browse…**: the backend host's file browser ([4.3.1](#431-browse-dialog)). Picking a `.yaml`, `.yml` or
   `.json` file inspects it at once. A `.py` only fills the path, and you press Inspect.
 - **Library…**: pick a profile from the Editor's library ([4.3.2](#432-pick-from-the-library-dialog)).
@@ -1454,7 +1454,7 @@ A pushed file becomes the Run tab's config path.
     `--cfg`, `-i`, `--astf`, `-f`, `-d`, `-m`, `-l`, `--rx-check` and `--client_cfg` are refused, also abbreviated),
     **TRex command port** (prefilled from the pushed config's `zmq_rpc_port`, else the Control session's port, else
     4501; the ⓘ: `the port <host> reaches the daemon's TRex on; Stop reads its port owners first`, `<host>` being the
-    trex-web-gui host, or `the computer running trex-web-gui serve` until it is known);
+    trex-web-gui host, or `the computer running trex-web-gui` until it is known);
   - Stateful:
     - **Source** (Stock, Uploaded) with **Upload…** ([12.5](#125-uploading-a-stateful-profile));
     - **Profile** (the daemon's list), the profile's details as the daemon reads it (templates, YAML duration,

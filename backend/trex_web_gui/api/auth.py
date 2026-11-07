@@ -1,6 +1,6 @@
 """The per-launch access token (P3c Task 0).
 
-`trex-web-gui serve` makes one token per process (or takes it from TREX_WEB_GUI_TOKEN) and prints a login URL.
+`trex-web-gui` makes one token per process (or takes it from TREX_WEB_GUI_TOKEN) and prints a login URL.
 The login route sets a session cookie named for the token; every /api route and every WebSocket then needs
 that cookie, so a browser that was never given the URL (another user on the host, a tab left open across a
 restart) is refused. The token has no persistent copy: it lives as long as the process.
@@ -30,7 +30,7 @@ ENV_VAR = "TREX_WEB_GUI_TOKEN"
 URLSAFE = re.compile(r"[A-Za-z0-9_-]+")
 LOGIN_PATH = "/api/auth/login"
 EXEMPT = frozenset({LOGIN_PATH, "/api/auth/status", "/api/auth/logout"})
-UNAUTHENTICATED_MESSAGE = "Open the URL printed by trex-web-gui serve."
+UNAUTHENTICATED_MESSAGE = "Open the URL printed by trex-web-gui."
 
 
 def new_token() -> str:

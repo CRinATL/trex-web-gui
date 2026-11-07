@@ -28,7 +28,7 @@ describe('api error mapping', () => {
     const e = await acquire({ ports: [0] }).catch((x) => x)
     expect(e).toBeInstanceOf(ApiError)
     expect(e).toMatchObject({ status: 0, code: 'no_reply' })
-    expect(e.message).toBe('No reply from trex-web-gui to POST /api/ports/acquire (the browser says "Load failed"). Is trex-web-gui serve still running, and the SSH tunnel up?')
+    expect(e.message).toBe('No reply from trex-web-gui to POST /api/ports/acquire (the browser says "Load failed"). Is trex-web-gui still running on the backend host, and the SSH tunnel up?')
   })
   it('an error that is not the browser\'s network failure passes through', async () => {
     const boom = new RangeError('x')
@@ -41,7 +41,7 @@ describe('api error mapping', () => {
     expect(e).toMatchObject({ status: 502, code: 'http_error', message: 'Bad Gateway' })
   })
   it('a 401 dispatches trex-web-gui:unauthenticated', async () => {
-    stubFetch(401, { error: 'unauthenticated', message: 'Open the URL printed by trex-web-gui serve.' })
+    stubFetch(401, { error: 'unauthenticated', message: 'Open the URL printed by trex-web-gui.' })
     const seen = vi.fn()
     window.addEventListener('trex-web-gui:unauthenticated', seen)
     try {
