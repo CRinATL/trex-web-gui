@@ -26,10 +26,31 @@ describe('PlannedStopDialog', () => {
   it('counts down while reconnecting', () => {
     vi.useFakeTimers()
     vi.setSystemTime(1_700_000_000_000)
-    render(page(stopped({ kind: 'reconnecting', deadline: 1_700_000_030 })))
+    render(page(stopped({ kind: 'reconnecting', deadline: 1_700_000_030, left_s: 30 })))
     expect(dialog()).toHaveTextContent('TRex is starting. Control reconnects by itself, within 30 s.')
     act(() => { vi.advanceTimersByTime(5000) })
     expect(dialog()).toHaveTextContent('within 25 s')
+  })
+  it('counts down from left_s whatever the browser clock says', () => {
+    vi.useFakeTimers()
+    vi.setSystemTime((1_700_000_030 + 3600) * 1000)   // an hour after the deadline
+    render(page(stopped({ kind: 'reconnecting', deadline: 1_700_000_030, left_s: 30 })))
+    expect(dialog()).toHaveTextContent('within 30 s')
+    act(() => { vi.advanceTimersByTime(5000) })
+    expect(dialog()).toHaveTextContent('within 25 s')
+    act(() => { vi.advanceTimersByTime(60000) })
+    expect(dialog()).toHaveTextContent('within 0 s')
+  })
+  it('a new left_s for the same deadline restarts the count from it', () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(1_700_000_000_000)
+    const r = render(page(stopped({ kind: 'reconnecting', deadline: 1_700_000_030, left_s: 30 })))
+    act(() => { vi.advanceTimersByTime(10000) })
+    expect(dialog()).toHaveTextContent('within 20 s')
+    r.rerender(page(stopped({ kind: 'reconnecting', deadline: 1_700_000_030, left_s: 15 })))
+    expect(dialog()).toHaveTextContent('within 15 s')
+    act(() => { vi.advanceTimersByTime(1000) })
+    expect(dialog()).toHaveTextContent('within 14 s')
   })
   it('stf_run names the end and links the Monitor', () => {
     render(page(stopped({ kind: 'stf_run', ends_at: AT + 60 })))
@@ -64,7 +85,7 @@ describe('PlannedStopDialog', () => {
     vi.setSystemTime(1_700_000_000_000)
     const r = render(page(stopped({ kind: 'none' })))
     act(() => { vi.advanceTimersByTime(7000) })
-    r.rerender(page(stopped({ kind: 'reconnecting', deadline: 1_700_000_037 })))
+    r.rerender(page(stopped({ kind: 'reconnecting', deadline: 1_700_000_037, left_s: 30 })))
     expect(dialog()).toHaveTextContent('within 30 s')
   })
   it('describes itself by the cause line', () => {

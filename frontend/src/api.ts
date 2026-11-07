@@ -5,7 +5,7 @@ export interface ServerInfo { version: string; mode: string; build_date: string;
 export interface PortIface { port: number; cfg_entry: string | null; kind: 'af_packet' | 'pci' | 'dummy' | 'vdev' | null; kernel_name: string | null
   pci_addr: string | null; driver: string | null; vendor_device: string | null; model: string | null; confirmed: boolean; note: string | null }
 // What the backend does after a daemon Stop it recognised as Control's own server (backend trex_session.py snapshot "ended").
-export type Recovery = { kind: 'none' } | { kind: 'reconnecting'; deadline: number } | { kind: 'stf_run'; ends_at: number } | { kind: 'reconnect_failed'; error: string }
+export type Recovery = { kind: 'none' } | { kind: 'reconnecting'; deadline: number; left_s: number } | { kind: 'stf_run'; ends_at: number } | { kind: 'reconnect_failed'; error: string }
 export interface Ended { by: 'daemon_stop'; at: number; daemon: string; recovery: Recovery }
 export interface SessionSnapshot { type: 'session'; state: SessionState; params: ConnectParams | null; info: ServerInfo | null; error: string | null; rpc_console: boolean; include_polling: boolean
   // "<ns>:<n>", changes on every connect attempt and never repeats across a GUI restart (backend trex_session.py snapshot)
