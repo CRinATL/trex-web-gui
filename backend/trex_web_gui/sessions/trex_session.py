@@ -117,6 +117,9 @@ class TrexSession(PortConfigCommands, CaptureCommands):
         self._busy: dict[int, str] = {}            # loop thread; port -> "ping" | "scan" | "apply"
         self._assigned: dict[int, dict[str, Any]] = {}   # loop thread; port -> this connection's last Assign
         self._init_capture(spool_dir)
+        self._ended: dict[str, object] | None = None   # loop thread; why a planned stop ended the session
+        self._stop_daemon: str | None = None           # loop thread; "host:port" of the daemon stop expected
+        self._held_loss: str | None = None             # loop thread; a loss seen while a stop was expected
 
     # -- public -------------------------------------------------------------------------------
     def snapshot(self) -> dict[str, object]:
@@ -127,7 +130,8 @@ class TrexSession(PortConfigCommands, CaptureCommands):
                 "info": dataclasses.asdict(self._info) if self._info else None, "error": self._error,
                 "rpc_console": self._rpc_console, "include_polling": self._include_polling,
                 "connect_seq": f"{_PROCESS_START_NS}:{self._connect_n}",
-                "ifaces": self._ifaces, "ifaces_note": self._ifaces_note}
+                "ifaces": self._ifaces, "ifaces_note": self._ifaces_note,
+                "ended": self._ended}
 
     async def connect(self, p: ConnectParams) -> ServerInfo:
         """Connect the control client and the reader at once, each on its own executor; returns the server
@@ -155,6 +159,7 @@ class TrexSession(PortConfigCommands, CaptureCommands):
             self._restart_cause = None
             self._timeout_seen = False
             self._watch_proc = False
+            self._stop_daemon = self._held_loss = None   # an expectation belongs to the connection it saw
             self._ports = []                             # silent: the next _set_ports must broadcast
             self._ifaces, self._ifaces_note = [], None
             if self._reset_capture_state():              # a stale monitor id must never reach the next server
@@ -224,6 +229,7 @@ class TrexSession(PortConfigCommands, CaptureCommands):
             # scan takes milliseconds
             self._watch_proc = (info.hostname == self._local_hostname()
                                 and server_running(self._proc_root) is True)
+            self._ended = None                           # only now: a failed connect keeps the planned stop
             self._set(SessionState.CONNECTED)
             self._poll_task = asyncio.create_task(self._poll_loop())   # before the await below
             self._stats_task = asyncio.create_task(self._stats_loop())
@@ -267,9 +273,65 @@ class TrexSession(PortConfigCommands, CaptureCommands):
                 self._ifaces, self._ifaces_note = [], None
                 self._publish({"type": "ports", "ports": []})
                 self._error = None
+                self._ended = None
+                self._stop_daemon = self._held_loss = None
                 self._set(SessionState.DISCONNECTED)
             finally:
                 self._ending = False
+
+    async def cancel_reconnect(self) -> None:
+        """Stop a pending reconnect after a planned stop; a stub until the reconnect exists (Task 3)."""
+
+    async def expect_stop(self, host: str, sync_port: int, daemon: str) -> bool:
+        """A daemon stop of `daemon` ("host:port") is about to happen. Awaits cancel_reconnect(), then arms
+        only when CONNECTED or LOST on exactly this `host` and `sync_port` (no name resolution); a loss seen
+        while armed is held, not published. Returns whether it armed."""
+        await self.cancel_reconnect()
+        p = self._params
+        if (self._state in (SessionState.CONNECTED, SessionState.LOST) and p is not None
+                and p.host == host and p.sync_port == sync_port):
+            self._stop_daemon = daemon
+            return True
+        return False
+
+    def planned_stop_done(self) -> None:
+        """The daemon confirmed the stop. With an expectation armed: in one step forget the capture state
+        (no RPC), empty the ports, drop the error and go DISCONNECTED with `ended` set (recovery none),
+        publishing `capture` (when there was state), `ports` and `session`. Both clients are marked dead so
+        the next connect() drops them without a release RPC and their late loss events are ignored. Without
+        an expectation: nothing."""
+        daemon, self._stop_daemon, self._held_loss = self._stop_daemon, None, None
+        if daemon is None:
+            return
+        for c in (self._client, self._reader):
+            if c is not None:
+                trexapi.fail_fast(c)
+                if c.conn.is_connected():
+                    c.conn.mark_for_disconnect("TRex stopped from the daemon dialog")
+        had = self._reset_capture_state()
+        if had:
+            self._publish(self.capture_snapshot())
+        self._restart_cause = None
+        self._ports = []
+        self._ifaces, self._ifaces_note = [], None
+        self._publish({"type": "ports", "ports": []})
+        self._error = None
+        self._ended = {"by": "daemon_stop", "at": time.time(), "daemon": daemon,
+                       "recovery": {"kind": "none"}}
+        self._set(SessionState.DISCONNECTED)
+
+    def expect_stop_cancel(self) -> None:
+        """Drop the stop expectation; a loss held meanwhile now takes effect (LOST with its cause)."""
+        held, self._stop_daemon, self._held_loss = self._held_loss, None, None
+        if held is not None:
+            self._mark_lost(held)
+
+    def set_recovery(self, recovery: dict[str, object]) -> None:
+        """Replace `ended["recovery"]` and publish `session`; nothing when `ended` is None."""
+        if self._ended is None:
+            return
+        self._ended = {**self._ended, "recovery": recovery}
+        self._publish(self.snapshot())
 
     async def close(self) -> None:
         """End the session for good; a second call returns at once. On the loop thread it sets both clients
@@ -857,9 +919,12 @@ class TrexSession(PortConfigCommands, CaptureCommands):
 
     def _mark_lost(self, cause: str) -> None:
         """CONNECTING: keep the cause for connect() to act on. CONNECTED: LOST with the cause as the error,
-        which cancels the loops and publishes `session`. Any other state: nothing."""
+        which cancels the loops and publishes `session`, unless a daemon stop is expected: then the cause is
+        only held. Any other state: nothing."""
         if self._state == SessionState.CONNECTING:
             self._pending_loss = cause
+        elif self._state == SessionState.CONNECTED and self._stop_daemon is not None:
+            self._held_loss = self._held_loss or cause   # planned_stop_done decides
         elif self._state == SessionState.CONNECTED:
             self._error = cause
             self._set(SessionState.LOST)
@@ -984,7 +1049,11 @@ class TrexSession(PortConfigCommands, CaptureCommands):
     def _handle_event(self, ev: ClientEvent) -> None:
         """Loop thread: publish a control client event as `event` (a "subscriber resumed" only after a
         timeout was seen), schedule a port refresh for a port or profile event, and mark the session lost on
-        a loss event, with the restart cause the RPC tap saw in place of the event's text."""
+        a loss event, with the restart cause the RPC tap saw in place of the event's text. A loss event
+        while DISCONNECTED (late, after a planned stop) is dropped unpublished; while LOST it still shows (the
+        reader's loss and the control client's crash both do)."""
+        if ev.name in trexapi.LOSS_EVENTS and self._state == SessionState.DISCONNECTED:
+            return
         if ev.name == "subscriber timeout":
             self._timeout_seen = True
         elif ev.name == "subscriber resumed" and not self._timeout_seen:
