@@ -37,7 +37,8 @@ afterEach(() => { cleanup(); vi.clearAllMocks(); vi.restoreAllMocks() })
 
 const renderPage = (active = true) => render(<MemoryRouter><PacketPage active={active} /></MemoryRouter>)
 const trpFile = (doc: PacketDoc, name = 'lab.trp') => new File([writeTrp(doc)], name, { type: 'application/json' })
-const title = () => screen.getByRole('heading', { level: 1 })
+// the page's own heading: its dialogs (Discard edits…, Templates) carry h2s of their own
+const title = () => document.querySelector('.packet-page > h2') as HTMLElement
 const menu = async (item: string | RegExp) => {
   await userEvent.click(screen.getByRole('button', { name: 'File ▾' }))
   await userEvent.click(screen.getByRole('menuitem', { name: item }))
@@ -58,9 +59,9 @@ async function editTtl(value: string) {
 describe('PacketPage', () => {
   it('Open reads a .trp file and shows its name in the title', async () => {
     renderPage()
-    expect(title()).toHaveTextContent('Packet editor — Untitled')
+    expect(title()).toHaveTextContent('Untitled')
     await openTrp()
-    expect(title()).toHaveTextContent('Packet editor — lab')
+    expect(title()).toHaveTextContent('lab')
     expect(title()).not.toHaveTextContent('•')
     await waitFor(() => expect(lastBuilt().packet.map((l) => l.id)).toEqual(['Ether', 'IP', 'UDP', 'Raw']))
   })
@@ -96,7 +97,7 @@ describe('PacketPage', () => {
     expect(screen.queryByRole('dialog')).toBeNull()
     expect(screen.getByRole('button', { name: 'Undo' })).toBeDisabled()
     expect(screen.getByRole('button', { name: 'Redo' })).toBeDisabled()
-    expect(title()).toHaveTextContent('Packet editor — Untitled')
+    expect(title()).toHaveTextContent('Untitled')
     expect(title()).not.toHaveTextContent('•')
     expect(window.confirm).not.toHaveBeenCalled()
   })
@@ -108,7 +109,7 @@ describe('PacketPage', () => {
     const ask = await discardDialog()
     await userEvent.click(within(ask).getByRole('button', { name: 'Discard' }))
     await waitFor(() => expect(lastBuilt().packet.map((l) => l.id)).toEqual(['Ether']))
-    expect(title()).toHaveTextContent('Packet editor — Untitled')
+    expect(title()).toHaveTextContent('Untitled')
   })
   it('New on a clean document asks nothing', async () => {
     renderPage()
@@ -125,7 +126,7 @@ describe('PacketPage', () => {
     await menu('New')
     await userEvent.click(within(await discardDialog()).getByRole('button', { name: 'Cancel' }))
     expect(screen.queryByRole('dialog')).toBeNull()
-    expect(title()).toHaveTextContent('Packet editor — lab •')
+    expect(title()).toHaveTextContent('lab •')
     expect(lastBuilt().packet[1].fields).toEqual([{ id: 'ttl', value: 9 }])
     expect(window.confirm).not.toHaveBeenCalled()
   })
@@ -138,7 +139,7 @@ describe('PacketPage', () => {
     await discardDialog()
     await userEvent.keyboard('{Escape}')
     expect(screen.queryByRole('dialog')).toBeNull()
-    expect(title()).toHaveTextContent('Packet editor — lab •')
+    expect(title()).toHaveTextContent('lab •')
   })
   it('Open .trp over unsaved changes asks first, and Escape with a template open closes only the question', async () => {
     vi.mocked(api.listTemplates).mockResolvedValue({ server: [{ id: 'TCP-SYN', name: 'TCP-SYN', buildable: true, reason: null }], user: [], dir: '/t' })
@@ -149,7 +150,7 @@ describe('PacketPage', () => {
     await waitFor(() => expect(title()).toHaveTextContent('•'))
     await userEvent.upload(screen.getByLabelText('Packet file'), trpFile(udpDoc(), 'other.trp'))
     await userEvent.click(within(await discardDialog()).getByRole('button', { name: 'Cancel' }))
-    expect(title()).toHaveTextContent('Packet editor — lab •')
+    expect(title()).toHaveTextContent('lab •')
     await userEvent.click(screen.getByRole('button', { name: 'Templates…' }))
     await userEvent.click(await screen.findByRole('button', { name: 'TCP-SYN' }))
     await discardDialog()
@@ -158,7 +159,7 @@ describe('PacketPage', () => {
     expect(screen.getByRole('dialog', { name: 'Templates' })).toBeInTheDocument()   // the template dialog is still there
     await userEvent.click(screen.getByRole('button', { name: 'TCP-SYN' }))
     await userEvent.click(within(await discardDialog()).getByRole('button', { name: 'Discard' }))
-    await waitFor(() => expect(title()).toHaveTextContent('Packet editor — TCP-SYN'))
+    await waitFor(() => expect(title()).toHaveTextContent('TCP-SYN'))
     expect(screen.queryByRole('dialog')).toBeNull()
     expect(window.confirm).not.toHaveBeenCalled()
   })
@@ -216,7 +217,7 @@ describe('PacketPage', () => {
     await waitFor(() => expect(title()).toHaveTextContent('•'))
     rerender(<MemoryRouter><PacketPage active={false} /></MemoryRouter>)     // App.tsx hides the page, it does not unmount it
     rerender(<MemoryRouter><PacketPage active /></MemoryRouter>)
-    expect(title()).toHaveTextContent('Packet editor — lab •')
+    expect(title()).toHaveTextContent('lab •')
     expect(screen.getByRole('button', { name: 'Undo' })).toBeEnabled()
     expect(lastBuilt().packet[1].fields).toEqual([{ id: 'ttl', value: 9 }])
   })

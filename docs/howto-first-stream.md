@@ -2,7 +2,7 @@
 
 A walk-through of the shortest useful job: send one UDP stream out of one port and watch it arrive on another. You do
 it twice. In **Part 1** the stream comes from a profile TRex ships (`udp_1pkt_simple.py`). In **Part 2** you build your
-own stream in Studio, change a field of its packet, and send that. Every button and message below is quoted as it
+own stream in the Editor, change a field of its packet, and send that. Every button and message below is quoted as it
 appears on screen; the shots were taken by [`vm/shoot_howto.py`](../vm/shoot_howto.py) against a test TRex server
 (v3.08, STL API 5.1). The shots were taken on 2026-10-30.
 
@@ -61,7 +61,7 @@ machine.
    Which destination a stream uses: a packet whose Ethernet header is scapy's default `Ether()` is sent with the
    port's configured destination (the stream's flag is "from config file"). Both streams below are that, so the
    port's configuration wins. The packet's own address wins only if you edit the `Ether` destination of the packet,
-   or set the **Destination MAC** field of the stream's **Properties** tab to From packet.
+   or set the **Destination MAC** field of the stream's **Stream settings** tab to From packet.
 
    On the test server the loop is a virtual pair that delivers every frame to the other end, so its Rx numbers would
    show even with a wrong destination; on real NICs, check this step.
@@ -99,18 +99,18 @@ machine.
    Go back to **Control**, select Port 0 and press **Stop**. The `State` chip returns to `STREAMS`: the stream is
    still assigned, only not running.
 
-## Part 2: your own stream in Studio
+## Part 2: your own stream in the Editor
 
-8. **A new profile with one stream.** Open **Studio**. In the library press **New…**, type a name (`My first
+8. **A new profile with one stream.** Open **Editor** (its **Profiles** tab). In the library press **New…**, type a name (`My first
    stream`) and press **Create**. Press **Add stream**: it adds a continuous stream whose packet is already a single
    UDP packet, `Ether / IP / UDP`.
 
-   ![A new Studio profile](howto/screens/10-studio-new-profile.png)
+   ![A new profile in the Editor](howto/screens/10-studio-new-profile.png)
 
-9. **Edit the packet.** Select the stream, open its **Packet** tab and press **Edit packet**. The embedded editor opens
+9. **Edit the packet.** Select the stream, open its **Stream packet** tab and press **Edit packet**. The embedded editor opens
    with **Presets…**, **Cancel** and **Save**. Press **Expand all** and read the three layers: `Ether`, `IP`, `UDP`
    (and the payload, `Raw`). Leave `Ether` alone. Its **Destination** reads `00:00:00:01:00:00`, scapy's placeholder,
-   and is not what is sent: the stream's **Destination MAC** (on its **Properties** tab) is `From config file`, so
+   and is not what is sent: the stream's **Destination MAC** (on its **Stream settings** tab) is `From config file`, so
    port 0 sends to the address of step 4. Editing this field would switch the stream to From packet.
 
    ![The embedded packet editor](howto/screens/11-studio-edit-packet.png)
@@ -120,11 +120,11 @@ machine.
 
    ![dport changed to 5000](howto/screens/12-studio-dport-changed.png)
 
-10. **Set the rate.** Open the stream's **Properties** tab, type `1000` into **Rate** (a bare number is pps; the
+10. **Set the rate.** Open the stream's **Stream settings** tab, type `1000` into **Rate** (a bare number is pps; the
     reading beside it says `= 1,000 pps`) and press **Save**. The stream table's **Rate** column then reads `1.00 kpps`
     (the shot is taken before Save: the field is marked edited and the table still reads `1 pps`).
 
-    ![Properties: Rate 1000](howto/screens/13-studio-properties-rate.png)
+    ![Stream settings: Rate 1000](howto/screens/13-studio-properties-rate.png)
 
 11. **Send it to port 0.** Press **Use in Control…**, leave **Port** at `Port 0` and press **Open Traffic tab**. The
     dialog names the rate Port 0's form still holds (`Port 0's rate stays 1 kpps: …`); the handoff does not change it.
@@ -137,7 +137,7 @@ machine.
     holds with `1`, a bare number, which is a factor (`= ×1 the profile's rates`), so the stream runs at its own
     1000 pps. Press **Assign**, then **Start**.
 
-    ![The Studio profile, assigned](howto/screens/15-studio-inspected-assigned.png)
+    ![The Editor profile, assigned](howto/screens/15-studio-inspected-assigned.png)
 
 12. **The same two checks.** The **State** chip on Port 0's **Control** tab reads `TX`; the Dashboard's **Tx pps** on
     Port 0 and **Rx pps** on Port 1 read about 1000 pps.

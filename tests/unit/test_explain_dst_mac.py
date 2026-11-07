@@ -29,8 +29,8 @@ def test_an_unresolved_gateway_and_the_streams_that_need_it():
         "Port 0 (ens1f0np0) cannot start: its ARP from 198.51.100.5 for its L3 gateway 192.0.2.1 got no "
         "answer, and streams 1, 2 take the destination MAC from the port.\n"
         "Give port 0 a destination on Control > Config (an L2 destination MAC, or an L3 gateway that answers "
-        "ARP), or set Destination MAC to From packet on those streams in Studio > Properties and assign the "
-        "profile again.")
+        "ARP), or set Destination MAC to From packet on those streams in "
+        "Editor > Stream settings and assign the profile again.")
 
 
 def test_without_a_name_or_a_source_the_port_and_gateway_still_show():

@@ -1,6 +1,6 @@
 import { act, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { MemoryRouter, useLocation } from 'react-router-dom'
+import { MemoryRouter, useLocation, useNavigate } from 'react-router-dom'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import * as api from './api'
 import * as state from './state'
@@ -24,20 +24,20 @@ describe('shell', () => {
       expect(screen.queryByRole('link', { name: 'Control' })).toBeNull()      // the shell is not rendered
     } finally { vi.unstubAllGlobals() }
   })
-  it('the nav is Control, Dashboard, Capture, Studio, Monitor, EMU, Events, Settings', async () => {
+  it('the nav is Control, Dashboard, Capture, Editor, Monitor, EMU, Events, Settings', async () => {
     render(<MemoryRouter initialEntries={['/monitor']}><AppShell /></MemoryRouter>)
-    expect(within(screen.getByRole('navigation')).getAllByRole('link').map((a) => a.textContent)).toEqual(['Control', 'Dashboard', 'Capture', 'Studio', 'Monitor', 'EMU', 'Events', 'Settings'])
+    expect(within(screen.getByRole('navigation')).getAllByRole('link').map((a) => a.textContent)).toEqual(['Control', 'Dashboard', 'Capture', 'Editor', 'Monitor', 'EMU', 'Events', 'Settings'])
     expect(screen.getByRole('heading', { name: 'Monitor' })).toBeInTheDocument()   // routes stay reachable by URL
   })
-  it('the top bar links to Studio, between Capture and Monitor', async () => {
+  it('the top bar links to Editor, between Capture and Monitor', async () => {
     vi.spyOn(api, 'listLibrary').mockResolvedValue({ profiles: [], load_errors: [], dir: '/lib' })
     render(<MemoryRouter initialEntries={['/dashboard']}><AppShell /><Where /></MemoryRouter>)
     const links = within(screen.getByRole('navigation')).getAllByRole('link').map((a) => a.textContent)
-    expect(links.indexOf('Studio')).toBe(links.indexOf('Capture') + 1)
-    expect(links.indexOf('Monitor')).toBe(links.indexOf('Studio') + 1)
-    await userEvent.click(screen.getByRole('link', { name: 'Studio' }))
-    expect(screen.getByTestId('where')).toHaveTextContent('/studio')
-    expect(screen.getByRole('heading', { name: 'Studio' })).toBeVisible()
+    expect(links.indexOf('Editor')).toBe(links.indexOf('Capture') + 1)
+    expect(links.indexOf('Monitor')).toBe(links.indexOf('Editor') + 1)
+    await userEvent.click(screen.getByRole('link', { name: 'Editor' }))
+    expect(screen.getByTestId('where')).toHaveTextContent('/editor')
+    expect(screen.getByRole('heading', { name: 'Editor' })).toBeVisible()
   })
   it('the top bar links to EMU, after Monitor, and the page answers', async () => {
     vi.spyOn(api, 'getEmu').mockResolvedValue({ type: 'emu', state: 'disconnected', target: null, info: null, error: null, busy: null, generation: 0, loaded: null })
@@ -120,7 +120,7 @@ describe('shell', () => {
       await act(async () => { await Promise.resolve() })
       expect(files).toHaveBeenCalled()
     })
-    it.each(['/dashboard', '/capture', '/studio', '/events', '/emu', '/'])('%s redirects to the Monitor', (path) => {
+    it.each(['/dashboard', '/capture', '/studio', '/editor', '/events', '/emu', '/'])('%s redirects to the Monitor', (path) => {
       only()
       render(<MemoryRouter initialEntries={[path]}><AppShell /><Where /></MemoryRouter>)
       expect(screen.getByTestId('where')).toHaveTextContent('/monitor')
@@ -131,35 +131,73 @@ describe('shell', () => {
       expect(within(screen.getByRole('contentinfo')).getByRole('status')).toHaveTextContent('Disconnected')
     })
   })
-  it('Studio keeps its selection across a page switch', async () => {
+  it('the Editor keeps its selection across a page switch', async () => {
     const e = (slug: string) => ({ slug, name: slug, path: `/lib/${slug}.json`, stream_count: 1, created: '', updated: '', source: null, source_missing: false, load_error: null })
     vi.spyOn(api, 'listLibrary').mockResolvedValue({ profiles: [e('a'), e('b')], load_errors: [], dir: '/lib' })
-    render(<MemoryRouter initialEntries={['/studio']}><AppShell /></MemoryRouter>)
+    render(<MemoryRouter initialEntries={['/editor']}><AppShell /></MemoryRouter>)
     await userEvent.click(await screen.findByRole('option', { name: /^b/ }))
     expect(screen.getByRole('option', { name: /^b/ })).toHaveAttribute('aria-selected', 'true')
     await userEvent.click(screen.getByRole('link', { name: 'Dashboard' }))
     expect(screen.queryByRole('listbox', { name: 'Profiles' })).toBeNull()    // hidden elsewhere
-    await userEvent.click(screen.getByRole('link', { name: 'Studio' }))
+    await userEvent.click(screen.getByRole('link', { name: 'Editor' }))
     expect(await screen.findByRole('option', { name: /^b/ })).toHaveAttribute('aria-selected', 'true')
   })
-  it("Studio's packet editor route shows the page and keeps the Studio link active", async () => {
+  it("the Editor's Packets tab shows the packet editor and keeps the Editor link active", async () => {
     vi.spyOn(api, 'listLibrary').mockResolvedValue({ profiles: [], load_errors: [], dir: '/lib' })
     const defs = vi.spyOn(api, 'packetDefinitions').mockRejectedValue(new Error('no backend here'))
     vi.spyOn(api, 'buildPacket').mockRejectedValue(new Error('no backend here'))
-    render(<MemoryRouter initialEntries={['/studio']}><AppShell /><Where /></MemoryRouter>)
+    render(<MemoryRouter initialEntries={['/editor']}><AppShell /><Where /></MemoryRouter>)
     expect(defs).not.toHaveBeenCalled()                                         // the editor is not mounted before its first visit
-    await userEvent.click(screen.getByRole('link', { name: 'Packet editor' }))
-    expect(screen.getByTestId('where')).toHaveTextContent('/studio/packet')
-    expect(screen.getByRole('heading', { name: /^Packet editor/, level: 1 })).toBeVisible()
-    expect(screen.getByRole('heading', { name: 'Studio', hidden: true })).not.toBeVisible()  // the library page is hidden
-    expect(screen.getByRole('link', { name: 'Studio' })).toHaveAttribute('aria-current', 'page')
+    await userEvent.click(screen.getByRole('tab', { name: 'Packets' }))
+    expect(screen.getByTestId('where')).toHaveTextContent('/editor/packet')
+    expect(screen.getByRole('heading', { name: 'Untitled', level: 2 })).toBeVisible()
+    expect(screen.getByRole('link', { name: 'Editor' })).toHaveAttribute('aria-current', 'page')
     // away and back: the same page, not a new one (it is mounted once and hidden)
     await userEvent.click(screen.getByRole('link', { name: 'Dashboard' }))
-    expect(screen.getByRole('heading', { name: /^Packet editor/, level: 1, hidden: true })).not.toBeVisible()
+    expect(screen.getByRole('heading', { name: 'Untitled', level: 2, hidden: true })).not.toBeVisible()
     expect(defs).toHaveBeenCalledTimes(1)
-    await userEvent.click(screen.getByRole('link', { name: 'Studio' }))
-    expect(screen.getByRole('heading', { name: 'Studio' })).toBeVisible()
-    expect(screen.getByRole('heading', { name: /^Packet editor/, level: 1, hidden: true })).not.toBeVisible()
+    await userEvent.click(screen.getByRole('link', { name: 'Editor' }))
+    expect(screen.getByRole('heading', { name: 'Untitled', level: 2, hidden: true })).not.toBeVisible()   // the Editor link goes to /editor: the tab follows the URL
+    expect(screen.getByRole('tab', { name: 'Profiles' })).toHaveAttribute('aria-selected', 'true')
+  })
+  it.each([['/studio', '/editor'], ['/studio/packet', '/editor/packet']])('%s redirects to %s', async (from, to) => {
+    vi.spyOn(api, 'listLibrary').mockResolvedValue({ profiles: [], load_errors: [], dir: '/lib' })
+    vi.spyOn(api, 'packetDefinitions').mockRejectedValue(new Error('no backend here'))
+    vi.spyOn(api, 'buildPacket').mockRejectedValue(new Error('no backend here'))
+    function Back() { const n = useNavigate(); return <button onClick={() => void n(-1)}>history back</button> }
+    render(<MemoryRouter initialEntries={['/dashboard', from]} initialIndex={1}><AppShell /><Where /><Back /></MemoryRouter>)
+    expect(screen.getByTestId('where')).toHaveTextContent(to)
+    expect(screen.getByRole('link', { name: 'Editor' })).toHaveAttribute('aria-current', 'page')
+    expect(screen.getByRole('tab', { name: to === '/editor' ? 'Profiles' : 'Packets' })).toHaveAttribute('aria-selected', 'true')
+    // replace: the /studio entry is gone, so Back lands on the page before it
+    await userEvent.click(screen.getByRole('button', { name: 'history back' }))
+    expect(screen.getByTestId('where')).toHaveTextContent('/dashboard')
+  })
+  it('an Editor tab switch keeps focus on the tab (arrow key and click)', async () => {
+    vi.spyOn(api, 'listLibrary').mockResolvedValue({ profiles: [], load_errors: [], dir: '/lib' })
+    vi.spyOn(api, 'packetDefinitions').mockRejectedValue(new Error('no backend here'))
+    vi.spyOn(api, 'buildPacket').mockRejectedValue(new Error('no backend here'))
+    render(<MemoryRouter initialEntries={['/editor']}><AppShell /><Where /></MemoryRouter>)
+    act(() => screen.getByRole('tab', { name: 'Profiles' }).focus())
+    await userEvent.keyboard('{ArrowRight}')
+    expect(screen.getByTestId('where')).toHaveTextContent('/editor/packet')
+    expect(screen.getByRole('tab', { name: 'Packets' })).toHaveAttribute('aria-selected', 'true')
+    expect(screen.getByRole('tab', { name: 'Packets' })).toHaveFocus()
+    await userEvent.click(screen.getByRole('tab', { name: 'Profiles' }))
+    expect(screen.getByRole('tab', { name: 'Profiles' })).toHaveFocus()
+    await userEvent.click(screen.getByRole('tab', { name: 'Packets' }))
+    expect(screen.getByRole('tab', { name: 'Packets' })).toHaveFocus()
+  })
+  it('Back after a tab switch returns to the previous tab', async () => {
+    vi.spyOn(api, 'listLibrary').mockResolvedValue({ profiles: [], load_errors: [], dir: '/lib' })
+    vi.spyOn(api, 'packetDefinitions').mockRejectedValue(new Error('no backend here'))
+    vi.spyOn(api, 'buildPacket').mockRejectedValue(new Error('no backend here'))
+    function Back() { const n = useNavigate(); return <button onClick={() => void n(-1)}>history back</button> }
+    render(<MemoryRouter initialEntries={['/editor']}><AppShell /><Where /><Back /></MemoryRouter>)
+    await userEvent.click(screen.getByRole('tab', { name: 'Packets' }))
+    expect(screen.getByRole('tab', { name: 'Packets' })).toHaveAttribute('aria-selected', 'true')
+    await userEvent.click(screen.getByRole('button', { name: 'history back' }))
+    expect(screen.getByRole('tab', { name: 'Profiles' })).toHaveAttribute('aria-selected', 'true')
   })
   it('the Events link shows the unseen count', () => {
     vi.spyOn(state, 'useAppState').mockReturnValue({ ...state.initialState, helloSeen: true, backendOnline: true, logUnseen: 3 })
@@ -231,7 +269,7 @@ describe('shell', () => {
     await userEvent.click(screen.getByRole('link', { name: 'Settings' }))
     expect(screen.getByRole('main')).toHaveFocus()
   })
-  it.each(['/settings', '/studio', '/control'])('ctrl+shift+c from %s opens the connect dialog over the same page', async (path) => {
+  it.each(['/settings', '/editor', '/control'])('ctrl+shift+c from %s opens the connect dialog over the same page', async (path) => {
     vi.spyOn(api, 'getSettings').mockResolvedValue({ settings: { preferences: { templates_dir: '', wireshark_path: 'wireshark', workspace_dir: '', release_on_exit: true, trex_cfg_path: '/etc/trex_cfg.yaml' }, connections: [] }, load_error: null })
     render(<MemoryRouter initialEntries={[path]}><AppShell /><Where /></MemoryRouter>)
     await userEvent.keyboard('c')

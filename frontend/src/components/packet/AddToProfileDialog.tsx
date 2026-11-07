@@ -12,7 +12,7 @@ const NEW = ''   // the select's "New profile…" value; no slug is empty
 
 // Adds the packet as a new last stream of a library profile: P4a's template stream (continuous, 1 pps, unnamed) with the
 // packet and VM replaced, and the document in the stream's sidecar entry so that it reopens in the editor. `flags` are the
-// stream's MAC-mode bits when the packet came from a preset. The success link opens Studio on the profile. A new profile
+// stream's MAC-mode bits when the packet came from a preset. The success link opens the Editor on the profile. A new profile
 // can be named here (RC1-23), so an empty library never makes the user leave the packet to make one; once created it joins
 // the list and stays chosen, so a failed add is retried into it rather than creating a second.
 export function AddToProfileDialog({ doc, flags = null, onClose, active = true }: {
@@ -121,7 +121,7 @@ export function AddToProfileDialog({ doc, flags = null, onClose, active = true }
       {done && (
         <>
           <p role="status">Added as stream {done.n} of {done.name}.{' '}
-            <a href="/studio" onClick={(e) => { e.preventDefault(); onClose(); navigate?.('/studio', { state: { studioSelect: done.slug } }) }}>Open {done.name} in Studio</a></p>
+            <a href="/editor" onClick={(e) => { e.preventDefault(); onClose(); navigate?.('/editor', { state: { studioSelect: done.slug } }) }}>Open {done.name} in Editor</a></p>
           {done.note && <p role="status" className="muted">{done.note}</p>}
           <div className="dialog-footer"><div className="end"><button type="button" data-autofocus onClick={onClose}>Close</button></div></div>
         </>

@@ -94,6 +94,18 @@ class Profile(NamedTuple):
     rev: str
 
 
+class LibraryLabel(NamedTuple):
+    """The library entry a file belongs to: its slug and its sidecar name."""
+
+    slug: str
+    name: str
+
+
+def display_name(path: str, label: LibraryLabel | None) -> str:
+    """What the GUI calls a loaded profile: the entry's name when `label` is set, else the path's basename."""
+    return label.name if label is not None else os.path.basename(path)
+
+
 class _Loaded(NamedTuple):
     """Both files of a profile, parsed."""
 
@@ -224,6 +236,29 @@ class ProfileLibrary:
             except ValueError as e:                      # JSON errors and SidecarError are ValueErrors
                 err = str(e)
         return _Loaded(_streams_of(jb), side, err, jb, sb, rev_of(jb, sb))
+
+    def label_of(self, path: str, slug: str | None = None) -> LibraryLabel | None:
+        """The library entry that supplied the file at `path`, or None; never raises. Reads only the sidecar.
+        Without `slug`, `path` must be a `<slug>.json` directly in the current library directory. With `slug`,
+        `path` must be that entry's JSON, or its sidecar's `.py` source path."""
+        given = slug is not None
+        try:
+            if slug is None:
+                p = Path(path).resolve()
+                if p.parent != self._dir().resolve() or not p.name.endswith(".json") \
+                        or p.name.endswith(SIDE_SUFFIX):
+                    return None
+                slug = p.name[:-5]
+                if not SLUG_RE.fullmatch(slug):
+                    return None
+            side = parse_sidecar(json.loads(_read_json(self._side_path(slug))))
+            if given and Path(path).resolve() != self.path_of(slug).resolve():
+                src = side["source"]
+                if src is None or src["kind"] != "py" or src["path"] != path:
+                    return None
+            return LibraryLabel(slug, side["name"])
+        except (OSError, ValueError, LibraryNotFound):
+            return None
 
     def _editable(self, slug: str, expect_rev: str) -> tuple[_Loaded, Sidecar]:
         """The profile for an edit based on `expect_rev` and the sidecar to edit (a fresh one when there is no

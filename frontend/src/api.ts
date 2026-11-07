@@ -70,7 +70,7 @@ export interface BusyMsg { type: 'busy'; ports: Record<number, BusyKind> }
 export type ServerMsg = SessionSnapshot | ClientEventMsg | HelloMsg | PortsMsg | LogMsg | RpcMsg | PortLabelsMsg | PingMsg | BusyMsg | CaptureMsg | CaptureSaveMsg | SetupsMsg | SettingsMsg | MonitorMsg | DaemonMsg | EmuMsg
 export interface Tunable { dest: string; flag: string; kind: 'int' | 'float' | 'str' | 'bool_true' | 'bool_false' | 'choice' | 'raw'; default: unknown; choices: unknown[] | null; help: string }
 export interface StreamSummary { index: number; name: string | null; enabled: boolean; self_start: boolean; mode: string; rate: string; packet: string; length: number; next: string | null; has_vm: boolean }
-export interface Inspected { path: string; kind: 'py' | 'yaml' | 'json'; tunables: Tunable[]; summary: StreamSummary[]; stream_count: number }
+export interface Inspected { path: string; name: string; kind: 'py' | 'yaml' | 'json'; tunables: Tunable[]; summary: StreamSummary[]; stream_count: number }
 export interface FsEntry { name: string; dir: boolean; size: number | null }
 export interface FsList { path: string; parent: string | null; entries: FsEntry[]; truncated: boolean }
 export interface SavedConnection extends ConnectParams { name: string }
@@ -158,12 +158,13 @@ export const SERVICE_MASK = { NO_TCP_UDP: 1, BGP: 2, DHCP: 4, TRANSPORT: 8, MDNS
 export const setService = (b: P & { enabled: boolean; filtered?: boolean; mask?: number }) => call<{ ports: PortView[] }>('POST', '/api/ports/service', b)
 export const setAttr = (b: P & Partial<{ promiscuous: boolean; multicast: boolean; link_up: boolean; led_on: boolean; flow_ctrl: number }>) => call<{ ports: PortView[] }>('POST', '/api/ports/attr', b)
 export const resetPorts = (b: P) => call<{ ports: PortView[] }>('POST', '/api/ports/reset', b)
-export const inspect = (b: { path: string; ports?: number[]; tunables?: string[] }) => call<Inspected>('POST', '/api/profiles/inspect', b)
-export const assign = (b: P & { path: string; tunables: string[]; stop_first?: boolean }) =>
+export const inspect = (b: { path: string; ports?: number[]; tunables?: string[]; library_slug?: string }) => call<Inspected>('POST', '/api/profiles/inspect', b)
+export const assign = (b: P & { path: string; tunables: string[]; stop_first?: boolean; library_slug?: string }) =>
   call<{ summary: StreamSummary[]; stream_count: number; rate: Record<string, Record<string, unknown>>; ports: PortView[] }>('POST', '/api/ports/assign', b)
 // This connection's last Assign to a port (backend TrexSession.assigned); Start sends what is on the port, not a path (RC1-30).
-export interface AssignedRecord { path: string; name: string; tunables: string[]; summary: StreamSummary[]; stream_count: number }
-export const assignedOn = (port: number) => call<{ streams: boolean; assigned: AssignedRecord | null }>('GET', `/api/ports/${port}/assigned`)
+export interface AssignedRecord { path: string; name: string; slug: string | null; tunables: string[]; summary: StreamSummary[]; stream_count: number }
+export type AssignedReply = { streams: boolean; assigned: AssignedRecord | null }
+export const assignedOn = (port: number) => call<AssignedReply>('GET', `/api/ports/${port}/assigned`)
 export const start = (b: P & { mult: string; duration?: number; force?: boolean }) => call<{ ports: PortView[] }>('POST', '/api/ports/start', b)
 export const update = (b: P & { mult: string }) => call<{ ports: PortView[] }>('POST', '/api/ports/update', b)
 export const pause = (b: P) => call<{ ports: PortView[] }>('POST', '/api/ports/pause', b)

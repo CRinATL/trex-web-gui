@@ -262,3 +262,82 @@ def test_fs_list_keeps_a_broken_symlink_and_caps_the_listing(tmp_path: Path, mon
         monkeypatch.setattr(app_module, "FS_LIST_MAX", 1)
         j = c.get("/api/fs/list", params={"path": str(tmp_path)}).json()
         assert len(j["entries"]) == 1 and j["truncated"] is True
+
+
+def import_entry(c, name: str, tunables: list[str] | None = None) -> dict:
+    """Import udp_for_benchmarks.py into the library as `name` with `tunables` (default: none); the entry."""
+    r = c.post("/api/studio/import", json={"path": PROFILE, "name": name, "tunables": tunables or []})
+    assert r.status_code == 200, r.text
+    return r.json()
+
+
+def assign_path(c, path: str, **kw) -> None:
+    """Assign `path` to port 0 (`kw` adds body fields); asserts 200."""
+    r = c.post("/api/ports/assign", json={"ports": [0], "path": path, **kw})
+    assert r.status_code == 200, r.text
+
+
+def held(c) -> dict:
+    """The assigned record of port 0."""
+    r = c.get("/api/ports/0/assigned")
+    assert r.status_code == 200, r.text
+    return r.json()["assigned"]
+
+
+def test_assigned_names_a_library_profile_and_follows_renames(tmp_path: Path, fake_trex):
+    """The record carries the entry's name and slug, and the name is read fresh: a same-slug rename, a
+    slug-changing rename (path relinked) and a delete (basename) each show on the next GET."""
+    f = fake_trex()
+    with client(tmp_path) as c:
+        e = import_entry(c, "cdm-test-1 (options)")
+        connect(c, f)
+        assert c.post("/api/ports/acquire", json={"ports": [0]}).status_code == 200
+        assign_path(c, e["path"])
+        rec = held(c)
+        assert rec["tunables"] == [] and rec["name"] == "cdm-test-1 (options)"
+        assert rec["slug"] == "cdm-test-1-options"
+        rev = c.get("/api/studio/profiles/cdm-test-1-options").json()["rev"]
+        url = "/api/studio/profiles/cdm-test-1-options/rename"
+        r = c.post(url, json={"name": "CDM-Test-1 (Options)", "rev": rev})
+        assert r.status_code == 200 and r.json()["slug"] == "cdm-test-1-options", r.text
+        assert held(c)["name"] == "CDM-Test-1 (Options)" and held(c)["path"] == e["path"]
+        rev = c.get("/api/studio/profiles/cdm-test-1-options").json()["rev"]
+        r = c.post(url, json={"name": "cdm-test-2", "rev": rev})
+        assert r.status_code == 200, r.text
+        rec = held(c)
+        assert rec["name"] == "cdm-test-2" and rec["slug"] == "cdm-test-2"
+        assert rec["path"].endswith("cdm-test-2.json")
+        assert c.delete("/api/studio/profiles/cdm-test-2").status_code == 200
+        assert held(c)["name"] == "cdm-test-2.json"
+
+
+def test_assign_of_a_py_entry_uses_the_sent_slug(tmp_path: Path, fake_trex):
+    """Two entries share one .py: the sent library_slug picks the name; without it the basename shows."""
+    f = fake_trex()
+    with client(tmp_path) as c:
+        import_entry(c, "A", ["--packet_len", "64"])
+        import_entry(c, "B", ["--packet_len", "128"])
+        connect(c, f)
+        assert c.post("/api/ports/acquire", json={"ports": [0]}).status_code == 200
+        assign_path(c, PROFILE, library_slug="b")
+        assert held(c)["name"] == "B" and held(c)["slug"] == "b"
+        assign_path(c, PROFILE)
+        assert held(c)["name"] == "udp_for_benchmarks.py" and held(c)["slug"] is None
+
+
+def test_inspect_reply_has_the_display_name(tmp_path: Path):
+    """Inspect names a library JSON by its entry, and a file outside the library by its basename."""
+    with client(tmp_path) as c:
+        e = import_entry(c, "Mine")
+        r = c.post("/api/profiles/inspect", json={"path": e["path"]})
+        assert r.status_code == 200 and r.json()["name"] == "Mine", r.text
+        r = c.post("/api/profiles/inspect", json={"path": PROFILE})
+        assert r.status_code == 200 and r.json()["name"] == "udp_for_benchmarks.py", r.text
+
+
+def test_library_slug_must_be_a_slug(tmp_path: Path):
+    """A library_slug outside SLUG_RE is a 422 on inspect and assign."""
+    with client(tmp_path) as c:
+        for url, body in (("/api/profiles/inspect", {}), ("/api/ports/assign", {"ports": [0]})):
+            r = c.post(url, json={"path": PROFILE, "library_slug": "../x", **body})
+            assert r.status_code == 422, (url, r.text)

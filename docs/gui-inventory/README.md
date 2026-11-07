@@ -13,6 +13,14 @@ screens with them. New: [117](screens/117-connection-lost-dialog.png), the Conne
 - the packet editor's Presets have a fifth tab, EVPN-VXLAN ([108](screens/108-packet-presets.png));
 - a profile's rate on the Traffic tab reads as in Studio (`1.00 kpps`, the HOWTO's shot 15).
 
+**The Studio page is the Editor page (2026-11-06).** The nav item and page title read **Editor**, with the tabs **Profiles**
+(the old Studio page, route `/editor`) and **Packets** (the packet editor, `/editor/packet`; `/studio` and `/studio/packet`
+redirect). Every existing shot's top bar still reads "Studio" until the re-shoot. A stream's inner tabs read **Stream settings** and **Stream packet** (were Properties and Packet), the packet
+editor's heading is the packet's name or `Untitled`, Control's buttons are **New in Editor…** and **Copy to Editor**, and the
+Traffic tab has an **In the profile** heading with a caption over its streams table. The text below, and the shot file names, still
+say Studio and Properties for the shots taken before this change; `vm/shoot_inventory.py` and `vm/shoot_howto.py` now click the
+new names. **Not re-shot yet:** `21`, `23`-`25` (Traffic caption), `88`-`94`, `107`-`114` and the HOWTO's `10`-`17`.
+
 **EMU page (P7, 2026-11-05).** Shots [118](screens/118-emu-connected.png) and [119](screens/119-emu-namespace-clients-counters.png)
 were taken by `vm/shoot_inventory.py` (the `emu` step) against `tests/fake/fake_emu.py` on port 18510, seeded with three
 namespaces of four clients; 119 is a 1500 px tall window. The status bar's "Disconnected" line is the Control session: the

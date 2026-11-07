@@ -91,6 +91,8 @@ BUNDLE_PREVIEW_FILE = FIXTURE_DIR / "bundlePreview.json"
 STUDIO_LIBRARY_FILE = FIXTURE_DIR / "studioLibrary.json"
 STUDIO_STREAMS_FILE = FIXTURE_DIR / "studioStreams.json"
 STUDIO_SIM_FILE = FIXTURE_DIR / "studioSim.json"
+INSPECT_REPLY_FILE = FIXTURE_DIR / "inspectReply.json"
+ASSIGNED_REPLY_FILE = FIXTURE_DIR / "assignedReply.json"
 STUDIO_TS = "2026-01-01T00:00:00.000Z"
 TREE_VLAN_FILE = FIXTURE_DIR / "packetTreeVlan.json"
 PACKET_DIR = FIXTURE_DIR / "packet"
@@ -614,6 +616,31 @@ def test_studio_wire_fixtures_match_what_the_backend_answers(tmp_path):
     _compare_or_write(STUDIO_LIBRARY_FILE, {"udp_for_benchmarks": _studio_normalise(listing, library)})
     _compare_or_write(STUDIO_STREAMS_FILE, {"udp_for_benchmarks": _studio_normalise(page, library)})
     _compare_or_write(STUDIO_SIM_FILE, {"udp_for_benchmarks": _studio_normalise(sim, library)})
+
+
+def test_inspect_and_assigned_wire_fixtures_match_what_the_backend_answers(tmp_path, fake_trex):
+    """The inspect reply and the /assigned reply for a library entry imported from udp_for_benchmarks.py
+    (its defaults) and assigned on port 0 by its JSON path."""
+    f = fake_trex()
+    with client(tmp_path) as c:
+        r = c.post("/api/studio/import", json={"path": PROFILE, "name": "cdm-test-1 (options)"})
+        assert r.status_code == 200, r.text
+        path = r.json()["path"]
+        inspected = c.post("/api/profiles/inspect", json={"path": path})
+        assert inspected.status_code == 200, inspected.text
+        r = c.post("/api/session/connect", json={"host": f.host, "sync_port": f.rpc_port,
+                                                  "async_port": f.pub_port, "timeout_s": 2})
+        assert r.status_code == 200, r.text
+        assert c.post("/api/ports/acquire", json={"ports": [0]}).status_code == 200
+        r = c.post("/api/ports/assign", json={"ports": [0], "path": path})
+        assert r.status_code == 200, r.text
+        held = c.get("/api/ports/0/assigned")
+        assert held.status_code == 200, held.text
+    library = tmp_path / "profiles"
+    assert inspected.json()["name"] == "cdm-test-1 (options)"
+    assert held.json()["assigned"]["slug"] == "cdm-test-1-options"
+    _compare_or_write(INSPECT_REPLY_FILE, {"library_entry": _studio_normalise(inspected.json(), library)})
+    _compare_or_write(ASSIGNED_REPLY_FILE, {"library_entry": _studio_normalise(held.json(), library)})
 
 
 def _shape(x: object) -> object:

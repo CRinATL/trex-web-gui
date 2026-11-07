@@ -439,11 +439,13 @@ class TrexSession(PortConfigCommands, CaptureCommands):
 
     async def assign_profile(self, ports: list[int], loaded: trexapi.LoadedProfile,
                              stop_first: bool = False,
-                             tunables: list[str] | None = None) -> dict[int, dict[str, object]]:
+                             tunables: list[str] | None = None, *, name: str | None = None,
+                             slug: str | None = None) -> dict[int, dict[str, object]]:
         """A3.1: stop (only when asked), remove all streams, add the profile's streams per port, then
         validate each port and return its rate info. Streams belong to profile_id "_" (other profiles
-        are shown read-only, A3.8). On success each port records the profile and `tunables` (assigned());
-        a failure forgets the ports' records, since their streams were removed."""
+        are shown read-only, A3.8). On success each port records the profile, its display `name` (the
+        path's basename when not given), the library `slug` it came from (or None) and `tunables`
+        (assigned()); a failure forgets the ports' records, since their streams were removed."""
         missing = [p for p in ports if p not in loaded.streams_by_port]
         if missing:
             raise trexapi.CommandRefused("bad_port", f"The profile was not loaded for port(s) {missing}.")
@@ -474,7 +476,8 @@ class TrexSession(PortConfigCommands, CaptureCommands):
                         f"on validate: {rc.err()}")
                 rates[p] = dict(c.ports[p].get_profile() or {})
             return rates
-        name = loaded.path.rsplit("/", 1)[-1]
+        if name is None:
+            name = loaded.path.rsplit("/", 1)[-1]
         try:
             result: dict[int, dict[str, object]] = await self._command(
                 f"Assign {name} to port(s) {ports}", blocking, ports=ports)
@@ -484,9 +487,19 @@ class TrexSession(PortConfigCommands, CaptureCommands):
             self._forget_assigned(ports)
             raise
         for p in ports:
-            self._assigned[p] = {"path": loaded.path, "name": name, "tunables": list(tunables or []),
-                                 "summary": loaded.summary, "stream_count": loaded.stream_count}
+            self._assigned[p] = {"path": loaded.path, "name": name, "slug": slug,
+                                 "tunables": list(tunables or []), "summary": loaded.summary,
+                                 "stream_count": loaded.stream_count}
         return result
+
+    def relink_library(self, old_slug: str, new_slug: str, old_path: str, new_path: str) -> None:
+        """A library rename changed an entry's slug and file: every record of `old_slug` takes `new_slug`
+        and every record of `old_path` takes `new_path` (loop thread, no I/O; nothing when there are none)."""
+        for rec in self._assigned.values():
+            if rec["slug"] == old_slug:
+                rec["slug"] = new_slug
+            if rec["path"] == old_path:
+                rec["path"] = new_path
 
     def _forget_assigned(self, ports: list[int]) -> None:
         """Drops the Assign records of `ports` (loop thread)."""
@@ -496,9 +509,9 @@ class TrexSession(PortConfigCommands, CaptureCommands):
     async def assigned(self, port: int) -> dict[str, Any]:
         """What is on `port`, as far as this session knows: `streams` is whether the port's default profile
         holds streams (the client's cache), and `assigned` the record of this connection's last Assign to it
-        (path, name, tunables, summary, stream_count), or None when there is none or the port no longer holds
-        streams or is no longer owned. Start sends what is on the port, not a path (RC1-30). Refused only when
-        not connected or for an unknown port."""
+        (path, name, slug, tunables, summary, stream_count), or None when there is none or the port no longer
+        holds streams or is no longer owned. Start sends what is on the port, not a path (RC1-30). Refused
+        only when not connected or for an unknown port."""
         c = self.require_control(mutating=False)
 
         # control executor: whether the port is owned and its profile "_" holds streams, from the cache

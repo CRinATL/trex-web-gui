@@ -80,7 +80,7 @@ async def load_profile(path: str, ports: list[int], tunables: list[str],
     suffix = os.path.splitext(path)[1].lower()
     if suffix not in PROFILE_SUFFIXES:
         raise ProfileError(f"{os.path.basename(path)}: only {', '.join(PROFILE_SUFFIXES)} profiles load here "
-                           "(a pcap is imported in the Studio).")
+                           "(a pcap is imported in the Editor).")
     if not os.path.isfile(path):
         raise ProfileError(f"{path} does not exist or is not a file.")
     if not ports:

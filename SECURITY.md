@@ -29,9 +29,9 @@ encryption and the authentication of the remote end.
   - The uvicorn access log rewrites the login URL's `token` parameter to `<redacted>`
     (`backend/trex_web_gui/api/auth.py:111-114`, `backend/trex_web_gui/cli.py:248`).
 - **Host and Origin checks.** Only the host names `127.0.0.1` and `localhost` are served, against DNS rebinding
-  (`backend/trex_web_gui/api/app.py:312`), and a browser request whose `Origin` is not a loopback origin on the serving
-  port is refused, against cross-site requests and WebSocket hijacking (`backend/trex_web_gui/api/origin.py:25`,
-  `backend/trex_web_gui/api/origin.py:46`).
+  (`backend/trex_web_gui/api/origin.py:39-60`, installed at `backend/trex_web_gui/api/app.py:325`), and a browser
+  request whose `Origin` is not a loopback origin on the serving port is refused, against cross-site requests and WebSocket hijacking (`backend/trex_web_gui/api/origin.py:65-75`,
+  `backend/trex_web_gui/api/origin.py:92`).
 
 ## By design, not vulnerabilities
 
@@ -49,7 +49,7 @@ encryption and the authentication of the remote end.
   kernel's copy of the start-up environment (`/proc/<pid>/environ` of the backend, and of the `uv` process that
   launched it), which the variable's removal does not clear.
   Logging out (`POST /api/auth/logout`) deletes that browser's cookie and, when the request carried a valid cookie,
-  closes every open WebSocket of the backend, every tab's (`backend/trex_web_gui/api/app.py:392-400`). The token
+  closes every open WebSocket of the backend, every tab's (`backend/trex_web_gui/api/app.py:409-419`). The token
   stays valid until the backend exits, so restart it to revoke a login URL someone else has seen.
 - **The Wireshark path is a program the backend runs**, as the user who runs trex-web-gui
   (`backend/trex_web_gui/sessions/wireshark.py:133`). Whoever can change the settings chooses it: anyone with the
@@ -58,7 +58,7 @@ encryption and the authentication of the remote end.
 
 ## Known open items
 
-- **No size cap on most JSON request bodies.** The routes that read their body by hand (the Studio library, the
+- **No size cap on most JSON request bodies.** The routes that read their body by hand (the profile library, the
   packet editor, test setups and the settings bundle) refuse one over their limit with 413
   (`backend/trex_web_gui/api/bodies.py:32`); file uploads are capped at 64 MiB
   (`backend/trex_web_gui/api/studio.py:47`).

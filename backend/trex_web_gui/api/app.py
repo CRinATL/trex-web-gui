@@ -42,8 +42,8 @@ from trex_web_gui.store.bundle import Stores
 from trex_web_gui.store.port_labels import LabelError, PortLabelStore
 from trex_web_gui.store.settings import SettingsError, SettingsStore, parse_settings
 from trex_web_gui.store.spool import SpoolBusy
-from trex_web_gui.store.test_setups import TestSetupStore
-from trex_web_gui.studio.library import ProfileLibrary, library_dir
+from trex_web_gui.store.test_setups import SLUG_RE, TestSetupStore
+from trex_web_gui.studio.library import ProfileLibrary, display_name, library_dir
 from trex_web_gui.studio.templates import TemplateStore, templates_dir
 from trex_web_gui.trexapi import lldp, scapy_exec
 from trex_web_gui.trexapi.packet import PacketBusy, PacketEngine, PacketError, PacketStartError
@@ -128,11 +128,13 @@ class InspectBody(BaseModel):
         """Field validator: rejects a duplicate or negative port id (check_ports)."""
         return check_ports(v)
     tunables: Tunables = Field(default_factory=list, max_length=100)
+    library_slug: str | None = Field(default=None, pattern=SLUG_RE.pattern)
 
 
 class AssignBody(Ports):
     path: str = Field(min_length=1)
     tunables: Tunables = Field(default_factory=list, max_length=100)
+    library_slug: str | None = Field(default=None, pattern=SLUG_RE.pattern)
     stop_first: bool = False
 
 
@@ -493,7 +495,7 @@ def create_app(data_dir: Path, server_hint: str | None = None, static_dir: Path 
     app.include_router(test_setups_router(setup_store, hub.publish, setups_json))
     app.include_router(bundle_router(Stores(store, label_store, setup_store), __version__, hub.publish,
                                      settings_json, labels_json, setups_json))
-    app.include_router(studio_router(library, data_dir))
+    app.include_router(studio_router(library, data_dir, lambda *a: session().relink_library(*a)))
     app.include_router(packet_router(packet_engine, template_store, lambda: store.load().preferences,
                                      data_dir))
     app.include_router(monitor_router(lambda: state["monitor"]))
@@ -650,13 +652,18 @@ def create_app(data_dir: Path, server_hint: str | None = None, static_dir: Path 
     @app.post("/api/profiles/inspect", response_model=None, responses=answers(*RUN_ANSWERS))
     async def inspect(b: InspectBody) -> dict[str, Any] | JSONResponse:
         """Loads a profile in the profile worker subprocess for these ports and tunables and returns its
-        summary; touches no server and no session. 422 profile_error when it cannot be loaded or exceeds
-        10 seconds."""
-        return await run(
-            trexapi.load_profile(b.path, b.ports, b.tunables, timeout_s=PROFILE_TIMEOUT_S,
-                                 max_result=result_cap(b.path, b.ports)),
-            lambda lp: {"path": lp.path, "kind": lp.kind, "tunables": lp.tunables, "summary": lp.summary,
-                        "stream_count": lp.stream_count})
+        summary; touches no server and no session. `name` is what the GUI calls the profile: the library
+        entry's name when `path` is that entry's JSON (or its `.py` source, when `library_slug` names the
+        entry), else the file's basename. 422 profile_error when it cannot be loaded or exceeds 10 seconds."""
+        async def go() -> tuple[trexapi.LoadedProfile, str]:
+            """Loads the profile, then names it (the label reads files, so off the loop)."""
+            lp = await trexapi.load_profile(b.path, b.ports, b.tunables, timeout_s=PROFILE_TIMEOUT_S,
+                                            max_result=result_cap(b.path, b.ports))
+            label = await asyncio.to_thread(library.label_of, lp.path, b.library_slug)
+            return lp, display_name(lp.path, label)
+        return await run(go(), lambda r: {"path": r[0].path, "kind": r[0].kind, "name": r[1],
+                                          "tunables": r[0].tunables, "summary": r[0].summary,
+                                          "stream_count": r[0].stream_count})
 
     @app.post("/api/ports/assign", response_model=None, responses=answers(*RUN_ANSWERS))
     async def assign(b: AssignBody) -> dict[str, Any] | JSONResponse:
@@ -672,7 +679,10 @@ def create_app(data_dir: Path, server_hint: str | None = None, static_dir: Path 
             await session().precheck_assign(b.ports, b.stop_first)
             lp = await trexapi.load_profile(b.path, b.ports, b.tunables, timeout_s=PROFILE_TIMEOUT_S,
                                             max_result=result_cap(b.path, b.ports))
-            rates = await session().assign_profile(b.ports, lp, b.stop_first, b.tunables)
+            label = await asyncio.to_thread(library.label_of, lp.path, b.library_slug)
+            rates = await session().assign_profile(b.ports, lp, b.stop_first, b.tunables,
+                                                   name=display_name(lp.path, label),
+                                                   slug=label.slug if label else None)
             return lp, rates
         return await run(go(), lambda r: {"summary": r[0].summary, "stream_count": r[0].stream_count,
                                           "rate": {str(p): v for p, v in r[1].items()}, **with_ports()})
@@ -680,11 +690,21 @@ def create_app(data_dir: Path, server_hint: str | None = None, static_dir: Path 
     @app.get("/api/ports/{pid}/assigned", response_model=None, responses=answers(*RUN_ANSWERS))
     async def assigned(pid: int) -> dict[str, Any] | JSONResponse:
         """What is on the port: `streams`, whether its default profile holds streams, and `assigned`, this
-        connection's last Assign to it (path, name, tunables, summary, stream_count), or null when there is
-        none or the port no longer holds streams or is no longer owned. Start sends what is on the port, so
-        the Traffic tab shows this, not the path being edited. Refused (409) when not connected or for an
-        unknown port."""
-        return await run(session().assigned(pid), lambda r: r)
+        connection's last Assign to it (path, name, slug, tunables, summary, stream_count), or null when there
+        is none or the port no longer holds streams or is no longer owned. `slug` is the library entry the
+        profile came from (null for a file that is not an entry); `name` is resolved on every read, so a
+        rename shows at once and a deleted entry falls back to the file's basename. Start sends what is on
+        the port, so the Traffic tab shows this, not the path being edited. Refused (409) when not connected
+        or for an unknown port."""
+        async def named() -> dict[str, Any]:
+            """The session's answer with a copy of the record carrying its current display name."""
+            r = await session().assigned(pid)
+            rec = r["assigned"]
+            if rec is not None:
+                label = await asyncio.to_thread(library.label_of, rec["path"], rec["slug"])
+                r = {**r, "assigned": {**rec, "name": display_name(rec["path"], label)}}
+            return r
+        return await run(named(), lambda r: r)
 
     @app.post("/api/ports/start", response_model=None, responses=answers(*RUN_ANSWERS))
     async def start(b: StartBody) -> dict[str, Any] | JSONResponse:

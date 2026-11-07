@@ -2,6 +2,9 @@ import { inspect, type LibraryEntry } from '../../api'
 import { defaultsFor } from '../../traffic'
 import { trafficStore } from '../../trafficStore'
 
+// linkedSlug lives in ../../linkedSlug, because trafficStore's relink reads it and this file imports trafficStore.
+export { linkedSlug } from '../../linkedSlug'
+
 // Spec §6.1, Q10: a .py entry is assigned from its source, not from the frozen JSON.
 export const PY_NOTE = 'Assigns the .py source with these tunables; editor changes to this entry are not sent.'
 
@@ -12,7 +15,7 @@ export const pySourceOf = (e: LibraryEntry): string | null => (e.source?.kind ==
 // path is absolute), so the kept values survive it. Nothing is inspected: that stays an explicit action.
 export function fillFromPy(port: number, e: LibraryEntry, src: string): void {
   trafficStore.set(port, {
-    path: src, formPath: src, inspected: null, specs: [], libraryPy: src, libraryArgs: e.source?.args ?? [],
+    path: src, formPath: src, inspected: null, specs: [], libraryPy: src, librarySlug: e.slug, libraryArgs: e.source?.args ?? [],
     // an entry with args but no tunable form (made through the API) keeps its args as the extra arguments
     values: e.source?.tunables?.values ?? {}, extra: e.source?.tunables ? e.source.tunables.extra : (e.source?.args ?? []).join(' '),
   })
@@ -23,5 +26,5 @@ export async function fillFromJson(port: number, e: LibraryEntry): Promise<void>
   const gen = trafficStore.generation()
   const i = await inspect({ path: e.path, ports: [port], tunables: [] })
   if (trafficStore.generation() !== gen) return
-  trafficStore.set(port, { path: e.path, formPath: i.path, inspected: i, specs: i.tunables, values: defaultsFor(i.tunables), extra: '', libraryPy: null })
+  trafficStore.set(port, { path: e.path, formPath: i.path, inspected: i, specs: i.tunables, values: defaultsFor(i.tunables), extra: '', libraryPy: null, librarySlug: null })
 }

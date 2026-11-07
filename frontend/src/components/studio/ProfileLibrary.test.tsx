@@ -5,6 +5,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import * as api from '../../api'
 import type { LibraryEntry, TestSetup } from '../../api'
 import * as state from '../../state'
+import { trafficStore } from '../../trafficStore'
 import { ProfileLibrary } from './ProfileLibrary'
 
 afterEach(() => vi.restoreAllMocks())
@@ -102,6 +103,29 @@ describe('ProfileLibrary', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Rename' }))
     expect(rename).toHaveBeenCalledWith('a', 'b', 'r1')
     expect(onChanged).toHaveBeenCalledWith('b')
+  })
+
+  it('a rename relinks Control forms', async () => {
+    vi.spyOn(api, 'getProfile').mockResolvedValue({ entry: entry('a'), rev: 'r1', sidecar: {} as api.Sidecar })
+    const renamed = entry('b')
+    vi.spyOn(api, 'renameProfile').mockResolvedValue(renamed)
+    const relink = vi.spyOn(trafficStore, 'relink')
+    show([entry('a')], { selected: 'a' })
+    await userEvent.click(screen.getByRole('button', { name: 'Rename…' }))
+    await userEvent.clear(name()); await userEvent.type(name(), 'b')
+    await userEvent.click(screen.getByRole('button', { name: 'Rename' }))
+    expect(relink).toHaveBeenCalledWith({ slug: 'a', path: '/lib/a.json' }, renamed)
+  })
+  it('a same-slug rename relinks too', async () => {
+    vi.spyOn(api, 'getProfile').mockResolvedValue({ entry: entry('a'), rev: 'r1', sidecar: {} as api.Sidecar })
+    const renamed = entry('a', { name: 'A' })
+    vi.spyOn(api, 'renameProfile').mockResolvedValue(renamed)
+    const relink = vi.spyOn(trafficStore, 'relink')
+    show([entry('a')], { selected: 'a' })
+    await userEvent.click(screen.getByRole('button', { name: 'Rename…' }))
+    await userEvent.clear(name()); await userEvent.type(name(), 'A')
+    await userEvent.click(screen.getByRole('button', { name: 'Rename' }))
+    expect(relink).toHaveBeenCalledWith({ slug: 'a', path: '/lib/a.json' }, renamed)
   })
 
   it('the name form puts the green commit button first and a plain Cancel under the name box (user, 2026-11-06)', async () => {

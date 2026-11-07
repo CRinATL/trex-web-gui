@@ -236,7 +236,9 @@ def main(argv: list[str] | None = None) -> int:
 
     a = build_parser().parse_args(argv)
     token = token_from_env_or_new()        # pops TREX_WEB_GUI_TOKEN: not inherited by any child process
-    app = create_app(a.data_dir or default_data_dir(), a.server.host if a.server else None,
+    # made absolute once, with abspath as the session does (not resolve: symlinks stay): library paths agree
+    data_dir = Path(os.path.abspath(a.data_dir or default_data_dir()))
+    app = create_app(data_dir, a.server.host if a.server else None,
                      None if a.dev else resolve_static(),
                      server_ports=a.server.ports if a.server else None,
                      origin_ports=frozenset({a.port} | ({DEV_PORT} if a.dev else set())), token=token,

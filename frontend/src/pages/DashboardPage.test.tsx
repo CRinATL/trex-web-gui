@@ -282,7 +282,7 @@ describe('DashboardPage stale before the first message', () => {
     const panel = screen.getByRole('tabpanel', { name: 'Streams' })
     act(() => { vi.advanceTimersByTime(3000) })
     expect(panel).not.toHaveClass('is-stale')
-    expect(within(panel).getByText(/^No streams with a PG ID are active\. A stream gets one in Studio > Properties/)).toBeInTheDocument()
+    expect(within(panel).getByText(/^No streams with a PG ID are active\. A stream gets one in Editor > Stream settings/)).toBeInTheDocument()
     act(() => { vi.advanceTimersByTime(1000) })
     expect(panel).toHaveClass('is-stale')
     expect(within(panel).getByRole('status', { name: 'Stream stats are stale' })).toBeInTheDocument()

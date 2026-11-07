@@ -33,7 +33,7 @@ describe('ImportDialog', () => {
   })
 
   it('a .py needs Inspect, then sends tunables and tunable_form', async () => {
-    const inspected: Inspected = { path: '/srv/gen.py', kind: 'py', summary: [], stream_count: 1,
+    const inspected: Inspected = { path: '/srv/gen.py', name: 'gen.py', kind: 'py', summary: [], stream_count: 1,
       tunables: [{ dest: 'size', flag: '--size', kind: 'int', default: 64, choices: null, help: 'bytes' }] }
     const insp = vi.spyOn(api, 'inspect').mockResolvedValue(inspected)
     const imp = vi.spyOn(api, 'importProfile').mockResolvedValue(entry)

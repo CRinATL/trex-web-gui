@@ -12,11 +12,13 @@ from trex_web_gui.studio import library as lib
 from trex_web_gui.studio.library import (
     LibraryError,
     LibraryExists,
+    LibraryLabel,
     LibraryNotFound,
     ProfileLibrary,
     SidecarUnreadable,
     StaleRevision,
     TooManyProfiles,
+    display_name,
     library_dir,
 )
 from trex_web_gui.studio.sidecar import new_sidecar
@@ -400,3 +402,73 @@ def test_duplicate_over_an_unparsable_sidecar_is_refused(tmp_path: Path) -> None
     with pytest.raises(SidecarUnreadable):
         pl.duplicate("a", "B")
     assert files(tmp_path) == before
+
+
+def test_label_of_a_library_json_is_its_sidecar_name(tmp_path: Path) -> None:
+    pl = mklib(tmp_path)
+    pl.create("cdm-test-1 (options)", [stream("a")])
+    want = LibraryLabel("cdm-test-1-options", "cdm-test-1 (options)")
+    assert pl.label_of(str(pl.path_of("cdm-test-1-options"))) == want
+    link = tmp_path / "link"
+    link.symlink_to(tmp_path / "profiles", target_is_directory=True)
+    assert pl.label_of(str(link / "cdm-test-1-options.json")) == want
+
+
+def test_label_of_follows_a_same_slug_rename(tmp_path: Path) -> None:
+    pl = mklib(tmp_path)
+    e = pl.create("cdm-test-1 (options)", [stream("a")])
+    rev = pl.get(e["slug"]).rev
+    pl.rename(e["slug"], "cdm-test-1 options", rev)
+    got = pl.label_of(str(pl.path_of("cdm-test-1-options")))
+    assert got == LibraryLabel("cdm-test-1-options", "cdm-test-1 options")
+
+
+def test_label_of_is_none_without_a_readable_sidecar(tmp_path: Path) -> None:
+    pl = mklib(tmp_path)
+    pl.create("A", [stream("a")])
+    json_path = str(pl.path_of("a"))
+    side = tmp_path / "profiles/a.gui.json"
+    side.write_text("{not json")
+    assert pl.label_of(json_path) is None
+    side.unlink()
+    assert pl.label_of(json_path) is None
+
+
+def test_label_of_is_none_outside_the_library_dir(tmp_path: Path) -> None:
+    pl = mklib(tmp_path)
+    pl.create("A", [stream("a")])
+    other = tmp_path / "elsewhere"
+    other.mkdir()
+    for n in ("a.json", "a.gui.json"):
+        (other / n).write_bytes((tmp_path / "profiles" / n).read_bytes())
+    assert pl.label_of(str(other / "a.json")) is None
+    assert pl.label_of(str(tmp_path / "profiles/a.gui.json")) is None
+    assert pl.label_of(str(tmp_path / "profiles/missing.json")) is None
+
+
+def test_label_of_a_py_entry_needs_its_slug(tmp_path: Path) -> None:
+    pl = mklib(tmp_path)
+    py = tmp_path / "p.py"
+    pl.create("A", [stream("a")], source=src_of("py", py))
+    pl.create("B", [stream("b")], source=src_of("py", py))
+    assert pl.label_of(str(py), "a") == LibraryLabel("a", "A")
+    assert pl.label_of(str(py)) is None
+    assert pl.label_of(str(py), "b") == LibraryLabel("b", "B")
+    pl.create("C", [stream("c")])
+    assert pl.label_of(str(py), "c") is None
+    assert pl.label_of(str(py), "../x") is None
+    assert pl.label_of(str(py), "") is None
+
+
+def test_label_of_a_py_slug_needs_that_entrys_own_py_source(tmp_path: Path) -> None:
+    pl = mklib(tmp_path)
+    py, other = tmp_path / "p.py", tmp_path / "q.py"
+    pl.create("A", [stream("a")], source=src_of("py", py))
+    pl.create("Y", [stream("y")], source=src_of("yaml", py))
+    assert pl.label_of(str(other), "a") is None          # a py entry, but not this file
+    assert pl.label_of(str(py), "y") is None             # this path, but the source is not a .py kind
+
+
+def test_display_name() -> None:
+    assert display_name("/a/b/x.json", None) == "x.json"
+    assert display_name("/a/b/x.json", LibraryLabel("x", "X!")) == "X!"

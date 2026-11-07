@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { ApiError, listLibrary, type LibraryList } from '../api'
 import { DiscardEditsDialog } from '../components/studio/DiscardEditsDialog'
 import { ProfileEditor } from '../components/studio/ProfileEditor'
-import { useOptionalLocation, useOptionalNavigate } from '../routerSafe'
+import { useOptionalLocation } from '../routerSafe'
 import { ProfileLibrary } from '../components/studio/ProfileLibrary'
 
 // `active`: the page is shown. App.tsx keeps it mounted while hidden, so the selection survives a page switch and the
@@ -37,9 +37,8 @@ export function StudioPage({ active = true }: { active?: boolean }) {
       else setSelected(next)
     } catch (x) { if (mine === seq.current) setError(x instanceof ApiError || x instanceof Error ? x.message : String(x)) }
   }, [])
-  // Control's New in Studio… and Copy to Studio navigate here with { studioSelect: slug }: taken once per navigation (its key).
+  // Control's New in Editor… and Copy to Editor navigate here with { studioSelect: slug }: taken once per navigation (its key).
   const location = useOptionalLocation()
-  const navigate = useOptionalNavigate()
   const asked = (location?.state as { studioSelect?: unknown } | null)?.studioSelect
   const navKey = location?.key
   const taken = useRef<string | undefined>(undefined)
@@ -54,8 +53,6 @@ export function StudioPage({ active = true }: { active?: boolean }) {
   const sel = entries.find((e) => e.slug === selected) ?? null
   return (
     <section className="studio-page">
-      <h1>Studio</h1>
-      <p><a href="/studio/packet" onClick={(e) => { if (navigate) { e.preventDefault(); navigate('/studio/packet') } }}>Packet editor</a></p>
       {error && <p role="alert" className="error">{error}</p>}
       <div className="studio-layout">
         <ProfileLibrary entries={entries} loadErrors={list?.load_errors ?? []} selected={selected} onSelect={choose} pinned={unsaved} onChanged={(s) => void refresh(s)} active={active} />

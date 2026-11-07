@@ -7,6 +7,8 @@ import { humanBps, rateLine } from './rate'
 import type { Selection } from '../portActions'
 import { wirePort, wireProfiles } from '../testWire'
 import { trafficStore } from '../trafficStore'
+import assignedReply from '../__fixtures__/assignedReply.json'
+import inspectReply from '../__fixtures__/inspectReply.json'
 import { TrafficTab } from './TrafficTab'
 
 const port = (o: Partial<api.PortView> = {}): api.PortView => ({
@@ -14,11 +16,13 @@ const port = (o: Partial<api.PortView> = {}): api.PortView => ({
   multicast: false, fc_mode: 0, vlan: [], layer_cfg: {}, rx_filter_mode: null, profiles: wireProfiles(o.state ?? 'STREAMS'), rx_info: {}, info: {}, ...o,
 })
 const stream = (i: number): api.StreamSummary => ({ index: i, name: `s${i}`, enabled: true, self_start: true, mode: 'continuous', rate: '1 pps', packet: 'Ether/IP', length: 64, next: null, has_vm: false })
+// The shape of __fixtures__/inspectReply.json, varied per test (the fixture itself is used below).
 const inspected = (o: Partial<api.Inspected> = {}): api.Inspected => ({
-  path: '/p/udp.py', kind: 'py', stream_count: 1, summary: [stream(0)],
+  path: '/p/udp.py', name: 'udp.py', kind: 'py', stream_count: 1, summary: [stream(0)],
   tunables: [{ dest: 'packet_len', flag: '--packet_len', kind: 'int', default: 64, choices: null, help: 'bytes' }], ...o,
 })
 const VALIDATED = { graph: { events_count: 1 }, rate: { max_bps_l1: 1216, max_bps_l2: 1056, max_line_util: 1.2161216e-05, max_pps: 1 } }   // tests/fixtures/p2/summary.json
+// The shape of what assign returns; the /assigned record is the shape of __fixtures__/assignedReply.json (see `record` below).
 const assigned = (o: Partial<Awaited<ReturnType<typeof api.assign>>> = {}) => ({ summary: [stream(0)], stream_count: 1, rate: { '0': VALIDATED }, ports: [], ...o })
 
 function setup(p: api.PortView = port(), readOnly = false) {
@@ -234,7 +238,7 @@ describe('TrafficTab re-inspect', () => {
   it('(d) after Assign, On the port shows what the port holds and the profile table goes', async () => {
     vi.spyOn(api, 'inspect').mockResolvedValue(inspected())
     vi.spyOn(api, 'assign').mockResolvedValue(assigned())
-    const record = { path: '/p/udp.py', name: 'udp.py', tunables: [], summary: [{ ...stream(0), length: 124 }], stream_count: 1 }
+    const record = { path: '/p/udp.py', name: 'udp.py', slug: null, tunables: [], summary: [{ ...stream(0), length: 124 }], stream_count: 1 }
     const on = vi.spyOn(api, 'assignedOn').mockResolvedValue({ streams: false, assigned: null })
     setup()
     expect(await screen.findByText(/^No streams\./)).toBeInTheDocument()
@@ -249,22 +253,22 @@ describe('TrafficTab re-inspect', () => {
   })
   it('RC1-30: a profile in the box that is not on the port is labelled, and Start says what it sends', async () => {
     vi.spyOn(api, 'inspect').mockResolvedValue(inspected())
-    vi.spyOn(api, 'assignedOn').mockResolvedValue({ streams: true, assigned: { path: '/p/simple.json', name: 'simple.json', tunables: [], summary: [stream(0)], stream_count: 1 } })
+    vi.spyOn(api, 'assignedOn').mockResolvedValue({ streams: true, assigned: { path: '/p/simple.json', name: 'simple.json', slug: null, tunables: [], summary: [stream(0)], stream_count: 1 } })
     setup()
     await inspectProfile()
-    expect(screen.getByText('In udp, not on the port: Assign puts these streams on the port.')).toBeInTheDocument()
+    expect(screen.getByText('These are the streams in udp.py. Port 0 has simple.json loaded instead: Assign replaces it.')).toBeInTheDocument()
     expect(screen.getByRole('table', { name: 'Streams on the port' })).toBeInTheDocument()
-    expect(screen.getByText('Start at ×1, no limit, sending simple, not udp: assign it first.')).toBeInTheDocument()
+    expect(screen.getByText('Start at ×1, no limit, sending simple.json, not udp.py: assign it first.')).toBeInTheDocument()
   })
   it('Assign is green (data-run go) while the profile in the box is not on the port, and plain once it is', async () => {
     vi.spyOn(api, 'inspect').mockResolvedValue(inspected())
-    const on = vi.spyOn(api, 'assignedOn').mockResolvedValue({ streams: true, assigned: { path: '/p/simple.json', name: 'simple.json', tunables: [], summary: [stream(0)], stream_count: 1 } })
+    const on = vi.spyOn(api, 'assignedOn').mockResolvedValue({ streams: true, assigned: { path: '/p/simple.json', name: 'simple.json', slug: null, tunables: [], summary: [stream(0)], stream_count: 1 } })
     setup()
     await inspectProfile()
     expect(screen.getByRole('button', { name: 'Assign' })).toHaveAttribute('data-run', 'go')
     // Start would send the old profile, so it is not green beside Assign (the toolbar's Start is unchanged)
     expect(within(screen.getByText(/^Start at /).parentElement!).getByRole('button', { name: 'Start' })).toHaveAttribute('data-quiet')
-    on.mockResolvedValue({ streams: true, assigned: { path: '/p/udp.py', name: 'udp.py', tunables: [], summary: [stream(0)], stream_count: 1 } })
+    on.mockResolvedValue({ streams: true, assigned: { path: '/p/udp.py', name: 'udp.py', slug: null, tunables: [], summary: [stream(0)], stream_count: 1 } })
     vi.spyOn(api, 'assign').mockResolvedValue(assigned())
     await userEvent.click(screen.getByRole('button', { name: 'Assign' }))
     await waitFor(() => expect(screen.getByRole('button', { name: 'Assign' })).not.toHaveAttribute('data-run'))
@@ -768,6 +772,53 @@ describe('TrafficTab form store', () => {
   })
 })
 
+describe('TrafficTab captions and names', () => {
+  const fixtureInspected = (o: Partial<api.Inspected> = {}): api.Inspected => ({ ...inspectReply.library_entry, kind: 'json', ...o })
+  const fixtureHeld = (o: Partial<api.AssignedRecord> = {}): api.AssignedRecord => ({ ...assignedReply.library_entry.assigned, ...o })
+  const inspectIt = async (path: string) => {
+    await userEvent.type(screen.getByRole('textbox', { name: /Profile path/ }), path)
+    await userEvent.click(screen.getByRole('button', { name: 'Inspect' }))
+    await screen.findByRole('heading', { name: 'In the profile' })
+  }
+  const NAME = inspectReply.library_entry.name
+  it('the profile section has an In the profile heading and the no-assignment caption', async () => {
+    vi.spyOn(api, 'inspect').mockResolvedValue(fixtureInspected())
+    vi.spyOn(api, 'assignedOn').mockResolvedValue({ streams: false, assigned: null })
+    setup()
+    await inspectIt('/lib/x.json')
+    expect(screen.getByRole('heading', { name: 'In the profile' })).toBeInTheDocument()
+    expect(screen.getByText(`These are the streams in ${NAME}. They aren't on port 0 yet: Assign loads them onto the port, then Start sends them.`)).toBeInTheDocument()
+  })
+  it('a different held profile is named in the caption', async () => {
+    vi.spyOn(api, 'inspect').mockResolvedValue(fixtureInspected())
+    vi.spyOn(api, 'assignedOn').mockResolvedValue({ streams: true, assigned: fixtureHeld({ path: '/lib/other.json', name: 'Other thing' }) })
+    setup()
+    await inspectIt('/lib/x.json')
+    expect(screen.getByText(`These are the streams in ${NAME}. Port 0 has Other thing loaded instead: Assign replaces it.`)).toBeInTheDocument()
+  })
+  it('the same path with other arguments says Assign reloads it', async () => {
+    vi.spyOn(api, 'inspect').mockResolvedValue(fixtureInspected())
+    vi.spyOn(api, 'assignedOn').mockResolvedValue({ streams: true, assigned: fixtureHeld({ tunables: ['--x', '1'] }) })
+    setup()
+    await inspectIt('/lib/x.json')
+    expect(screen.getByText(`These are the streams in ${NAME}. Port 0 has it loaded with other arguments: Assign reloads it.`)).toBeInTheDocument()
+  })
+  it('streams without a record say Assign replaces them', async () => {
+    vi.spyOn(api, 'inspect').mockResolvedValue(fixtureInspected())
+    vi.spyOn(api, 'assignedOn').mockResolvedValue({ streams: true, assigned: null })
+    setup()
+    await inspectIt('/lib/x.json')
+    expect(screen.getByText(`These are the streams in ${NAME}. Port 0 has other streams loaded: Assign replaces them.`)).toBeInTheDocument()
+  })
+  it('the Start line names both profiles by name', async () => {
+    vi.spyOn(api, 'inspect').mockResolvedValue(fixtureInspected())
+    vi.spyOn(api, 'assignedOn').mockResolvedValue({ streams: true, assigned: fixtureHeld({ path: '/lib/other.json', name: 'Other thing' }) })
+    setup()
+    await inspectIt('/lib/x.json')
+    expect(screen.getByText(`Start at ×1, no limit, sending Other thing, not ${NAME}: assign it first.`)).toBeInTheDocument()
+  })
+})
+
 describe('TrafficTab library and Studio', () => {
   const lib = (o: Partial<api.LibraryEntry> = {}): api.LibraryEntry => ({
     slug: 'udp', name: 'udp', path: '/lib/udp.json', stream_count: 1, created: 'c', updated: 'u', source_missing: false, load_error: null,
@@ -790,42 +841,67 @@ describe('TrafficTab library and Studio', () => {
     // Inspect keeps the values the pick filled in
     await userEvent.click(screen.getByRole('button', { name: 'Inspect' }))
     await screen.findByText('--packet_len')
-    expect(insp).toHaveBeenCalledWith({ path: '/srv/p/udp.py', ports: [0], tunables: ['--packet_len', '128', '--y', '1'] })   // the entry's stored argv
+    expect(insp).toHaveBeenCalledWith({ path: '/srv/p/udp.py', ports: [0], tunables: ['--packet_len', '128', '--y', '1'], library_slug: 'udp' })   // the entry's stored argv
     expect(screen.getByLabelText('--packet_len')).toHaveValue(128)
     expect(screen.getByLabelText('Extra arguments')).toHaveValue('--y 1')
     // typing another path drops the note
     await userEvent.type(screen.getByRole('textbox', { name: /Profile path/ }), 'x')
     expect(screen.queryByText(/editor changes to this entry are not sent/)).toBeNull()
   })
+  it('a .py library pick sends its slug with Inspect and Assign', async () => {
+    vi.spyOn(api, 'listLibrary').mockResolvedValue({ profiles: [lib({ slug: 'b' })], load_errors: [], dir: '/lib' })
+    const insp = vi.spyOn(api, 'inspect').mockResolvedValue(inspected({ path: '/srv/p/udp.py' }))
+    const asg = vi.spyOn(api, 'assign').mockResolvedValue(assigned())
+    setup()
+    await userEvent.click(screen.getByRole('button', { name: 'Library…' }))
+    await userEvent.click(await screen.findByRole('button', { name: 'udp' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Inspect' }))
+    await screen.findByText('--packet_len')
+    expect(insp).toHaveBeenCalledWith({ path: '/srv/p/udp.py', ports: [0], tunables: ['--packet_len', '128', '--y', '1'], library_slug: 'b' })
+    await userEvent.click(screen.getByRole('button', { name: 'Assign' }))
+    expect(asg).toHaveBeenCalledWith(expect.objectContaining({ path: '/srv/p/udp.py', library_slug: 'b' }))
+  })
+  it('editing the path after a .py pick drops the slug', async () => {
+    vi.spyOn(api, 'listLibrary').mockResolvedValue({ profiles: [lib({ slug: 'b' })], load_errors: [], dir: '/lib' })
+    const insp = vi.spyOn(api, 'inspect').mockResolvedValue(inspected({ path: '/srv/p/udp.py' }))
+    setup()
+    await userEvent.click(screen.getByRole('button', { name: 'Library…' }))
+    await userEvent.click(await screen.findByRole('button', { name: 'udp' }))
+    await userEvent.type(screen.getByRole('textbox', { name: /Profile path/ }), '2')
+    expect(trafficStore.get(0).librarySlug).toBeNull()
+    await userEvent.click(screen.getByRole('button', { name: 'Inspect' }))
+    await screen.findByText('--packet_len')
+    expect(insp.mock.calls[0][0]).not.toHaveProperty('library_slug')
+  })
   it('New in Studio creates and navigates', async () => {
     const create = vi.spyOn(api, 'createProfile').mockResolvedValue(lib({ slug: 'fresh', name: 'Fresh' }))
     inRouter()
-    await userEvent.click(screen.getByRole('button', { name: 'New in Studio…' }))
+    await userEvent.click(screen.getByRole('button', { name: 'New in Editor…' }))
     await userEvent.type(screen.getByRole('textbox', { name: 'Name' }), 'Fresh')
     await userEvent.click(screen.getByRole('button', { name: 'Create' }))
     expect(create).toHaveBeenCalledWith('Fresh')
-    await vi.waitFor(() => expect(screen.getByTestId('where')).toHaveTextContent('/studio {"studioSelect":"fresh"}'))
+    await vi.waitFor(() => expect(screen.getByTestId('where')).toHaveTextContent('/editor {"studioSelect":"fresh"}'))
   })
   it('New in Studio shows a refusal and stays', async () => {
     vi.spyOn(api, 'createProfile').mockRejectedValue(new api.ApiError(409, 'exists', 'a profile with that name exists'))
     inRouter()
-    await userEvent.click(screen.getByRole('button', { name: 'New in Studio…' }))
+    await userEvent.click(screen.getByRole('button', { name: 'New in Editor…' }))
     await userEvent.type(screen.getByRole('textbox', { name: 'Name' }), 'Dup')
     await userEvent.click(screen.getByRole('button', { name: 'Create' }))
     expect(await screen.findByRole('alert')).toHaveTextContent('a profile with that name exists')
     expect(screen.getByTestId('where')).toHaveTextContent('/control')
   })
-  it('Copy to Studio imports the inspected profile with its tunables', async () => {
+  it('Copy to Editor imports the inspected profile with its tunables', async () => {
     vi.spyOn(api, 'inspect').mockResolvedValue(inspected())
     const imp = vi.spyOn(api, 'importProfile').mockResolvedValue(lib({ slug: 'udp-2' }))
     inRouter()
-    expect(screen.getByRole('button', { name: 'Copy to Studio' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Copy to Editor' })).toBeDisabled()
     await inspectProfile()
     fireEvent.change(screen.getByLabelText('--packet_len'), { target: { value: '128' } })
     await userEvent.type(screen.getByLabelText('Extra arguments'), '--y 1')
-    await userEvent.click(screen.getByRole('button', { name: 'Copy to Studio' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Copy to Editor' }))
     expect(imp).toHaveBeenCalledWith({ path: '/p/udp.py', name: 'udp', tunables: ['--packet_len', '128', '--y', '1'], tunable_form: { values: { packet_len: '128' }, extra: '--y 1' } })
-    await vi.waitFor(() => expect(screen.getByTestId('where')).toHaveTextContent('/studio {"studioSelect":"udp-2"}'))
+    await vi.waitFor(() => expect(screen.getByTestId('where')).toHaveTextContent('/editor {"studioSelect":"udp-2"}'))
   })
   it('a .py entry with args but no tunable form inspects and assigns with its args', async () => {
     const e = lib({ source: { kind: 'py', path: '/srv/p/udp.py', args: ['--packet_len', '128'], tunables: null, ports_differ: false, imported: 'i' } })
@@ -837,9 +913,9 @@ describe('TrafficTab library and Studio', () => {
     await userEvent.click(await screen.findByRole('button', { name: 'udp' }))
     await userEvent.click(screen.getByRole('button', { name: 'Inspect' }))
     await screen.findByText('--packet_len')
-    expect(insp).toHaveBeenCalledWith({ path: '/srv/p/udp.py', ports: [0], tunables: ['--packet_len', '128'] })
+    expect(insp).toHaveBeenCalledWith({ path: '/srv/p/udp.py', ports: [0], tunables: ['--packet_len', '128'], library_slug: 'udp' })
     await userEvent.click(screen.getByRole('button', { name: 'Assign' }))
-    expect(asg).toHaveBeenCalledWith({ ports: [0], path: '/srv/p/udp.py', tunables: ['--packet_len', '128'] })
+    expect(asg).toHaveBeenCalledWith({ ports: [0], path: '/srv/p/udp.py', tunables: ['--packet_len', '128'], library_slug: 'udp' })
   })
   it('a .py pick clears an old Assign error', async () => {
     vi.spyOn(api, 'listLibrary').mockResolvedValue({ profiles: [lib()], load_errors: [], dir: '/lib' })

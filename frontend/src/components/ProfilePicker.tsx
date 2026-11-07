@@ -10,11 +10,13 @@ import { pySourceOf } from './studio/libraryPick'
 const INSPECTABLE = /\.(ya?ml|json)$/i
 const errText = (x: unknown) => (x instanceof Error ? x.message : String(x))
 
-export function ProfilePicker({ portId, path, onPath, onInspected, inputRef, disabled, tunablesFor, visible = true, onLibraryPick }: {
+export function ProfilePicker({ portId, path, onPath, onInspected, inputRef, disabled, tunablesFor, librarySlugFor, visible = true, onLibraryPick }: {
   portId: number; path: string; onPath: (p: string) => void; onInspected: (i: Inspected | null) => void
   inputRef?: Ref<HTMLInputElement>; disabled?: boolean
   // the tunable arguments to inspect with; empty for a path that has not been inspected yet
   tunablesFor?: (path: string) => string[]
+  // the library slug to send with an Inspect of this path, when the form still is that library pick
+  librarySlugFor?: (path: string) => string | undefined
   visible?: boolean   // false while the tab or page is hidden: an open Browse dialog must not keep its Escape hotkey
   // a .py library entry: the caller fills the path and the entry's tunables (a JSON-backed entry is picked and inspected here)
   onLibraryPick?: (e: LibraryEntry) => void
@@ -30,7 +32,8 @@ export function ProfilePicker({ portId, path, onPath, onInspected, inputRef, dis
   async function doInspect(p: string) {
     if (inFlight.current || !p.trim()) return
     inFlight.current = true; setBusy(true); setError(null)
-    try { onInspected(await inspect({ path: p.trim(), ports: [portId], tunables: tunablesFor?.(p.trim()) ?? [] })) }
+    const slug = librarySlugFor?.(p.trim())
+    try { onInspected(await inspect({ path: p.trim(), ports: [portId], tunables: tunablesFor?.(p.trim()) ?? [], ...(slug ? { library_slug: slug } : {}) })) }
     catch (x) { onInspected(null); setError({ status: x instanceof ApiError ? x.status : 0, message: errText(x) }) }
     finally { inFlight.current = false; setBusy(false) }
   }
