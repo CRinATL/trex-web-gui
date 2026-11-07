@@ -7,15 +7,20 @@ import { useDialogFocus } from './useDialogFocus'
 
 const timeOf = (epoch: number) => new Date(epoch * 1000).toLocaleTimeString()
 
-// Whole seconds left to an epoch deadline, re-read every second; never below zero.
-function useSecondsLeft(deadline: number | null): number {
-  const [now, setNow] = useState(() => Date.now())
+// Whole seconds left, counted down from the clock reading at which `left` last arrived; never below zero. The backend
+// sends the seconds left rather than only an epoch deadline because its clock is not the browser's; a new `left` (a
+// repeated session message) re-anchors the count, so the elapsed time is not subtracted twice.
+function useSecondsLeft(left: number | null): number {
+  const [clock, setClock] = useState<{ left: number | null; at: number; now: number }>({ left: null, at: 0, now: 0 })
   useEffect(() => {
-    if (deadline === null) return
-    const id = setInterval(() => setNow(Date.now()), 1000)
+    if (left === null) return
+    const at = Date.now()
+    const id = setInterval(() => setClock({ left, at, now: Date.now() }), 1000)
     return () => clearInterval(id)
-  }, [deadline])
-  return deadline === null ? 0 : Math.max(0, Math.ceil(deadline - now / 1000))
+  }, [left])
+  if (left === null) return 0
+  const elapsed = clock.left === left ? clock.now - clock.at : 0   // until a tick for this `left`, none (never left + 1)
+  return Math.max(0, Math.ceil(left - elapsed / 1000))
 }
 
 // Remounts the recovery line when the kind or the deadline changes, so its countdown starts from a fresh clock reading.
@@ -24,7 +29,7 @@ const recoveryKey = (r: RecoveryInfo) => (r.kind === 'reconnecting' ? `${r.kind}
 // The recovery line for the stop's kind, with its action where the spec gives one.
 function Recovery({ ended, session, onClose }: { ended: Ended; session: SessionSnapshot; onClose: () => void }) {
   const rec = ended.recovery
-  const left = useSecondsLeft(rec.kind === 'reconnecting' ? rec.deadline : null)
+  const left = useSecondsLeft(rec.kind === 'reconnecting' ? rec.left_s : null)
   const params = session.params
   switch (rec.kind) {
     case 'none': return <p>Nothing restarts it. Start TRex from the TRex daemon dialog to reconnect.</p>

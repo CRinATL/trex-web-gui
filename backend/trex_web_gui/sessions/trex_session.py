@@ -128,14 +128,20 @@ class TrexSession(PortConfigCommands, CaptureCommands):
     # -- public -------------------------------------------------------------------------------
     def snapshot(self) -> dict[str, object]:
         """The `session` message: state, params, info, error, the RPC console flags, connect_seq and the
-        interfaces. Publishes nothing."""
+        interfaces. Publishes nothing. A `reconnecting` recovery in `ended` carries `left_s`, the seconds to
+        its deadline (never below zero) read from this process's clock, because the browser's clock is not
+        the backend's; `_ended` itself is not changed."""
+        ended = self._ended
+        if ended is not None and ended["recovery"]["kind"] == "reconnecting":   # type: ignore[index]
+            left = max(0.0, ended["recovery"]["deadline"] - time.time())        # type: ignore[index]
+            ended = {**ended, "recovery": {**ended["recovery"], "left_s": left}}  # type: ignore[dict-item]
         return {"type": "session", "state": str(self._state),
                 "params": dataclasses.asdict(self._params) if self._params else None,
                 "info": dataclasses.asdict(self._info) if self._info else None, "error": self._error,
                 "rpc_console": self._rpc_console, "include_polling": self._include_polling,
                 "connect_seq": f"{_PROCESS_START_NS}:{self._connect_n}",
                 "ifaces": self._ifaces, "ifaces_note": self._ifaces_note,
-                "ended": self._ended}
+                "ended": ended}
 
     async def connect(self, p: ConnectParams, failure_level: str = "error") -> ServerInfo:
         """Connect the control client and the reader at once, each on its own executor; returns the server

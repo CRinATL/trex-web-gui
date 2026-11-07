@@ -27,7 +27,7 @@ describe('StatusBar', () => {
       expect(screen.getByRole('status').textContent).not.toMatch(/reconnecting/)
     })
     it('ends with reconnecting while it is', () => {
-      bar({ ...base, state: 'disconnected', params, ended: ended({ kind: 'reconnecting', deadline: at + 30 }) })
+      bar({ ...base, state: 'disconnected', params, ended: ended({ kind: 'reconnecting', deadline: at + 30, left_s: 30 }) })
       expect(screen.getByRole('status').textContent).toBe(`TRex stopped from the daemon dialog at ${when} · reconnecting`)
     })
     it('a planned stop keeps the normal colour class, even LOST', () => {
@@ -83,7 +83,7 @@ describe('StatusBar', () => {
       expect(screen.getByRole('status')).not.toHaveAttribute('title')
     })
     it('reconnecting has no tooltip', () => {
-      bar({ ...base, state: 'disconnected', params, ended: ended({ kind: 'reconnecting', deadline: at + 30 }) })
+      bar({ ...base, state: 'disconnected', params, ended: ended({ kind: 'reconnecting', deadline: at + 30, left_s: 30 }) })
       expect(screen.getByRole('status').textContent).toMatch(/ · reconnecting$/)
       expect(screen.getByRole('status')).not.toHaveAttribute('title')
     })

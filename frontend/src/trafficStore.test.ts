@@ -84,6 +84,30 @@ describe('trafficStore', () => {
       expect(trafficStore.get(0).inspected?.name).toBe('a.py')
     })
   })
+  describe('unlink', () => {
+    const insp = (path: string, name: string): Inspected => ({ path, name, kind: 'json', tunables: [], summary: [], stream_count: 0 })
+    it('unlinks a form on the entry JSON path and shows the file basename', () => {
+      trafficStore.set(0, { path: '/lib/my-profile.json', formPath: '/lib/my-profile.json', librarySlug: 'my-profile', libraryPy: '/src/x.py', libraryArgs: ['--a'], inspected: insp('/lib/my-profile.json', 'My Profile') })
+      trafficStore.unlink({ slug: 'my-profile', path: '/lib/my-profile.json' })
+      expect(trafficStore.get(0)).toMatchObject({ path: '/lib/my-profile.json', librarySlug: null, libraryPy: null, libraryArgs: [], inspected: { path: '/lib/my-profile.json', name: 'my-profile.json' } })
+    })
+    it('unlinks a form from the entry .py pick but keeps its path', () => {
+      trafficStore.set(0, { path: '/src/udp.py', libraryPy: '/src/udp.py', librarySlug: 'udp', inspected: insp('/src/udp.py', 'UDP') })
+      trafficStore.unlink({ slug: 'udp', path: '/lib/udp.json' })
+      expect(trafficStore.get(0)).toMatchObject({ path: '/src/udp.py', librarySlug: null, libraryPy: null, libraryArgs: [], inspected: { path: '/src/udp.py', name: 'udp.py' } })
+    })
+    it('keeps the identity of other forms and publishes nothing when nothing changes', () => {
+      trafficStore.set(0, { path: '/lib/else.json', librarySlug: 'else', inspected: insp('/lib/else.json', 'Else') })
+      trafficStore.set(1, { path: '/x.py' })
+      const [a, b] = [trafficStore.get(0), trafficStore.get(1)]
+      const fn = vi.fn()
+      trafficStore.subscribe(fn)
+      trafficStore.unlink({ slug: 'gone', path: '/lib/gone.json' })
+      expect(trafficStore.get(0)).toBe(a)
+      expect(trafficStore.get(1)).toBe(b)
+      expect(fn).not.toHaveBeenCalled()
+    })
+  })
   it('the defaults are frozen', () => {
     expect(Object.isFrozen(DEFAULT_FORM)).toBe(true)
     expect(Object.isFrozen(DEFAULT_FORM.applied)).toBe(true)

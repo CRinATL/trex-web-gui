@@ -285,7 +285,30 @@ def test_set_recovery_publishes(fake_trex, new_session) -> None:
         s.set_recovery({"kind": "reconnecting", "deadline": 5.0})
         last = sessions(rec)[-1]
         assert rec.msgs[-1] is last
-        assert last["ended"]["recovery"] == {"kind": "reconnecting", "deadline": 5.0}
+        assert last["ended"]["recovery"] == {"kind": "reconnecting", "deadline": 5.0, "left_s": 0.0}
+    new_session.run(run())
+
+
+def test_snapshot_reports_seconds_left_of_a_reconnect(fake_trex, new_session, monkeypatch) -> None:
+    f = fake_trex()
+
+    async def run() -> None:
+        s = new_session(Recorder())
+        await s.connect(params(f))
+        assert await s.expect_stop(f.host, f.rpc_port, DAEMON)
+        s.planned_stop_done()
+        s.set_recovery({"kind": "reconnecting", "deadline": time.time() + 30})
+        first = s.snapshot()["ended"]
+        assert 29 < first["recovery"]["left_s"] <= 30
+        real = time.time
+        monkeypatch.setattr(trex_session.time, "time", lambda: real() + 10)
+        second = s.snapshot()["ended"]
+        assert 19 < second["recovery"]["left_s"] <= 20
+        assert {**first, "recovery": None} == {**second, "recovery": None}   # only left_s moved
+        assert first["recovery"]["deadline"] == second["recovery"]["deadline"]
+        assert "left_s" not in s._ended["recovery"]                          # the stored value is not mutated
+        s.set_recovery({"kind": "reconnecting", "deadline": 5.0})
+        assert s.snapshot()["ended"]["recovery"]["left_s"] == 0.0
     new_session.run(run())
 
 

@@ -85,6 +85,21 @@ describe('ProfileLibrary', () => {
     expect(onChanged).toHaveBeenCalledWith(null)
   })
 
+  it('a delete unlinks an open form, and a rejected delete leaves it linked', async () => {
+    trafficStore.reset()
+    trafficStore.set(0, { path: '/src/a.py', libraryPy: '/src/a.py', librarySlug: 'a' })
+    vi.spyOn(api, 'deleteProfile').mockRejectedValueOnce(new api.ApiError(500, 'boom', 'boom'))
+    show([entry('a')], { selected: 'a' })
+    await userEvent.click(screen.getByRole('button', { name: 'Delete' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Confirm delete' }))
+    await screen.findByText('boom')
+    expect(trafficStore.get(0).librarySlug).toBe('a')
+    vi.spyOn(api, 'deleteProfile').mockResolvedValue({ profiles: [], load_errors: [], dir: '/lib' })
+    await userEvent.click(screen.getByRole('button', { name: 'Confirm delete' }))
+    await vi.waitFor(() => expect(trafficStore.get(0).librarySlug).toBeNull())
+    trafficStore.reset()
+  })
+
   it('Cancel on the delete question deletes nothing', async () => {
     const del = vi.spyOn(api, 'deleteProfile')
     show([entry('a')], { selected: 'a' })

@@ -469,6 +469,26 @@ def test_label_of_a_py_slug_needs_that_entrys_own_py_source(tmp_path: Path) -> N
     assert pl.label_of(str(py), "y") is None             # this path, but the source is not a .py kind
 
 
+def test_label_of_is_none_on_a_symlink_loop_in_the_library(tmp_path: Path) -> None:
+    pl = mklib(tmp_path)
+    (tmp_path / "profiles").mkdir()
+    a, b = tmp_path / "profiles/x.json", tmp_path / "profiles/y.json"
+    a.symlink_to(b)
+    b.symlink_to(a)
+    assert pl.label_of(str(a)) is None
+
+
+def test_label_of_is_none_when_the_entry_json_loops(tmp_path: Path) -> None:
+    pl = mklib(tmp_path)
+    py = tmp_path / "p.py"
+    pl.create("A", [stream("a")], source=src_of("py", py))
+    entry, loop2 = pl.path_of("a"), tmp_path / "profiles/loop2.json"
+    entry.unlink()
+    entry.symlink_to(loop2)
+    loop2.symlink_to(entry)
+    assert pl.label_of(str(py), "a") is None
+
+
 def test_display_name() -> None:
     assert display_name("/a/b/x.json", None) == "x.json"
     assert display_name("/a/b/x.json", LibraryLabel("x", "X!")) == "X!"
