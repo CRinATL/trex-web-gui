@@ -594,9 +594,11 @@ class DaemonSession:
 
     async def stop(self, rpc_port: int, confirm: bool, force: bool = False,
                    owners_unknown_ack: bool = False) -> dict[str, Any]:
-        """Stop (or Force stop) TRex; returns {running, stop_s, other_pids, still_answering}
-        (still_answering: after the daemon's run ended, a TRex it did not start still answers on rpc_port;
-        other_pids: the TRexes then still listed, which may be [], else []). Stop sends stop_trex
+        """Stop (or Force stop) TRex; returns {running, stop_s, confirmed, other_pids, still_answering}
+        (confirmed: false when an is_running read failed after the stop was sent, so `running` true means
+        "could not tell", not "still running"; still_answering: after the daemon's run ended, a TRex it did
+        not start still answers on rpc_port; other_pids: the TRexes then still listed, which may be [], else
+        []). Stop sends stop_trex
         with our seq; Force stop always sends force_trex_kill, held seq or not (the daemon's two calls are
         the same for a live seq, and a stale one is refused -33 or answered False while Idle). Refusals
         before any state-changing call: confirm_required; not_daemon_run first for any Force stop while the
@@ -713,12 +715,14 @@ class DaemonSession:
     async def _wait_stopped(self, client: DaemonClient
                             ) -> tuple[dict[str, Any], list[tuple[int, str]] | None]:
         """Poll is_running until false, for up to STOP_WAIT_S; then fold in one status read so a stopped run
-        is recorded at once. Returns ({running, stop_s}, the fold-in's process list or None when it failed);
-        a TRex still running is not an error: {running: true, stop_s: None}. An is_running read that fails
-        ends the wait the same way (the stop was sent, so a 502 now could misreport a stop that worked, and
-        running true keeps Control's session); the fold-in, failing too, records it as the session's error."""
+        is recorded at once. Returns ({running, stop_s, confirmed}, the fold-in's process list or None when it
+        failed); a TRex still running is not an error: {running: true, stop_s: None, confirmed: true}. An
+        is_running read that fails ends the wait with confirmed false (the stop was sent, so a 502 now could
+        misreport a stop that worked, and running true keeps Control's session); the fold-in, failing too,
+        records it as the session's error."""
         t0 = time.monotonic()
         stop_s: float | None = None
+        confirmed = True
         try:
             while True:
                 if not await self._call(client.is_running):
@@ -728,8 +732,8 @@ class DaemonSession:
                     break
                 await asyncio.sleep(STOP_POLL_S)
         except (DaemonFault, DaemonUnreachable):
-            pass
-        return {"running": stop_s is None, "stop_s": stop_s}, await self._poll(False)
+            confirmed = False
+        return {"running": stop_s is None, "stop_s": stop_s, "confirmed": confirmed}, await self._poll(False)
 
     # -- upload -------------------------------------------------------------------------------------
     async def _plan_upload(self, path: str) -> stfyaml.UploadPlan:

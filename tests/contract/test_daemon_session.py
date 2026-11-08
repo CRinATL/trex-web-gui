@@ -399,10 +399,11 @@ def test_stop_reply_reports_running(fake_daemon: Any, fake_trex: Any,
         await started(s)
         out = await s.stop(f.rpc_port, True)
         assert out["running"] is False and out["stop_s"] is not None and out["stop_s"] < 5
+        assert out["confirmed"] is True
         await s.connect(stubborn.host, stubborn.port)
         await started(s)
-        assert await s.stop(f.rpc_port, True) == {"running": True, "stop_s": None, "other_pids": [],
-                                                  "still_answering": False}
+        assert await s.stop(f.rpc_port, True) == {"running": True, "stop_s": None, "confirmed": True,
+                                                  "other_pids": [], "still_answering": False}
         assert s.snapshot()["run"]["state"] == "running"
     drive(body)
 
@@ -410,8 +411,9 @@ def test_stop_reply_reports_running(fake_daemon: Any, fake_trex: Any,
 def test_stop_survives_a_running_read_fault(fake_daemon: Any, fake_trex: Any,
                                            monkeypatch: pytest.MonkeyPatch) -> None:
     """is_running fails after stop_trex was sent: the stop still answers (no 502 after a stop that may have
-    worked), the wait ends at once rather than at its bound, the reply cannot say TRex stopped (running true),
-    the hooks cancel, and the status fold-in records the failure as the session's error."""
+    worked), the wait ends at once rather than at its bound, the reply cannot say TRex stopped (running true)
+    and says so (confirmed false), the hooks cancel, and the status fold-in records the failure as the
+    session's error."""
     monkeypatch.setattr(session_mod, "POLL_S", 60.0)
     d, f, hooks = fake_daemon(), fake_trex(), Hooks()
 
@@ -427,7 +429,8 @@ def test_stop_survives_a_running_read_fault(fake_daemon: Any, fake_trex: Any,
         t0 = time.monotonic()
         out = await s.stop(f.rpc_port, True)
         assert time.monotonic() - t0 < session_mod.STOP_WAIT_S
-        assert out == {"running": True, "stop_s": None, "other_pids": [], "still_answering": False}
+        assert out == {"running": True, "stop_s": None, "confirmed": False, "other_pids": [],
+                       "still_answering": False}
         assert hooks.calls == ["expect", "cancel"]
         snap = s.snapshot()
         assert snap["state"] == "error" and "connection reset" in snap["last_error"]
