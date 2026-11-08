@@ -246,6 +246,15 @@ describe('StreamsTab columns', () => {
     expect(within(rows()[0]).getByRole('rowheader')).not.toHaveClass('num')
     expect(tds[2].classList.contains('num')).toBe(false)
   })
+  it('right-aligns the numeric headers', () => {
+    showAll()
+    pgidStore.push(wirePgid('tx'))
+    renderTab()
+    const ths = within(screen.getByRole('table', { name: 'Streams' })).getAllByRole('columnheader').filter((h) => h.getAttribute('scope') === 'col')
+    expect(ths).toHaveLength(15)
+    for (const th of ths.slice(3)) expect(th, th.textContent ?? '').toHaveClass('num')
+    for (const th of ths.slice(0, 3)) expect(th, th.textContent ?? '').not.toHaveClass('num')
+  })
   it('the chart keeps its bit-rate metrics', () => {
     pgidStore.push(wirePgid('tx'))
     renderTab()

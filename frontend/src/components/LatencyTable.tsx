@@ -6,6 +6,7 @@ import { pgidStore, WINDOW_LEN } from '../pgidStats'
 import { cell } from '../statsFormat'
 import { LatencyHistogram } from './LatencyHistogram'
 import { pgidSource, useStale } from '../useStale'
+import { TableViewControls } from './TableViewControls'
 import { PgidSelector, type Selection } from './PgidSelector'
 import { ChartCheckbox, PgidChart, type Metric } from './PgidChart'
 
@@ -24,39 +25,43 @@ function errors(id: number): number | null {
 }
 
 function Table({ ids, sel }: { ids: number[]; sel: Selection }) {
-  const lastCols = Array.from({ length: WINDOW_LEN }, (_, i) => i)
+  const { view } = useDashView()
+  const lastCols = view.history ? Array.from({ length: WINDOW_LEN }, (_, i) => i) : []
   return (
-    <table className="dash-table" aria-label="Latency">
-      <thead>
-        <tr>
-          <th scope="col">Chart</th><th scope="col">PG ID</th>
-          <th scope="col" title={MAX_NOTE}>Max (µs)</th>
-          <th scope="col" title={SERVER_MAX_NOTE}>Server max (µs)</th>
-          <th scope="col">Avg (µs)</th>
-          {lastCols.map((i) => <th key={i} scope="col" title={LAST_NOTE}>{i === 0 ? 'Last (µs)' : `Last-${i} (µs)`}</th>)}
-          <th scope="col">Jitter (µs)</th>
-          <th scope="col" title="sequence too low plus sequence too high, since Clear">Errors</th>
-        </tr>
-      </thead>
-      <tbody>
-        {ids.map((id) => {
-          const lat = pgidStore.latest()?.latency[String(id)]?.latency
-          const win = pgidStore.window(id)
-          return (
-            <tr key={id}>
-              <td><ChartCheckbox tab="latency" id={id} sel={sel} /></td>
-              <th scope="row">{id}</th>
-              <td>{cell(pgidStore.runningMax(id))}</td>
-              <td>{cell(lat?.total_max)}</td>
-              <td>{cell(lat?.average)}</td>
-              {lastCols.map((i) => <td key={i}>{cell(win[i])}</td>)}
-              <td>{cell(lat?.jitter)}</td>
-              <td>{cell(errors(id))}</td>
-            </tr>
-          )
-        })}
-      </tbody>
-    </table>
+    <>
+      <TableViewControls tab="latency" />
+      <table className="dash-table" aria-label="Latency">
+        <thead>
+          <tr>
+            <th scope="col">Chart</th><th scope="col">PG ID</th>
+            <th scope="col" className="num" title={MAX_NOTE}>Max (µs)</th>
+            <th scope="col" className="num" title={SERVER_MAX_NOTE}>Server max (µs)</th>
+            <th scope="col" className="num">Avg (µs)</th>
+            <th scope="col" className="num">Jitter (µs)</th>
+            <th scope="col" className="num" title="sequence too low plus sequence too high, since Clear">Errors</th>
+            {lastCols.map((i) => <th key={i} scope="col" className="num" title={LAST_NOTE}>{i === 0 ? 'Last (µs)' : `Last-${i} (µs)`}</th>)}
+          </tr>
+        </thead>
+        <tbody>
+          {ids.map((id) => {
+            const lat = pgidStore.latest()?.latency[String(id)]?.latency
+            const win = pgidStore.window(id)
+            return (
+              <tr key={id}>
+                <td><ChartCheckbox tab="latency" id={id} sel={sel} /></td>
+                <th scope="row">{id}</th>
+                <td className="num">{cell(pgidStore.runningMax(id))}</td>
+                <td className="num">{cell(lat?.total_max)}</td>
+                <td className="num">{cell(lat?.average)}</td>
+                <td className="num">{cell(lat?.jitter)}</td>
+                <td className="num">{cell(errors(id))}</td>
+                {lastCols.map((i) => <td key={i} className="num">{cell(win[i])}</td>)}
+              </tr>
+            )
+          })}
+        </tbody>
+      </table>
+    </>
   )
 }
 
@@ -81,7 +86,7 @@ export function LatencyTab({ visible = true }: { visible?: boolean }) {
       {(sel) => (
         <>
           {sel.atCap && <p id={capReasonId('latency')}>{CAP_REASON}</p>}
-          <div className="overview-grid">
+          <div className={view.wide ? 'overview-grid wide' : 'overview-grid'}>
             <div>
               {visible && (ids.length === 0 ? (unheard ? null : <p>No streams with latency are active.</p>) : <Table ids={ids} sel={sel} />)}
               {visible && ids.length > 0 && <LatencyHistogram ids={ids} chosen={histId} onChoose={(id) => dashboardPrefs.set({ histId: id })} />}

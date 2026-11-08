@@ -38,12 +38,13 @@ function ColumnsControl() {
   )
 }
 
-// The row above a Dashboard table: Columns ▾ (Streams only) and the Full-width table toggle.
+// The row above a Dashboard table: Columns ▾ (Streams only), Show history (Latency only) and the Full-width table toggle.
 export function TableViewControls({ tab }: { tab: 'streams' | 'latency' }) {
   const { view, setView } = useDashView()
   return (
     <div className="table-view-controls">
       {tab === 'streams' && <ColumnsControl />}
+      {tab === 'latency' && <button type="button" className="chip" aria-pressed={view.history} onClick={() => setView({ history: !view.history })}>Show history (Last … Last-9)</button>}
       <button type="button" className="chip" aria-pressed={view.wide} onClick={() => setView({ wide: !view.wide })}>Full-width table</button>
     </div>
   )

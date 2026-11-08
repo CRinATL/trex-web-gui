@@ -61,6 +61,7 @@ describe('DashboardPage Clear stats', () => {
   })
   it('Clear stats empties the Latency tab Max, and renders its table only while that tab is shown', async () => {
     vi.spyOn(state, 'useAppState').mockReturnValue({ ...state.initialState, session: session('connected') })
+    localStorage.setItem(DASH_VIEW_KEY, '{"history":true}'); resetDashViewStore()   // Last is a history column
     pgidStore.reset()
     pgidStore.push(wirePgid('tx'))
     render(<DashboardPage />)

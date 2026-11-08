@@ -4,7 +4,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { dashboardPrefs } from '../dashboardPrefs'
 import { pgidStore } from '../pgidStats'
 import { wirePgid, type WirePgid } from '../testPgid'
-import { resetDashViewStore } from '../dashView'
+import { DASH_VIEW_KEY, resetDashViewStore } from '../dashView'
 import UPlot from 'uplot'
 import { LatencyTab } from './LatencyTable'
 
@@ -34,7 +34,61 @@ const at = (id: number, name: string) => {
   return within(rowOf(id)).getAllByRole('cell')[i - 1]   // the row header is not a cell
 }
 
+const HEADS = ['Chart', 'PG ID', 'Max (µs)', 'Server max (µs)', 'Avg (µs)', 'Jitter (µs)', 'Errors']
+const heads = () => within(table()).getAllByRole('columnheader').map((h) => h.textContent)
+
+describe('LatencyTab view', () => {
+  it('hides Last…Last-9 by default', () => {
+    pgidStore.push(wirePgid('tx'))
+    render(<LatencyTab />)
+    expect(heads()).toEqual(HEADS)
+    expect(screen.getByRole('button', { name: 'Show history (Last … Last-9)' })).toHaveAttribute('aria-pressed', 'false')
+  })
+  it('Show history adds Last…Last-9 after Errors', async () => {
+    pgidStore.push(wirePgid('tx'))
+    render(<LatencyTab />)
+    await userEvent.click(screen.getByRole('button', { name: 'Show history (Last … Last-9)' }))
+    const h = heads()
+    expect(h).toHaveLength(HEADS.length + 10)
+    expect(h.slice(0, HEADS.length)).toEqual(HEADS)
+    expect(h[HEADS.length]).toBe('Last (µs)')
+    expect(h.at(-1)).toBe('Last-9 (µs)')
+    expect(screen.getByRole('columnheader', { name: 'Last (µs)' })).toHaveAttribute('title', "the server's maximum over its latest sample period")
+    expect(screen.getByRole('button', { name: 'Show history (Last … Last-9)' })).toHaveAttribute('aria-pressed', 'true')
+  })
+  it('right-aligns the numbers', () => {
+    localStorage.setItem(DASH_VIEW_KEY, '{"history":true}'); resetDashViewStore()
+    pgidStore.push(wirePgid('tx'))
+    render(<LatencyTab />)
+    const tds = Array.from(rowOf(7).children)
+    expect(tds).toHaveLength(HEADS.length + 10)
+    for (const td of tds.slice(2)) expect(td.tagName === 'TD' && td.classList.contains('num'), td.textContent ?? '').toBe(true)
+    expect(tds[0].classList.contains('num')).toBe(false)
+    expect(within(rowOf(7)).getByRole('rowheader')).not.toHaveClass('num')
+  })
+  it('right-aligns the numeric headers', () => {
+    localStorage.setItem(DASH_VIEW_KEY, '{"history":true}'); resetDashViewStore()
+    pgidStore.push(wirePgid('tx'))
+    render(<LatencyTab />)
+    const ths = within(table()).getAllByRole('columnheader')
+    expect(ths).toHaveLength(HEADS.length + 10)
+    for (const th of ths.slice(2)) expect(th, th.textContent ?? '').toHaveClass('num')
+    for (const th of ths.slice(0, 2)) expect(th, th.textContent ?? '').not.toHaveClass('num')
+  })
+  it('Full-width table stacks the chart', async () => {
+    pgidStore.push(wirePgid('tx'))
+    const { container } = render(<LatencyTab />)
+    expect(container.querySelector('.overview-grid')).not.toHaveClass('wide')
+    const chip = screen.getByRole('button', { name: 'Full-width table' })
+    expect(chip).toHaveAttribute('aria-pressed', 'false')
+    await userEvent.click(chip)
+    expect(chip).toHaveAttribute('aria-pressed', 'true')
+    expect(container.querySelector('.overview-grid')).toHaveClass('wide')
+  })
+})
+
 describe('LatencyTab table', () => {
+  beforeEach(() => { localStorage.setItem(DASH_VIEW_KEY, '{"history":true}'); resetDashViewStore() })
   it('renders the recorded tx sample: pg_id 7 with its numbers', () => {
     pgidStore.push(wirePgid('tx'))
     render(<LatencyTab />)
