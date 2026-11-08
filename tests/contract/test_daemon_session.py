@@ -407,6 +407,33 @@ def test_stop_reply_reports_running(fake_daemon: Any, fake_trex: Any,
     drive(body)
 
 
+def test_stop_survives_a_running_read_fault(fake_daemon: Any, fake_trex: Any,
+                                           monkeypatch: pytest.MonkeyPatch) -> None:
+    """is_running fails after stop_trex was sent: the stop still answers (no 502 after a stop that may have
+    worked), the wait ends at once rather than at its bound, the reply cannot say TRex stopped (running true),
+    the hooks cancel, and the status fold-in records the failure as the session's error."""
+    monkeypatch.setattr(session_mod, "POLL_S", 60.0)
+    d, f, hooks = fake_daemon(), fake_trex(), Hooks()
+
+    def failing(self: DaemonClient) -> Any:
+        """The link drops: every is_running read fails."""
+        raise DaemonUnreachable("connection reset")
+
+    async def body(s: DaemonSession, rec: Recorder) -> None:
+        """Connect, start, make is_running fail, time a Stop."""
+        await s.connect(d.host, d.port)
+        await started(s)
+        monkeypatch.setattr(DaemonClient, "is_running", failing)
+        t0 = time.monotonic()
+        out = await s.stop(f.rpc_port, True)
+        assert time.monotonic() - t0 < session_mod.STOP_WAIT_S
+        assert out == {"running": True, "stop_s": None, "other_pids": [], "still_answering": False}
+        assert hooks.calls == ["expect", "cancel"]
+        snap = s.snapshot()
+        assert snap["state"] == "error" and "connection reset" in snap["last_error"]
+    drive(body, hooks=hooks)
+
+
 def test_stop_calls_the_hooks_in_order(fake_daemon: Any, fake_trex: Any) -> None:
     """A stop that ends TRex tells the hooks expect, then done; expect carries the TRex command target and the
     daemon's host:port."""

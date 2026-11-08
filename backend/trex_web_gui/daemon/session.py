@@ -711,22 +711,22 @@ class DaemonSession:
                             ) -> tuple[dict[str, Any], list[tuple[int, str]] | None]:
         """Poll is_running until false, for up to STOP_WAIT_S; then fold in one status read so a stopped run
         is recorded at once. Returns ({running, stop_s}, the fold-in's process list or None when it failed);
-        a TRex still running is not an error: {running: true, stop_s: None}."""
+        a TRex still running is not an error: {running: true, stop_s: None}. An is_running read that fails
+        ends the wait the same way (the stop was sent, so a 502 now could misreport a stop that worked, and
+        running true keeps Control's session); the fold-in, failing too, records it as the session's error."""
         t0 = time.monotonic()
         stop_s: float | None = None
-        while True:
-            if not await self._call(client.is_running):
-                stop_s = round(time.monotonic() - t0, 3)
-                break
-            if time.monotonic() - t0 >= STOP_WAIT_S:
-                break
-            await asyncio.sleep(STOP_POLL_S)
-        cmds = None
         try:
-            cmds = await self._poll(False)
-        except TrexApiError:        # _poll(False) records its own failures
+            while True:
+                if not await self._call(client.is_running):
+                    stop_s = round(time.monotonic() - t0, 3)
+                    break
+                if time.monotonic() - t0 >= STOP_WAIT_S:
+                    break
+                await asyncio.sleep(STOP_POLL_S)
+        except (DaemonFault, DaemonUnreachable):
             pass
-        return {"running": stop_s is None, "stop_s": stop_s}, cmds
+        return {"running": stop_s is None, "stop_s": stop_s}, await self._poll(False)
 
     # -- upload -------------------------------------------------------------------------------------
     async def _plan_upload(self, path: str) -> stfyaml.UploadPlan:
