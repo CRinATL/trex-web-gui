@@ -6,6 +6,7 @@
   --series-1: #0072b2; --series-2: #d55e00; --series-3: #009e73; --series-4: #b0558a;
   --series-5: #b37400; --series-6: #2a82bd; --series-7: #a6761d; --series-8: #666666;
   --chart-grid: #d9d9e0;
+  --control-h: 32px; --control-px: 12px; --control-radius: 4px; --control-border: #808090;   /* 3:1 on --bg and --panel (WCAG 1.4.11) */
   --edited: #0b7285; --edited-bg: #e3fafc;   /* an unsaved edit (RC1-31): bluer than --series-3, never orange or --accent */
   font: 15px/1.5 system-ui, sans-serif;
 }
@@ -17,6 +18,7 @@
     --series-1: #0072b2; --series-2: #d55e00; --series-3: #009e73; --series-4: #cc79a7;
     --series-5: #e69f00; --series-6: #56b4e9; --series-7: #a6761d; --series-8: #a0a0a0;
     --chart-grid: #33333c;
+    --control-border: #767680;
     --edited: #22b8cf; --edited-bg: #0f2a30;
   }
 }
@@ -28,6 +30,7 @@
   --series-1: #0072b2; --series-2: #d55e00; --series-3: #009e73; --series-4: #cc79a7;
   --series-5: #e69f00; --series-6: #56b4e9; --series-7: #a6761d; --series-8: #a0a0a0;
   --chart-grid: #33333c;
+  --control-border: #767680;
   --edited: #22b8cf; --edited-bg: #0f2a30;
 }
 :root[data-theme="contrast"] {
@@ -37,9 +40,20 @@
   --series-1: #3d9be0; --series-2: #e8702a; --series-3: #00b386; --series-4: #cc79a7;
   --series-5: #e69f00; --series-6: #56b4e9; --series-7: #c9922e; --series-8: #a0a0a0;
   --chart-grid: #808080;
+  --control-border: #ffffff;
   --edited: #66d9e8; --edited-bg: #002a30;
 }
 :root[data-theme="contrast"] :focus-visible { outline: 2px solid var(--accent); }
+:root[data-density="compact"] { --control-h: 26px; --control-px: 8px; }
+/* The base look of a control, at zero specificity (:where) so every component rule below still wins. Check boxes, radios,
+   sliders, colour and file pickers keep the browser's own look. */
+:where(button, select, textarea, input:not([type="checkbox"], [type="radio"], [type="range"], [type="color"], [type="file"])) { font: inherit; color: var(--fg); border: 1px solid var(--control-border);
+  border-radius: var(--control-radius); }
+:where(button, select, input:not([type="checkbox"], [type="radio"], [type="range"], [type="color"], [type="file"])) { min-height: var(--control-h); padding: 0 var(--control-px); }
+:where(button) { background: var(--panel); cursor: pointer; }
+:where(button:hover:enabled) { background: color-mix(in srgb, var(--fg) 8%, var(--panel)); }
+:where(button:disabled, select:disabled, textarea:disabled, input:not([type="checkbox"], [type="radio"], [type="range"], [type="color"], [type="file"]):disabled) { opacity: .55; cursor: default; }
+:where(select, textarea, input:not([type="checkbox"], [type="radio"], [type="range"], [type="color"], [type="file"])) { background: var(--bg); }
 * { box-sizing: border-box; }
 html, body, #root { height: 100%; margin: 0; }
 body { background: var(--bg); color: var(--fg); }
@@ -82,7 +96,7 @@ input[type="checkbox"].edited:not(:focus-visible), input[type="radio"].edited:no
 .edited-tag { font-size: .7rem; color: var(--edited); border: 1px solid var(--edited); border-radius: 8px; padding: 0 .35rem; margin-left: .35rem; white-space: nowrap; }
 /* The count beside a form's Save is a button that opens the change list (UnsavedChanges): a dashed teal box like the edited
    fields, so it reads as part of the edit marking and as something to press. */
-button.unsaved-count { font: inherit; font-size: .85rem; color: var(--edited); background: var(--edited-bg);
+button.unsaved-count { min-height: 0; font: inherit; font-size: .85rem; color: var(--edited); background: var(--edited-bg);
   border: 1px dashed var(--edited); border-radius: 4px; padding: 1px 6px; cursor: pointer; }
 button.unsaved-count:hover, button.unsaved-count[aria-expanded="true"] { border-style: solid; }
 button.unsaved-count:focus-visible { outline: 2px solid var(--edited); outline-offset: 2px; }
@@ -109,7 +123,7 @@ button.unsaved-count:focus-visible { outline: 2px solid var(--edited); outline-o
 .tree-row.port-row .span-name { grid-column: span 2; }   /* a saved name is part of the label: no name column */
 .tree-row.port-row .badge { justify-self: start; }
 /* a sortable column's header: reads as the header text, the arrow marks the sorted column (RC1-18) */
-button.th-sort { background: none; border: 0; padding: 0; font: inherit; color: inherit; cursor: pointer; }
+button.th-sort { min-height: 0; background: none; border: 0; padding: 0; font: inherit; color: inherit; cursor: pointer; }
 button.th-sort:focus-visible { outline: 2px solid var(--accent); }
 .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
 .tree-row { display: flex; align-items: center; gap: .5rem; padding: .15rem .4rem; border-radius: 4px; cursor: default; }
@@ -127,7 +141,7 @@ button.th-sort:focus-visible { outline: 2px solid var(--accent); }
 .owner { color: var(--muted); margin-left: auto; }
 .context-menu { z-index: 20; display: flex; flex-direction: column; min-width: 12rem; padding: .25rem; background: var(--bg);
   border: 1px solid var(--border); border-radius: 6px; box-shadow: 0 4px 16px rgb(0 0 0 / .3); }
-.context-menu button { text-align: left; background: none; border: 0; padding: .3rem .6rem; color: var(--fg); font: inherit; cursor: pointer; }
+.context-menu button { min-height: 0; text-align: left; background: none; border: 0; padding: .3rem .6rem; color: var(--fg); font: inherit; cursor: pointer; }
 .context-menu button:hover, .context-menu button:focus { background: var(--panel); }
 .context-menu button[aria-disabled="true"] { color: var(--muted); cursor: not-allowed; }
 .context-menu button.danger { color: var(--bad); }
@@ -138,7 +152,7 @@ button.th-sort:focus-visible { outline: 2px solid var(--accent); }
 .tabs-end { margin-left: auto; display: flex; gap: .5rem; align-items: center; }
 .tabs { display: flex; gap: .25rem; }
 .tabs-horizontal { border-bottom: 1px solid var(--border); flex: 1; }
-.tabs [role="tab"] { background: none; border: 0; border-bottom: 2px solid transparent; padding: .3rem .8rem; color: var(--muted); font: inherit; cursor: pointer; }
+.tabs [role="tab"] { min-height: 0; background: none; border: 0; border-bottom: 2px solid transparent; padding: .3rem .8rem; color: var(--muted); font: inherit; cursor: pointer; }
 .tabs [role="tab"][aria-selected="true"] { color: var(--fg); font-weight: 600; border-bottom-color: var(--accent); }
 .tabs-vertical { flex-direction: column; gap: 0; border-right: 1px solid var(--border); }
 .tabs-vertical [role="tab"] { text-align: left; border-bottom: 0; border-left: 3px solid transparent; }
@@ -171,7 +185,7 @@ button.info { min-width: 24px; min-height: 24px; padding: 0; background: none; b
 .chip.st-STREAMS { color: var(--accent); }
 .chip.st-TX, .chip.st-PCAP_TX { color: var(--ok); border-color: var(--ok); }
 .chip.st-PAUSE { color: var(--warn); border-color: var(--warn); }
-button.chip { font: inherit; font-size: .8rem; cursor: pointer; }
+button.chip { min-height: 0; font: inherit; font-size: .8rem; cursor: pointer; }
 button.chip[aria-pressed="true"] { font-weight: 600; border-color: var(--accent); }
 button.chip[aria-pressed="true"]::before { content: "\2713\00a0"; }
 .y-axis-toggle { display: inline-flex; align-items: center; gap: .4rem; }
@@ -197,13 +211,13 @@ button.danger { color: var(--bad); }
 /* Run buttons (RunButton.tsx, RC1-20), and any button that is the step the page asks for next (Connect, Turn service
    mode on/off): the hue is what the button does, a solid fill that it is available (RC1-22), the lit form the state now.
    The lit ring is an inset shadow, so lighting never changes the button's size. */
-button[data-run] { --run: var(--fg); }
+/* One border in every state (the browser's own is 2px), so enabling or disabling never resizes the button; the height is the base
+   rule's, so a run button and a plain button are as tall in both densities. */
+button[data-run] { --run: var(--fg); border: 1px solid color-mix(in srgb, var(--fg) 25%, var(--bg)); border-radius: 4px;
+  min-height: var(--control-h); padding: 0 var(--control-px); }
 button[data-run="go"] { --run: var(--ok); }
 button[data-run="stop"] { --run: var(--bad); }
 button[data-run="hold"] { --run: var(--warn); }
-/* One border in every state (the browser's own is 2px), so enabling or disabling never resizes the button. */
-button[data-run] { border: 1px solid color-mix(in srgb, var(--fg) 25%, var(--bg)); border-radius: 4px;
-  padding: 2px 7px; }   /* the browser's 1px 6px padding plus the 1px its 2px border had: as tall as a plain button */
 /* --bg text on the fill is at least 5:1 in every theme: the light hues are dark, the dark and contrast hues are light. */
 /* An enabled run button is boxed: a 1px gap in the page colour, then a 1px ring in its own hue just outside it, so a solid
    fill reads as a button rather than a coloured label in every theme (the ring is a text hue, at least 4.5:1 on --bg and
@@ -245,7 +259,7 @@ button[data-run][data-on] { border-color: var(--run); box-shadow: inset 0 0 0 1p
 .browse-list ul { list-style: none; padding: 0; margin: 0; }
 .browse-list li + li { border-top: 1px solid var(--border); }
 .browse-list li button { display: flex; width: 100%; gap: 1rem; justify-content: space-between; text-align: left;
-  background: none; border: 0; padding: .3rem .6rem; color: var(--accent); font: inherit; cursor: pointer; }
+  min-height: 0; background: none; border: 0; padding: .3rem .6rem; color: var(--accent); font: inherit; cursor: pointer; }
 .browse-list li button:hover:not(:disabled), .browse-list li button:focus-visible { background: var(--panel); }
 .browse-list .browse-name { overflow-wrap: anywhere; }
 .browse-list .browse-dir { font-weight: 600; }
@@ -284,7 +298,7 @@ button[data-run][data-on] { border-color: var(--run); box-shadow: inset 0 0 0 1p
 .chart-tip-row { display: flex; gap: .4rem; align-items: center; }
 .chart-tip-value { margin-left: auto; padding-left: .75rem; font-weight: 600; }
 .chart-legend { margin: .25rem 0 0; font-size: .85rem; color: var(--muted); font-variant-numeric: tabular-nums; display: flex; flex-wrap: wrap; gap: .4rem; align-items: center; }
-.legend-chip { display: inline-flex; gap: .35rem; align-items: center; padding: .1rem .5rem; font-size: .85rem; background: var(--panel); color: var(--fg); border: 1px solid var(--border); border-radius: 999px; }
+.legend-chip { min-height: 0; display: inline-flex; gap: .35rem; align-items: center; padding: .1rem .5rem; font-size: .85rem; background: var(--panel); color: var(--fg); border: 1px solid var(--border); border-radius: 999px; }
 .legend-chip[aria-pressed="false"] { color: var(--muted); border-style: dashed; background: transparent; }
 .legend-chip[aria-pressed="false"] .legend-swatch { opacity: .35; }
 .legend-swatch { width: .7rem; height: .7rem; border-radius: 2px; display: inline-block; }
@@ -329,16 +343,23 @@ button[data-run][data-on] { border-color: var(--run); box-shadow: inset 0 0 0 1p
 .hex-view { font-family: monospace; white-space: pre; }
 .hex-row { display: flex; gap: .75rem; }
 .hex-offset { color: var(--muted); }
-.hex-byte { background: none; border: 0; color: inherit; font: inherit; padding: 0 .15rem; cursor: pointer; }
+.hex-byte { min-height: 0; background: none; border: 0; color: inherit; font: inherit; padding: 0 .15rem; cursor: pointer; }
 .hex-byte.marked, .hex-ascii .marked { background: var(--panel); outline: 1px solid var(--accent); }
-button.field-range { background: none; border: 0; font: inherit; font-family: monospace; cursor: pointer; padding: 0 .2rem; }
+button.field-range { min-height: 0; background: none; border: 0; font: inherit; font-family: monospace; cursor: pointer; padding: 0 .2rem; }
 button.field-range.selected { background: var(--panel); outline: 1px solid var(--accent); }
 .name-edit-actions { margin-top: .3rem; }
 .setups-menu { position: relative; display: inline-block; }
 .setups-menu-list { position: absolute; top: 100%; left: 0; z-index: 10; display: flex; flex-direction: column; min-width: 10rem;
   background: var(--bg); border: 1px solid var(--border); border-radius: 6px; padding: .25rem; }
+.setups-menu-list button { min-height: 0; padding: .3rem .6rem; }
+button.expander { min-height: 0; padding: 0 .2rem; }
+/* The Columns ▾ panel: positioned as a menu list, but a form group (check boxes), sized to its longest label. */
+.columns-panel { position: absolute; top: 100%; left: 0; z-index: 10;
+  background: var(--bg); border: 1px solid var(--border); border-radius: 6px; padding: .4rem .6rem; margin: 0; min-width: max-content; }
+.columns-panel label { display: block; white-space: nowrap; clear: both; }   /* below the floated legend, not beside it */
+.columns-panel legend { padding: 0; float: left; width: 100%; font-weight: 600; }
 /* Test setups: a fixed-height master-detail; the list and the detail pane each scroll, the footer stays. */
-.setups-dialog { display: flex; flex-direction: column; width: min(56rem, 92vw); height: min(36rem, 85vh); }
+.setups-dialog { display: flex; flex-direction: column; width: min(56rem, 92vw); height: min(40rem, 85vh); }   /* 40rem: a 2-port detail and a failed Run's actions fit at 900 px */
 .setups-master { display: grid; grid-template-columns: minmax(11rem, 16rem) 1fr; gap: 1rem; flex: 1; min-height: 0; }
 .setups-list { list-style: none; margin: 0; padding: 0; overflow: auto; border-right: 1px solid var(--border); }
 .setups-list [role="option"] { display: flex; flex-direction: column; padding: .35rem .5rem; cursor: pointer; border-radius: 4px; }
@@ -374,7 +395,7 @@ button.field-range.selected { background: var(--panel); outline: 1px solid var(-
 fieldset.plain { border: 0; padding: 0; margin: 0; }
 fieldset.plain legend { padding: 0; font-weight: 600; font-size: 1.1em; margin-bottom: .5rem; }
 .badge.badge-alert { color: var(--bad); border-color: var(--bad); }
-.statusbar .end { margin-left: auto; display: flex; align-items: center; gap: .5rem; }
+.statusbar .end { margin-left: auto; display: flex; align-items: center; gap: .5rem; flex-shrink: 0; white-space: nowrap; }   /* the version and buttons keep their width; a long message wraps instead */
 .statusbar .end button, .statusbar .end a { color: var(--fg); background: var(--panel); }
 .statusbar .end button[data-run]:enabled { box-shadow: 0 0 0 1px var(--panel), 0 0 0 2px var(--run); }   /* the box's gap in the bar's colour */
 
@@ -453,13 +474,14 @@ fieldset.plain legend { padding: 0; font-weight: 600; font-size: 1.1em; margin-b
 /* Packet editor (B1.11): grey default, blue user-set, red error; each with a glyph beside the colour */
 .packet-editor { display: flex; flex-direction: column; gap: .5rem; }
 .editor-toolbar, .editor-tabs, .append-layer, .breadcrumb { display: flex; flex-wrap: wrap; align-items: center; gap: .4rem; }
-.editor-tabs button[aria-selected="true"] { border-bottom: 2px solid var(--accent); }
-.breadcrumb-layer { background: none; border: 0; color: var(--accent); font: inherit; cursor: pointer; padding: 0 .1rem; }
+.editor-tabs button { min-height: 0; background: none; border: 0; border-bottom: 2px solid transparent; padding: .3rem .8rem; color: var(--muted); }
+.editor-tabs button[aria-selected="true"] { border-bottom: 2px solid var(--accent); color: var(--fg); font-weight: 600; }
+.breadcrumb-layer { min-height: 0; background: none; border: 0; color: var(--accent); font: inherit; cursor: pointer; padding: 0 .1rem; }
 .layer-pane { border: 1px solid var(--border); border-radius: 6px; margin: .25rem 0; }
 .layer-pane.invalid { border-color: var(--bad); }
 .layer-head { display: flex; align-items: center; background: var(--panel); border-radius: 6px; }
-.layer-title { flex: 1; text-align: left; background: none; border: 0; color: inherit; font: inherit; font-weight: 600; cursor: pointer; padding: .3rem .5rem; }
-.layer-menu { background: none; border: 0; color: inherit; cursor: pointer; }
+.layer-title { min-height: 0; flex: 1; text-align: left; background: none; border: 0; color: inherit; font: inherit; font-weight: 600; cursor: pointer; padding: .3rem .5rem; }
+.layer-menu { min-height: 0; padding: 0 .2rem; background: none; border: 0; color: inherit; cursor: pointer; }
 .layer-body { padding: .25rem .5rem; }
 .structure-note { margin: 0 0 .25rem; }
 .structure-note p { margin: .15rem 0; }
@@ -482,7 +504,7 @@ fieldset.plain legend { padding: 0; font-weight: 600; font-size: 1.1em; margin-b
 .field-input { width: 100%; box-sizing: border-box; color: inherit; }
 .field-row.error .field-input { border-color: var(--bad); }
 .field-marks { display: flex; gap: .25rem; align-items: center; }
-.field-reset { background: none; border: 0; color: inherit; cursor: pointer; }
+.field-reset { min-height: 0; padding: 0 .2rem; background: none; border: 0; color: inherit; cursor: pointer; }
 .field-error, .field-row .field-error { grid-column: 2 / -1; color: var(--bad); }
 .field-note { display: block; }
 .mark-error { color: var(--bad); font-weight: 700; }

@@ -123,3 +123,14 @@ describe('edited marker and the focus ring', () => {
     }
   })
 })
+
+// A control's border is a component boundary (WCAG 1.4.11): at least 3:1 against --bg and --panel, which a button and a field sit on.
+describe('control border contrast', () => {
+  for (const [scheme, b] of Object.entries(BLOCKS)) it(`${scheme}: --control-border is at least 3:1 on --bg and --panel`, () => {
+    expect(b['--control-border'], `${scheme} defines --control-border`).toBeTruthy()
+    for (const bg of ['--bg', '--panel']) {
+      const r = contrastRatio(b['--control-border'], b[bg])
+      expect(r, `${scheme} --control-border ${b['--control-border']} on ${bg} = ${r.toFixed(2)}`).toBeGreaterThanOrEqual(3)
+    }
+  })
+})

@@ -2,15 +2,17 @@ import { act, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import * as api from '../api'
+import { resetDensityStore } from '../density'
 import { useTheme } from '../theme'
 import { SettingsPage } from './SettingsPage'
+import * as state from '../state'
 import { AppStateProvider } from '../state'
 import * as ws from '../ws'
 import preview from '../__fixtures__/bundlePreview.json'
 import { unsavedRows } from '../testUnsaved'
 
-beforeEach(() => { vi.spyOn(api, 'getAbout').mockResolvedValue({ app_version: '1', trex_pin: { upstream_sha: 'x', patches: [] }, supported: 's', host: 'trex-host' }) })
-afterEach(() => { vi.restoreAllMocks(); vi.unstubAllGlobals(); localStorage.clear(); delete document.documentElement.dataset.theme })
+beforeEach(() => { localStorage.clear(); resetDensityStore(); vi.spyOn(api, 'getAbout').mockResolvedValue({ app_version: '1', trex_pin: { upstream_sha: 'x', patches: [] }, supported: 's', host: 'trex-host' }) })
+afterEach(() => { vi.restoreAllMocks(); vi.unstubAllGlobals(); localStorage.clear(); delete document.documentElement.dataset.theme; delete document.documentElement.dataset.density })
 
 const PREFS = { templates_dir: '', wireshark_path: 'wireshark', workspace_dir: '', release_on_exit: true, trex_cfg_path: '/etc/trex_cfg.yaml' }
 const settings = (name = 'lab'): api.Settings => ({ preferences: PREFS, connections: name ? [{ name, host: '10.0.0.5', sync_port: 4501, async_port: 4500, timeout_s: 3 }] : [] })
@@ -192,11 +194,26 @@ describe('SettingsPage', () => {
     await section('Files on the backend host')
     await screen.findByLabelText('Wireshark path')
   })
+  it('Appearance shows a Density group that sets data-density', async () => {
+    vi.spyOn(api, 'getSettings').mockResolvedValue({ settings: settings(), load_error: null })
+    render(<SettingsPage />)
+    const group = screen.getByRole('group', { name: 'Density' })
+    expect(within(group).getByRole('radio', { name: 'Comfortable' })).toBeChecked()
+    await userEvent.click(within(group).getByRole('radio', { name: 'Compact' }))
+    expect(document.documentElement.dataset.density).toBe('compact')
+    expect(within(group).getByRole('radio', { name: 'Compact' })).toBeChecked()
+  })
+  it('the --monitor-only page shows the Density group too', () => {
+    vi.spyOn(state, 'useAppState').mockReturnValue({ ...state.initialState, monitorOnly: true })
+    render(<SettingsPage />)
+    expect(screen.getByRole('group', { name: 'Density' })).toBeInTheDocument()
+    expect(screen.getByRole('group', { name: 'Theme' })).toBeInTheDocument()
+  })
   it('the Theme radios render while GET /api/settings fails', async () => {
     vi.spyOn(api, 'getSettings').mockRejectedValue(new Error('backend down'))
     render(<SettingsPage />)
     expect(screen.getByRole('group', { name: 'Theme' })).toBeInTheDocument()
-    expect(screen.getAllByRole('radio')).toHaveLength(4)
+    expect(screen.getAllByRole('radio')).toHaveLength(6)
     expect(await screen.findByRole('alert')).toHaveTextContent('backend down')
   })
   it('Export downloads a file whose name starts with trex-web-gui-settings-', async () => {
