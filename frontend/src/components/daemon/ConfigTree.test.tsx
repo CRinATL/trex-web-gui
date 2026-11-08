@@ -81,6 +81,13 @@ describe('ConfigTree', () => {
     expect(screen.getByText('must be an integer')).toBeInTheDocument()
   })
 
+  it('an error on an object\'s own path shows in its open fold', () => {
+    tree({ memory: 'x' }, [{ path: 'memory', line: null, message: 'must be a mapping' }])
+    const msg = screen.getByText('must be a mapping')
+    expect(msg.closest('details')).toBe(screen.getByText('Memory').closest('details'))
+    expect(msg.closest('details')!.open).toBe(true)
+  })
+
   it('picker offers dummy', () => {
     const { container } = tree({ interfaces: [''] })
     const input = screen.getByLabelText('Interface 1')

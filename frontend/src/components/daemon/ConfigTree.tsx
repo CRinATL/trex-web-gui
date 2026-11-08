@@ -47,9 +47,10 @@ function Field({ field, path, label, entry, ...t }: TreeProps & { field: MetaFie
       return (
         <Fold className="full cfg-fold" summary={label} forceOpen={hasErrorUnder(errors, path)}>
           <div className="form-grid">
-            {(field.description || entry) && (
+            {(field.description || entry || error) && (
               <div className="full cfg-fold-tools">
                 {field.description && <Info label={label}>{field.description}</Info>}
+                {error && <span className="field-error error"><span aria-hidden="true">⚠ </span>{error}</span>}
                 {entry && <button type="button" aria-label={`Remove ${label}`} onClick={entry.remove}>Remove</button>}
               </div>
             )}
