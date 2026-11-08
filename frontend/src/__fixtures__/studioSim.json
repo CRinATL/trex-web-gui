@@ -37,7 +37,7 @@
     "totals": {
       "bps_l1": 1184.0,
       "bps_l2": 1024.0,
-      "burst_pkts": 0,
+      "burst_pkts": null,
       "percent": 0.0,
       "pps": 1.0
     },

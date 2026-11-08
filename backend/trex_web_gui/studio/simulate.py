@@ -45,13 +45,14 @@ class Chain(TypedDict):
 
 
 class Totals(TypedDict):
-    """Sums over the enabled streams: an upper bound, since a chain runs one stream at a time."""
+    """Sums over the enabled streams: an upper bound, since a chain runs one stream at a time. `burst_pkts`
+    sums the chains' packet totals; None when any chain has none (a continuous stream, a loop forever)."""
 
     pps: float
     bps_l1: float
     bps_l2: float
     percent: float
-    burst_pkts: int
+    burst_pkts: int | None
 
 
 class RoundTripView(TypedDict):
@@ -215,7 +216,7 @@ def report(streams: list[dict[str, Any]], rt: RoundTrip) -> SimReport:
     totals: Totals = {
         "pps": sum(m["pps"] or 0.0 for m in on), "bps_l1": sum(m["bps_l1"] or 0.0 for m in on),
         "bps_l2": sum(m["bps_l2"] or 0.0 for m in on), "percent": sum(m["percent"] or 0.0 for m in on),
-        "burst_pkts": sum(c["pkts"] or 0 for c in chains),
+        "burst_pkts": total([c["pkts"] for c in chains]),
     }
     if len(on) > 1:
         notes.append("totals add every enabled stream, an upper bound: a chain runs one stream at a time, "

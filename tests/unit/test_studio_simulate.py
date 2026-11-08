@@ -95,6 +95,15 @@ def test_loop_forever() -> None:
     assert any("loops forever" in n for n in r["notes"])
 
 
+def test_total_packets_unknown_when_a_chain_has_no_total() -> None:
+    """A burst chain beside one that loops forever, or beside a continuous stream: the total is unknown,
+    None, never the finite chains' sum with the endless one counted as 0 (p4a-profiles-162)."""
+    looping = [burst(1, name="a", nxt="b"), burst(1, name="b", nxt="a", self_start=False)]
+    assert report([burst(500), *looping], OK)["totals"]["burst_pkts"] is None
+    assert report([burst(500), stream()], OK)["totals"]["burst_pkts"] is None
+    assert report([burst(500), burst(7)], OK)["totals"]["burst_pkts"] == 507
+
+
 def test_unreachable_stream_listed() -> None:
     """An enabled stream that does not self-start and that no next names is unreachable."""
     r = report([stream(name="a"), stream(name="b", self_start=False), stream(self_start=False)], OK)

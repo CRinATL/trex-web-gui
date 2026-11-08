@@ -30,7 +30,8 @@ export function SimulateDialog({ report, onClose, active = true }: { report: Sim
   const ref = useDialogFocus<HTMLDivElement>('[data-autofocus]')
   useHotkey('escape', () => { if (active) onClose() })
   const { round_trip: rt, streams, totals, chains, unreachable, notes } = report
-  // a total is unknown, not 0, when no enabled stream contributes a figure to it (a percentage stream gives none offline)
+  // a rate total is unknown, not 0, when no enabled stream contributes a figure to it (a percentage stream gives none
+  // offline); the packet total comes from the chains, null when any has none (a continuous stream, a loop forever)
   const enabled = streams.filter((s) => s.enabled)
   const known = (pick: (s: SimStream) => number | null) => enabled.some((s) => pick(s) !== null)
   return (
@@ -50,7 +51,7 @@ export function SimulateDialog({ report, onClose, active = true }: { report: Sim
           ))}
         </tbody>
         <tfoot>
-          <tr><th scope="row" colSpan={5}>Total</th><td>{known((s) => s.pps) ? humanPps(totals.pps) : DASH}</td><td>{known((s) => s.bps_l1) ? humanBps(totals.bps_l1) : DASH}</td><td>{known((s) => s.bps_l2) ? humanBps(totals.bps_l2) : DASH}</td><td>{known((s) => s.pkts) ? totals.burst_pkts : DASH}</td></tr>
+          <tr><th scope="row" colSpan={5}>Total</th><td>{known((s) => s.pps) ? humanPps(totals.pps) : DASH}</td><td>{known((s) => s.bps_l1) ? humanBps(totals.bps_l1) : DASH}</td><td>{known((s) => s.bps_l2) ? humanBps(totals.bps_l2) : DASH}</td><td>{totals.burst_pkts ?? DASH}</td></tr>
         </tfoot>
       </table>
       {streams.length > SHOWN_ROWS && <p className="muted">Showing the first {SHOWN_ROWS} of {streams.length} streams.</p>}
