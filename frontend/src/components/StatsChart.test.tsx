@@ -4,6 +4,7 @@ import UPlot from 'uplot'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { statsFromSample } from '../testStats'
 import { statsStore } from '../stats'
+import { resetDashViewStore } from '../dashView'
 import { StatsChart } from './StatsChart'
 import { DashboardPage } from '../pages/DashboardPage'
 
@@ -13,7 +14,7 @@ const mock = UPlot as unknown as Mock
 const overviewCharts = () => mock.instances.filter((i) => i.target.closest('#dash-panel-overview'))
 
 const reset = () => { statsStore.onSession('connected'); statsStore.onSession('disconnected') }
-beforeEach(reset)
+beforeEach(() => { localStorage.clear(); resetDashViewStore(); reset() })
 afterEach(() => { reset(); vi.restoreAllMocks() })
 
 describe('StatsChart', () => {

@@ -4,11 +4,12 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { dashboardPrefs } from '../dashboardPrefs'
 import { pgidStore } from '../pgidStats'
 import { wirePgid, type WirePgid } from '../testPgid'
+import { resetDashViewStore } from '../dashView'
 import UPlot from 'uplot'
 import { LatencyTab } from './LatencyTable'
 
 const reset = () => { pgidStore.reset(); pgidStore.track('streams', []); pgidStore.track('latency', []) }
-beforeEach(reset)
+beforeEach(() => { localStorage.clear(); resetDashViewStore(); reset() })
 afterEach(reset)
 
 const lastMax = (m: WirePgid, id: number, v: number | null) => { m.latency[String(id)].latency.last_max = v; return m }

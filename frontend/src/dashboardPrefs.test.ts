@@ -19,7 +19,7 @@ describe('dashboardPrefs', () => {
     expect(dashboardPrefs.get()).toEqual({ tab: 'overview', windowS: DEFAULT_INTERVAL, layout: DEFAULT_LAYOUT, yFrom0: false, histId: null })
   })
   it('yFrom0 defaults to Fit, is patched alone, and reset returns to Fit', () => {
-    dashboardPrefs.set({ yFrom0: true, histId: null })
+    dashboardPrefs.set({ yFrom0: true })
     expect(dashboardPrefs.get()).toEqual({ tab: 'overview', windowS: DEFAULT_INTERVAL, layout: DEFAULT_LAYOUT, yFrom0: true, histId: null })
     dashboardPrefs.reset()
     expect(dashboardPrefs.get().yFrom0).toBe(false)
