@@ -178,7 +178,11 @@ mkdir -p ~/.config/systemd/user
 curl -fLo ~/.config/systemd/user/trex-web-gui.service https://raw.githubusercontent.com/CRinATL/trex-web-gui/main/docs/trex-web-gui.service
 systemctl --user daemon-reload
 systemctl --user enable --now trex-web-gui
+loginctl enable-linger
 ```
+
+`loginctl enable-linger` keeps the service running after you log out. Without it, systemd stops your user services
+when your last session on the host ends, the service included.
 
 Read the login URL with `journalctl --user -u trex-web-gui`. A user unit has no display, and Wireshark needs one: see
 the comments in the unit.
