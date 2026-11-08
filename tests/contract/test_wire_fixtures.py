@@ -46,9 +46,13 @@ P5 (Task 5). `monitorStl.json` and `monitorStateful.json` hold the `monitor` mes
 connected to the fake's `--pub-replay` of tests/fixtures/p5/pub-stl.jsonl and pub-stateful.jsonl, taken
 once every PUB name the recording holds (summary.json `names`) is present. Normalised: `ts`, `stale_since`
 (when set), every `known_ts` value and every `other[...].ts` become MONITOR_TS, and the target port 4500.
-The replay loops from the moment the fake starts and the app joins mid-loop, so the counters and the
-values inside the frames depend on where it was. The file keeps the values of the run that wrote it; the
-comparison is of the SHAPE only (keys, and the type of every leaf; a list counts as a list).
+For monitorStl.json the fake replays only line MONITOR_STL_FRAME of pub-stl.jsonl, so the app receives
+one frame and the message is the same on every run: it is compared exactly, as the frontend tests pin its
+values (the recording's rates halve every second, so a capture from the whole loop changed with the join
+point, DEFERRED agent-tooling-14). For monitorStateful.json the replay loops from the moment the fake starts
+and the app joins mid-loop, so the counters and the values inside the frames depend on where it was. The
+file keeps the values of the run that wrote it; the comparison is of the SHAPE only (keys, and the type of
+every leaf; a list counts as a list).
 
 P7 (Task 6). `emuMsg.json` holds the `emu` message the app publishes (by scenario: connected,
 disconnected, loading, loaded), `emuNamespaces.json`, `emuClients.json` and `emuCounters.json` the GET
@@ -98,6 +102,7 @@ TREE_VLAN_FILE = FIXTURE_DIR / "packetTreeVlan.json"
 PACKET_DIR = FIXTURE_DIR / "packet"
 MONITOR_STL_FILE = FIXTURE_DIR / "monitorStl.json"
 MONITOR_STATEFUL_FILE = FIXTURE_DIR / "monitorStateful.json"
+MONITOR_STL_FRAME = 1           # the line of pub-stl.jsonl monitorStl.json is taken from (see P5 above)
 MONITOR_TS = 1700000000.0
 P5 = FIXTURES / "p5"
 FLOW_LATENCY = str(ROOT / "tests" / "fixtures" / "profiles" / "flow_latency.py")
@@ -662,10 +667,17 @@ def normalise_monitor(msg: dict) -> dict:
     return out
 
 
-def capture_monitor(fake_trex, tmp_path, replay: str, names: list[str]) -> dict:
+def capture_monitor(fake_trex, tmp_path, replay: str, names: list[str], frame: int | None = None) -> dict:
     """Connect an app to a fake replaying `replay` and return the first `monitor` message on /api/ws that
-    holds every name in `names`, normalised."""
-    fake = fake_trex("--pub-replay", str(P5 / replay))
+    holds every name in `names`, normalised. With `frame`, the fake replays only that line of `replay`, so
+    the message is the same on every run (one frame received, whatever the join point)."""
+    source = P5 / replay
+    if frame is not None:
+        tmp_path.mkdir(parents=True, exist_ok=True)
+        one = tmp_path / f"frame-{frame}.jsonl"
+        one.write_text(source.read_text().splitlines()[frame] + "\n")
+        source = one
+    fake = fake_trex("--pub-replay", str(source))
     app = create_app(tmp_path, token=TEST_TOKEN, monitor_target=(fake.host, fake.pub_port))
     with authed(app) as c, c.websocket_connect(WS) as ws:
         end = time.monotonic() + 40.0          # a full replay loop (30 s) in case the join missed the names
@@ -675,16 +687,19 @@ def capture_monitor(fake_trex, tmp_path, replay: str, names: list[str]) -> dict:
                 return normalise_monitor(m)
 
 
-def _compare_shape_or_write(file: Path, got: dict, check_monitor: bool = True) -> None:
+def _compare_shape_or_write(file: Path, got: dict, check_monitor: bool = True, exact: bool = False) -> None:
     """With WRITE_WIRE_FIXTURES=1 write `got` to `file` (sorted keys, indent 2, making the directory);
-    otherwise assert that its shape equals the file's, and (unless `check_monitor` is False) that the file
-    is a connected monitor message at MONITOR_TS."""
+    otherwise assert that its shape equals the file's, with `exact` that it equals the file, and (unless
+    `check_monitor` is False) that the file is a connected monitor message at MONITOR_TS."""
     if os.environ.get("WRITE_WIRE_FIXTURES") == "1":
         file.parent.mkdir(parents=True, exist_ok=True)
         file.write_text(json.dumps(got, sort_keys=True, indent=2) + "\n")
         return
     want = json.loads(file.read_text())
     assert _shape(got) == _shape(want), f"{file.name} drifted in shape (run `make wire-fixtures` if intended)"
+    if exact:
+        keys = _diff_keys(got, want)
+        assert not keys, f"{file.name} drifted in {keys} (run `make wire-fixtures` if intended)"
     if check_monitor:
         assert want["state"] == "connected" and want["ts"] == MONITOR_TS
 
@@ -692,13 +707,14 @@ def _compare_shape_or_write(file: Path, got: dict, check_monitor: bool = True) -
 def test_p5_monitor_wire_fixtures(fake_trex, tmp_path):
     """The monitor message for the STL recording (trex-global only) and the stateful one (every name)."""
     names = json.loads((P5 / "summary.json").read_text())["names"]
-    stl = capture_monitor(fake_trex, tmp_path / "stl", "pub-stl.jsonl", list(names["stl"]))
+    stl = capture_monitor(fake_trex, tmp_path / "stl", "pub-stl.jsonl", list(names["stl"]),
+                          frame=MONITOR_STL_FRAME)
     stateful = capture_monitor(fake_trex, tmp_path / "stateful", "pub-stateful.jsonl",
                                list(names["stateful"]))
     assert stl["global"] is not None and stl["latency_v2"] is None and stl["templates"] is None
     assert stateful["latency_v2"] is not None and stateful["templates"] is not None
     assert stateful["latency"] is not None and stateful["rx_check"] is not None
-    _compare_shape_or_write(MONITOR_STL_FILE, stl)
+    _compare_shape_or_write(MONITOR_STL_FILE, stl, exact=True)
     _compare_shape_or_write(MONITOR_STATEFUL_FILE, stateful)
 
 
