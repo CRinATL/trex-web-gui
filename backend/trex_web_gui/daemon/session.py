@@ -650,7 +650,10 @@ class DaemonSession:
         the hooks cancel. When `before`, the process list read before the stop, held two or more TRexes, a
         stop that ended the daemon's run is checked by _other_trex before `done`: a TRex still answering on
         rpc_port is not the one stopped, so the hooks cancel, the reply's still_answering is true and its
-        other_pids names what is still listed (daemon-force-3)."""
+        other_pids names what is still listed (daemon-force-3). The operation slot (`busy`) stays held
+        through that check: its list wait shares the is_running wait's STOP_WAIT_S from `t0`, so past that
+        bound it adds at most one STOP_POLL_S, one list read and the PROBE_TIMEOUT_S probe, and a slot
+        released sooner would let a Start race the probe."""
         hooks = self._hooks
         settled = False
         try:
