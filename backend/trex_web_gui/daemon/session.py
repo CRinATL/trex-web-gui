@@ -661,20 +661,22 @@ class DaemonSession:
             self._stop_sent = True
             t0 = time.monotonic()
             out = await self._wait_stopped(client)
-            out["other_pids"] = []
+            answering = None
             if not out["running"] and len(before) >= 2:
-                out["other_pids"] = await self._other_trex(client, host, rpc_port, len(before), t0)
+                answering = await self._other_trex(client, host, rpc_port, len(before), t0)
+            out["other_pids"] = answering or []
             settled = True
             if hooks is not None:
-                (hooks.cancel if out["running"] or out["other_pids"] else hooks.done)()
+                (hooks.cancel if out["running"] or answering is not None else hooks.done)()
             return out
         finally:
             if hooks is not None and not settled:
                 hooks.cancel()
 
     async def _other_trex(self, client: DaemonClient, host: str, rpc_port: int, count_before: int,
-                          t0: float) -> list[int]:
-        """The sorted pids still listed when a TRex still answers on host:rpc_port after the stop, else [].
+                          t0: float) -> list[int] | None:
+        """None when nothing answers on host:rpc_port after the stop; else the sorted pids still listed, which
+        may be [] (an empty listing never decides that the TRex at rpc_port stopped).
         The daemon reports Idle at SIGUSR1, before its TRex exits (trex_launch_thread.py `run`), so the
         process list is re-read until it holds fewer than `count_before` processes, for up to STOP_WAIT_S
         from `t0`; the probe runs either way (a TRex that never left reads as still running). A connect
@@ -684,10 +686,11 @@ class DaemonSession:
             await asyncio.sleep(STOP_POLL_S)
             cmds = await self._call(client.trex_cmds)
         if not await port_accepts(host, rpc_port, PROBE_TIMEOUT_S):
-            return []
+            return None
         pids = sorted(int(pid) for pid, _cmd in cmds)
+        listed = f"pid {', '.join(map(str, pids))}" if pids else "no TRex process listed"
         self._log_warning(f"Stop on {host}:{rpc_port} ended the daemon's run, but {_STILL_RUNNING} "
-                          f"(pid {', '.join(map(str, pids))}).")
+                          f"({listed}).")
         return pids
 
     async def _wait_stopped(self, client: DaemonClient) -> dict[str, Any]:

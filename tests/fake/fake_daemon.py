@@ -23,7 +23,8 @@ kill finds the daemon Idle), --exit-lag S (after a stop or kill ends the fake's 
 by get_trex_cmds for S seconds while get_running_status already says Idle: trex_launch_thread.py `run` sends
 SIGUSR1 to the TRex process group and sets the status Idle at once, without waiting for `_t-rex-64` to exit),
 --foreign-after-start (lists the --foreign process only once a start_trex has succeeded, as when a TRex is
-started by hand beside this backend's run).
+started by hand beside this backend's run), --foreign-ends-with-run (lists the --foreign process only while
+the fake's own run is going, so a stop empties the list at once).
 
 force_trex_kill stops only the daemon's own run: the real daemon's force_trex_kill and stop_trex both call
 CTRex.stop_trex (trex_server.py), which answers False while Idle and never touches a TRex the daemon did not
@@ -125,12 +126,13 @@ class Daemon:
     def cmds(self) -> list[list[str]]:
         """The get_trex_cmds result: the foreign processes the flags ask for, then this fake's run."""
         out: list[list[str]] = []
-        if self.args.foreign or (self.args.foreign_after_start and self.started):
-            out.append(list(FOREIGN_CMD[0]))
         if self.args.foreign_stf:
             out.append(list(STF["stf_cmd"]))
         with self.lock:
             self._settle()
+            if self.args.foreign or (self.args.foreign_after_start and self.started) \
+                    or (self.args.foreign_ends_with_run and self.run_seq is not None):
+                out.insert(0, list(FOREIGN_CMD[0]))
             if self.run_seq is not None:
                 out.append(["4242", self.run_cmd])
             now = time.monotonic()
@@ -330,6 +332,7 @@ def main() -> None:
     ap.add_argument("--run-ends-before-kill", action="store_true")
     ap.add_argument("--exit-lag", type=float, default=0.0)
     ap.add_argument("--foreign-after-start", action="store_true")
+    ap.add_argument("--foreign-ends-with-run", action="store_true")
     args = ap.parse_args()
     daemon = Daemon(args)
     httpd = ThreadingHTTPServer(("127.0.0.1", args.port), make_handler(daemon, args))
