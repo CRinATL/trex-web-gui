@@ -1,12 +1,13 @@
 import { DEFAULT_INTERVAL, DEFAULT_LAYOUT } from './chartSeries'
 
 export type DashTabId = 'overview' | 'streams' | 'latency' | 'utilization'
-export interface DashboardPrefs { tab: DashTabId; windowS: number; layout: number; yFrom0: boolean }
+export interface DashboardPrefs { tab: DashTabId; windowS: number; layout: number; yFrom0: boolean; histId: number | null }
 
-const DEFAULTS: DashboardPrefs = Object.freeze({ tab: 'overview', windowS: DEFAULT_INTERVAL, layout: DEFAULT_LAYOUT, yFrom0: false })
+const DEFAULTS: DashboardPrefs = Object.freeze({ tab: 'overview', windowS: DEFAULT_INTERVAL, layout: DEFAULT_LAYOUT, yFrom0: false, histId: null })
 
-// The Dashboard's tab, chart interval, layout and y axis mode (Fit, or From 0): browser-side, so they survive leaving the page. Saved
-// setups read the tab, interval and layout, not the y axis mode (setups.ts). Reset on a new connect_seq (state.tsx).
+// The Dashboard's tab, chart interval, layout, y axis mode (Fit, or From 0) and the Latency histogram's PG ID: browser-side, so they
+// survive leaving the page. Saved setups save and restore the tab, interval, layout and y axis mode, not the histogram PG ID (setups.ts).
+// Reset on a new connect_seq (state.tsx).
 class DashboardPrefsStore {
   private prefs: DashboardPrefs = DEFAULTS
   private listeners = new Set<() => void>()

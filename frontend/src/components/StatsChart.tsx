@@ -1,14 +1,17 @@
-import { useState, useSyncExternalStore } from 'react'
+import { useSyncExternalStore } from 'react'
 import { seriesById, SERIES } from '../chartSeries'
 import { dashboardPrefs } from '../dashboardPrefs'
+import { useDashView } from '../dashView'
 import { statsStore } from '../stats'
 import { TimeChart } from './TimeChart'
 
-type Props = { initialSeriesId: string; windowS: number; label: string }
+type Props = { index: number; windowS: number; label: string }
 
-// The total scope of one chosen statistic, over statsStore.
-export function StatsChart({ initialSeriesId, windowS, label }: Props) {
-  const [seriesId, setSeriesId] = useState(initialSeriesId)
+// The total scope of one chosen statistic, over statsStore. The choice for chart `index` lives in dashView, so it survives leaving the page.
+export function StatsChart({ index, windowS, label }: Props) {
+  const { view, setView } = useDashView()
+  const seriesId = view.overviewSeries[index]
+  const setSeriesId = (id: string) => setView({ overviewSeries: view.overviewSeries.map((o, i) => (i === index ? id : o)) })
   const { yFrom0 } = useSyncExternalStore(dashboardPrefs.subscribe, dashboardPrefs.get)
   const s = seriesById(seriesId)
   const data = (w: number): [number[], (number | null)[]] => {

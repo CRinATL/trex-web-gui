@@ -19,7 +19,7 @@ const readBars = (): BarChoice => {
 const saveBars = (c: BarChoice) => { try { localStorage.setItem(BARS_KEY, String(c)) } catch { /* storage unavailable: the choice lasts until reload */ } }
 
 // One latency pg_id's histogram as an SVG, with its five error counters beside it.
-// chosen / onChoose: the pg_id lives in the caller, which stays mounted while another dashboard tab is shown.
+// chosen / onChoose: the pg_id is the caller's, kept in dashboardPrefs, so it survives the Dashboard unmounting and a tab switch.
 export function LatencyHistogram({ ids, chosen, onChoose }: { ids: number[]; chosen: number | null; onChoose: (id: number) => void }) {
   const [count, setCount] = useState<BarChoice>(readBars)
   const id = chosen !== null && ids.includes(chosen) ? chosen : ids[0]

@@ -90,7 +90,7 @@ describe('buildSetup', () => {
   })
   it('carries the dashboard section with the backend field names, and only scalar tunable values', () => {
     const forms = { 0: form({ values: { size: 128, name: 'a', on: true, junk: { x: 1 } } }) }
-    const dash = { prefs: { tab: 'latency' as const, windowS: 120, layout: 2, yFrom0: true }, streams: [3, 4], latency: [9] }
+    const dash = { prefs: { tab: 'latency' as const, windowS: 120, layout: 2, yFrom0: true, histId: null }, streams: [3, 4], latency: [9] }
     const s = buildSetup('x', params, [view(0)], forms, {}, dash, new Set([0]), noOpts, null)
     expect(s.dashboard).toEqual({ tab: 'latency', window_s: 120, layout: 2, y_from0: true, streams_pgids: [3, 4], latency_pgids: [9] })
     expect(s.ports[0].tunables.values).toEqual({ size: 128, name: 'a', on: true })
@@ -175,7 +175,7 @@ describe('loadSetup', () => {
     expect(trafficStore.get(1)).toMatchObject({ multValue: '2', unit: 'x', duration: '', force: true, values: { size: 256 }, extra: '--x 1' })
     expect(trafficStore.get(1).specs).toEqual(insp('/p/1.py').tunables)
     expect(trafficStore.get(1).inspected?.path).toBe('/p/1.py')
-    expect(dashboardPrefs.get()).toEqual({ tab: 'latency', windowS: 120, layout: 2, yFrom0: true })
+    expect(dashboardPrefs.get()).toEqual({ tab: 'latency', windowS: 120, layout: 2, yFrom0: true, histId: null })
     expect(pgidStore.selection('streams')).toEqual({ picked: [{ id: 3, color: PGID_PALETTE[0] }, { id: 4, color: PGID_PALETTE[1] }], seeded: true })
     expect(pgidStore.selection('latency')).toEqual({ picked: [{ id: 9, color: PGID_PALETTE[0] }], seeded: true })
   })
