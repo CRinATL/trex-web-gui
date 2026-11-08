@@ -95,6 +95,9 @@ describe('control tokens and base rule', () => {
     for (const sel of bare) expect(only(sel).body, sel).toContain('min-height: 0')
     expect(only('button.info').body).toContain('min-height: 24px')
   })
+  it('the Test setups dialog is up to 40rem tall, so a two-port detail fits at 900 px', () => {
+    expect(only('.setups-dialog').body).toContain('height: min(40rem, 85vh)')
+  })
   it('the Columns panel keeps each label on one line', () => {
     expect(only('.columns-panel label').body).toContain('white-space: nowrap')
   })

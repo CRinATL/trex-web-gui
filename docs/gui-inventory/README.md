@@ -7,8 +7,8 @@ against the same guest, and the HOWTO's screens with them (About, [57](screens/5
 What changed on screen: buttons, text inputs and selects
 share one look and one 32 px height (Settings > Appearance has a **Density** choice, Comfortable or Compact, and the
 shots use the default, Comfortable, [53](screens/53-settings-appearance.png)); a Control toolbar group has one solid
-run button, the step to take (Stop while a port transmits, Resume while it is paused, Start all only while nothing
-runs), the others quiet; the Dashboard's Streams and Latency tables show the default columns of PR #112 with
+run button, the step to take (Stop while a port transmits, Resume while it is paused, Start all only while no port
+you own runs), the others quiet; the Dashboard's Streams and Latency tables show the default columns of PR #112 with
 **Columns ▾**, **Show history** and **Full-width table** above them ([37](screens/37-dash-streams.png),
 [38](screens/38-dash-latency-top.png)). The shots that show traffic also carry new live numbers and times. In its fix
 round: the status bar keeps `trex-web-gui <version>` and its buttons on one line and wraps a long message instead
