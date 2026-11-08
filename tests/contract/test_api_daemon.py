@@ -80,7 +80,7 @@ def test_refusals_map_to_409_with_code(tmp_path: Path, fake_daemon: Any) -> None
         r = c.post("/api/daemon/stop", json={"rpc_port": dead, "confirm": False})
         assert r.status_code == 409 and r.json()["error"] == "confirm_required"
         r = c.post("/api/daemon/stop", json={"rpc_port": dead, "confirm": True})
-        assert r.status_code == 409 and r.json()["error"] == "owners_unknown"
+        assert r.status_code == 409 and r.json()["error"] == "owners_unknown" and "stf" not in r.json()
         assert changed(d) == set()
         connect(c, foreign)
         r = c.post("/api/daemon/start", json={**start, "confirm": True})
@@ -89,6 +89,18 @@ def test_refusals_map_to_409_with_code(tmp_path: Path, fake_daemon: Any) -> None
                                              "owners_unknown_ack": True})
         assert r.status_code == 409 and r.json()["error"] == "not_daemon_run"   # the daemon is Idle
         assert changed(foreign) == set()
+
+
+def test_stf_owners_unknown_says_stf(tmp_path: Path, fake_daemon: Any) -> None:
+    """Force stop of a stateful run this backend did not start: the owners_unknown 409 carries `stf: true`, so
+    the GUI can say why the owners are unknown without its own reading of the command line
+    (p5-monitor-daemon-257)."""
+    d = fake_daemon("--foreign-stf", "--daemon-run")
+    with authed(create_app(tmp_path, token=TEST_TOKEN)) as c:
+        connect(c, d)
+        r = c.post("/api/daemon/stop", json={"rpc_port": free_port(), "confirm": True, "force": True})
+        assert r.status_code == 409 and r.json()["error"] == "owners_unknown" and r.json()["stf"] is True
+        assert changed(d) == set()
 
 
 def test_stop_passes_owners_unknown_ack(tmp_path: Path, fake_daemon: Any, monkeypatch: Any) -> None:

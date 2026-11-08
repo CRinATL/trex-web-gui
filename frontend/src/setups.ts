@@ -66,7 +66,7 @@ export function buildSetup(name: string, params: ConnectParams, ports: PortView[
   return {
     name: name.trim(), slug: slugify(name), created: '', updated: '', server, ports: out,
     dashboard: dash && {
-      tab: dash.prefs.tab, window_s: dash.prefs.windowS, layout: dash.prefs.layout,
+      tab: dash.prefs.tab, window_s: dash.prefs.windowS, layout: dash.prefs.layout, y_from0: dash.prefs.yFrom0,
       streams_pgids: dash.streams.slice(0, SELECT_MAX), latency_pgids: dash.latency.slice(0, SELECT_MAX),
     },
   }
@@ -200,7 +200,7 @@ export async function loadSetup(setup: TestSetup, params: ConnectParams, ports: 
     }
     const d = setup.dashboard
     if (d) {
-      dashboardPrefs.set({ tab: d.tab, windowS: d.window_s, layout: d.layout })
+      dashboardPrefs.set({ tab: d.tab, windowS: d.window_s, layout: d.layout, yFrom0: d.y_from0 })
       for (const [tab, ids] of [['streams', d.streams_pgids], ['latency', d.latency_pgids]] as const) {
         pgidStore.setSelection(tab, { picked: ids.slice(0, SELECT_MAX).map((id, i) => ({ id, color: PGID_PALETTE[i] })), seeded: true })
       }

@@ -694,8 +694,7 @@ has its own legend under it, with no standing time entry (hovering adds the time
   goes when the cursor leaves.
 - A **Y axis** control, **Fit** (the default: the range fits the lines) or **From 0** (the axis starts at 0), sits
   beside Layout on Overview and beside the charts on Streams, Latency and Utilization. It is one setting for every
-  Dashboard chart, kept in the browser with the interval and layout (a saved setup keeps the interval and layout, not
-  this).
+  Dashboard chart, kept in the browser with the interval and layout, and a saved setup keeps it with them.
 
 ### 6.1 Overview
 

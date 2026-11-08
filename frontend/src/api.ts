@@ -284,7 +284,7 @@ export interface SetupPort {
   tunables: { values: Record<string, unknown>; extra: string }
   mult: string; duration: number; force: boolean; acquire_force: boolean; stop_first: boolean; layer: SetupLayer | null
 }
-export interface SetupDashboard { tab: 'overview' | 'streams' | 'latency' | 'utilization'; streams_pgids: number[]; latency_pgids: number[]; window_s: number; layout: number }
+export interface SetupDashboard { tab: 'overview' | 'streams' | 'latency' | 'utilization'; streams_pgids: number[]; latency_pgids: number[]; window_s: number; layout: number; y_from0: boolean }
 export interface TestSetup {
   name: string; slug: string; created: string; updated: string; server: string | null; ports: SetupPort[]; dashboard: SetupDashboard | null
 }
@@ -354,7 +354,7 @@ export interface SimStream {
 export interface SimChain { start: string; steps: string[]; end: 'stop' | 'loop'; loop_to: string | null; action_count: number; pkts: number | null }
 export interface SimReport {
   round_trip: { equal: boolean; differences: string[] }; streams: SimStream[]
-  totals: { pps: number; bps_l1: number; bps_l2: number; percent: number; burst_pkts: number }
+  totals: { pps: number; bps_l1: number; bps_l2: number; percent: number; burst_pkts: number | null }
   chains: SimChain[]; unreachable: string[]; notes: string[]
 }
 export interface AddressRange { start: string; count: number }

@@ -36,6 +36,7 @@ export function DaemonRunTab({ daemon, pushed, onModal }: { daemon: DaemonMsg | 
   const [stfModal, setStfModal] = useState(false)   // an upload dialog of the stateful fields is open
   const [preview, setPreview] = useState<{ key: string; text?: string; error?: string } | null>(null)
   const [confirm, setConfirm] = useState<Confirm | null>(null)
+  const [ackStf, setAckStf] = useState(false)   // the owners_unknown refusal named a stateful run (its 409 body's stf)
   const [note, setNote] = useState<string | null>(null)
   const [endsAt, setEndsAt] = useState<{ seq: number; ms: number } | null>(null)   // the end time belongs to one run
   const [startSnap, setStartSnap] = useState<{ body: StartBody; timeout: number; text: string; rpcPort?: number } | null>(null)   // what the Start confirm shows and sends
@@ -141,13 +142,13 @@ export function DaemonRunTab({ daemon, pushed, onModal }: { daemon: DaemonMsg | 
   async function doForce() {
     try { await doStop(true, false) }
     catch (x) {
-      if (x instanceof ApiError && x.code === 'owners_unknown') { setConfirm('force_ack'); return }
+      // stf: the backend found a stateful run, which has no command port; else the port read failed
+      if (x instanceof ApiError && x.code === 'owners_unknown') { setAckStf(x.body.stf === true); setConfirm('force_ack'); return }
       throw x
     }
   }
 
   const stopOk = connected && daemon?.running_seq != null && !problems.cmdPort
-  const foreignStf = !!daemon && daemon.trex_cmds.some((c) => /(^|\s)-f(\s|$)/.test(c.cmd))   // the TRex on the host runs -f
   const canForce = connected && running && daemon?.running_seq == null
   const startOk = connected && !running && !daemon?.busy && body !== null && preview?.key === key && !!preview.text
   const tail = finalLog && finalLog.seq === stfRun?.seq ? finalLog.text.split('\n').slice(-LOG_TAIL_LINES).join('\n') : null
@@ -267,7 +268,7 @@ export function DaemonRunTab({ daemon, pushed, onModal }: { daemon: DaemonMsg | 
       )}
       {confirm === 'force_ack' && (
         <ConfirmDialog title="Force stop anyway?" confirmLabel="Force stop anyway" danger onConfirm={() => doStop(true, true)} onClose={() => setConfirm(null)}
-          body={foreignStf
+          body={ackStf
             ? <p>A stateful (-f) run has no command port, so the GUI cannot see who is using it. Another user may be running traffic on this TRex. Force stop anyway?</p>
             : <p>TRex&apos;s command port did not answer, so the GUI cannot see who owns its ports. Another user may be running traffic on this TRex. Force stop anyway?</p>} />
       )}

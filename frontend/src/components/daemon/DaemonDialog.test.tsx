@@ -153,15 +153,27 @@ describe('DaemonDialog', () => {
     expect(screen.queryByRole('dialog', { name: /Force stop/ })).toBeNull()
   })
 
-  it('Force stop of a foreign stateful run says it has no command port', async () => {
-    vi.spyOn(api, 'daemonStop').mockRejectedValueOnce(new api.ApiError(409, 'owners_unknown', 'Cannot tell who runs it'))
-    const foreignStf = { ...foreign, trex_cmds: [{ pid: 7, cmd: './t-rex-64 --iom 0 --cfg /etc/trex_cfg.yaml -f cap2/sfr2.yaml -d 20 -m 1.0 --no-key' }] } as api.DaemonMsg
-    await open({ daemon: foreignStf })
+  it('Force stop of a foreign stateful run says it has no command port, as the refusal\'s stf flag says', async () => {
+    // the snapshot has no -f command: the backend's refusal, not the GUI's own reading of the command line, decides
+    vi.spyOn(api, 'daemonStop').mockRejectedValueOnce(new api.ApiError(409, 'owners_unknown', 'Cannot tell who runs it', { stf: true }))
+    await open({ daemon: foreign })
     await userEvent.click(screen.getByRole('button', { name: 'Force stop' }))
     await userEvent.click(within(dialog('Force stop TRex')).getByRole('button', { name: 'Force stop' }))
     const again = await screen.findByRole('dialog', { name: 'Force stop anyway?' })
     expect(again).toHaveTextContent('A stateful (-f) run has no command port, so the GUI cannot see who is using it. Another user may be running traffic on this TRex. Force stop anyway?')
     expect(again).not.toHaveTextContent('did not answer')
+  })
+
+  it('Force stop beside an -i -f command refused without the stf flag says the command port did not answer', async () => {
+    // -f with -i is a stateless TRex with a command port (the backend's _is_stf), so the refusal carries no stf
+    vi.spyOn(api, 'daemonStop').mockRejectedValueOnce(new api.ApiError(409, 'owners_unknown', 'Cannot read who owns the ports'))
+    const both = { ...foreign, trex_cmds: [{ pid: 7, cmd: './t-rex-64 -i -f cap2/sfr2.yaml' }] } as api.DaemonMsg
+    await open({ daemon: both })
+    await userEvent.click(screen.getByRole('button', { name: 'Force stop' }))
+    await userEvent.click(within(dialog('Force stop TRex')).getByRole('button', { name: 'Force stop' }))
+    const again = await screen.findByRole('dialog', { name: 'Force stop anyway?' })
+    expect(again).toHaveTextContent("TRex's command port did not answer")
+    expect(again).not.toHaveTextContent('stateful')
   })
 
   it('a Stop refused with owners_unknown shows an error line, not a second confirm', async () => {

@@ -51,10 +51,18 @@ describe('SimulateDialog', () => {
   })
 
   it('a page where every stream is a percentage shows a dash in each total cell, not 0', () => {
-    const report: SimReport = { ...recorded, streams: [pct(0), pct(1)], totals: { pps: 0, bps_l1: 0, bps_l2: 0, burst_pkts: 0, percent: 200 } }
+    const report: SimReport = { ...recorded, streams: [pct(0), pct(1)], totals: { pps: 0, bps_l1: 0, bps_l2: 0, burst_pkts: null, percent: 200 } }
     render(<SimulateDialog report={report} onClose={vi.fn()} />)
     const total = screen.getAllByRole('row').find((r) => /^Total/.test(r.textContent ?? ''))!
     expect(within(total).getAllByRole('cell').map((c) => c.textContent)).toEqual(['–', '–', '–', '–'])
+  })
+
+  it('a burst beside a chain that loops forever shows a dash for Total packets, as the backend\'s null says', () => {
+    const burst = { ...recorded.streams[0], pkts: 500 }
+    const report: SimReport = { ...recorded, streams: [burst], totals: { ...recorded.totals, burst_pkts: null } }
+    render(<SimulateDialog report={report} onClose={vi.fn()} />)
+    const total = screen.getAllByRole('row').find((r) => /^Total/.test(r.textContent ?? ''))!
+    expect(within(total).getAllByRole('cell')[3].textContent).toBe('–')
   })
 
   it('some streams contributing keeps the sum', () => {

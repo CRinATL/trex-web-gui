@@ -69,11 +69,13 @@ _NOT_DAEMON_RUN = ("The daemon did not start this TRex and cannot stop it: force
 class DaemonRefused(TrexApiError):
     """A refusal made by trex-web-gui before any state-changing daemon call. `code` is one of
     confirm_required, not_connected, busy, already_running, foreign_trex, reserved, in_use, owners_unknown,
-    not_ours, not_daemon_run, invalid_config, invalid_profile and plan_changed."""
-    def __init__(self, code: str, message: str) -> None:
-        """Keep the short reason as .code beside the message."""
+    not_ours, not_daemon_run, invalid_config, invalid_profile and plan_changed. `extra` holds fields the 409
+    body carries beside error and message (owners_unknown for a stateful run: {stf: true})."""
+    def __init__(self, code: str, message: str, **extra: Any) -> None:
+        """Keep the short reason as .code and any added body fields as .extra beside the message."""
         super().__init__(message)
         self.code = code
+        self.extra = extra
 
 
 def _is_stf(cmd: str) -> bool:
@@ -624,7 +626,7 @@ class DaemonSession:
                                         "not start; Stop never stops a run it did not start.")
                 if not owners_unknown_ack:
                     raise DaemonRefused("owners_unknown", f"Cannot tell who runs it: {_STF_NO_PORTS}. "
-                                        + _FORCE_HINT)
+                                        + _FORCE_HINT, stf=True)
                 cause, kill_only = _STF_NO_PORTS, True
             elif not ours:
                 cause = await self._check_owners(host, rpc_port, force, owners_unknown_ack)

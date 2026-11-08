@@ -389,7 +389,7 @@ describe('SetupDialog', () => {
     const edit = (port: number, patch: Parameters<typeof trafficStore.set>[1]) => act(() => trafficStore.set(port, patch))
     const saveRun = () => btn('Save and Run')
     const layer = { mode: 'L3' as const, dst_mac: null, src_ipv4: '10.0.0.1', dst_ipv4: '10.0.0.2', vlan: [], ipv6: null }
-    const dashboard = { tab: 'latency' as const, window_s: 120, layout: 2, streams_pgids: [1], latency_pgids: [2] }
+    const dashboard = { tab: 'latency' as const, window_s: 120, layout: 2, y_from0: false, streams_pgids: [1], latency_pgids: [2] }
     const setup2 = () => ({ ...lab([sp(0, { stop_first: true, acquire_force: true, layer }), sp(1)]), dashboard })
     it('names each changed field with old and new values, and offers Save and Run beside Run as saved', async () => {
       open({ setups: [setup2()] })

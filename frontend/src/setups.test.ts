@@ -90,9 +90,9 @@ describe('buildSetup', () => {
   })
   it('carries the dashboard section with the backend field names, and only scalar tunable values', () => {
     const forms = { 0: form({ values: { size: 128, name: 'a', on: true, junk: { x: 1 } } }) }
-    const dash = { prefs: { tab: 'latency' as const, windowS: 120, layout: 2, yFrom0: false }, streams: [3, 4], latency: [9] }
+    const dash = { prefs: { tab: 'latency' as const, windowS: 120, layout: 2, yFrom0: true }, streams: [3, 4], latency: [9] }
     const s = buildSetup('x', params, [view(0)], forms, {}, dash, new Set([0]), noOpts, null)
-    expect(s.dashboard).toEqual({ tab: 'latency', window_s: 120, layout: 2, streams_pgids: [3, 4], latency_pgids: [9] })
+    expect(s.dashboard).toEqual({ tab: 'latency', window_s: 120, layout: 2, y_from0: true, streams_pgids: [3, 4], latency_pgids: [9] })
     expect(s.ports[0].tunables.values).toEqual({ size: 128, name: 'a', on: true })
   })
   it('slugify mirrors the server', () => {
@@ -141,7 +141,7 @@ describe('loadSetup', () => {
     expect(trafficStore.get(0)).toMatchObject({ path: '/p/0.py', libraryPy: null, librarySlug: null })
   })
   it('Load reports a missing profile per port and leaves the forms unchanged', async () => {
-    const s = setup([sp(0), sp(1)], { dashboard: { tab: 'latency', window_s: 120, layout: 2, streams_pgids: [1], latency_pgids: [2] } })
+    const s = setup([sp(0), sp(1)], { dashboard: { tab: 'latency', window_s: 120, layout: 2, y_from0: false, streams_pgids: [1], latency_pgids: [2] } })
     const inspect = vi.fn(async (b: { path: string }) => {
       if (b.path === '/p/1.py') throw new ApiError(404, 'not_found', '/p/1.py: no such file')
       return insp(b.path)
@@ -162,7 +162,7 @@ describe('loadSetup', () => {
   })
   it('Load fills every form and applies the dashboard section', async () => {
     const s = setup([sp(0, { mult: '50%', duration: 3 }), sp(1, { mult: '2', force: true, tunables: { values: { size: 256 }, extra: '--x 1' } })],
-      { dashboard: { tab: 'latency', window_s: 120, layout: 2, streams_pgids: [3, 4], latency_pgids: [9] } })
+      { dashboard: { tab: 'latency', window_s: 120, layout: 2, y_from0: true, streams_pgids: [3, 4], latency_pgids: [9] } })
     const inspect = vi.fn(async (b: { path: string; tunables?: string[] }) => insp(b.path))
     const r = await loadSetup(s, params, ports, { inspect })
     expect(r).toMatchObject({ ok: true, slug: 'lab-a', updated: 'u1', serverMismatch: null })
@@ -175,7 +175,7 @@ describe('loadSetup', () => {
     expect(trafficStore.get(1)).toMatchObject({ multValue: '2', unit: 'x', duration: '', force: true, values: { size: 256 }, extra: '--x 1' })
     expect(trafficStore.get(1).specs).toEqual(insp('/p/1.py').tunables)
     expect(trafficStore.get(1).inspected?.path).toBe('/p/1.py')
-    expect(dashboardPrefs.get()).toEqual({ tab: 'latency', windowS: 120, layout: 2, yFrom0: false })
+    expect(dashboardPrefs.get()).toEqual({ tab: 'latency', windowS: 120, layout: 2, yFrom0: true })
     expect(pgidStore.selection('streams')).toEqual({ picked: [{ id: 3, color: PGID_PALETTE[0] }, { id: 4, color: PGID_PALETTE[1] }], seeded: true })
     expect(pgidStore.selection('latency')).toEqual({ picked: [{ id: 9, color: PGID_PALETTE[0] }], seeded: true })
   })
