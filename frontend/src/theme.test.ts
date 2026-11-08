@@ -66,7 +66,7 @@ describe('theme', () => {
     expect(html).toContain("localStorage.getItem('trex-web-gui.theme')")
   })
   it('index.html pre-paint script applies a stored compact density', () => {
-    const body = /<script>([\s\S]*?)<\/script>/.exec(html)![1]
+    const body = new DOMParser().parseFromString(html, 'text/html').querySelector('script:not([src])')!.textContent!
     try {
       localStorage.setItem('trex-web-gui.density', 'compact')
       delete document.documentElement.dataset.density
