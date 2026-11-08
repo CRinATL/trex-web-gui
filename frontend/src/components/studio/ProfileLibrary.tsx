@@ -3,11 +3,12 @@ import { ApiError, createProfile, deleteProfile, duplicateProfile, getProfile, r
 import { useAppState } from '../../state'
 import { trafficStore } from '../../trafficStore'
 import { AssignToPortDialog } from './AssignToPortDialog'
+import { pySourceOf } from './libraryPick'
 import { ImportDialog } from './ImportDialog'
 import { RunButton } from '../RunButton'
 
 const errText = (x: unknown) => (x instanceof ApiError || x instanceof Error ? x.message : String(x))
-type Edit = { kind: 'new' | 'rename' | 'duplicate'; name: string }
+type Edit = { kind: 'new' | 'rename' | 'duplicate'; name: string; asJson?: boolean }
 const TITLE: Record<Edit['kind'], string> = { new: 'New profile', rename: 'Rename profile', duplicate: 'Duplicate profile' }
 const VERB: Record<Edit['kind'], string> = { new: 'Create', rename: 'Rename', duplicate: 'Duplicate' }
 
@@ -63,7 +64,7 @@ export function ProfileLibrary({ entries, loadErrors, selected, onSelect, onChan
     const name = edit.name.trim()
     if (edit.kind === 'new') return (await createProfile(name)).slug
     if (!sel) return undefined
-    if (edit.kind === 'duplicate') return (await duplicateProfile(sel.slug, name)).slug
+    if (edit.kind === 'duplicate') return (await duplicateProfile(sel.slug, name, !!edit.asJson)).slug
     const old = { slug: sel.slug, path: sel.path }
     const entry = await renameProfile(old.slug, name, (await getProfile(old.slug)).rev)
     trafficStore.relink(old, entry)   // open Control forms follow the entry's new path, slug and name
@@ -113,6 +114,12 @@ export function ProfileLibrary({ entries, loadErrors, selected, onSelect, onChan
             <RunButton kind="go" disabled={busy || !edit.name.trim() || renamePinned} title={renamePinned ? PINNED : undefined} onClick={() => void doEdit()}>{VERB[edit.kind]}</RunButton>{' '}
             <button type="button" onClick={() => { setEdit(null); setError(null) }}>Cancel</button>
           </div>
+          {/* ui-recs-1: a .py-linked entry runs its source, so its edits reach Control only through a JSON-backed copy */}
+          {edit.kind === 'duplicate' && sel && pySourceOf(sel) !== null && (
+            <label className="muted"><input type="checkbox" checked={!!edit.asJson} onChange={(e) => setEdit({ ...edit, asJson: e.target.checked })} />{' '}
+              As a JSON profile: Control assigns the copy's own streams, edits included, not {pySourceOf(sel)}. A snapshot: it has
+              no tunables, and later changes to the .py do not reach it.</label>
+          )}
           {edit.kind === 'rename' && pointing > 0 && (
             <p className="muted">{pointing} test setup{pointing === 1 ? '' : 's'} point{pointing === 1 ? 's' : ''} at this profile; they will need the new path.</p>
           )}

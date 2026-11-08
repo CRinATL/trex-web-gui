@@ -114,6 +114,25 @@ def test_create_list_get_rename_duplicate_delete(tmp_path: Path) -> None:
         assert r.status_code == 422 and r.json()["error"] == "invalid_name"
 
 
+def test_duplicate_as_json_answers_a_json_backed_copy(tmp_path: Path) -> None:
+    """ui-recs-1: `as_json` makes the copy of a .py-linked entry JSON-backed; without it the copy keeps the
+    .py."""
+    py = tmp_path / "p.py"
+    with client(tmp_path) as c:
+        c.post("/api/studio/profiles", json={"name": "a"})
+        side = lib_dir(tmp_path) / "a.gui.json"
+        doc = json.loads(side.read_text())
+        doc["source"] = {"kind": "py", "path": str(py), "args": [], "tunables": None, "ports_differ": False,
+                         "imported": "2026-10-23T10:00:00.000Z"}
+        side.write_text(json.dumps(doc))
+        r = c.post("/api/studio/profiles/a/duplicate", json={"name": "Plain"})
+        assert r.status_code == 200 and r.json()["source"]["kind"] == "py", r.text
+        r = c.post("/api/studio/profiles/a/duplicate", json={"name": "Json", "as_json": True})
+        assert r.status_code == 200, r.text
+        got = r.json()["source"]
+        assert got["kind"] == "json" and got["path"] == str(lib_dir(tmp_path) / "a.json")
+
+
 def test_rename_with_an_old_rev_is_409_stale(tmp_path: Path) -> None:
     with client(tmp_path) as c:
         c.post("/api/studio/profiles", json={"name": "a"})

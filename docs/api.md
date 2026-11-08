@@ -2038,7 +2038,8 @@ Remove both files; the listing.
 
 ### POST /api/studio/profiles/{slug}/duplicate
 
-A copy under a new name; 409 exists or too_many, 422 invalid_name.
+A copy under a new name (with `as_json`, a .py-linked entry's copy is backed by its own JSON); 409
+exists or too_many, 422 invalid_name.
 
 **Path parameters**
 
@@ -2046,11 +2047,12 @@ A copy under a new name; 409 exists or too_many, 422 invalid_name.
 |---|---|---|---|---|
 | `slug` | `string` | yes | - | - |
 
-**Request body** (`application/json`, schema `NameBody`)
+**Request body** (`application/json`, schema `DuplicateBody`)
 
 | field | type | required | default | constraints |
 |---|---|---|---|---|
 | `name` | `string` | yes | - | - |
+| `as_json` | `boolean` | no | `false` | - |
 
 **Responses**
 
@@ -2515,6 +2517,13 @@ POST /api/daemon/connect.
 |---|---|---|---|---|
 | `host` | `string` | yes | - | - |
 | `port` | `integer` | yes | - | minimum=1, maximum=65535 |
+
+### DuplicateBody
+
+| field | type | required | default | constraints |
+|---|---|---|---|---|
+| `name` | `string` | yes | - | - |
+| `as_json` | `boolean` | no | `false` | - |
 
 ### EmuConnectBody
 

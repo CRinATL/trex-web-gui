@@ -372,7 +372,9 @@ export const getProfile = (slug: string) => call<ProfileDetail>('GET', studioPat
 // The reply is the listing after the delete.
 export const deleteProfile = (slug: string) => call<LibraryList>('DELETE', studioPath(slug))
 export const renameProfile = (slug: string, name: string, rev: string) => call<LibraryEntry>('POST', `${studioPath(slug)}/rename`, { name, rev })
-export const duplicateProfile = (slug: string, name: string) => call<LibraryEntry>('POST', `${studioPath(slug)}/duplicate`, { name })
+// `asJson`: a .py-linked entry's copy is backed by its own JSON, so Control assigns its edited streams (ui-recs-1).
+export const duplicateProfile = (slug: string, name: string, asJson = false) =>
+  call<LibraryEntry>('POST', `${studioPath(slug)}/duplicate`, { name, as_json: asJson })
 export const getStreams = (slug: string, offset: number, limit?: number) =>
   call<StreamPage>('GET', `${studioPath(slug)}/streams?offset=${offset}${limit === undefined ? '' : `&limit=${limit}`}`)
 export const putStreams = (slug: string, diff: StreamsDiff) => call<DiffReply>('PUT', `${studioPath(slug)}/streams`, diff)
