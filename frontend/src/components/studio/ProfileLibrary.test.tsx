@@ -161,8 +161,22 @@ describe('ProfileLibrary', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Duplicate…' }))
     expect(name()).toHaveValue('a copy')
     await userEvent.click(screen.getByRole('button', { name: 'Duplicate' }))
-    expect(dup).toHaveBeenCalledWith('a', 'a copy')
+    expect(dup).toHaveBeenCalledWith('a', 'a copy', false)
     expect(onChanged).toHaveBeenCalledWith('a-copy')
+    expect(screen.queryByRole('checkbox')).toBeNull()        // a JSON-backed entry has no .py to detach from
+  })
+
+  it('Duplicate of a .py-linked entry can make a JSON-backed copy (ui-recs-1)', async () => {
+    const dup = vi.spyOn(api, 'duplicateProfile').mockResolvedValue(entry('a-json'))
+    const py = entry('a', { source: { kind: 'py', path: '/src/a.py', args: [], tunables: null, ports_differ: false, imported: 'i' } })
+    show([py], { selected: 'a' })
+    await userEvent.click(screen.getByRole('button', { name: 'Duplicate…' }))
+    const box = screen.getByRole('checkbox', { name: /As a JSON profile/ })
+    expect(box).not.toBeChecked()
+    expect(box.closest('label')).toHaveTextContent("Control assigns the copy's own streams, edits included, not /src/a.py. A snapshot: it has no tunables")
+    await userEvent.click(box)
+    await userEvent.click(screen.getByRole('button', { name: 'Duplicate' }))
+    expect(dup).toHaveBeenCalledWith('a', 'a copy', true)
   })
 
   it('Rename warns when a test setup points at the entry', async () => {

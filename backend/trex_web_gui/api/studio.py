@@ -58,6 +58,11 @@ class NameBody(BaseModel):
     name: str
 
 
+class DuplicateBody(BaseModel):
+    name: str
+    as_json: bool = False      # a .py-linked entry's copy is backed by its own JSON (ui-recs-1)
+
+
 class RenameBody(BaseModel):
     name: str
     rev: str
@@ -281,12 +286,13 @@ def studio_router(library: ProfileLibrary, data_dir: Path,
 
     @router.post("/api/studio/profiles/{slug}/duplicate", response_model=None,
                  responses=answers(*LIBRARY_ANSWERS, (404, "not_found", "no such profile")))
-    async def duplicate_profile(slug: str, b: NameBody) -> LibraryEntry | JSONResponse:
-        """A copy under a new name; 409 exists or too_many, 422 invalid_name."""
+    async def duplicate_profile(slug: str, b: DuplicateBody) -> LibraryEntry | JSONResponse:
+        """A copy under a new name (with `as_json`, a .py-linked entry's copy is backed by its own JSON); 409
+        exists or too_many, 422 invalid_name."""
         async def go() -> LibraryEntry:
             """404 first, then the copy."""
             library.path_of(slug)
-            return await io(library.duplicate, slug, b.name)
+            return await io(library.duplicate, slug, b.name, b.as_json)
         return await guarded(go)
 
     @router.get("/api/studio/profiles/{slug}/streams", response_model=None,

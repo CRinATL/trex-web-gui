@@ -117,6 +117,30 @@ def test_duplicate_checks_the_new_name_and_keeps_source(tmp_path: Path) -> None:
     assert pl.get("a-copy").streams == pl.get("a").streams
 
 
+def test_duplicate_as_json_detaches_a_py_source(tmp_path: Path) -> None:
+    """ui-recs-1: the copy is backed by its own JSON (the edited streams), the original stays on its .py."""
+    pl = mklib(tmp_path)
+    src = src_of("py", tmp_path / "p.py")
+    pl.create("A", [stream("a"), stream("b")], source=src)
+    before = pl.get("a").sidecar
+    e = pl.duplicate("a", "A json", as_json=True)
+    assert e["slug"] == "a-json" and e["stream_count"] == 2
+    assert e["source"] is not None and e["source"]["kind"] == "json"
+    assert e["source"]["path"] == str(pl.path_of("a")) and e["source"]["args"] == []
+    assert e["source"]["tunables"] is None
+    assert pl.get("a-json").streams == pl.get("a").streams
+    assert pl.get("a").sidecar == before                 # the original still runs its .py
+
+
+def test_duplicate_as_json_keeps_a_json_backed_source(tmp_path: Path) -> None:
+    """An entry already backed by its JSON (here an import of a JSON file) is copied as a plain Duplicate."""
+    pl = mklib(tmp_path)
+    src = src_of("json", tmp_path / "x.json")
+    pl.create("A", [stream("a")], source=src)
+    e = pl.duplicate("a", "A copy", as_json=True)
+    assert e["source"] == pl.get("a").sidecar["source"]
+
+
 def test_rename_moves_both_files_and_keeps_created(tmp_path: Path) -> None:
     pl = mklib(tmp_path)
     old = pl.create("Old", [stream("a")])

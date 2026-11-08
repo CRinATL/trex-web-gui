@@ -379,9 +379,11 @@ class ProfileLibrary:
             self._side_path(slug).unlink(missing_ok=True)
         return self._entry(new_slug, new)
 
-    def duplicate(self, slug: str, new_name: str) -> LibraryEntry:
-        """A copy under a new name, keeping `source` and `pcap_wizard`, with new timestamps. LibraryNotFound,
-        LibraryError, LibraryExists, TooManyProfiles."""
+    def duplicate(self, slug: str, new_name: str, as_json: bool = False) -> LibraryEntry:
+        """A copy under a new name, keeping `source` and `pcap_wizard`, with new timestamps. With `as_json`,
+        a copy of a .py-linked entry is backed by its own JSON instead (source kind "json", naming the
+        original's JSON), so Control assigns the edited streams; the original is untouched (ui-recs-1).
+        LibraryNotFound, LibraryError, LibraryExists, TooManyProfiles."""
         got = self._load(slug)
         if got.sidecar_error is not None:
             raise SidecarUnreadable(f"{slug}{SIDE_SUFFIX}", got.sidecar_error)
@@ -391,7 +393,11 @@ class ProfileLibrary:
             raise LibraryExists(new_slug)
         self._check_room()
         old = got.sidecar or new_sidecar(slug, None, len(got.streams))
-        new = new_sidecar(n, old["source"], len(got.streams))
+        source = old["source"]
+        if as_json and source is not None and source["kind"] == "py":
+            source = {"kind": "json", "path": str(self.path_of(slug)), "args": [], "tunables": None,
+                      "ports_differ": source["ports_differ"], "imported": now()}
+        new = new_sidecar(n, source, len(got.streams))
         new["streams"] = (list(old["streams"]) + [{} for _ in got.streams])[:len(got.streams)]
         new["pcap_wizard"] = old["pcap_wizard"]
         self._write(new_slug, got.json_bytes, new)
