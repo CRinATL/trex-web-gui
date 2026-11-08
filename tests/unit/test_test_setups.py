@@ -34,7 +34,8 @@ def test_slugify() -> None:
 def test_round_trip_one_port_with_layer(tmp_path: Path) -> None:
     layer = {"mode": "L3", "src_ipv4": "10.0.0.1", "dst_ipv4": "10.0.0.2", "vlan": [5], "ipv6": None,
              "dst_mac": None}
-    dash = {"tab": "latency", "streams_pgids": [1], "latency_pgids": [2, 3], "window_s": 120, "layout": 2}
+    dash = {"tab": "latency", "streams_pgids": [1], "latency_pgids": [2, 3], "window_s": 120, "layout": 2,
+            "y_from0": True}
     store = ts.TestSetupStore(tmp_path)
     saved = store.save(parse_setup(setup(ports=[port(layer=layer)], dashboard=dash)))
     got = store.get("lab-a")
@@ -129,6 +130,15 @@ def test_port_list_and_dashboard_limits() -> None:
             parse_setup(setup(**kw))
         assert e.value.field == field, kw
     parse_setup(setup(ports=[port(port=i) for i in range(64)]))
+
+
+def test_dashboard_y_axis_mode_defaults_to_fit_and_must_be_a_flag() -> None:
+    """A setup saved before y_from0 existed reads as Fit (False); a non-bool names the field (setups-1)."""
+    dash = {"tab": "streams", "streams_pgids": [], "latency_pgids": [], "window_s": 60, "layout": 1}
+    assert parse_setup(setup(dashboard=dash))["dashboard"]["y_from0"] is False
+    with pytest.raises(SetupError) as e:
+        parse_setup(setup(dashboard={**dash, "y_from0": "yes"}))
+    assert e.value.field == "dashboard.y_from0"
 
 
 def test_name_limits_and_control_characters() -> None:

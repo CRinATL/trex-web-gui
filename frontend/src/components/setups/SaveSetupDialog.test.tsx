@@ -66,7 +66,7 @@ describe('SaveSetupDialog', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Save' }))
     const body = put.mock.calls[0][1]
     expect(body.ports[0]).toMatchObject({ stop_first: false, layer: null })
-    expect(body.dashboard).toEqual({ tab: 'streams', window_s: 60, layout: 4, streams_pgids: [5], latency_pgids: [] })
+    expect(body.dashboard).toEqual({ tab: 'streams', window_s: 60, layout: 4, y_from0: false, streams_pgids: [5], latency_pgids: [] })
   })
   it('names a port whose layer cannot be stored when port configuration is ticked', async () => {
     trafficStore.set(0, form('/p/0.py'))

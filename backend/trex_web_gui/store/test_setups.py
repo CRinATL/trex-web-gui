@@ -205,7 +205,7 @@ def _port(i: int, raw: object) -> SetupPort:
 
 
 def _dashboard(raw: object) -> dict[str, Any] | None:
-    """The Dashboard view validated, or None."""
+    """The Dashboard view validated (tab, PG IDs, window, layout and the Y axis mode `y_from0`), or None."""
     if raw is None:
         return None
     d = _dict("dashboard", raw)
@@ -223,6 +223,7 @@ def _dashboard(raw: object) -> dict[str, Any] | None:
         if d.get(k) not in choices or isinstance(d.get(k), bool):
             raise SetupError(f"dashboard.{k}", f"must be one of {', '.join(map(str, choices))}")
         out[k] = d[k]
+    out["y_from0"] = _flag("dashboard.y_from0", d.get("y_from0", False))  # absent in setups saved before it
     return out
 
 
