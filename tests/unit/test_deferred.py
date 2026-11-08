@@ -62,9 +62,38 @@ def test_a_status_with_a_pipe_is_refused(tmp_path: Path) -> None:
 
 
 def test_host_rows_are_not_ledger_rows() -> None:
-    """H-* rows (the 1.x host findings) have no ledger link; deferred.py leaves them to release.py."""
+    """H-* rows (the 1.x host findings) have no ledger link: check and sync leave them alone (release.py
+    gates them), though mark can close them."""
     row = "| H-1 | host use, 2026-10-31 | a finding | open |"
     assert deferred.ROW.match(row) is None
+
+
+HAND_ROWS = """| ID | Origin | Text | Status |
+|---|---|---|---|
+| H-1 | host use, 2026-10-31 | a finding with a \\| pipe | open |
+| X-2 | guest test, 2026-11-07 (spec `a.md`, "Non-goals") | another | open |
+"""
+
+
+def test_mark_closes_rows_without_a_ledger_link(tmp_path: Path) -> None:
+    """Hand-entered rows (an origin cell, no ledger link) are marked like ledger rows: only the last cell."""
+    f = tmp_path / "DEFERRED.md"
+    f.write_text(REGISTER + "\n" + HAND_ROWS)
+    r = run(f, "mark", "H-1", "X-2", "p3c-capture-18", "--status", "fixed in 5aa0724")
+    assert r.returncode == 0, r.stderr
+    want = (REGISTER + "\n" + HAND_ROWS).replace("| open (untriaged) |", "| fixed in 5aa0724 |")
+    assert f.read_text() == want.replace("| open |", "| fixed in 5aa0724 |")
+
+
+def test_mark_refuses_a_header_or_a_duplicate_id(tmp_path: Path) -> None:
+    f = tmp_path / "DEFERRED.md"
+    text = REGISTER + "\n" + HAND_ROWS + HAND_ROWS.splitlines()[2] + "\n"
+    f.write_text(text)
+    r = run(f, "mark", "H-1", "--status", "fixed in 5aa0724")
+    assert r.returncode == 1
+    assert "H-1 names 2 rows" in r.stderr
+    assert run(f, "mark", "ID", "--status", "x").returncode == 1
+    assert f.read_text() == text
 
 
 def test_mark_needs_ids_and_a_status(tmp_path: Path) -> None:

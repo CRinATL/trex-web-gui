@@ -4,8 +4,8 @@
                       longer matches its ledger line (run at every final gate)
   deferred.py sync    append the missing entries as `open (untriaged)`; existing rows and statuses are kept
   deferred.py mark ID... --status TEXT
-                      set those rows' status column (e.g. --status "fixed in 5aa0724"); exit 1, nothing
-                      written, if an ID has no row
+                      set those rows' status column (e.g. --status "fixed in 5aa0724"), ledger rows and
+                      hand-entered ones alike; exit 1, nothing written, if an ID has no row or several
 
 Which entries are open comes from the SDD ledger tool (`sdd-ledger.sh <ws> open`, from the
 sdd-on-this-machine skill; override with SDD_LEDGER), so a `Resolved:` line closes an entry here exactly as
@@ -26,6 +26,9 @@ PHASES = {"2026-10-16-p1-skeleton-connection": "P1", "2026-10-16-p2-live-control
           "2026-10-17-p3a-dashboard-port-names": "P3a", "2026-10-17-p3b-port-config": "P3b"}
 ROW = re.compile(r"^\| (?P<id>[^ |]+-\d+) \| \[[^]]*\]\((?P<ledger>[^)]*)\) \| "
                  r"(?P<text>.*) \| (?P<status>[^|]*) \|$")
+# Any register row, ledger-linked or entered by hand (H-, RC1-, ...): its ID is the first cell and its
+# status the last; mark closes either kind
+ANY_ROW = re.compile(r"^\| (?P<id>[^ |]+) \| .+ \| (?P<status>[^|]*) \|$")
 
 
 def phase_of(ws: Path) -> str:
@@ -53,11 +56,15 @@ def esc(text: str) -> str:
 
 
 def mark(path: Path, ids: list[str], status: str) -> int:
-    """Set the status column of the rows named by ids; 1, nothing written, on an unknown ID or a bad status.
+    """Set the status column of the rows named by ids; 1, nothing written, on an unknown or ambiguous ID or
+    a bad status.
 
-    A status is bad when empty or when it contains '|'."""
+    A status is bad when empty or when it contains '|'. A table's header row (ID `ID`) is never a row."""
     lines = path.read_text().splitlines()
-    at = {m["id"]: i for i, m in enumerate(map(ROW.match, lines)) if m}
+    at: dict[str, list[int]] = {}
+    for i, m in enumerate(map(ANY_ROW.match, lines)):
+        if m and m["id"] != "ID":
+            at.setdefault(m["id"], []).append(i)
     if "|" in status or not status.strip():
         print("deferred: a status must be non-empty and contain no '|'", file=sys.stderr)
         return 1
@@ -65,10 +72,15 @@ def mark(path: Path, ids: list[str], status: str) -> int:
     if unknown:
         print(f"deferred: no row for {', '.join(unknown)}; nothing written", file=sys.stderr)
         return 1
+    several = [f"{i} names {len(at[i])} rows" for i in ids if len(at[i]) > 1]
+    if several:
+        print(f"deferred: {'; '.join(several)}; nothing written", file=sys.stderr)
+        return 1
     for rid in ids:
-        m = ROW.match(lines[at[rid]])
+        n = at[rid][0]
+        m = ANY_ROW.match(lines[n])
         assert m is not None
-        lines[at[rid]] = lines[at[rid]][:m.start("status")] + f"{status} |"
+        lines[n] = lines[n][:m.start("status")] + f"{status} |"
     path.write_text("\n".join(lines) + "\n")
     print(f"deferred: marked {len(ids)} row{'' if len(ids) == 1 else 's'} '{status}'")
     return 0
