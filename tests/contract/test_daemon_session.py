@@ -670,6 +670,53 @@ def test_stop_check_is_bounded(fake_daemon: Any, fake_trex: Any, monkeypatch: py
     drive(body, hooks=hooks)
 
 
+def test_stop_check_reuses_the_status_read(fake_daemon: Any, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Two TRexes listed, the daemon's run leaving at once: the check takes its first process list from the
+    status fold-in after the wait, so the stop makes no read beyond the two every stop makes."""
+    monkeypatch.setattr(session_mod, "POLL_S", 60.0)
+    d = fake_daemon("--daemon-run", "--foreign")
+    dead = free_port()
+
+    async def body(s: DaemonSession, rec: Recorder) -> None:
+        """Connect, Force stop with the ack on a dead port."""
+        await s.connect(d.host, d.port)
+        before = d.methods().count("get_trex_cmds")
+        out = await s.stop(dead, True, force=True, owners_unknown_ack=True)
+        assert d.methods().count("get_trex_cmds") - before == 2
+        assert out["other_pids"] == []
+    drive(body)
+
+
+def test_stop_check_survives_a_list_read_fault(fake_daemon: Any, fake_trex: Any,
+                                               monkeypatch: pytest.MonkeyPatch) -> None:
+    """A process-list read that fails during the post-stop wait, after a kill that worked: the stop still
+    answers (no 502), the wait ends, and the probe decides: a TRex answering cancels, naming the last list."""
+    monkeypatch.setattr(session_mod, "POLL_S", 60.0)
+    d, f, hooks = fake_daemon("--daemon-run", "--foreign", "--exit-lag", "30"), fake_trex(), Hooks()
+    real = DaemonClient.trex_cmds
+    reads = 0
+
+    def failing(self: DaemonClient) -> Any:
+        """The real read for the stop's first two (pre-stop list, status fold-in); then the link drops."""
+        nonlocal reads
+        reads += 1
+        if reads > 2:
+            raise DaemonUnreachable("connection reset")
+        return real(self)
+
+    async def body(s: DaemonSession, rec: Recorder) -> None:
+        """Connect, make later list reads fail, time a Force stop."""
+        await s.connect(d.host, d.port)
+        monkeypatch.setattr(DaemonClient, "trex_cmds", failing)
+        t0 = time.monotonic()
+        out = await s.stop(f.rpc_port, True, force=True)
+        assert time.monotonic() - t0 < session_mod.STOP_WAIT_S
+        assert out["running"] is False
+        assert out["other_pids"] == sorted([FOREIGN_PID, DAEMON_PID])
+        assert hooks.calls == ["expect", "cancel"]
+    drive(body, hooks=hooks)
+
+
 def test_stop_with_one_trex_skips_the_check(fake_daemon: Any, fake_trex: Any,
                                             monkeypatch: pytest.MonkeyPatch) -> None:
     """Only the daemon's run on the host: the two process-list reads a stop always makes (the pre-stop one and

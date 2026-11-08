@@ -334,34 +334,36 @@ class DaemonSession:
         await self._poll(True)
         return self.snapshot()
 
-    async def _poll(self, raise_errors: bool) -> None:
-        """Read the four status calls, fold them into the state and publish. A failure sets state `error` and
-        last_error (and is raised when `raise_errors`); the next good poll sets `connected` again."""
+    async def _poll(self, raise_errors: bool) -> list[tuple[int, str]] | None:
+        """Read the four status calls, fold them into the state and publish; returns the process list read,
+        or None when nothing was folded in. A failure sets state `error` and last_error (and is raised when
+        `raise_errors`); the next good poll sets `connected` again."""
         client, gen = self._client, self._gen
         if client is None:
-            return
+            return None
         self._reads += 1
         try:
             running = bool(await self._call(client.is_running))
             status = await self._call(client.running_status)
             reserved = await self._call(client.is_reserved)
-            cmds = await self._call(client.trex_cmds)
+            cmds: list[tuple[int, str]] = await self._call(client.trex_cmds)
         except TrexApiError as exc:
             if gen == self._gen:
                 self._state, self._last_error = "error", str(exc)
                 self._flush()
             if raise_errors:
                 raise
-            return
+            return None
         finally:
             self._reads -= 1
         if gen != self._gen:
-            return                          # disconnected or reconnected while the calls were out
+            return None                     # disconnected or reconnected while the calls were out
         self._status = {"state": _state_name(status.get("state")), "verbose": str(status.get("verbose", ""))}
         self._reserved, self._cmds = bool(reserved), cmds
         self._state, self._last_error = "connected", None
         self._apply_idle(running)
         self._flush()
+        return cmds
 
     def _apply_idle(self, running: bool | None = None) -> None:
         """An Idle status ends a `running` run (`stopped` when this session sent a Stop, else `ended`; the
@@ -660,10 +662,10 @@ class DaemonSession:
                     raise DaemonRefused("not_daemon_run", _NOT_DAEMON_RUN)
             self._stop_sent = True
             t0 = time.monotonic()
-            out = await self._wait_stopped(client)
+            out, cmds = await self._wait_stopped(client)
             answering = None
             if not out["running"] and len(before) >= 2:
-                answering = await self._other_trex(client, host, rpc_port, len(before), t0)
+                answering = await self._other_trex(client, host, rpc_port, len(before), t0, cmds)
             out["other_pids"] = answering or []
             settled = True
             if hooks is not None:
@@ -674,17 +676,25 @@ class DaemonSession:
                 hooks.cancel()
 
     async def _other_trex(self, client: DaemonClient, host: str, rpc_port: int, count_before: int,
-                          t0: float) -> list[int] | None:
-        """None when nothing answers on host:rpc_port after the stop; else the sorted pids still listed, which
+                          t0: float, cmds: list[tuple[int, str]] | None) -> list[int] | None:
+        """None when nothing answers on host:rpc_port after the stop; else the sorted pids last listed, which
         may be [] (an empty listing never decides that the TRex at rpc_port stopped).
         The daemon reports Idle at SIGUSR1, before its TRex exits (trex_launch_thread.py `run`), so the
         process list is re-read until it holds fewer than `count_before` processes, for up to STOP_WAIT_S
-        from `t0`; the probe runs either way (a TRex that never left reads as still running). A connect
-        that succeeds logs a warning."""
-        cmds = await self._call(client.trex_cmds)
-        while len(cmds) >= count_before and time.monotonic() - t0 < STOP_WAIT_S:
-            await asyncio.sleep(STOP_POLL_S)
-            cmds = await self._call(client.trex_cmds)
+        from `t0`, starting from `cmds` (the status fold-in's read; None to read it here). The probe runs
+        either way: a TRex that never left reads as still running, and a read that fails ends the wait
+        (the kill already worked, so a 502 now would misreport it). A connect that succeeds logs a warning.
+        A hand-started TRex exiting during the wait also shortens it, so the probe can meet the daemon's
+        own lingering TRex: that cancels, the safe side."""
+        try:
+            if cmds is None:
+                cmds = await self._call(client.trex_cmds)
+            while len(cmds) >= count_before and time.monotonic() - t0 < STOP_WAIT_S:
+                await asyncio.sleep(STOP_POLL_S)
+                cmds = await self._call(client.trex_cmds)
+        except (DaemonFault, DaemonUnreachable):    # the next poll records the failure
+            pass
+        cmds = cmds or []
         if not await port_accepts(host, rpc_port, PROBE_TIMEOUT_S):
             return None
         pids = sorted(int(pid) for pid, _cmd in cmds)
@@ -693,9 +703,11 @@ class DaemonSession:
                           f"({listed}).")
         return pids
 
-    async def _wait_stopped(self, client: DaemonClient) -> dict[str, Any]:
+    async def _wait_stopped(self, client: DaemonClient
+                            ) -> tuple[dict[str, Any], list[tuple[int, str]] | None]:
         """Poll is_running until false, for up to STOP_WAIT_S; then fold in one status read so a stopped run
-        is recorded at once. A TRex still running is not an error: {running: true, stop_s: None}."""
+        is recorded at once. Returns ({running, stop_s}, the fold-in's process list or None when it failed);
+        a TRex still running is not an error: {running: true, stop_s: None}."""
         t0 = time.monotonic()
         stop_s: float | None = None
         while True:
@@ -705,11 +717,12 @@ class DaemonSession:
             if time.monotonic() - t0 >= STOP_WAIT_S:
                 break
             await asyncio.sleep(STOP_POLL_S)
+        cmds = None
         try:
-            await self._poll(False)
+            cmds = await self._poll(False)
         except TrexApiError:        # _poll(False) records its own failures
             pass
-        return {"running": stop_s is None, "stop_s": stop_s}
+        return {"running": stop_s is None, "stop_s": stop_s}, cmds
 
     # -- upload -------------------------------------------------------------------------------------
     async def _plan_upload(self, path: str) -> stfyaml.UploadPlan:
