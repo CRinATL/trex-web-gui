@@ -634,13 +634,13 @@ def test_probe_period_holds_when_syns_are_dropped(fake_trex, new_session, monkey
         s = new_session(rec)
         await planned_stop(s, f)
         s._params = dataclasses.replace(s._params, sync_port=drop.port, timeout_s=0.1)
-        real = s._port_accepts
+        real = trex_session.port_accepts
 
         async def spy(*a: object) -> bool:
             """Record the probe's start time, then probe for real."""
             starts.append(time.monotonic())
             return await real(*a)
-        monkeypatch.setattr(s, "_port_accepts", spy)
+        monkeypatch.setattr(trex_session, "port_accepts", spy)
         s.reconnect_after_start(0)
         await s._reconnect_task
         assert s.snapshot()["ended"]["recovery"]["kind"] == "reconnect_failed"

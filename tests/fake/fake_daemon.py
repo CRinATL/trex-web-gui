@@ -19,7 +19,12 @@ push_file wrote),
 (302 to every call), --stop-keeps-running (stop_trex says True but the run goes on), --daemon-run (the fake
 starts Running a stateless run of its own whose seq this backend never saw, as when another client started it
 through the daemon), --run-ends-before-kill (the run ends on its own just as force_trex_kill arrives, so the
-kill finds the daemon Idle).
+kill finds the daemon Idle), --exit-lag S (after a stop or kill ends the fake's run, its process stays listed
+by get_trex_cmds for S seconds while get_running_status already says Idle: trex_launch_thread.py `run` sends
+SIGUSR1 to the TRex process group and sets the status Idle at once, without waiting for `_t-rex-64` to exit),
+--foreign-after-start (lists the --foreign process only once a start_trex has succeeded, as when a TRex is
+started by hand beside this backend's run), --foreign-ends-with-run (lists the --foreign process only while
+the fake's own run is going, so a stop empties the list at once).
 
 force_trex_kill stops only the daemon's own run: the real daemon's force_trex_kill and stop_trex both call
 CTRex.stop_trex (trex_server.py), which answers False while Idle and never touches a TRex the daemon did not
@@ -91,6 +96,8 @@ class Daemon:
         self.end_at: float | None = None        # an STF run's end; None for a stateless run
         self.outcome = "TRex is Idle"
         self.stf_run = False
+        self.started = False                    # a start_trex has succeeded (--foreign-after-start)
+        self.lingering: list[tuple[str, str, float]] = []   # (pid, cmd, until): ended runs still listed
         self.tmp = tempfile.TemporaryDirectory(prefix="fake-daemon-")
         if args.daemon_run:
             self.seq = self.run_seq = 1
@@ -119,14 +126,18 @@ class Daemon:
     def cmds(self) -> list[list[str]]:
         """The get_trex_cmds result: the foreign processes the flags ask for, then this fake's run."""
         out: list[list[str]] = []
-        if self.args.foreign:
-            out.append(list(FOREIGN_CMD[0]))
         if self.args.foreign_stf:
             out.append(list(STF["stf_cmd"]))
         with self.lock:
             self._settle()
+            if self.args.foreign or (self.args.foreign_after_start and self.started) \
+                    or (self.args.foreign_ends_with_run and self.run_seq is not None):
+                out.insert(0, list(FOREIGN_CMD[0]))
             if self.run_seq is not None:
                 out.append(["4242", self.run_cmd])
+            now = time.monotonic()
+            self.lingering = [e for e in self.lingering if e[2] > now]
+            out.extend([pid, cmd] for pid, cmd, _until in self.lingering)
         return out
 
     def start(self, params: dict[str, Any]) -> Any:
@@ -142,7 +153,7 @@ class Daemon:
         with self.lock:
             self.seq += 1
             seq = self.seq
-            self.run_seq, self.stf_run = seq, not stateless
+            self.run_seq, self.stf_run, self.started = seq, not stateless, True
             self.starting_until = time.monotonic() + START_S
             self.end_at = None
             if stateless:
@@ -171,8 +182,11 @@ class Daemon:
         return ("result", True)
 
     def _end(self, how: str) -> None:
-        """End the run now; an STF run reports the recorded outcome for `how`. Lock held."""
+        """End the run now; an STF run reports the recorded outcome for `how`, and with --exit-lag its process
+        stays listed for that long. Lock held."""
         self.outcome = STF["outcomes"][how] if self.stf_run else "TRex is Idle"
+        if self.args.exit_lag > 0 and self.run_seq is not None:
+            self.lingering.append(("4242", self.run_cmd, time.monotonic() + self.args.exit_lag))
         self.run_seq, self.end_at = None, None
 
     def kill(self) -> Any:
@@ -316,6 +330,9 @@ def main() -> None:
     ap.add_argument("--stop-keeps-running", action="store_true")
     ap.add_argument("--daemon-run", action="store_true")
     ap.add_argument("--run-ends-before-kill", action="store_true")
+    ap.add_argument("--exit-lag", type=float, default=0.0)
+    ap.add_argument("--foreign-after-start", action="store_true")
+    ap.add_argument("--foreign-ends-with-run", action="store_true")
     args = ap.parse_args()
     daemon = Daemon(args)
     httpd = ThreadingHTTPServer(("127.0.0.1", args.port), make_handler(daemon, args))
