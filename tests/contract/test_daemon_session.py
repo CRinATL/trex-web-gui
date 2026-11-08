@@ -401,9 +401,37 @@ def test_stop_reply_reports_running(fake_daemon: Any, fake_trex: Any,
         assert out["running"] is False and out["stop_s"] is not None and out["stop_s"] < 5
         await s.connect(stubborn.host, stubborn.port)
         await started(s)
-        assert await s.stop(f.rpc_port, True) == {"running": True, "stop_s": None, "other_pids": []}
+        assert await s.stop(f.rpc_port, True) == {"running": True, "stop_s": None, "other_pids": [],
+                                                  "still_answering": False}
         assert s.snapshot()["run"]["state"] == "running"
     drive(body)
+
+
+def test_stop_survives_a_running_read_fault(fake_daemon: Any, fake_trex: Any,
+                                           monkeypatch: pytest.MonkeyPatch) -> None:
+    """is_running fails after stop_trex was sent: the stop still answers (no 502 after a stop that may have
+    worked), the wait ends at once rather than at its bound, the reply cannot say TRex stopped (running true),
+    the hooks cancel, and the status fold-in records the failure as the session's error."""
+    monkeypatch.setattr(session_mod, "POLL_S", 60.0)
+    d, f, hooks = fake_daemon(), fake_trex(), Hooks()
+
+    def failing(self: DaemonClient) -> Any:
+        """The link drops: every is_running read fails."""
+        raise DaemonUnreachable("connection reset")
+
+    async def body(s: DaemonSession, rec: Recorder) -> None:
+        """Connect, start, make is_running fail, time a Stop."""
+        await s.connect(d.host, d.port)
+        await started(s)
+        monkeypatch.setattr(DaemonClient, "is_running", failing)
+        t0 = time.monotonic()
+        out = await s.stop(f.rpc_port, True)
+        assert time.monotonic() - t0 < session_mod.STOP_WAIT_S
+        assert out == {"running": True, "stop_s": None, "other_pids": [], "still_answering": False}
+        assert hooks.calls == ["expect", "cancel"]
+        snap = s.snapshot()
+        assert snap["state"] == "error" and "connection reset" in snap["last_error"]
+    drive(body, hooks=hooks)
 
 
 def test_stop_calls_the_hooks_in_order(fake_daemon: Any, fake_trex: Any) -> None:
@@ -604,7 +632,8 @@ def test_stop_beside_a_hand_started_trex_cancels(fake_daemon: Any, fake_trex: An
 
 def test_stop_whose_list_empties_but_the_port_answers_cancels(fake_daemon: Any, fake_trex: Any) -> None:
     """Both listed TRexes leave the process list during the wait, yet a TRex still answers on the command
-    port: an empty listing never decides "stopped", so the hooks cancel (other_pids stays [])."""
+    port: an empty listing never decides "stopped", so the hooks cancel (other_pids stays []) and the reply
+    says a TRex still answers (still_answering), so the Run tab can say so without a pid."""
     d, f, hooks = fake_daemon("--daemon-run", "--foreign-ends-with-run"), fake_trex(), Hooks()
 
     async def body(s: DaemonSession, rec: Recorder) -> None:
@@ -612,6 +641,7 @@ def test_stop_whose_list_empties_but_the_port_answers_cancels(fake_daemon: Any, 
         await s.connect(d.host, d.port)
         out = await s.stop(f.rpc_port, True, force=True)
         assert out["other_pids"] == []
+        assert out["still_answering"] is True
         assert hooks.calls == ["expect", "cancel"]
         assert len(still_running_warnings(rec)) == 1
     drive(body, hooks=hooks)
@@ -628,6 +658,7 @@ def test_stop_beside_another_trex_on_a_dead_port_is_done(fake_daemon: Any) -> No
         await s.connect(d.host, d.port)
         out = await s.stop(dead, True, force=True, owners_unknown_ack=True)
         assert out["other_pids"] == []
+        assert out["still_answering"] is False
         assert hooks.calls == ["expect", "done"]
         assert still_running_warnings(rec) == []
     drive(body, hooks=hooks)

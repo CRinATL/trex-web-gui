@@ -583,7 +583,7 @@ export const daemonStartPreview = (b: StartBody) => call<{ command_preview: stri
 export const daemonStart = (b: StartBody & { timeout: number; confirm: boolean; rpc_port?: number }) =>
   call<{ seq: number; command_preview: string; run: DaemonRun }>('POST', '/api/daemon/start', b)
 export const daemonStop = (b: { rpc_port: number; confirm: boolean; force: boolean; owners_unknown_ack: boolean }) =>
-  call<{ running: boolean; stop_s: number | null; other_pids: number[] }>('POST', '/api/daemon/stop', b)
+  call<{ running: boolean; stop_s: number | null; other_pids: number[]; still_answering: boolean }>('POST', '/api/daemon/stop', b)
 export const daemonStfProfiles = (source: 'stock' | 'uploaded') => call<{ source: string; files: string[] }>('GET', `/api/daemon/stf/profiles?source=${source}`)
 export const daemonStfProfile = (path: string) => call<StfProfileInfo>('POST', '/api/daemon/stf/profile', { path })
 // The STF upload (backend daemon/session.py stf_upload_preview, stf_upload). `path` is a file on the backend's host.

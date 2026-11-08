@@ -594,8 +594,9 @@ class DaemonSession:
 
     async def stop(self, rpc_port: int, confirm: bool, force: bool = False,
                    owners_unknown_ack: bool = False) -> dict[str, Any]:
-        """Stop (or Force stop) TRex; returns {running, stop_s, other_pids} (other_pids: the TRexes still
-        listed when one the daemon did not start still answers on rpc_port, else []). Stop sends stop_trex
+        """Stop (or Force stop) TRex; returns {running, stop_s, other_pids, still_answering}
+        (still_answering: after the daemon's run ended, a TRex it did not start still answers on rpc_port;
+        other_pids: the TRexes then still listed, which may be [], else []). Stop sends stop_trex
         with our seq; Force stop always sends force_trex_kill, held seq or not (the daemon's two calls are
         the same for a live seq, and a stale one is refused -33 or answered False while Idle). Refusals
         before any state-changing call: confirm_required; not_daemon_run first for any Force stop while the
@@ -648,8 +649,11 @@ class DaemonSession:
         answering anything but True found no daemon run to stop (it ended meanwhile): not_daemon_run, and
         the hooks cancel. When `before`, the process list read before the stop, held two or more TRexes, a
         stop that ended the daemon's run is checked by _other_trex before `done`: a TRex still answering on
-        rpc_port is not the one stopped, so the hooks cancel and the reply's other_pids names what is still
-        listed (daemon-force-3)."""
+        rpc_port is not the one stopped, so the hooks cancel, the reply's still_answering is true and its
+        other_pids names what is still listed (daemon-force-3). The operation slot (`busy`) stays held
+        through that check: its list wait shares the is_running wait's STOP_WAIT_S from `t0`, so past that
+        bound it adds at most one STOP_POLL_S, one list read and the PROBE_TIMEOUT_S probe, and a slot
+        released sooner would let a Start race the probe."""
         hooks = self._hooks
         settled = False
         try:
@@ -669,6 +673,7 @@ class DaemonSession:
             if not out["running"] and len(before) >= 2:
                 answering = await self._other_trex(client, host, rpc_port, len(before), t0, cmds)
             out["other_pids"] = answering or []
+            out["still_answering"] = answering is not None
             settled = True
             if hooks is not None:
                 (hooks.cancel if out["running"] or answering is not None else hooks.done)()
@@ -709,22 +714,22 @@ class DaemonSession:
                             ) -> tuple[dict[str, Any], list[tuple[int, str]] | None]:
         """Poll is_running until false, for up to STOP_WAIT_S; then fold in one status read so a stopped run
         is recorded at once. Returns ({running, stop_s}, the fold-in's process list or None when it failed);
-        a TRex still running is not an error: {running: true, stop_s: None}."""
+        a TRex still running is not an error: {running: true, stop_s: None}. An is_running read that fails
+        ends the wait the same way (the stop was sent, so a 502 now could misreport a stop that worked, and
+        running true keeps Control's session); the fold-in, failing too, records it as the session's error."""
         t0 = time.monotonic()
         stop_s: float | None = None
-        while True:
-            if not await self._call(client.is_running):
-                stop_s = round(time.monotonic() - t0, 3)
-                break
-            if time.monotonic() - t0 >= STOP_WAIT_S:
-                break
-            await asyncio.sleep(STOP_POLL_S)
-        cmds = None
         try:
-            cmds = await self._poll(False)
-        except TrexApiError:        # _poll(False) records its own failures
+            while True:
+                if not await self._call(client.is_running):
+                    stop_s = round(time.monotonic() - t0, 3)
+                    break
+                if time.monotonic() - t0 >= STOP_WAIT_S:
+                    break
+                await asyncio.sleep(STOP_POLL_S)
+        except (DaemonFault, DaemonUnreachable):
             pass
-        return {"running": stop_s is None, "stop_s": stop_s}, cmds
+        return {"running": stop_s is None, "stop_s": stop_s}, await self._poll(False)
 
     # -- upload -------------------------------------------------------------------------------------
     async def _plan_upload(self, path: str) -> stfyaml.UploadPlan:
