@@ -1526,7 +1526,7 @@ When another TRex the daemon did not start runs on the host and still answers on
 daemon's run ended, the tab says `The daemon's run stopped, but a TRex the daemon did not start still answers on
 command port <port> (TRex processes still listed: pid N). Stop it on the host.`, and Control keeps its session, since
 its TRex did not stop. The pids are every TRex the host still lists, which can include the daemon's own if it has not
-exited yet.
+exited yet; when the host lists none, the parenthesis reads `(no TRex process listed)`.
 
 A stop of the TRex Control is connected to (same host and command port as the Control session) is not a loss:
 Control shows the **TRex stopped** dialog ([1.3](#13-the-status-bar)), and a later stateless Start from this dialog

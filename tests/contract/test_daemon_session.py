@@ -401,7 +401,8 @@ def test_stop_reply_reports_running(fake_daemon: Any, fake_trex: Any,
         assert out["running"] is False and out["stop_s"] is not None and out["stop_s"] < 5
         await s.connect(stubborn.host, stubborn.port)
         await started(s)
-        assert await s.stop(f.rpc_port, True) == {"running": True, "stop_s": None, "other_pids": []}
+        assert await s.stop(f.rpc_port, True) == {"running": True, "stop_s": None, "other_pids": [],
+                                                  "still_answering": False}
         assert s.snapshot()["run"]["state"] == "running"
     drive(body)
 
@@ -604,7 +605,8 @@ def test_stop_beside_a_hand_started_trex_cancels(fake_daemon: Any, fake_trex: An
 
 def test_stop_whose_list_empties_but_the_port_answers_cancels(fake_daemon: Any, fake_trex: Any) -> None:
     """Both listed TRexes leave the process list during the wait, yet a TRex still answers on the command
-    port: an empty listing never decides "stopped", so the hooks cancel (other_pids stays [])."""
+    port: an empty listing never decides "stopped", so the hooks cancel (other_pids stays []) and the reply
+    says a TRex still answers (still_answering), so the Run tab can say so without a pid."""
     d, f, hooks = fake_daemon("--daemon-run", "--foreign-ends-with-run"), fake_trex(), Hooks()
 
     async def body(s: DaemonSession, rec: Recorder) -> None:
@@ -612,6 +614,7 @@ def test_stop_whose_list_empties_but_the_port_answers_cancels(fake_daemon: Any, 
         await s.connect(d.host, d.port)
         out = await s.stop(f.rpc_port, True, force=True)
         assert out["other_pids"] == []
+        assert out["still_answering"] is True
         assert hooks.calls == ["expect", "cancel"]
         assert len(still_running_warnings(rec)) == 1
     drive(body, hooks=hooks)
@@ -628,6 +631,7 @@ def test_stop_beside_another_trex_on_a_dead_port_is_done(fake_daemon: Any) -> No
         await s.connect(d.host, d.port)
         out = await s.stop(dead, True, force=True, owners_unknown_ack=True)
         assert out["other_pids"] == []
+        assert out["still_answering"] is False
         assert hooks.calls == ["expect", "done"]
         assert still_running_warnings(rec) == []
     drive(body, hooks=hooks)

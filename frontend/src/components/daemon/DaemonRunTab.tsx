@@ -132,10 +132,12 @@ export function DaemonRunTab({ daemon, pushed, onModal }: { daemon: DaemonMsg | 
     const rpcPort = Number(portText)
     const r = await daemonStop({ rpc_port: rpcPort, confirm: true, force, owners_unknown_ack: ack })
     setConfirm(null)
-    // other_pids: the daemon's run ended, but a TRex it did not start still answers on the command port. They are
-    // the TRexes still listed, which may include the daemon's own still exiting, so the copy names none as the other.
-    if (r.other_pids.length > 0) {
-      setNote(`The daemon's run stopped, but a TRex the daemon did not start still answers on command port ${rpcPort} (TRex processes still listed: pid ${r.other_pids.join(', ')}). Stop it on the host.`)
+    // still_answering: the daemon's run ended, but a TRex it did not start still answers on the command port.
+    // other_pids are the TRexes still listed, which may include the daemon's own still exiting, so the copy names
+    // none as the other; the list may also be empty, and an empty listing does not mean that TRex stopped.
+    if (r.still_answering) {
+      const listed = r.other_pids.length > 0 ? `TRex processes still listed: pid ${r.other_pids.join(', ')}` : 'no TRex process listed'
+      setNote(`The daemon's run stopped, but a TRex the daemon did not start still answers on command port ${rpcPort} (${listed}). Stop it on the host.`)
     } else setNote(r.running ? 'TRex is still running after the stop.' : null)
   }
   // Force stop's owners_unknown asks once more; any other refusal stays in the first confirmation.
