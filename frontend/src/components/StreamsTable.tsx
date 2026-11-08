@@ -4,6 +4,7 @@ import { useDashView } from '../dashView'
 import { MAX_PGIDS, pgidStore, type FlowCounter } from '../pgidStats'
 import { portAria, portTitle, type PortLabel } from '../portLabels'
 import { cell, humanBps, humanPps, l1Bps } from '../statsFormat'
+import { TableViewControls } from './TableViewControls'
 import { PgidSelector, type Selection } from './PgidSelector'
 import { CAP_REASON, capReasonId } from '../pgidPalette'
 import { pgidSource, useStale } from '../useStale'
@@ -32,21 +33,37 @@ function rxBpsL1(id: number, scope: string): number | null {
   return l1Bps(rate(id, 'rx_bps', scope), rate(id, 'rx_pps', scope))
 }
 
-// The cells shared by a pg_id's row (scope 'total') and its per-port rows.
-function valueCells(id: number, scope: string) {
+// The packet-rate cells shared by a pg_id's row (scope 'total') and its per-port rows.
+function packetRateCells(id: number, scope: string) {
+  return (
+    <>
+      <td className="num">{humanPps(rate(id, 'tx_pps', scope))}</td>
+      <td className="num">{humanPps(rate(id, 'rx_pps', scope))}</td>
+    </>
+  )
+}
+
+// The bit-rate cells (Columns: Bit rates).
+function bitRateCells(id: number, scope: string) {
+  return (
+    <>
+      <td className="num">{humanBps(rate(id, 'tx_bps_l1', scope))}</td>
+      <td className="num">{humanBps(rate(id, 'tx_bps', scope))}</td>
+      <td className="num">{humanBps(rxBpsL1(id, scope))}</td>
+      <td className="num">{humanBps(rate(id, 'rx_bps', scope))}</td>
+    </>
+  )
+}
+
+// The counter cells (Columns: Packet and byte counters).
+function counterCells(id: number, scope: string) {
   const count = (f: FlowCounter) => cell(pgidStore.relative(id, f, scope))
   return (
     <>
-      <td>{humanPps(rate(id, 'tx_pps', scope))}</td>
-      <td>{humanPps(rate(id, 'rx_pps', scope))}</td>
-      <td>{humanBps(rate(id, 'tx_bps_l1', scope))}</td>
-      <td>{humanBps(rate(id, 'tx_bps', scope))}</td>
-      <td>{humanBps(rxBpsL1(id, scope))}</td>
-      <td>{humanBps(rate(id, 'rx_bps', scope))}</td>
-      <td>{count('tx_pkts')}</td>
-      <td>{count('rx_pkts')}</td>
-      <td>{count('tx_bytes')}</td>
-      <td>{count('rx_bytes')}</td>
+      <td className="num">{count('tx_pkts')}</td>
+      <td className="num">{count('rx_pkts')}</td>
+      <td className="num">{count('tx_bytes')}</td>
+      <td className="num">{count('rx_bytes')}</td>
     </>
   )
 }
@@ -75,6 +92,7 @@ function PortHead({ k, ports, labelOf }: { k: string; ports: PortView[]; labelOf
 }
 
 function Table({ ids, ports, labelOf, sel }: { ids: number[]; ports: PortView[]; labelOf: (p: PortView) => PortLabel | null; sel: Selection }) {
+  const { view } = useDashView()
   const [page, setPage] = useState(0)
   const [open, setOpen] = useState<Set<number>>(new Set())
   const pages = Math.max(1, Math.ceil(ids.length / PAGE_SIZE))
@@ -85,6 +103,7 @@ function Table({ ids, ports, labelOf, sel }: { ids: number[]; ports: PortView[];
 
   return (
     <>
+      <TableViewControls tab="streams" />
       {ids.length > PAGE_SIZE && (
         <div className="pager">
           <label>
@@ -100,17 +119,20 @@ function Table({ ids, ports, labelOf, sel }: { ids: number[]; ports: PortView[];
         <thead>
           <tr>
             <td colSpan={3} />
-            <th colSpan={6} scope="colgroup">Rates</th>
-            <th colSpan={5} scope="colgroup">Counters {COUNTER_NOTE}</th>
-            <th scope="col">Rate</th>
+            <th colSpan={2} scope="colgroup">Packet rates</th>
+            <th colSpan={2} scope="colgroup">Loss</th>
+            {view.bitRates && <th colSpan={4} scope="colgroup">Bit rates</th>}
+            {view.counters && <th colSpan={4} scope="colgroup">Counters {COUNTER_NOTE}</th>}
           </tr>
           <tr>
             <th scope="col">Chart</th><th scope="col">PG ID</th><th scope="col">Type</th>
             <th scope="col">Tx pps</th><th scope="col">Rx pps</th>
-            <th scope="col">Tx bps L1</th><th scope="col">Tx bps L2</th><th scope="col">Rx bps L1</th><th scope="col">Rx bps L2</th>
-            <th scope="col" title={COUNTER_NOTE}>Tx pkts</th><th scope="col" title={COUNTER_NOTE}>Rx pkts</th>
-            <th scope="col" title={COUNTER_NOTE}>Tx bytes</th><th scope="col" title={COUNTER_NOTE}>Rx bytes</th>
             <th scope="col" title={COUNTER_NOTE}>Loss</th><th scope="col">Loss/s</th>
+            {view.bitRates && <><th scope="col">Tx bps L1</th><th scope="col">Tx bps L2</th><th scope="col">Rx bps L1</th><th scope="col">Rx bps L2</th></>}
+            {view.counters && <>
+              <th scope="col" title={COUNTER_NOTE}>Tx pkts</th><th scope="col" title={COUNTER_NOTE}>Rx pkts</th>
+              <th scope="col" title={COUNTER_NOTE}>Tx bytes</th><th scope="col" title={COUNTER_NOTE}>Rx bytes</th>
+            </>}
           </tr>
         </thead>
         <tbody>
@@ -129,16 +151,20 @@ function Table({ ids, ports, labelOf, sel }: { ids: number[]; ports: PortView[];
                     {' '}{id}
                   </th>
                   <td>{latency.has(id) ? 'latency' : 'flow'}</td>
-                  {valueCells(id, 'total')}
-                  <td>{cell(pgidStore.lossPkts(id))}</td>
-                  <td>{humanPps(pgidStore.lossPps(id))}</td>
+                  {packetRateCells(id, 'total')}
+                  <td className="num">{cell(pgidStore.lossPkts(id))}</td>
+                  <td className="num">{humanPps(pgidStore.lossPps(id))}</td>
+                  {view.bitRates && bitRateCells(id, 'total')}
+                  {view.counters && counterCells(id, 'total')}
                 </tr>
                 {expanded && portKeys.map((k) => (
                   <tr key={k} className="port-row">
                     <td />
                     <PortHead k={k} ports={ports} labelOf={labelOf} />
-                    {valueCells(id, k)}
-                    <td /><td />
+                    {packetRateCells(id, k)}
+                    <td className="num" /><td className="num" />
+                    {view.bitRates && bitRateCells(id, k)}
+                    {view.counters && counterCells(id, k)}
                   </tr>
                 ))}
               </Fragment>
@@ -188,7 +214,7 @@ export function StreamsTab({ ports, labelOf, visible = true }: { ports: PortView
         <>
           {truncated && <p role="status" className="banner">Showing the first {ids.length} of {all.length} streams</p>}
           {sel.atCap && <p id={capReasonId('streams')}>{CAP_REASON}</p>}
-          <div className="overview-grid">
+          <div className={view.wide ? 'overview-grid wide' : 'overview-grid'}>
             <div>
               {visible && (ids.length === 0 ? (unheard ? null : <p>No streams with a PG ID are active. {PGID_HOW}</p>) : <Table ids={ids} ports={ports} labelOf={labelOf} sel={sel} />)}
               {visible && <FlowErrors ports={ports} labelOf={labelOf} />}

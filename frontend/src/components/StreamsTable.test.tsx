@@ -2,6 +2,7 @@ import { act, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import UPlot from 'uplot'
+import { DASH_VIEW_KEY, resetDashViewStore } from '../dashView'
 import { pgidStore } from '../pgidStats'
 import { wirePgid, type WirePgid } from '../testPgid'
 import { wirePort } from '../testWire'
@@ -10,7 +11,7 @@ import { StreamsTab } from './StreamsTable'
 const ports = [wirePort('tx_owned', { id: 0 }), wirePort('idle_unowned', { id: 1, owned: false })]
 const labelOf = (p: { id: number }) => (p.id === 0 ? { name: 'uplink-A', description: 'to the DUT' } : null)
 const reset = () => { pgidStore.reset(); pgidStore.track('streams', []); pgidStore.track('latency', []) }
-beforeEach(reset)
+beforeEach(() => { localStorage.clear(); resetDashViewStore(); reset() })
 afterEach(reset)
 
 // n flow pg_ids (1..n) copied from the recorded pg_id 5; `active` lists activeN ids, so activeN > n reads as truncated.
@@ -26,10 +27,16 @@ function synth(n: number, activeN = n): WirePgid {
 }
 
 const renderTab = () => render(<StreamsTab ports={ports} labelOf={labelOf} />)
+// Store the optional columns as chosen, as a returning visitor would have them.
+const showColumns = (v: { bitRates: boolean; counters: boolean }) => { localStorage.setItem(DASH_VIEW_KEY, JSON.stringify(v)); resetDashViewStore() }
+const showAll = () => showColumns({ bitRates: true, counters: true })
+const headers = () => within(screen.getByRole('table', { name: 'Streams' })).getAllByRole('row')[1].querySelectorAll('th')
+const headerTexts = () => Array.from(headers(), (h) => h.textContent)
 const rows = () => within(screen.getByRole('table', { name: 'Streams' })).getAllByRole('row').slice(2)   // after the two header rows
 
 describe('StreamsTab table', () => {
   it('renders the recorded tx sample: pg_id 5 as flow and 7 as latency, with its numbers', () => {
+    showAll()
     pgidStore.push(wirePgid('tx'))
     renderTab()
     const r = rows()
@@ -44,11 +51,13 @@ describe('StreamsTab table', () => {
     expect(within(r[0]).getAllByText('7,818,181')).toHaveLength(2)
   })
   it('heads the counter columns with "since the stream was added, or Clear"', () => {
+    showAll()
     pgidStore.push(wirePgid('tx'))
     renderTab()
     expect(screen.getByRole('columnheader', { name: /since the stream was added, or Clear/ })).toBeInTheDocument()
   })
   it('computes Rx bps L1 when the server sends no rx_bps_l1', () => {
+    showAll()
     const m = wirePgid('tx')
     delete m.flow['5'].rx_bps_l1
     pgidStore.push(m)
@@ -89,6 +98,7 @@ describe('StreamsTab table', () => {
     expect(screen.getByRole('rowheader', { name: 'Port 1' })).toBeInTheDocument()
   })
   it('shows – for None values, never NaN', () => {
+    showAll()
     const m = wirePgid('tx')
     m.flow['5'].tx_pps.total = null
     m.flow['5'].rx_bps_l1.total = null
@@ -156,6 +166,7 @@ describe('StreamsTab table', () => {
     expect(document.getElementById('pgid-cap-reason-streams')).toHaveTextContent(/At most 8/)
   })
   it('after Clear a counter cell reads 0 (rendered)', () => {
+    showAll()
     pgidStore.push(wirePgid('tx'))
     renderTab()
     act(() => pgidStore.clear())
@@ -169,6 +180,109 @@ describe('StreamsTab table', () => {
     const u = (UPlot as unknown as { instances: { opts: { series: { label?: string; stroke?: string }[] } }[] }).instances.at(-1)!
     expect(u.opts.series.slice(1).map((s) => s.label)).toEqual(['PG 1', 'PG 2', 'PG 3', 'PG 4'])
     expect(new Set(u.opts.series.slice(1).map((s) => s.stroke)).size).toBe(4)
+  })
+})
+
+describe('StreamsTab columns', () => {
+  const DEFAULT_HEADS = ['Chart', 'PG ID', 'Type', 'Tx pps', 'Rx pps', 'Loss', 'Loss/s']
+  const BITS = ['Tx bps L1', 'Tx bps L2', 'Rx bps L1', 'Rx bps L2']
+  const COUNTS = ['Tx pkts', 'Rx pkts', 'Tx bytes', 'Rx bytes']
+  const openColumns = async () => { await userEvent.click(screen.getByRole('button', { name: 'Columns ▾' })) }
+  it('shows only the default columns', () => {
+    pgidStore.push(wirePgid('tx'))
+    renderTab()
+    expect(headerTexts()).toEqual(DEFAULT_HEADS)
+  })
+  it('Columns ▾ shows the bit rates', async () => {
+    pgidStore.push(wirePgid('tx'))
+    renderTab()
+    await openColumns()
+    await userEvent.click(screen.getByRole('checkbox', { name: 'Bit rates (L1 and L2)' }))
+    expect(headerTexts()).toEqual([...DEFAULT_HEADS, ...BITS])
+    expect(screen.getByRole('button', { name: 'Columns ▾' })).toHaveAttribute('aria-expanded', 'true')
+    expect(screen.getByRole('group', { name: 'Columns' })).toBeInTheDocument()
+  })
+  it('Columns ▾ shows the counters with their note', async () => {
+    pgidStore.push(wirePgid('tx'))
+    renderTab()
+    await openColumns()
+    await userEvent.click(screen.getByRole('checkbox', { name: 'Packet and byte counters' }))
+    expect(headerTexts()).toEqual([...DEFAULT_HEADS, ...COUNTS])
+    expect(screen.getByRole('columnheader', { name: /since the stream was added, or Clear/ })).toBeInTheDocument()
+  })
+  it('keeps the choice across a remount', async () => {
+    pgidStore.push(wirePgid('tx'))
+    const { unmount } = renderTab()
+    await openColumns()
+    await userEvent.click(screen.getByRole('checkbox', { name: 'Packet and byte counters' }))
+    unmount()
+    resetDashViewStore()
+    renderTab()
+    expect(headerTexts()).toEqual([...DEFAULT_HEADS, ...COUNTS])
+  })
+  it('aligns per-port rows in every combination', async () => {
+    for (const bitRates of [false, true]) for (const counters of [false, true]) {
+      localStorage.clear(); showColumns({ bitRates, counters })
+      pgidStore.reset(); pgidStore.track('streams', []); pgidStore.push(wirePgid('tx'))
+      const { unmount } = renderTab()
+      await userEvent.click(screen.getByRole('button', { name: 'PG ID 5 ports' }))
+      const width = (tr: Element) => Array.from(tr.children).reduce((n, c) => n + ((c as HTMLTableCellElement).colSpan || 1), 0)
+      const want = width(screen.getByRole('table', { name: 'Streams' }).querySelectorAll('thead tr')[1])
+      const portRows = screen.getByRole('table', { name: 'Streams' }).querySelectorAll('tr.port-row')
+      expect(portRows.length).toBeGreaterThan(0)
+      for (const tr of portRows) expect(width(tr), `bitRates=${bitRates} counters=${counters}`).toBe(want)
+      unmount()
+    }
+  })
+  it('right-aligns the numbers', () => {
+    showAll()
+    pgidStore.push(wirePgid('tx'))
+    renderTab()
+    const tds = Array.from(rows()[0].children)
+    expect(tds).toHaveLength(15)
+    const values = tds.slice(3)   // after Chart, PG ID and Type
+    for (const td of values) expect(td.tagName === 'TD' && td.classList.contains('num'), td.textContent ?? '').toBe(true)
+    expect(tds[0].classList.contains('num')).toBe(false)
+    expect(within(rows()[0]).getByRole('rowheader')).not.toHaveClass('num')
+    expect(tds[2].classList.contains('num')).toBe(false)
+  })
+  it('the chart keeps its bit-rate metrics', () => {
+    pgidStore.push(wirePgid('tx'))
+    renderTab()
+    const opts = Array.from(screen.getByRole('combobox', { name: 'Chart metric' }).querySelectorAll('option'), (o) => o.textContent)
+    expect(opts).toEqual(expect.arrayContaining(['Tx bps L1', 'Tx bps L2', 'Rx bps L2']))
+  })
+  it('Full-width table stacks the chart', async () => {
+    pgidStore.push(wirePgid('tx'))
+    const { container } = renderTab()
+    expect(container.querySelector('.overview-grid')).not.toHaveClass('wide')
+    const chip = screen.getByRole('button', { name: 'Full-width table' })
+    expect(chip).toHaveAttribute('aria-pressed', 'false')
+    await userEvent.click(chip)
+    expect(chip).toHaveAttribute('aria-pressed', 'true')
+    expect(container.querySelector('.overview-grid')).toHaveClass('wide')
+  })
+  it('Escape closes the Columns panel', async () => {
+    pgidStore.push(wirePgid('tx'))
+    renderTab()
+    await openColumns()
+    expect(screen.getByRole('group', { name: 'Columns' })).toBeInTheDocument()
+    await userEvent.keyboard('{Escape}')
+    expect(screen.getByRole('button', { name: 'Columns ▾' })).toHaveAttribute('aria-expanded', 'false')
+    expect(screen.queryByRole('group', { name: 'Columns' })).toBeNull()
+  })
+  it('a press outside closes the Columns panel, one inside does not', async () => {
+    pgidStore.push(wirePgid('tx'))
+    renderTab()
+    await openColumns()
+    await userEvent.click(screen.getByRole('checkbox', { name: 'Bit rates (L1 and L2)' }))
+    expect(screen.getByRole('group', { name: 'Columns' })).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('table', { name: 'Streams' }))
+    expect(screen.queryByRole('group', { name: 'Columns' })).toBeNull()
+  })
+  it('renders no controls row with the empty-state message', () => {
+    renderTab()
+    expect(screen.queryByRole('button', { name: 'Columns ▾' })).toBeNull()
   })
 })
 

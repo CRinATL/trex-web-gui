@@ -5,7 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import * as api from '../api'
 import * as state from '../state'
 import { dashboardPrefs } from '../dashboardPrefs'
-import { resetDashViewStore } from '../dashView'
+import { DASH_VIEW_KEY, resetDashViewStore } from '../dashView'
 import { pgidStore } from '../pgidStats'
 import { statsStore } from '../stats'
 import { wirePgid, wireUtil } from '../testPgid'
@@ -24,6 +24,8 @@ afterEach(() => { dashboardPrefs.reset(); vi.useRealTimers(); vi.restoreAllMocks
 const session = (st: api.SessionSnapshot['state']): api.SessionSnapshot => ({ type: 'session', state: st, params: null, info: null, error: null, rpc_console: false, include_polling: false })
 
 describe('DashboardPage Clear stats', () => {
+  beforeEach(() => { localStorage.clear(); resetDashViewStore() })
+  afterEach(() => { localStorage.clear() })
   it('calls statsStore.clear and nothing else when connected', async () => {
     vi.spyOn(state, 'useAppState').mockReturnValue({ ...state.initialState, session: session('connected') })
     const clear = vi.spyOn(statsStore, 'clear')
@@ -48,6 +50,8 @@ describe('DashboardPage Clear stats', () => {
     vi.spyOn(state, 'useAppState').mockReturnValue({ ...state.initialState, session: session('connected') })
     pgidStore.reset()
     pgidStore.push(wirePgid('tx'))
+    localStorage.setItem(DASH_VIEW_KEY, JSON.stringify({ counters: true }))   // the counters are not a default column
+    resetDashViewStore()
     render(<DashboardPage />)
     await userEvent.click(screen.getByRole('tab', { name: 'Streams' }))
     const row = () => within(screen.getByRole('table', { name: 'Streams' })).getAllByRole('row')[2]
