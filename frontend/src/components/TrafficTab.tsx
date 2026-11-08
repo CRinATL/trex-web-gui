@@ -13,6 +13,9 @@ import { fillFromPy, linkedSlug, PY_NOTE, pySourceOf } from './studio/libraryPic
 import { TunablesForm } from './TunablesForm'
 import { RunButton } from './RunButton'
 import { EditedTag } from '../ui/Edited'
+import { statsStore } from '../stats'
+import { humanBps as statsBps, humanPps } from '../statsFormat'
+import { useStatsSelector } from '../useStats'
 
 const errText = (x: unknown) => (x instanceof Error ? x.message : String(x))
 const stemOf = (p: string) => (p.split('/').pop() ?? p).replace(/\.[^.]*$/, '')
@@ -41,6 +44,15 @@ function StreamsTable({ summary, count, label }: { summary: StreamSummary[]; cou
       {count > summary.length && <p className="muted">Showing the first {summary.length} of {count} streams</p>}
     </>
   )
+}
+// What the port sends now (ui-recs-3), beside the ×1 line so requested and observed rates are on one page. The keys are
+// the ones PortsTable reads; statsStore drops its buffer on a reconnect, so an old reading shows as dashes, never stale.
+function MeasuredTx({ id }: { id: number }) {
+  const scope = String(id)
+  const pps = useStatsSelector(() => statsStore.relative(scope, 'tx_pps'))
+  const l2 = useStatsSelector(() => statsStore.relative(scope, 'tx_bps'))
+  const l1 = useStatsSelector(() => statsStore.relative(scope, 'tx_bps_L1'))
+  return <p>Measured now: Tx {humanPps(pps)} · L2 {statsBps(l2)} · L1 {statsBps(l1)}</p>
 }
 const sameArgs = (a: string[], b: string[]) => a.length === b.length && a.every((x, i) => x === b[i])
 
@@ -286,6 +298,7 @@ export function TrafficTab({ port, selection, ports, readOnly, connected, visibl
             <details><summary>Full validate response</summary><pre>{JSON.stringify(rateInfo, null, 2)}</pre></details>
           </div>
         )}
+        {connected && <MeasuredTx id={id} />}
       </section>
 
       <section>

@@ -459,7 +459,8 @@ Source: `frontend/src/components/TrafficTab.tsx`, `frontend/src/components/Profi
     inspected profile, with its tunables for a `.py`) each make a library entry and open it in [Editor](#5-editor-page)
     (A3.6's New and Duplicate).
   - **What it holds:** the streams table (**#**, **Name**, **Enabled**, **Mode**, **Rate**, **Packet**, **Length**, **VM**),
-    the **Show rate at ×1** button, "At ×1: max …, L2 …, …% line utilisation", and a collapsed **Full validate response**.
+    the **Show rate at ×1** button, "At ×1: max …, L2 …, …% line utilisation", a collapsed **Full validate response**,
+    and "Measured now: Tx … · L2 … · L1 …", the port's live Tx rates (ui-recs-3).
   - **Rate:** **Multiplier**, one typed box (a bare number or `×` is a factor; `%` adds a slider; pps, bps, bps L1 with
     k/M/G, the scale only with a unit) with a live reading beside it, **Duration (s)** (empty = no limit), **Force**. On a
     transmitting port a typed multiplier is applied on Enter or a click elsewhere in the page, never by switching apps.
