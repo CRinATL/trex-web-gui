@@ -65,4 +65,17 @@ describe('theme', () => {
     expect(THEME_KEY).toBe('trex-web-gui.theme')
     expect(html).toContain("localStorage.getItem('trex-web-gui.theme')")
   })
+  it('index.html pre-paint script applies a stored compact density', () => {
+    const body = /<script>([\s\S]*?)<\/script>/.exec(html)![1]
+    try {
+      localStorage.setItem('trex-web-gui.density', 'compact')
+      delete document.documentElement.dataset.density
+      new Function(body)()
+      expect(document.documentElement.dataset.density).toBe('compact')
+      localStorage.setItem('trex-web-gui.density', 'tiny')
+      delete document.documentElement.dataset.density
+      new Function(body)()
+      expect(document.documentElement.dataset.density).toBeUndefined()
+    } finally { delete document.documentElement.dataset.density }
+  })
 })

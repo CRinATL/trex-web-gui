@@ -8,6 +8,7 @@ import { Info } from '../ui/Info'
 import { Tabs, tabPanel } from '../ui/Tabs'
 import { useAppState } from '../state'
 import { THEMES, readTheme, useTheme, type Theme } from '../theme'
+import { DENSITIES, useDensity } from '../density'
 
 const sameSettings = (a: Settings | null, b: Settings | null) => JSON.stringify(a) === JSON.stringify(b)
 const stamp = () => new Date().toISOString().replace(/[-:]/g, '').replace(/\.\d+Z$/, 'Z')
@@ -44,10 +45,23 @@ function ThemeFieldset() {
   )
 }
 
-// --monitor-only has no Control session and refuses every write, so only the theme (a per-browser choice) is offered.
+// The Density control: per browser, effective at once, and independent of the backend.
+function DensityFieldset() {
+  const { density, setDensity } = useDensity()
+  return (
+    <fieldset>
+      <legend>Density</legend>
+      {DENSITIES.map(([value, label]) => (
+        <label key={value}><input type="radio" name="density" checked={density === value} onChange={() => setDensity(value)} /> {label}</label>
+      ))}
+    </fieldset>
+  )
+}
+
+// --monitor-only has no Control session and refuses every write, so only the theme and density (per-browser choices) are offered.
 export function SettingsPage() {
   const { monitorOnly } = useAppState()
-  return monitorOnly ? <section><h1>Settings</h1><ThemeFieldset /></section> : <FullSettingsPage />
+  return monitorOnly ? <section><h1>Settings</h1><ThemeFieldset /><DensityFieldset /></section> : <FullSettingsPage />
 }
 
 function FullSettingsPage() {
@@ -194,7 +208,7 @@ function FullSettingsPage() {
       <div className="side-layout">
         <Tabs label="Settings sections" idPrefix="settings" orientation="vertical" tabs={tabs} selected={sel} onSelect={setSel} />
         <div>
-          <div {...tabPanel('settings', 'appearance', sel)}><ThemeFieldset /></div>
+          <div {...tabPanel('settings', 'appearance', sel)}><ThemeFieldset /><DensityFieldset /></div>
           <div {...tabPanel('settings', 'files', sel)}>
             {s && (
               <div className="form-grid">
