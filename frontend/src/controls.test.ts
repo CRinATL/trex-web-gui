@@ -98,6 +98,11 @@ describe('control tokens and base rule', () => {
   it('the Columns panel keeps each label on one line', () => {
     expect(only('.columns-panel label').body).toContain('white-space: nowrap')
   })
+  it('the status bar keeps the version and its buttons on one line, so a long message wraps instead of them', () => {
+    const end = only('.statusbar .end').body
+    expect(end).toContain('flex-shrink: 0')
+    expect(end).toContain('white-space: nowrap')
+  })
   it('each Columns label clears the floated legend, so the first one is not pushed beside it and out of the panel', () => {
     expect(only('.columns-panel legend').body).toContain('float: left')
     expect(only('.columns-panel label').body).toContain('clear: both')

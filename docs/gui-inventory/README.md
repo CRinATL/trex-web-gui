@@ -10,7 +10,14 @@ shots use the default, Comfortable, [53](screens/53-settings-appearance.png)); a
 run button, the step to take (Stop while a port transmits, Resume while it is paused, Start all only while nothing
 runs), the others quiet; the Dashboard's Streams and Latency tables show the default columns of PR #112 with
 **Columns ▾**, **Show history** and **Full-width table** above them ([37](screens/37-dash-streams.png),
-[38](screens/38-dash-latency-top.png)). The shots that show traffic also carry new live numbers and times.
+[38](screens/38-dash-latency-top.png)). The shots that show traffic also carry new live numbers and times. In its fix
+round: the status bar keeps `trex-web-gui <version>` and its buttons on one line and wraps a long message instead
+([06](screens/06-connect-error.png), [32](screens/32-statusbar-reconnect-failed.png), [118](screens/118-emu-connected.png));
+the Test setups dialog is up to 40 rem tall, so a two-port setup's detail fits at 900 px
+([75](screens/75-manage-setups-run-finished.png)); and the Traffic tab's [23](screens/23-port-traffic-inspected.png),
+[24](screens/24-port-traffic-transmitting.png) and [25](screens/25-port-traffic-update.png) are taller windows (990, 990
+and 1000 px, so 2800x1980 and 2800x2000), the least that shows the port heading and tabs below the sticky toolbar and the
+action bar above the status bar.
 
 **Traffic tab shots re-shot for the measured rate (2026-11-08).** The Traffic tab's **On the port** section now ends
 with "Measured now: Tx … · L2 … · L1 …" (ui-recs-3), so the 18 shots that show it were shot again on `main` after PR
@@ -701,7 +708,8 @@ A Run that finished (the setup stops, assigns and starts both ports):
 ![Test setups, Run finished](screens/75-manage-setups-run-finished.png)
 
 A Run that failed at **start** (the setup asks 100 Gbps of port 1, which TRex refuses on a 10 Gbps port; port 0 had started, so
-**Stop started ports** is offered; the failed row is in view without scrolling):
+**Stop started ports** is offered; the failed row scrolls itself into view, and the shot scrolls the pane a little
+further so the row clears the sticky bar under it, which leaves the title row just above the top edge):
 
 ![Test setups, Run failed at start](screens/77-manage-setups-run-failed-start.png)
 
@@ -1369,7 +1377,7 @@ connect bar ([95](screens/95-monitor-guest-global.png)), with the Disconnect/Con
 ([99](screens/99-monitor-inspector.png)); the Run tab keeps long help behind ⓘ (Extra arguments, command port) and its actions (Start, Stop) in one
 bar ([105](screens/105-daemon-stf-running.png)); the Start confirmation shows the host, port and command ([104](screens/104-daemon-start-confirm.png)).
 Mismatches found:
-- The Monitor's CPU chart labels its y axis `0 %` on every tick when the CPU is near zero ([96](screens/96-monitor-guest-charts.png)).
+- The Monitor's CPU chart labels its y axis `0 %` on every tick when the CPU is near zero ([96](screens/96-monitor-guest-charts.png); the 2026-11-08 re-shoot no longer shows it: its ticks read `0.2 %` and `0.1 %`).
 - The Monitor's Host and Port are one row but Connect and Disconnect sit on a second row beneath them; the other connect forms put
   their buttons at the row's end ([52](screens/52-monitor-disconnected.png)).
 - The daemon dialog's Config tab: an error ("is required") touches the button beside it in the Interfaces and Ports info boxes, and Load

@@ -359,7 +359,7 @@ button.expander { min-height: 0; padding: 0 .2rem; }
 .columns-panel label { display: block; white-space: nowrap; clear: both; }   /* below the floated legend, not beside it */
 .columns-panel legend { padding: 0; float: left; width: 100%; font-weight: 600; }
 /* Test setups: a fixed-height master-detail; the list and the detail pane each scroll, the footer stays. */
-.setups-dialog { display: flex; flex-direction: column; width: min(56rem, 92vw); height: min(36rem, 85vh); }
+.setups-dialog { display: flex; flex-direction: column; width: min(56rem, 92vw); height: min(40rem, 85vh); }   /* 40rem: a 2-port detail and a failed Run's actions fit at 900 px */
 .setups-master { display: grid; grid-template-columns: minmax(11rem, 16rem) 1fr; gap: 1rem; flex: 1; min-height: 0; }
 .setups-list { list-style: none; margin: 0; padding: 0; overflow: auto; border-right: 1px solid var(--border); }
 .setups-list [role="option"] { display: flex; flex-direction: column; padding: .35rem .5rem; cursor: pointer; border-radius: 4px; }
@@ -395,7 +395,7 @@ button.expander { min-height: 0; padding: 0 .2rem; }
 fieldset.plain { border: 0; padding: 0; margin: 0; }
 fieldset.plain legend { padding: 0; font-weight: 600; font-size: 1.1em; margin-bottom: .5rem; }
 .badge.badge-alert { color: var(--bad); border-color: var(--bad); }
-.statusbar .end { margin-left: auto; display: flex; align-items: center; gap: .5rem; }
+.statusbar .end { margin-left: auto; display: flex; align-items: center; gap: .5rem; flex-shrink: 0; white-space: nowrap; }   /* the version and buttons keep their width; a long message wraps instead */
 .statusbar .end button, .statusbar .end a { color: var(--fg); background: var(--panel); }
 .statusbar .end button[data-run]:enabled { box-shadow: 0 0 0 1px var(--panel), 0 0 0 2px var(--run); }   /* the box's gap in the bar's colour */
 

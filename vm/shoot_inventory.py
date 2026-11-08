@@ -551,6 +551,39 @@ async def step_control(c):
     await b.scroll("main", 0)
 
 
+# The port panel's framing: <main> is scrolled so the port heading (the h2 above .port-panel) and the tabs
+# sit just below the sticky Control toolbar. Returns how many CSS px the bottom of the visible tab panel (the
+# Traffic tab's action bar) then falls below main's bottom edge (0 when it fits), plus the rects for the log.
+_FRAME_PANEL = """(() => {
+  const m = document.querySelector('main'), t = document.querySelector('.toolbar[role=toolbar]')
+  const pp = document.querySelector('.port-panel')
+  const head = pp.previousElementSibling && pp.previousElementSibling.tagName === 'H2' ? pp.previousElementSibling : pp
+  const panel = [...pp.querySelectorAll('[role=tabpanel]')].find((e) => S.vis(e))
+  const bottom = () => Math.max(...[...panel.querySelectorAll('*')].filter((e) => S.vis(e)).map((e) => e.getBoundingClientRect().bottom))
+  m.scrollTop += head.getBoundingClientRect().top - t.getBoundingClientRect().bottom - 8
+  const over = Math.max(0, Math.ceil(bottom() + 8 - m.getBoundingClientRect().bottom))
+  return { over, rects: [head.getBoundingClientRect().top, t.getBoundingClientRect().bottom, bottom(), m.getBoundingClientRect().bottom] }
+})()"""  # noqa: E501  (JS source embedded as data)
+
+
+async def framed_panel_shot(b, name):
+    """Shoot the port panel with its heading and tabs below the sticky toolbar and its action bar shown. When
+    the panel is taller than the 900 px window leaves room for, the window is made taller by the difference
+    (rounded up to 10 px) for this one shot, as 119 is, rather than cutting the action bar or hiding the
+    heading."""
+    r = await b.js(_FRAME_PANEL)
+    height = HEIGHT if r["over"] == 0 else HEIGHT + -(-r["over"] // 10) * 10
+    if height != HEIGHT:
+        await b.viewport(height)
+        await asyncio.sleep(0.3)
+        r = await b.js(_FRAME_PANEL)
+    print(f"frame {name} at {height} px: over {r['over']}, [heading top, toolbar bottom, panel bottom,"
+          f" main bottom] {r['rects']}", flush=True)
+    await b.shot(name)
+    if height != HEIGHT:
+        await b.viewport()
+
+
 async def step_port_tabs(c):
     """16-27: Config, Tools (Ping, IPv6 neighbours), Traffic (empty, Browse, inspected, transmitting, update)
     and Counters; 115, Traffic's floating ⓘ note."""
@@ -585,7 +618,7 @@ async def step_port_tabs(c):
     await b.click("Show rate at ×1", "button")
     await b.click("Assign", "button", "[role=tabpanel]")
     await asyncio.sleep(1.5)
-    await b.shot("23-port-traffic-inspected")
+    await framed_panel_shot(b, "23-port-traffic-inspected")
     await b.click("About profile paths", "button", "[role=tabpanel]")      # the floating ⓘ note (RC1-34)
     await b.wait("document.querySelector('[role=note]:not([hidden])') !== null", 10, "the profile paths note")
     await b.shot("115-traffic-profile-note")
@@ -598,11 +631,11 @@ async def step_port_tabs(c):
                  " const m = /^Measured now: Tx ([\\d.]+) kpps/.exec(p.textContent);"
                  " return m && +m[1] >= 4.5 })",
                  20, "the measured rate at 5 kpps")
-    await b.shot("24-port-traffic-transmitting")
+    await framed_panel_shot(b, "24-port-traffic-transmitting")
     await b.fill("Multiplier", "8kpps")
     await b.key("Enter")               # typing alone never starts the countdown; Enter commits
     await b.wait_text("Applying")
-    await b.shot("25-port-traffic-update")
+    await framed_panel_shot(b, "25-port-traffic-update")
     await b.click("Apply now", "button")
     await b.click("Counters", "[role=tab]")
     await asyncio.sleep(1.5)
@@ -797,6 +830,20 @@ async def pick(b, name):
     await b.click(f"~{name}", "[role=option]", "[role=dialog]")
 
 
+# Scroll the Test setups detail pane so the last port row that reads "failed" ends above the sticky actions
+# bar; returns the px scrolled (0 when it already did).
+_CLEAR_FAILED_ROW = """(() => {
+  const d = document.querySelector('[role=dialog]')
+  const row = [...d.querySelectorAll('.setups-ports tr')].filter((r) => r.textContent.includes('failed')).pop()
+  const bar = d.querySelector('.setups-actions')
+  let pane = row.parentElement
+  while (pane && !/(auto|scroll)/.test(getComputedStyle(pane).overflowY)) pane = pane.parentElement
+  const by = Math.max(0, Math.ceil(row.getBoundingClientRect().bottom + 4 - bar.getBoundingClientRect().top))
+  pane.scrollTop += by
+  return by
+})()"""  # noqa: E501  (JS source embedded as data)
+
+
 async def step_setups(c):
     """65-82: the Setups menu, Save current setup (refused port, filled, overwrite), the Test setups dialog
     (list, loaded, edits since Load, Run failed at assign, Run finished, Run failed at start, Stop started
@@ -874,6 +921,9 @@ async def step_setups(c):
     await b.wait_text("ready")
     await b.click("Run", "button", "[role=dialog]")
     await b.wait_for("Stop started ports", "button", "[role=dialog]", timeout=40)
+    # the failed row scrolls itself into view, but the sticky bar (Load, Run, Stop started ports and the
+    # two-line reason) is taller than the row's scroll margin: scroll the pane on until the row clears the bar
+    print("77 pane scrolled by:", await b.js(_CLEAR_FAILED_ROW), flush=True)
     await b.shot("77-manage-setups-run-failed-start")
     await b.click("Stop started ports", "button", "[role=dialog]")
     await b.wait_gone("Stop started ports", "button", "[role=dialog]")
