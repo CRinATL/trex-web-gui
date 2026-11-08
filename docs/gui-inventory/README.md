@@ -2,6 +2,15 @@
 
 ## Scope
 
+**Traffic tab shots re-shot for the measured rate (2026-11-08).** The Traffic tab's **On the port** section now ends
+with "Measured now: Tx … · L2 … · L1 …" (ui-recs-3), so the 18 shots that show it were shot again on `main` after PR
+#110: [21](screens/21-port-traffic-empty.png), [23](screens/23-port-traffic-inspected.png)-[25](screens/25-port-traffic-update.png),
+[115](screens/115-traffic-profile-note.png), [94](screens/94-control-library-pick.png) and the Test setups dialogs over
+the tab, [68](screens/68-save-setup-filled.png)-[73](screens/73-manage-setups-edits-since-load.png) and
+[76](screens/76-manage-setups-run-failed-assign.png)-[81](screens/81-manage-setups-other-server.png), and the HOWTO's 07
+and 15. `vm/shoot_inventory.py` now waits before 24 until the measured rate reads the 5 kpps asked for, so 24 and 25 do
+not show a rate still ramping up. The other shots are unchanged.
+
 **Re-shot after 1.3.1 (2026-11-07).** Every screen was shot again on `main` after 1.3.1 (About,
 [57](screens/57-settings-about.png), shows `1.3.1` and 17 vendor patches), against the same guest, and the HOWTO's and
 the EMU HOWTO's screens with them. Every top bar now reads **Editor**, and the Editor shots show the Profiles and

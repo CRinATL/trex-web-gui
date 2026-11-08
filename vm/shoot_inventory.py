@@ -592,6 +592,12 @@ async def step_port_tabs(c):
     await b.click("About profile paths", "button", "[role=tabpanel]")
     await b.click("Start", "button", "[role=tabpanel]")
     await b.wait_text("TX")
+    # The live stats lag Start by a few ticks: shoot once "Measured now" reads the 5 kpps asked for (within
+    # 10 %), so 24 and 25 do not show a rate still ramping up beside the requested one.
+    await b.wait("[...document.querySelectorAll('[role=tabpanel] p')].some((p) => {"
+                 " const m = /^Measured now: Tx ([\\d.]+) kpps/.exec(p.textContent);"
+                 " return m && +m[1] >= 4.5 })",
+                 20, "the measured rate at 5 kpps")
     await b.shot("24-port-traffic-transmitting")
     await b.fill("Multiplier", "8kpps")
     await b.key("Enter")               # typing alone never starts the countdown; Enter commits
