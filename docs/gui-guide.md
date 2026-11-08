@@ -734,7 +734,13 @@ Per-stream (PG ID) flow statistics; needs streams with flow stats or latency
 ([37](gui-inventory/screens/37-dash-streams.png)).
 
 - A table **Chart** (checkbox), **PG ID** (▸/▾ expands the per-port rows), **Type** (`flow` or `latency`), Tx/Rx pps,
-  Tx/Rx bps L1 and L2, Tx/Rx pkts and bytes (`since the stream was added, or Clear`), **Loss**, **Loss/s**.
+  **Loss**, **Loss/s**. These are the default columns; they fit a 1400 px window beside the chart.
+- **Columns ▾** opens a panel with two check boxes that add columns after Loss/s: **Bit rates (L1 and L2)** (Tx/Rx
+  bps L1 and L2) and **Packet and byte counters** (Tx/Rx pkts and bytes, `since the stream was added, or Clear`). The
+  chart's Metric select still offers the bit rates when the columns are hidden.
+- **Full-width table** (shared with Latency) stacks the chart under the table so the table uses the whole width.
+- The column choice, Full-width table, the chart's series and metric and the Streams and Latency intervals are saved
+  per browser (see section 15).
 - A **Page** select above 100 ids.
 - `Showing the first 1151 of N streams` when the backend caps the ids it reads.
 - `rx_err` / `tx_err` per port below.
@@ -749,8 +755,9 @@ Per-stream (PG ID) flow statistics; needs streams with flow stats or latency
 [38](gui-inventory/screens/38-dash-latency-top.png), [39](gui-inventory/screens/39-dash-latency-bottom.png).
 
 - A table **Chart**, **PG ID**, **Max (µs)** (the largest last-max seen since connect or Clear), **Server max (µs)**
-  (the server's, which Clear does not reset), **Avg (µs)**, **Last (µs)** to **Last-9 (µs)**, **Jitter (µs)**,
-  **Errors** (seq too low plus seq too high).
+  (the server's, which Clear does not reset), **Avg (µs)**, **Jitter (µs)**, **Errors** (seq too low plus seq too
+  high). **Show history** adds **Last (µs)** to **Last-9 (µs)** after Errors; it is off by default.
+- **Full-width table**, as on Streams, stacks the chart under the table. Both choices are saved per browser.
 - A **Latency histogram** of one **PG ID** with **Bars** (11, 17 or All) and the counters Dropped, Duplicates, Out of
   order, Seq too high, Seq too low.
 - The chart **Latency: <metric> (µs)** (Average, Max, Last max, Jitter).
@@ -1664,8 +1671,8 @@ A port held under your own user name by another session reads `Port N is held by
 |---|---|---|
 | Saved connections, preferences, port names, test setups | backend data directory (default `~/.local/share/trex-web-gui`) | until changed; part of Export settings |
 | Editor profile library, user packet templates, saved capture files | backend data directory (or the directories set in Settings) | until deleted |
-| Theme, last Browse directory, Monitor host history, collapsed Monitor panels, histogram bar count | this browser (local storage) | per browser |
-| Traffic forms, Dashboard tab/interval/layout/Y axis, charted PG IDs, xstats pins and baselines, Clear stats baselines | this browser tab | until a new connection starts or the page is reloaded |
+| Theme, last Browse directory, Monitor host history, collapsed Monitor panels, histogram bar count, Dashboard columns, history, full width, chart series and metrics, Streams/Latency intervals | this browser (local storage) | per browser |
+| Traffic forms, Dashboard tab/interval/layout/Y axis, histogram PG ID, charted PG IDs, xstats pins and baselines, Clear stats baselines | this browser tab | until a new connection starts or the page is reloaded |
 | Event log | this browser tab | across reconnects; lost on reload |
 | RPC capture switch | backend session | survives a page reload |
 

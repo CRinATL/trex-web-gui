@@ -56,6 +56,15 @@ describe('LatencyTab view', () => {
     expect(screen.getByRole('columnheader', { name: 'Last (µs)' })).toHaveAttribute('title', "the server's maximum over its latest sample period")
     expect(screen.getByRole('button', { name: 'Show history (Last … Last-9)' })).toHaveAttribute('aria-pressed', 'true')
   })
+  it('Show history turns off again', async () => {
+    pgidStore.push(wirePgid('tx'))
+    render(<LatencyTab />)
+    const chip = screen.getByRole('button', { name: 'Show history (Last … Last-9)' })
+    await userEvent.click(chip)
+    await userEvent.click(chip)
+    expect(heads()).toEqual(HEADS)
+    expect(chip).toHaveAttribute('aria-pressed', 'false')
+  })
   it('right-aligns the numbers', () => {
     localStorage.setItem(DASH_VIEW_KEY, '{"history":true}'); resetDashViewStore()
     pgidStore.push(wirePgid('tx'))

@@ -271,6 +271,15 @@ describe('StreamsTab columns', () => {
     expect(chip).toHaveAttribute('aria-pressed', 'true')
     expect(container.querySelector('.overview-grid')).toHaveClass('wide')
   })
+  it('Full-width table turns off again', async () => {
+    pgidStore.push(wirePgid('tx'))
+    const { container } = renderTab()
+    const chip = screen.getByRole('button', { name: 'Full-width table' })
+    await userEvent.click(chip)
+    await userEvent.click(chip)
+    expect(chip).toHaveAttribute('aria-pressed', 'false')
+    expect(container.querySelector('.overview-grid')).not.toHaveClass('wide')
+  })
   it('Escape closes the Columns panel', async () => {
     pgidStore.push(wirePgid('tx'))
     renderTab()
