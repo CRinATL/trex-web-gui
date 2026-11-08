@@ -138,6 +138,9 @@ export function DaemonRunTab({ daemon, pushed, onModal }: { daemon: DaemonMsg | 
     if (r.still_answering) {
       const listed = r.other_pids.length > 0 ? `TRex processes still listed: pid ${r.other_pids.join(', ')}` : 'no TRex process listed'
       setNote(`The daemon's run stopped, but a TRex the daemon did not start still answers on command port ${rpcPort} (${listed}). Stop it on the host.`)
+    } else if (!r.confirmed) {
+      // an is_running read failed after the stop was sent: running true then means "could not tell"
+      setNote('The stop was sent, but the daemon stopped answering, so the GUI could not confirm TRex stopped.')
     } else setNote(r.running ? 'TRex is still running after the stop.' : null)
   }
   // Force stop's owners_unknown asks once more; any other refusal stays in the first confirmation.
