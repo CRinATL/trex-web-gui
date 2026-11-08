@@ -1,4 +1,4 @@
-import { useRef, useState, useSyncExternalStore, type KeyboardEvent, type MouseEvent } from 'react'
+import { useId, useRef, useState, useSyncExternalStore, type KeyboardEvent, type MouseEvent } from 'react'
 import { ApiError, type DiffReply, type SidecarEntry, type StreamJson, type StreamPage, type StreamRow, type StreamsDiff } from '../../api'
 import { humanBps, humanPps } from '../../statsFormat'
 import { copyStreams, pastedEntries, pastedStreams } from './streamClipboard'
@@ -45,6 +45,9 @@ function rateText(r: StreamJson['mode']['rate']): string {
 // `history` (D11, owned by the editor, which also records its own writes in it): Undo and Redo send the inverse diff
 // through `writer`, only while no write is queued or in flight and no index-shifting one is out; an entry is pushed only
 // after its write resolved OK.
+// It is a multi-select grid (one tab stop, aria-activedescendant naming the active row) so the keyboard alone selects: the
+// arrows, Home and End select one row, with Shift they extend from the anchor, with Ctrl they move the active row alone,
+// and Space adds that row to the selection or takes it out (the WAI-ARIA multi-select pattern). They stay on this page.
 // `pinned`: the packet pane holds unsaved edits, and a write that moves the selection (or the open stream's index) would
 // unmount them; the actions that do are off, with this as their title.
 export const PINNED = 'The packet has unsaved edits: save or cancel them first.'
@@ -66,10 +69,15 @@ export function StreamTable({ page, selection, onSelect, writer, history, onWrit
   // A toggled checkbox shows its new state until the next page read; kept per page object, so a read clears it.
   const [enabledNow, setEnabledNow] = useState<{ page: StreamPage; values: Record<number, boolean> }>({ page, values: {} })
   const anchor = useRef<number | null>(null)
+  // The active row, kept per page object like enabledNow, so a page read drops it for the last selected row.
+  const [activeNow, setActiveNow] = useState<{ page: StreamPage; index: number } | null>(null)
+  const rowId = `${useId()}-row-`
   const tableRef = useRef<HTMLTableElement>(null)
   const count = page.stream_count
   const sel = selection.filter((i) => page.rows.some((r) => r.index === i))
   const selectedRows = page.rows.filter((r) => sel.includes(r.index))
+  const active = activeNow?.page === page && page.rows.some((r) => r.index === activeNow.index) ? activeNow.index : (sel.at(-1) ?? null)
+  const activate = (index: number) => setActiveNow({ page, index })
   const enabledOf = (r: StreamRow) => (enabledNow.page === page ? enabledNow.values[r.index] : undefined) ?? r.stream.enabled
 
   // One write. A stale or gone writer is the editor's alert, so it is not repeated here as an error line.
@@ -95,6 +103,7 @@ export function StreamTable({ page, selection, onSelect, writer, history, onWrit
 
   function click(e: MouseEvent, index: number) {
     if (locked) return
+    activate(index)
     if (e.shiftKey && anchor.current !== null) {
       const [lo, hi] = [Math.min(anchor.current, index), Math.max(anchor.current, index)]
       onSelect(range(lo, hi - lo + 1))
@@ -237,6 +246,40 @@ export function StreamTable({ page, selection, onSelect, writer, history, onWrit
     }
   }
 
+  // The arrows, Home and End (`to`: the row they reach on this page), and Space on the table itself; see the header.
+  function navigate(e: KeyboardEvent<HTMLTableElement>, to: number | null): boolean {
+    const ctrl = e.ctrlKey || e.metaKey
+    if (to === null) {
+      if (active === null || e.target !== e.currentTarget) return false   // Space on a checkbox is the checkbox's
+      anchor.current = active
+      onSelect(sel.includes(active) ? sel.filter((i) => i !== active) : [...sel, active])
+      return true
+    }
+    activate(to)
+    document.getElementById(rowId + to)?.scrollIntoView?.({ block: 'nearest' })
+    if (ctrl) return true
+    if (e.shiftKey && anchor.current !== null) {
+      const [lo, hi] = [Math.min(anchor.current, to), Math.max(anchor.current, to)]
+      onSelect(range(lo, hi - lo + 1))
+      return true
+    }
+    anchor.current = to
+    onSelect([to])
+    return true
+  }
+  // The row an arrow, Home or End reaches from the active one; with none active, ArrowDown starts at the first row and
+  // ArrowUp at the last. Undefined for any other key.
+  function target(key: string): number | undefined {
+    const rows = page.rows.map((r) => r.index)
+    if (rows.length === 0) return undefined
+    const at = active === null ? -1 : rows.indexOf(active)
+    if (key === 'Home') return rows[0]
+    if (key === 'End') return rows[rows.length - 1]
+    if (key === 'ArrowDown') return rows[Math.min(at + 1, rows.length - 1)]
+    if (key === 'ArrowUp') return at < 0 ? rows[rows.length - 1] : rows[Math.max(at - 1, 0)]
+    return undefined
+  }
+
   function onKey(e: KeyboardEvent<HTMLTableElement>) {
     const typing = e.target instanceof HTMLInputElement && e.target.type !== 'checkbox'
     if (locked || renaming || typing) return
@@ -252,6 +295,8 @@ export function StreamTable({ page, selection, onSelect, writer, history, onWrit
     else if (ctrl && key === 'v') { if (!asking && !pinned) paste() }
     else if (e.key === 'Delete') { if (!asking && !pinned && sel.length) ask([...sel]) }
     else if (e.key === 'F2') startRename()
+    else if (!e.altKey && target(e.key) !== undefined) navigate(e, target(e.key) as number)
+    else if (e.key === ' ' && !e.altKey) handled = navigate(e, null)
     else handled = false
     if (handled) e.preventDefault()
   }
@@ -284,31 +329,32 @@ export function StreamTable({ page, selection, onSelect, writer, history, onWrit
       ))}
       <div className="stream-table-frame">
       <div className="stream-table-scroll">
-        <table className="stream-table" aria-label="Streams" tabIndex={0} ref={tableRef} onKeyDown={onKey}>
+        <table className="stream-table" role="grid" aria-label="Streams" aria-multiselectable="true" tabIndex={0} ref={tableRef} onKeyDown={onKey}
+          aria-activedescendant={active === null ? undefined : rowId + active}>
           <thead>
-            <tr><th>Enabled</th><th>#</th><th>Name</th><th>Packet</th><th>Length (with FCS)</th><th>Mode</th><th>Rate</th><th>Next</th><th aria-hidden="true" /></tr>
+            <tr role="row"><th role="columnheader">Enabled</th><th role="columnheader">#</th><th role="columnheader">Name</th><th role="columnheader">Packet</th><th role="columnheader">Length (with FCS)</th><th role="columnheader">Mode</th><th role="columnheader">Rate</th><th role="columnheader">Next</th><th role="columnheader" aria-hidden="true" /></tr>
           </thead>
           <tbody>
             {page.rows.map((r) => (
-              <tr key={r.index} aria-selected={sel.includes(r.index)} data-open={sel.length === 1 && sel[0] === r.index ? 'true' : undefined} onClick={(e) => click(e, r.index)}>
-                <td><input type="checkbox" aria-label={`Enabled ${label(r.stream, r.index)}`} checked={enabledOf(r)} disabled={locked}
+              <tr key={r.index} role="row" id={rowId + r.index} aria-selected={sel.includes(r.index)} data-active={active === r.index ? 'true' : undefined} data-open={sel.length === 1 && sel[0] === r.index ? 'true' : undefined} onClick={(e) => click(e, r.index)}>
+                <td role="gridcell"><input type="checkbox" aria-label={`Enabled ${label(r.stream, r.index)}`} checked={enabledOf(r)} disabled={locked}
                   onClick={(e) => e.stopPropagation()} onChange={() => toggle(r)} /></td>
-                <td>{r.index}</td>
+                <td role="gridcell">{r.index}</td>
                 {renaming?.index === r.index ? (
-                  <td><input autoFocus aria-label={`Name of stream ${r.index}`} value={renaming.text} onClick={(e) => e.stopPropagation()}
+                  <td role="gridcell"><input autoFocus aria-label={`Name of stream ${r.index}`} value={renaming.text} onClick={(e) => e.stopPropagation()}
                     onChange={(e) => setRenaming({ index: r.index, text: e.target.value })}
                     onKeyDown={(e) => { if (e.key === 'Enter') endRename(true); if (e.key === 'Escape') endRename(false); e.stopPropagation() }}
                     onBlur={() => endRename(false)} /></td>
                 ) : (
-                  <td onDoubleClick={() => { if (!locked) setRenaming({ index: r.index, text: r.stream.name === undefined ? '' : String(r.stream.name) }) }}>
+                  <td role="gridcell" onDoubleClick={() => { if (!locked) setRenaming({ index: r.index, text: r.stream.name === undefined ? '' : String(r.stream.name) }) }}>
                     {r.stream.name === undefined ? '' : String(r.stream.name)}</td>
                 )}
-                <td className={r.length === null ? 'error' : undefined}>{r.summary.proto} {r.summary.info}</td>
-                <td>{r.length === null ? '—' : r.length + 4}</td>
-                <td>{modeText(r.stream.mode)}</td>
-                <td>{rateText(r.stream.mode.rate)}</td>
-                <td>{r.stream.next === undefined ? '' : String(r.stream.next)}</td>
-                <td aria-hidden="true" className="chev">›</td>
+                <td role="gridcell" className={r.length === null ? 'error' : undefined}>{r.summary.proto} {r.summary.info}</td>
+                <td role="gridcell">{r.length === null ? '—' : r.length + 4}</td>
+                <td role="gridcell">{modeText(r.stream.mode)}</td>
+                <td role="gridcell">{rateText(r.stream.mode.rate)}</td>
+                <td role="gridcell">{r.stream.next === undefined ? '' : String(r.stream.next)}</td>
+                <td role="gridcell" aria-hidden="true" className="chev">›</td>
               </tr>
             ))}
           </tbody>
