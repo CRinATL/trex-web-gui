@@ -44,6 +44,30 @@ describe('control tokens and base rule', () => {
     expect(baseRules.length).toBeGreaterThanOrEqual(5)
     for (const r of baseRules) for (const s of r.selectors) expect(s.startsWith(':where('), s).toBe(true)
   })
+  it('the base rule sets the control height', () => {
+    const height = baseRules.filter((r) => r.selectors.every((s) => s.startsWith(':where(') && /\bbutton\b/.test(s) && /\bselect\b/.test(s)
+      && !/\btextarea\b/.test(s) && s.includes('input:not(')))   // the height rule leaves textarea to its own rows
+    expect(height.length, 'the :where rule naming button, select and the text input').toBeGreaterThanOrEqual(1)
+    for (const r of height) {
+      expect(r.body).toContain('min-height: var(--control-h)')
+      expect(r.body).toContain('padding: 0 var(--control-px)')
+    }
+  })
+  it('no unwrapped element rule for controls', () => {
+    // Drop each :where( ... ) group (balanced), then the selector may not be a bare button, select, input or textarea.
+    const unwrap = (sel: string) => {
+      let out = '', depth = 0, i = 0
+      while (i < sel.length) {
+        if (depth === 0 && sel.startsWith(':where(', i)) { depth = 1; i += 7; continue }
+        const ch = sel[i++]
+        if (depth > 0) { if (ch === '(') depth++; else if (ch === ')') depth--; continue }
+        out += ch
+      }
+      return out
+    }
+    const bare = /^(button|select|input|textarea)(:[\w-]+(\([^()]*\))?)*$/
+    for (const r of rules) for (const s of r.selectors) expect(unwrap(s).trim(), s).not.toMatch(bare)
+  })
   it('the base rule spares check boxes, radios and sliders', () => {
     const text = 'input:not([type="checkbox"], [type="radio"], [type="range"], [type="color"], [type="file"])'
     for (const r of baseRules) for (const s of r.selectors) {

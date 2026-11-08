@@ -168,6 +168,17 @@ describe('Toolbar', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Resume' }))
     expect(resume).toHaveBeenCalledWith({ ports: [0] })
   })
+  it('one solid run button per group: Pause is quiet while transmitting, Stop while paused', () => {
+    const tx = render(<Toolbar ports={[port(0, { owned: true, state: 'TX', profiles: { _: 'TX' } })]} selection={{ kind: 'port', id: 0 }} readOnly={false} connected onError={() => undefined} />)
+    expect(screen.getByRole('button', { name: 'Pause' })).toHaveAttribute('data-quiet')
+    expect(screen.getByRole('button', { name: 'Stop' })).not.toHaveAttribute('data-quiet')
+    expect(screen.getByRole('button', { name: 'Stop' })).toHaveAttribute('data-run', 'stop')
+    tx.unmount()
+    render(<Toolbar ports={[port(0, { owned: true, state: 'PAUSE', profiles: { _: 'PAUSE' } })]} selection={{ kind: 'port', id: 0 }} readOnly={false} connected onError={() => undefined} />)
+    expect(screen.getByRole('button', { name: 'Resume' })).not.toHaveAttribute('data-quiet')
+    expect(screen.getByRole('button', { name: 'Stop' })).toHaveAttribute('data-quiet')
+    expect(screen.getByRole('button', { name: 'Stop' })).toHaveAttribute('data-run', 'stop')
+  })
   it('Pause and Stop drop a pending update', async () => {
     vi.spyOn(api, 'pause').mockResolvedValue({ ports: [] })
     vi.spyOn(api, 'stop').mockResolvedValue({ ports: [] })

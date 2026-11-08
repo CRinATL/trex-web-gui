@@ -46,8 +46,8 @@ export function Toolbar({ ports, selection, readOnly, connected, statsConnected 
     if (!a?.enabled) return
     void guarded(() => { before?.(); return a.run() })
   }
-  const act = (label: string, a: MenuAction | undefined, before?: () => void, title?: string, kind?: RunKind) => kind
-    ? <RunButton kind={kind} disabled={!a?.enabled || busy} title={title} onClick={() => run(a, before)}>{label}</RunButton>
+  const act = (label: string, a: MenuAction | undefined, before?: () => void, title?: string, kind?: RunKind, quiet = false) => kind
+    ? <RunButton kind={kind} quiet={quiet} disabled={!a?.enabled || busy} title={title} onClick={() => run(a, before)}>{label}</RunButton>
     : <button type="button" disabled={!a?.enabled || busy} title={title} onClick={() => run(a, before)}>{label}</button>
   const noPort = portId === null ? 'Select a port' : undefined
   const mine = portId === null ? [] : [portId]
@@ -78,8 +78,9 @@ export function Toolbar({ ports, selection, readOnly, connected, statsConnected 
         <RunButton kind={paused ? 'hold' : 'go'} lit={sending || paused} litLabel={paused ? 'Paused' : 'Transmitting'}
           fits={['Transmitting', 'Paused']} disabled={!start?.enabled || busy}
           title={noPort ?? (sending || paused ? `Port ${portId} is ${paused ? 'paused' : 'transmitting'}` : startSummary(form))} onClick={doStart}>Start</RunButton>
-        {act(paused ? 'Resume' : 'Pause', toggle, paused ? undefined : () => dropPending(mine), noPort, paused ? 'go' : 'hold')}
-        {act('Stop', find(onSelection, 'stop'), () => dropPending(mine), noPort, 'stop')}
+        {act(paused ? 'Resume' : 'Pause', toggle, paused ? undefined : () => dropPending(mine), noPort, paused ? 'go' : 'hold', sending)}
+        {/* one solid button per group: Stop is the step while transmitting (Pause is quiet), Resume while paused (Stop is quiet) */}
+        {act('Stop', find(onSelection, 'stop'), () => dropPending(mine), noPort, 'stop', paused)}
         {act(sel?.owned ? 'Release' : 'Acquire', ownership, undefined, noPort)}
       </div>
       <div role="group" aria-label="All ports" className="tb-group">
