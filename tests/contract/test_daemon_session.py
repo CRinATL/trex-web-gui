@@ -490,6 +490,88 @@ def test_force_stop_calls_the_hooks(fake_daemon: Any, fake_trex: Any) -> None:
     drive(body, hooks=hooks)
 
 
+def warnings_of(rec: Recorder) -> list[dict[str, Any]]:
+    """The warning-level `log` messages recorded so far."""
+    return [m for m in rec.msgs if m["type"] == "log" and m["level"] == "warning"]
+
+
+async def other_client(d: Any, *calls: Callable[[DaemonClient], Any]) -> None:
+    """Make `calls` from a second DaemonClient, off the loop, as another client of the daemon would."""
+    c = DaemonClient(d.host, d.port)
+    for call in calls:
+        await asyncio.to_thread(call, c)
+
+
+def test_force_stop_with_our_seq_sends_force_trex_kill(fake_daemon: Any, fake_trex: Any) -> None:
+    """Force stop while this backend holds a seq kills with force_trex_kill, never stop_trex(seq)
+    (p5-monitor-daemon-174)."""
+    d, f = fake_daemon(), fake_trex()
+
+    async def body(s: DaemonSession, rec: Recorder) -> None:
+        """Connect, start stateless, Force stop."""
+        await s.connect(d.host, d.port)
+        await s.start(CFG, {}, "", 20, True, None, f.rpc_port)
+        out = await s.stop(f.rpc_port, True, force=True)
+        assert out["running"] is False
+        assert d.methods().count("force_trex_kill") == 1
+        assert "stop_trex" not in d.methods()
+    drive(body)
+
+
+def test_force_stop_with_our_seq_and_the_ack_logs_the_warning(fake_daemon: Any) -> None:
+    """Force stop with the ack while a seq is held publishes the owners_unknown_ack warning and kills once."""
+    d = fake_daemon()
+    dead = free_port()
+
+    async def body(s: DaemonSession, rec: Recorder) -> None:
+        """Connect, start stateless, Force stop with the ack on an unreadable port."""
+        await s.connect(d.host, d.port)
+        await s.start(CFG, {}, "", 20, True)
+        await s.stop(dead, True, force=True, owners_unknown_ack=True)
+        logs = warnings_of(rec)
+        assert len(logs) == 1 and "owners_unknown_ack" in logs[0]["message"]
+        assert f"{d.host}:{dead}" in logs[0]["message"]
+        assert d.methods().count("force_trex_kill") == 1
+    drive(body)
+
+
+def test_force_stop_with_a_stale_seq_kills_the_new_run(fake_daemon: Any, fake_trex: Any,
+                                                       monkeypatch: pytest.MonkeyPatch) -> None:
+    """Our run ended and another client started one before a poll cleared our seq: Force stop kills that run
+    (stop_trex with the stale seq would be refused -33)."""
+    monkeypatch.setattr(session_mod, "POLL_S", 60.0)
+    d, f = fake_daemon(), fake_trex()
+
+    async def body(s: DaemonSession, rec: Recorder) -> None:
+        """Connect, start, let another client replace the run, Force stop."""
+        await s.connect(d.host, d.port)
+        await s.start(CFG, {}, "", 20, True)
+        await other_client(d, lambda c: c.force_trex_kill(), lambda c: c.start_trex(CFG, {}, "other", 20, ""))
+        out = await s.stop(f.rpc_port, True, force=True)
+        assert out["running"] is False
+        assert "stop_trex" not in d.methods()
+        assert DaemonClient(d.host, d.port).is_running() is False
+    drive(body)
+
+
+def test_force_stop_with_a_held_seq_and_the_daemon_idle_is_refused_first(
+        fake_daemon: Any, fake_trex: Any, monkeypatch: pytest.MonkeyPatch) -> None:
+    """A held seq whose run already ended (the daemon Idle, no poll since): Force stop is not_daemon_run before
+    any stopping call, so the hooks hear nothing."""
+    monkeypatch.setattr(session_mod, "POLL_S", 60.0)
+    d, f, hooks = fake_daemon(), fake_trex(), Hooks()
+
+    async def body(s: DaemonSession, rec: Recorder) -> None:
+        """Connect, start, let another client end the run, Force stop."""
+        await s.connect(d.host, d.port)
+        await s.start(CFG, {}, "", 20, True)
+        await other_client(d, lambda c: c.force_trex_kill())
+        await refused(s.stop(f.rpc_port, True, force=True), "not_daemon_run")
+        assert "expect" not in hooks.calls
+        assert d.methods().count("force_trex_kill") == 1
+    drive(body, hooks=hooks)
+
+
 def test_start_tells_the_hooks(fake_daemon: Any) -> None:
     """A stateless start reports the daemon, the command port the caller gave, the mode and the timeout."""
     d, hooks = fake_daemon(), Hooks()
