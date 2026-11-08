@@ -227,4 +227,13 @@ describe('LatencyTab table', () => {
     render(<LatencyTab />)
     expect(screen.getByText('No streams with latency are active.')).toBeInTheDocument()
   })
+  it('shows no table controls with the empty-state message', () => {
+    const m = wirePgid('tx')
+    m.active.latency = []
+    pgidStore.push(m)
+    render(<LatencyTab />)
+    expect(screen.getByText('No streams with latency are active.')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Show history (Last … Last-9)' })).toBeNull()
+    expect(screen.queryByRole('button', { name: 'Full-width table' })).toBeNull()
+  })
 })

@@ -18,8 +18,8 @@ export const DASH_VIEW_DEFAULTS: DashView = Object.freeze({
   streamsWindowS: DEFAULT_INTERVAL, latencyWindowS: DEFAULT_INTERVAL,
 })
 
-const STREAMS_METRICS: readonly string[] = ['tx_pps', 'rx_pps', 'tx_bps_l1', 'tx_bps', 'rx_bps', 'loss_pps']
-const LATENCY_METRICS: readonly string[] = ['lat_avg', 'lat_max', 'lat_last_max', 'lat_jitter']
+const STREAMS_METRICS: readonly SeriesKey[] = ['tx_pps', 'rx_pps', 'tx_bps_l1', 'tx_bps', 'rx_bps', 'loss_pps']
+const LATENCY_METRICS: readonly SeriesKey[] = ['lat_avg', 'lat_max', 'lat_last_max', 'lat_jitter']
 
 // Validate one stored object field by field: each bad field takes its default.
 function sanitize(raw: unknown): DashView {
@@ -32,7 +32,7 @@ function sanitize(raw: unknown): DashView {
   const overviewSeries = Array.isArray(o) && o.length === DEFAULT_CHARTS.length && o.every((e) => typeof e === 'string')
     ? Object.freeze(o.map((e: string, i) => (ids.has(e) ? e : DEFAULT_CHARTS[i])))
     : d.overviewSeries
-  const pick = (v: unknown, allowed: readonly string[], dflt: SeriesKey) => (typeof v === 'string' && allowed.includes(v) ? (v as SeriesKey) : dflt)
+  const pick = (v: unknown, allowed: readonly SeriesKey[], dflt: SeriesKey) => allowed.find((a) => a === v) ?? dflt
   const win = (v: unknown, dflt: number) => ((INTERVALS as readonly unknown[]).includes(v) ? (v as number) : dflt)
   return {
     bitRates: bool('bitRates'), counters: bool('counters'), history: bool('history'), wide: bool('wide'),

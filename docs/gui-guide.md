@@ -725,7 +725,7 @@ has its own legend under it, with no standing time entry (hovering adds the time
 - **Charts**:
   - **Interval** (60, 90, 120, 300 s) and **Layout** (1, 2 or 4 charts).
   - Each chart's caption is its series select (Tx pps, Rx pps, Tx bps L2, Rx bps L2, Tx bps L1, Rx bps L1) over the
-    Total.
+    Total. Each chart's series choice is kept per browser.
   - Defaults: 60 s, 2 charts, Tx pps and Rx pps.
 
 ### 6.2 Streams
@@ -739,7 +739,7 @@ Per-stream (PG ID) flow statistics; needs streams with flow stats or latency
   bps L1 and L2) and **Packet and byte counters** (Tx/Rx pkts and bytes, `since the stream was added, or Clear`). The
   chart's Metric select still offers the bit rates when the columns are hidden.
 - **Full-width table** (shared with Latency) stacks the chart under the table so the table uses the whole width.
-- The column choice, Full-width table, the chart's series and metric and the Streams and Latency intervals are saved
+- The column choice, Full-width table, the chart's metric and interval and the Streams and Latency intervals are saved
   per browser (see section 15).
 - A **Page** select above 100 ids.
 - `Showing the first 1151 of N streams` when the backend caps the ids it reads.
