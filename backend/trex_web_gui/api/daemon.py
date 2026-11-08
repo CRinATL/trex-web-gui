@@ -242,9 +242,9 @@ def daemon_router(daemon: Callable[[], DaemonSession]) -> APIRouter:
     @router.post("/api/daemon/stop", response_model=None, responses=answers(*DAEMON_ANSWERS))
     async def stop(b: StopBody) -> Any:
         """Stop (or, with `force`, Force stop) TRex; needs confirm; returns {running, stop_s, other_pids}:
-        `other_pids` lists the TRex processes still running when, after the daemon's run ended, a TRex the
-        daemon did not start still answers on `rpc_port` (Control is then not told TRex stopped), else
-        []. 409 with
+        `other_pids` lists the TRex processes still running when, after the daemon's run ended, a TRex
+        the daemon did not start still answers on `rpc_port` (Control is then not told TRex stopped),
+        else []. 409 with
         `confirm_required`, `not_connected` (no daemon connection), `busy` (another daemon operation is in
         flight), `not_ours` (Stop when this backend holds no run, or a stateful run it did not start),
         `owners_unknown` (the port owners cannot be read; Force stop lifts it with
