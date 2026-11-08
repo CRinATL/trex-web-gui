@@ -166,7 +166,7 @@ async def _answer(make: Callable[[], Any]) -> Any:
         out = make()
         return await out if inspect.isawaitable(out) else out
     except DaemonRefused as e:
-        return err(409, e.code, e.message)
+        return err(409, e.code, e.message, e.extra)
     except DaemonUnreachable as e:
         return err(502, "daemon_unreachable", e.message)
     except DaemonFault as e:
@@ -247,10 +247,11 @@ def daemon_router(daemon: Callable[[], DaemonSession]) -> APIRouter:
         else []. 409 with
         `confirm_required`, `not_connected` (no daemon connection), `busy` (another daemon operation is in
         flight), `not_ours` (Stop when this backend holds no run, or a stateful run it did not start),
-        `owners_unknown` (the port owners cannot be read; Force stop lifts it with
-        `owners_unknown_ack`), `in_use` (another user owns a port; never lifted), or `not_daemon_run` (Force
-        stop while the daemon has no run of its own: a TRex started by hand, which the daemon cannot stop;
-        answered first, before any port owner read or `owners_unknown_ack`).
+        `owners_unknown` (the port owners cannot be read, the body carrying `stf: true` when a stateful run
+        has no command port to read them from; Force stop lifts it with `owners_unknown_ack`), `in_use`
+        (another user owns a port; never lifted), or `not_daemon_run` (Force stop while the daemon has no
+        run of its own: a TRex started by hand, which the daemon cannot stop; answered first, before any
+        port owner read or `owners_unknown_ack`).
         502 when the daemon cannot be reached or faults."""
         return await _answer(lambda: daemon().stop(b.rpc_port, b.confirm, b.force, b.owners_unknown_ack))
 

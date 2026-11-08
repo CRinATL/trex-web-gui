@@ -1035,7 +1035,7 @@ def test_force_stop_of_a_foreign_stf_run_needs_the_ack(fake_daemon: Any) -> None
         await s.connect(d.host, d.port)
         await refused(s.stop(dead, True), "not_ours")
         e = await refused(s.stop(dead, True, force=True), "owners_unknown")
-        assert "stateful" in e.message
+        assert "stateful" in e.message and e.extra == {"stf": True}
         assert "force_trex_kill" not in d.methods()
         await s.stop(dead, True, force=True, owners_unknown_ack=True)
         assert d.methods().count("force_trex_kill") == 1

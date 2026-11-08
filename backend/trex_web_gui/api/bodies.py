@@ -1,5 +1,7 @@
 """Request-body helpers shared by the routes: the JSON error shape and a size-capped JSON read."""
 import json
+from collections.abc import Mapping
+from typing import Any
 
 from fastapi import Request
 from fastapi.responses import JSONResponse
@@ -7,9 +9,9 @@ from fastapi.responses import JSONResponse
 from trex_web_gui.api.declared import Item
 
 
-def err(status: int, code: str, message: str) -> JSONResponse:
-    """A JSON error response, `{error: code, message}`, with HTTP status `status`."""
-    return JSONResponse({"error": code, "message": message}, status_code=status)
+def err(status: int, code: str, message: str, extra: Mapping[str, Any] | None = None) -> JSONResponse:
+    """A JSON error response, `{error: code, message}` plus any `extra` fields, with HTTP status `status`."""
+    return JSONResponse({**(extra or {}), "error": code, "message": message}, status_code=status)
 
 
 # What a route that reads its body with `read_json_capped` declares (the 411, 413 and 422 it raises).

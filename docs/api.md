@@ -691,10 +691,11 @@ the daemon did not start still answers on `rpc_port` (Control is then not told T
 else []. 409 with
 `confirm_required`, `not_connected` (no daemon connection), `busy` (another daemon operation is in
 flight), `not_ours` (Stop when this backend holds no run, or a stateful run it did not start),
-`owners_unknown` (the port owners cannot be read; Force stop lifts it with
-`owners_unknown_ack`), `in_use` (another user owns a port; never lifted), or `not_daemon_run` (Force
-stop while the daemon has no run of its own: a TRex started by hand, which the daemon cannot stop;
-answered first, before any port owner read or `owners_unknown_ack`).
+`owners_unknown` (the port owners cannot be read, the body carrying `stf: true` when a stateful run
+has no command port to read them from; Force stop lifts it with `owners_unknown_ack`), `in_use`
+(another user owns a port; never lifted), or `not_daemon_run` (Force stop while the daemon has no
+run of its own: a TRex started by hand, which the daemon cannot stop; answered first, before any
+port owner read or `owners_unknown_ack`).
 502 when the daemon cannot be reached or faults.
 
 **Request body** (`application/json`, schema `StopBody`)
