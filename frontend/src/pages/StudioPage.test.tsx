@@ -32,7 +32,7 @@ async function dirtyProfile(ui: (active: boolean) => ReactElement, beforeEdit?: 
   const view = render(ui(true))
   await user.click(await screen.findByRole('option', { name: /udp_for_benchmarks/ }))
   await beforeEdit?.(user)
-  await user.click(await screen.findByRole('cell', { name: '0' }))
+  await user.click(await screen.findByRole('gridcell', { name: '0' }))
   await user.click(within(screen.getByRole('tablist', { name: 'Stream' })).getByRole('tab', { name: 'Stream packet' }))
   await user.click(screen.getByRole('button', { name: 'Edit packet' }))
   await vi.waitFor(() => expect(document.querySelector('.layer-list')).not.toBeNull())

@@ -1,4 +1,4 @@
-import { cleanup, render, screen, within } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import * as api from '../../api'
@@ -30,13 +30,13 @@ async function open(first: StreamPage, ...later: StreamPage[]) {
   const put = vi.spyOn(api, 'putStreams').mockResolvedValue(reply())
   const onChanged = vi.fn()
   render(<ProfileEditor entry={entry} onChanged={onChanged} />)
-  await screen.findByRole('table', { name: 'Streams' })
+  await screen.findByRole('grid', { name: 'Streams' })
   return { get, put, onChanged, user: userEvent.setup() }
 }
 // The Name cell (column 2): a stream's name also appears in another's Next cell.
-const nameCell = (name: string) => screen.getAllByRole('cell', { name }).find((c) => (c as HTMLTableCellElement).cellIndex === 2) as HTMLElement
+const nameCell = (name: string) => screen.getAllByRole('gridcell', { name }).find((c) => (c as HTMLTableCellElement).cellIndex === 2) as HTMLElement
 const rowOf = (name: string) => nameCell(name).closest('tr') as HTMLElement
-const table = () => screen.getByRole('table', { name: 'Streams' })
+const table = () => screen.getByRole('grid', { name: 'Streams' })
 
 describe('StreamTable', () => {
   it('warns, once per pair, of an enabled stream whose Next is disabled, and shows nothing otherwise', async () => {
@@ -120,6 +120,90 @@ describe('StreamTable', () => {
     expect(rowOf('a')).toHaveAttribute('aria-selected', 'true')
     expect(rowOf('b')).toHaveAttribute('aria-selected', 'false')
     expect(table()).toHaveFocus()
+    expect(table()).toHaveAttribute('aria-activedescendant', rowOf('a').id)     // the page read dropped the old index 0
+  })
+
+  it('is a multi-select grid whose active row is the one last clicked', async () => {
+    const { user } = await open(pageOf([stream('a'), stream('b')]))
+    expect(table()).toHaveAttribute('aria-multiselectable', 'true')
+    expect(table()).not.toHaveAttribute('aria-activedescendant')
+    await user.click(nameCell('b'))
+    expect(table()).toHaveAttribute('aria-activedescendant', rowOf('b').id)
+    expect(rowOf('b')).toHaveAttribute('data-active', 'true')
+    expect(rowOf('a')).not.toHaveAttribute('data-active')
+  })
+
+  it('arrow keys select the next or previous row, Home and End the first or last, stopping at the ends', async () => {
+    const { put, user } = await open(pageOf([stream('a'), stream('b'), stream('c')]))
+    const selected = () => ['a', 'b', 'c'].filter((n) => rowOf(n).getAttribute('aria-selected') === 'true')
+    table().focus()
+    await user.keyboard('{ArrowDown}')                          // nothing selected: the first row
+    expect(selected()).toEqual(['a'])
+    await user.keyboard('{ArrowDown}')
+    expect(selected()).toEqual(['b'])
+    expect(table()).toHaveAttribute('aria-activedescendant', rowOf('b').id)
+    await user.keyboard('{ArrowUp}{ArrowUp}')                   // the first row stays
+    expect(selected()).toEqual(['a'])
+    expect(fireEvent.keyDown(table(), { key: 'ArrowUp' })).toBe(false)
+    await user.keyboard('{End}')
+    expect(selected()).toEqual(['c'])
+    await user.keyboard('{ArrowDown}')                          // the last row stays
+    expect(selected()).toEqual(['c'])
+    expect(fireEvent.keyDown(table(), { key: 'ArrowDown' })).toBe(false)   // still handled, so the page does not scroll
+    await user.keyboard('{Home}')
+    expect(selected()).toEqual(['a'])
+    expect(put).not.toHaveBeenCalled()
+    expect(table()).toHaveFocus()
+  })
+
+  it('ArrowUp with nothing selected selects the last row', async () => {
+    const { user } = await open(pageOf([stream('a'), stream('b'), stream('c')]))
+    table().focus()
+    await user.keyboard('{ArrowUp}')
+    expect(rowOf('c')).toHaveAttribute('aria-selected', 'true')
+    expect(rowOf('a')).toHaveAttribute('aria-selected', 'false')
+  })
+
+  it('Shift with an arrow, Home or End extends the selection from the anchor', async () => {
+    const { user } = await open(pageOf([stream('a'), stream('b'), stream('c'), stream('d')]))
+    const selected = () => ['a', 'b', 'c', 'd'].filter((n) => rowOf(n).getAttribute('aria-selected') === 'true')
+    await user.click(nameCell('b'))
+    await user.keyboard('{Shift>}{ArrowDown}{ArrowDown}{/Shift}')
+    expect(selected()).toEqual(['b', 'c', 'd'])
+    await user.keyboard('{Shift>}{ArrowUp}{/Shift}')
+    expect(selected()).toEqual(['b', 'c'])
+    await user.keyboard('{Shift>}{Home}{/Shift}')
+    expect(selected()).toEqual(['a', 'b'])
+    await user.keyboard('{Shift>}{End}{/Shift}')
+    expect(selected()).toEqual(['b', 'c', 'd'])
+    expect(table()).toHaveAttribute('aria-activedescendant', rowOf('d').id)
+  })
+
+  it('Ctrl with an arrow moves the active row alone, and Space adds it to the selection or takes it out', async () => {
+    const { user } = await open(pageOf([stream('a'), stream('b'), stream('c')]))
+    const selected = () => ['a', 'b', 'c'].filter((n) => rowOf(n).getAttribute('aria-selected') === 'true')
+    await user.click(nameCell('a'))
+    await user.keyboard('{Control>}{ArrowDown}{ArrowDown}{/Control}')
+    expect(selected()).toEqual(['a'])
+    expect(table()).toHaveAttribute('aria-activedescendant', rowOf('c').id)
+    await user.keyboard(' ')
+    expect(selected()).toEqual(['a', 'c'])
+    await user.keyboard('{Shift>}{ArrowUp}{/Shift}')           // Space set the anchor: c to b
+    expect(selected()).toEqual(['b', 'c'])
+    await user.keyboard('{Control>}{ArrowUp}{/Control} ')
+    expect(selected()).toEqual(['b', 'c', 'a'].sort())
+    await user.keyboard(' ')
+    expect(selected()).toEqual(['b', 'c'])
+  })
+
+  it('Space on an Enabled checkbox toggles the checkbox, not the row\'s selection', async () => {
+    const { put, user } = await open(pageOf([stream('a'), stream('b')]))
+    await user.click(nameCell('a'))
+    screen.getByRole('checkbox', { name: 'Enabled b' }).focus()
+    await user.keyboard(' ')
+    expect(put).toHaveBeenCalledWith('p', { rev: 'r0', changed: { 1: { enabled: false } } })
+    expect(rowOf('a')).toHaveAttribute('aria-selected', 'true')
+    expect(rowOf('b')).toHaveAttribute('aria-selected', 'false')
   })
 
   it('Ctrl+C then Ctrl+V pastes after the selection and reports renames', async () => {
@@ -185,7 +269,7 @@ describe('StreamTable', () => {
     expect(rowOf('b')).toHaveAttribute('aria-selected', 'true')
     const tryEverything = async () => {
       table().focus()
-      await user.keyboard('{Delete}{Alt>}{ArrowUp}{/Alt}{Alt>}{ArrowDown}{/Alt}{Control>}v{/Control}{F2}')
+      await user.keyboard('{Delete}{Alt>}{ArrowUp}{/Alt}{Alt>}{ArrowDown}{/Alt}{Control>}v{/Control}{F2}{ArrowDown}{Shift>}{ArrowDown}{/Shift}{End}')
       await user.dblClick(nameCell('c'))
       await user.click(screen.getByRole('checkbox', { name: 'Enabled d' }))
       await user.click(nameCell('c'))
@@ -253,8 +337,10 @@ describe('StreamTable', () => {
     await user.click(nameCell('a'))
     await user.keyboard('{Control>}c{/Control}')
     screen.getByRole('button', { name: 'Add stream' }).focus()
-    await user.keyboard('{Delete}{Alt>}{ArrowDown}{/Alt}{Control>}v{/Control}{F2}')
+    await user.keyboard('{Delete}{Alt>}{ArrowDown}{/Alt}{Control>}v{/Control}{F2}{ArrowDown}{End}')
     expect(put).not.toHaveBeenCalled()
+    expect(rowOf('a')).toHaveAttribute('aria-selected', 'true')
+    expect(rowOf('b')).toHaveAttribute('aria-selected', 'false')
     expect(screen.queryByRole('group', { name: 'Delete streams' })).not.toBeInTheDocument()
     expect(screen.queryByRole('textbox', { name: /^Name of stream/ })).not.toBeInTheDocument()
   })
@@ -293,7 +379,7 @@ describe('StreamTable', () => {
     const heads = screen.getAllByRole('columnheader').map((h) => h.textContent)
     expect(heads).toEqual(['Enabled', '#', 'Name', 'Packet', 'Length (with FCS)', 'Mode', 'Rate', 'Next'])
     expect(rowOf('a')).toHaveTextContent('0aUDP Ether / IP / UDP a64single burst, 10 pkts10 ppsb')
-    expect(within(rowOf('b')).getAllByRole('cell')[4]).toHaveTextContent('—')
+    expect(within(rowOf('b')).getAllByRole('gridcell')[4]).toHaveTextContent('—')
     expect(rowOf('b')).toHaveTextContent('no usable packet (Error: bad)')
   })
 
@@ -398,7 +484,7 @@ describe('StreamTable', () => {
       expect(undoBtn()).toBeDisabled()
       expect(undoBtn()).not.toHaveAttribute('title')
       await user.click(screen.getByRole('button', { name: 'Reload' }))
-      await screen.findByRole('table', { name: 'Streams' })
+      await screen.findByRole('grid', { name: 'Streams' })
       expect(undoBtn()).toBeDisabled()
       expect(redoBtn()).toBeDisabled()
     })

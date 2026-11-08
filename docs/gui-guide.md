@@ -1013,7 +1013,10 @@ deleted elsewhere. Reload library`.
   Ctrl+Shift+Z, Alt+↑/↓, Ctrl+C, Ctrl+V, Delete, F2 (rename).
 - Columns **Enabled** (a checkbox, saved at once), **#**, **Name** (double-click or F2 renames inline; every `next`
   that named the stream follows), **Packet**, **Length (with FCS)**, **Mode**, **Rate**, **Next**.
-- Click, Ctrl+click and Shift+click select.
+- Click, Ctrl+click and Shift+click select. From the keyboard, while the table has focus: ↑/↓ select the previous or
+  next row, Home/End the first or last on the page; with Shift they extend the selection, with Ctrl they move only the
+  active row (a dashed outline), and Space adds that row to the selection or takes it out. They stay on the page. The
+  table is marked up as an ARIA grid that allows several selected rows, each carrying `aria-selected`.
 - 100 rows per page: **Previous**, `rows a–b of N`, **Next**.
 - A write that moves indices locks the table until the page has been read back.
 - Notices:
@@ -1680,6 +1683,7 @@ A port held under your own user name by another session reads `Port N is held by
 | the setups list, the library list | ↑/↓, Home, End | move |
 | the capture packet table | ↑/↓, Enter | select, open the viewer |
 | the stream table (focused) | Ctrl+C, Ctrl+V, Delete, F2, Alt+↑/↓, Ctrl+Z, Ctrl+Y or Ctrl+Shift+Z | copy, paste, delete, rename, move, undo, redo |
+| the stream table (focused) | ↑/↓, Home/End, Shift+↑/↓/Home/End, Ctrl+↑/↓, Space | select a row, extend the selection, move the active row, add or remove it |
 | the packet editor | Ctrl+Z; Ctrl+Y, Ctrl+Shift+Z or Ctrl+R; Ctrl+D | undo; redo; delete the layer opened last |
 | the standalone packet editor | Ctrl+O, Ctrl+S | open a .trp, save a .trp |
 | a field row | Enter, Escape | commit, revert the text |

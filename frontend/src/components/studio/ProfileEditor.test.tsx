@@ -44,14 +44,14 @@ describe('ProfileEditor', () => {
     expect(screen.queryByRole('dialog', { name: 'Profile source' })).not.toBeInTheDocument()
     cleanup()
     show(withSource({ kind: 'json', path: '/in/x.json' }))
-    await screen.findByRole('table', { name: 'Streams' })
+    await screen.findByRole('grid', { name: 'Streams' })
     expect(screen.queryByRole('button', { name: 'View source…' })).not.toBeInTheDocument()
   })
 
   it('a properties Save is one undo step', async () => {
     const { user } = show(py)
     const put = vi.spyOn(api, 'putStreams').mockResolvedValue({ rev: 'r1', stream_count: 1, renamed: {}, cleared: [], warnings: [] })
-    await user.click(await screen.findByRole('cell', { name: /UDP/ }))
+    await user.click(await screen.findByRole('gridcell', { name: /UDP/ }))
     const isg = await screen.findByLabelText(/^ISG/)
     await user.clear(isg)
     await user.type(isg, '7')
@@ -68,7 +68,7 @@ describe('ProfileEditor', () => {
     let answer: (r: api.DiffReply) => void = () => undefined
     const put = vi.spyOn(api, 'putStreams').mockImplementationOnce(() => new Promise((resolve) => { answer = resolve }))
     await user.click(await screen.findByRole('checkbox', { name: 'Enabled #0' }))
-    await user.click(await screen.findByRole('cell', { name: /UDP/ }))
+    await user.click(await screen.findByRole('gridcell', { name: /UDP/ }))
     const isg = await screen.findByLabelText(/^ISG/)
     await user.clear(isg)
     await user.type(isg, '7')
@@ -125,7 +125,7 @@ describe('ProfileEditor', () => {
     get.mockResolvedValue({ ...page, rev: 'newer' })
     await user.click(await screen.findByRole('button', { name: 'Reload' }))        // 2. a new writer
     await vi.waitFor(() => expect(screen.queryByRole('alert')).not.toBeInTheDocument())
-    await user.click(await screen.findByRole('cell', { name: '0' }))               // 3. a new shifting write, held
+    await user.click(await screen.findByRole('gridcell', { name: '0' }))               // 3. a new shifting write, held
     await user.click(screen.getByRole('button', { name: 'Delete' }))
     await user.click(screen.getByRole('button', { name: 'Confirm delete' }))
     expect(put).toHaveBeenCalledTimes(2)
@@ -161,7 +161,7 @@ describe('ProfileEditor', () => {
     const onChanged = vi.fn()
     render(<ProfileEditor entry={py} onChanged={onChanged} />)
     const user = userEvent.setup()
-    await user.click(await screen.findByRole('cell', { name: 's0' }))
+    await user.click(await screen.findByRole('gridcell', { name: 's0' }))
     await user.click(screen.getByRole('button', { name: 'Delete' }))
     await user.click(screen.getByRole('button', { name: 'Confirm delete' }))
     expect(put).toHaveBeenCalledTimes(1)
@@ -213,12 +213,12 @@ describe('ProfileEditor', () => {
   describe('the selected stream', () => {
     it('shows Stream settings and Stream packet tabs once one stream is selected', async () => {
       const { user } = show(py)
-      await screen.findByRole('cell', { name: /UDP/ })
+      await screen.findByRole('gridcell', { name: /UDP/ })
       const holder = screen.getByText('Click a stream to edit its properties and packet.')
       expect(holder.closest('.stream-placeholder')).not.toBeNull()
       expect(holder.closest('.stream-placeholder')).toHaveTextContent(/(⌘|Ctrl)-click or Shift-click selects several, for Copy, Duplicate and Delete\./)
       expect(screen.queryByText('Select one stream to see its properties and packet.')).not.toBeInTheDocument()
-      await user.click(screen.getByRole('cell', { name: '0' }))
+      await user.click(screen.getByRole('gridcell', { name: '0' }))
       expect(screen.getByRole('tablist', { name: 'Stream' })).toBeInTheDocument()
       expect(screen.getByLabelText('ISG (µs)')).toBeVisible()
       expect(screen.getByRole('button', { name: 'View packet…', hidden: true })).not.toBeVisible()
@@ -229,7 +229,7 @@ describe('ProfileEditor', () => {
     it('Save sends the patch under the stream index with the writer rev', async () => {
       const { get, onChanged, user } = show(py)
       const put = vi.spyOn(api, 'putStreams').mockResolvedValue({ rev: 'r2', stream_count: 1, renamed: {}, cleared: [], warnings: [] })
-      await user.click(await screen.findByRole('cell', { name: '0' }))
+      await user.click(await screen.findByRole('gridcell', { name: '0' }))
       await user.clear(screen.getByLabelText('ISG (µs)'))
       await user.type(screen.getByLabelText('ISG (µs)'), '30')
       onChanged.mockClear(); get.mockClear()
@@ -242,7 +242,7 @@ describe('ProfileEditor', () => {
     it('a refused Save shows its message and keeps the edit', async () => {
       const { user } = show(py)
       vi.spyOn(api, 'putStreams').mockRejectedValue(new api.ApiError(422, 'invalid_stream', 'stream 0 isg: bad', { index: 0, field: 'isg' }))
-      await user.click(await screen.findByRole('cell', { name: '0' }))
+      await user.click(await screen.findByRole('gridcell', { name: '0' }))
       await user.type(screen.getByLabelText('ISG (µs)'), '5')
       await user.click(screen.getByRole('button', { name: 'Save' }))
       expect(await screen.findByRole('alert')).toHaveTextContent('stream 0 isg: bad')
@@ -257,7 +257,7 @@ describe('ProfileEditor', () => {
       vi.spyOn(api, 'putStreams').mockImplementationOnce(() => new Promise((resolve) => { answer = resolve }))
       render(<ProfileEditor entry={py} onChanged={vi.fn()} />)
       const user = userEvent.setup()
-      await user.click(await screen.findByRole('cell', { name: 's1' }))
+      await user.click(await screen.findByRole('gridcell', { name: 's1' }))
       expect(screen.getByLabelText('ISG (µs)')).toBeEnabled()
       await user.click(screen.getByRole('button', { name: 'Down' }))
       expect(screen.getByLabelText('ISG (µs)')).toBeDisabled()
@@ -277,7 +277,7 @@ describe('ProfileEditor', () => {
 
     it('Previous and Next are disabled at the ends of a one-stream profile', async () => {
       const { user } = show(py)
-      await user.click(await screen.findByRole('cell', { name: '0' }))
+      await user.click(await screen.findByRole('gridcell', { name: '0' }))
       expect(screen.getByRole('button', { name: 'Previous stream' })).toBeDisabled()
       expect(screen.getByRole('button', { name: 'Next stream' })).toBeDisabled()
     })
@@ -428,7 +428,7 @@ describe('ProfileEditor', () => {
       await user.click(screen.getByRole('button', { name: 'Import' }))
       const del = deferred<api.DiffReply>()
       const put = vi.spyOn(api, 'putStreams').mockImplementationOnce(() => del.p)
-      await user.click(screen.getByRole('cell', { name: 's0' }))
+      await user.click(screen.getByRole('gridcell', { name: 's0' }))
       await user.click(screen.getByRole('button', { name: 'Delete' }))
       await user.click(screen.getByRole('button', { name: 'Confirm delete' }))
       expect(put).toHaveBeenCalledTimes(1)
@@ -483,7 +483,7 @@ describe('ProfileEditor', () => {
       await user.click(await screen.findByRole('button', { name: 'Import stream from pcap…' }))
       await user.type(screen.getByRole('textbox', { name: 'Path' }), '/srv/t.pcap')
       expect(screen.getByRole('button', { name: 'Import' })).toBeEnabled()
-      await user.click(screen.getByRole('cell', { name: 's0' }))
+      await user.click(screen.getByRole('gridcell', { name: 's0' }))
       await user.click(screen.getByRole('button', { name: 'Delete' }))
       await user.click(screen.getByRole('button', { name: 'Confirm delete' }))
       expect(screen.getByRole('button', { name: 'Import' })).toBeDisabled()
@@ -510,7 +510,7 @@ describe('ProfileEditor', () => {
       const confirm = vi.spyOn(window, 'confirm')
       render(<ProfileEditor entry={py} onChanged={vi.fn()} />)
       const user = userEvent.setup()
-      await user.click(await screen.findByRole('cell', { name: 's0' }))
+      await user.click(await screen.findByRole('gridcell', { name: 's0' }))
       await user.click(streamTab('Stream packet'))
       await user.click(screen.getByRole('button', { name: 'Edit packet' }))
       await screen.findByRole('tab', { name: 'Field engine' })
@@ -530,7 +530,7 @@ describe('ProfileEditor', () => {
 
     it('switching streams with unsaved packet edits asks first', async () => {
       const { user, confirm } = await editing()
-      await user.click(screen.getByRole('cell', { name: 's1' }))
+      await user.click(screen.getByRole('gridcell', { name: 's1' }))
       expect(await screen.findByRole('dialog', { name: 'Discard the packet edits?' })).toBeInTheDocument()
       expect(screen.getByRole('row', { name: /s0/ })).toHaveAttribute('aria-selected', 'true')
       expect(screen.getByRole('row', { name: /s1/ })).toHaveAttribute('aria-selected', 'false')
@@ -543,7 +543,7 @@ describe('ProfileEditor', () => {
 
     it('Keep editing keeps the edits', async () => {
       const { user } = await editing()
-      await user.click(screen.getByRole('cell', { name: 's1' }))
+      await user.click(screen.getByRole('gridcell', { name: 's1' }))
       await user.click(await screen.findByRole('button', { name: 'Keep editing' }))
       expect(asked()).not.toBeInTheDocument()
       expect(screen.getByRole('row', { name: /s0/ })).toHaveAttribute('aria-selected', 'true')
@@ -553,7 +553,7 @@ describe('ProfileEditor', () => {
 
     it('Escape closes the question and nothing else', async () => {
       const { user } = await editing()
-      await user.click(screen.getByRole('cell', { name: 's1' }))
+      await user.click(screen.getByRole('gridcell', { name: 's1' }))
       await screen.findByRole('dialog', { name: 'Discard the packet edits?' })
       await user.keyboard('{Escape}')
       expect(asked()).not.toBeInTheDocument()
@@ -575,8 +575,8 @@ describe('ProfileEditor', () => {
       vi.spyOn(api, 'getStreams').mockResolvedValue(two)
       render(<ProfileEditor entry={py} onChanged={vi.fn()} />)
       const user = userEvent.setup()
-      await user.click(await screen.findByRole('cell', { name: 's0' }))
-      await user.click(screen.getByRole('cell', { name: 's1' }))
+      await user.click(await screen.findByRole('gridcell', { name: 's0' }))
+      await user.click(screen.getByRole('gridcell', { name: 's1' }))
       await user.click(streamTab('Stream packet'))
       expect(asked()).not.toBeInTheDocument()
       expect(screen.getByRole('row', { name: /s1/ })).toHaveAttribute('aria-selected', 'true')
@@ -585,7 +585,7 @@ describe('ProfileEditor', () => {
     it('with unsaved edits the actions that move the selection are off, saying why', async () => {
       const { user } = await editing()
       const bar = within(screen.getByRole('toolbar', { name: 'Stream actions' }))
-      await user.click(screen.getByRole('cell', { name: 's1' }))     // asks; Keep editing below
+      await user.click(screen.getByRole('gridcell', { name: 's1' }))     // asks; Keep editing below
       await user.click(await screen.findByRole('button', { name: 'Keep editing' }))
       for (const name of ['Up', 'Down', 'Duplicate', 'Paste', 'Delete']) {
         expect(bar.getByRole('button', { name })).toBeDisabled()
@@ -610,7 +610,7 @@ describe('ProfileEditor', () => {
       await user.click(screen.getByRole('checkbox', { name: 'Enabled s1' }))
       await vi.waitFor(() => expect(tableUndo()).toBeEnabled())
       await editTtl(user)
-      screen.getByRole('table', { name: 'Streams' }).focus()
+      screen.getByRole('grid', { name: 'Streams' }).focus()
       await user.keyboard('{Control>}z{/Control}')
       await new Promise((r) => setTimeout(r, 20))
       expect(put).toHaveBeenCalledTimes(1)           // only the toggle

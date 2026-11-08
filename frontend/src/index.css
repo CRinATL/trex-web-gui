@@ -399,6 +399,7 @@ fieldset.plain legend { padding: 0; font-weight: 600; font-size: 1.1em; margin-b
 .stream-placeholder { border: 1px dashed var(--border); border-radius: 6px; padding: 1rem; text-align: center; }
 .stream-placeholder p { margin: .2rem 0; }
 .stream-table:focus-visible { outline: 2px solid var(--accent); }
+.stream-table:focus tr[data-active="true"] { outline: 2px dashed var(--accent); outline-offset: -2px; }   /* the keyboard's active row */
 .pcap-timing { display: flex; flex-direction: column; gap: .35rem; }
 .pcap-timing-option { display: flex; align-items: center; gap: .5rem; }
 .pcap-wizard input.narrow { width: 6rem; flex: none; }   /* the speedup, gap and count inputs hold a short number; they do not stretch to the row */
