@@ -181,7 +181,7 @@ describe('AppStateProvider', () => {
     act(() => onMsg(snap('connected', 'f:2')))
     expect(trafficStore.all()).toEqual({})
     expect(trafficStore.get(2)).toEqual(DEFAULT_FORM)
-    expect(dashboardPrefs.get()).toEqual({ tab: 'overview', windowS: DEFAULT_INTERVAL, layout: DEFAULT_LAYOUT, yFrom0: false })
+    expect(dashboardPrefs.get()).toEqual({ tab: 'overview', windowS: DEFAULT_INTERVAL, layout: DEFAULT_LAYOUT, yFrom0: false, histId: null })
   })
 })
 

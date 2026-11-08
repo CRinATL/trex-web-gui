@@ -1,6 +1,7 @@
 import { act, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import { dashboardPrefs } from '../dashboardPrefs'
 import { pgidStore } from '../pgidStats'
 import { wirePgid, type WirePgid } from '../testPgid'
 import UPlot from 'uplot'
@@ -133,6 +134,12 @@ describe('LatencyTab table', () => {
     expect(u.setDataCalls.length).toBeGreaterThan(calls)
     expect(u.setDataCalls.at(-1)![1]).toEqual([223])
     expect(document.activeElement).toBe(screen.getByRole('combobox', { name: 'Latency chart metric' }))
+  })
+  it('falls back when the stored histogram id is gone', () => {
+    pgidStore.push(many(6))   // ids 7..12
+    dashboardPrefs.set({ histId: 99 })
+    render(<LatencyTab />)
+    expect(screen.getByRole('combobox', { name: 'Histogram PG ID' })).toHaveValue('7')
   })
   it('keeps the histogram pg_id across a tab switch (the tab stays mounted)', async () => {
     pgidStore.push(many(2))

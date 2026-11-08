@@ -1,6 +1,6 @@
 import { Fragment, useMemo, useState, useSyncExternalStore } from 'react'
 import type { PortView } from '../api'
-import { DEFAULT_INTERVAL } from '../chartSeries'
+import { useDashView } from '../dashView'
 import { MAX_PGIDS, pgidStore, type FlowCounter } from '../pgidStats'
 import { portAria, portTitle, type PortLabel } from '../portLabels'
 import { cell, humanBps, humanPps, l1Bps } from '../statsFormat'
@@ -175,7 +175,7 @@ function FlowErrors({ ports, labelOf }: { ports: PortView[]; labelOf: (p: PortVi
 export function StreamsTab({ ports, labelOf, visible = true }: { ports: PortView[]; labelOf: (p: PortView) => PortLabel | null; visible?: boolean }) {
   const version = useSyncExternalStore(pgidStore.subscribe, pgidStore.version)
   const all = useMemo(() => pgidStore.ids(), [version])   // eslint-disable-line react-hooks/exhaustive-deps
-  const [windowS, setWindowS] = useState<number>(DEFAULT_INTERVAL)
+  const { view, setView } = useDashView()
   const msg = pgidStore.latest()
   // Stale before any message: the read has failed since connect, so "no streams" would be a claim nobody measured.
   const unheard = useStale(pgidSource) && msg === null
@@ -194,7 +194,7 @@ export function StreamsTab({ ports, labelOf, visible = true }: { ports: PortView
               {visible && <FlowErrors ports={ports} labelOf={labelOf} />}
             </div>
             <div>
-              <PgidChart title={(m) => `Streams: ${m.label}`} metrics={METRICS} metricLabel="Chart metric" intervalLabel="Streams interval" sel={sel} windowS={windowS} setWindowS={setWindowS} />
+              <PgidChart title={(m) => `Streams: ${m.label}`} metrics={METRICS} metricLabel="Chart metric" intervalLabel="Streams interval" sel={sel} windowS={view.streamsWindowS} setWindowS={(n) => setView({ streamsWindowS: n })} metric={view.streamsMetric} setMetric={(m) => setView({ streamsMetric: m })} />
             </div>
           </div>
         </>

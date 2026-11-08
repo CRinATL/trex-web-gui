@@ -1,10 +1,11 @@
 import { act, cleanup, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import type { ReactNode } from 'react'
-import { afterEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import * as api from '../api'
 import * as state from '../state'
 import { dashboardPrefs } from '../dashboardPrefs'
+import { resetDashViewStore } from '../dashView'
 import { pgidStore } from '../pgidStats'
 import { statsStore } from '../stats'
 import { wirePgid, wireUtil } from '../testPgid'
@@ -14,8 +15,8 @@ import { DashboardPage } from './DashboardPage'
 
 // A stand-in that shows the props the Dashboard hands each chart.
 vi.mock('../components/TimeChart', () => ({
-  TimeChart: (p: { title: string; yFrom0?: boolean; controls?: ReactNode }) => (
-    <figure aria-label={p.title} data-yfrom0={String(p.yFrom0 ?? false)}>{p.controls}</figure>
+  TimeChart: (p: { title: string; yFrom0?: boolean; controls?: ReactNode; caption?: ReactNode }) => (
+    <figure aria-label={p.title} data-yfrom0={String(p.yFrom0 ?? false)}>{p.caption}{p.controls}</figure>
   ),
 }))
 afterEach(() => { dashboardPrefs.reset(); vi.useRealTimers(); vi.restoreAllMocks(); pgidStore.reset() })
@@ -330,6 +331,44 @@ describe('DashboardPage stale before the first message', () => {
     render(<DashboardPage />)
     act(() => { vi.advanceTimersByTime(10000) })
     expect(screen.getByRole('tabpanel', { name: 'Overview' })).not.toHaveClass('is-stale')
+  })
+})
+
+describe('DashboardPage keeps the chart choices while the page is away', () => {
+  beforeEach(() => { localStorage.clear(); resetDashViewStore() })
+  afterEach(() => { cleanup(); localStorage.clear() })
+  const connect = () => vi.spyOn(state, 'useAppState').mockReturnValue({ ...state.initialState, session: session('connected') })
+  // Pick `value` in the named select (after opening `tab`), leave the page, come back, and read the select again.
+  async function keeps(tab: string | null, name: string, value: string, seed?: () => void) {
+    connect()
+    pgidStore.reset()
+    if (seed) seed()
+    const first = render(<DashboardPage />)
+    if (tab) await userEvent.click(screen.getByRole('tab', { name: tab }))
+    await userEvent.selectOptions(screen.getByRole('combobox', { name }), value)
+    first.unmount()
+    render(<DashboardPage />)
+    if (tab) await userEvent.click(screen.getByRole('tab', { name: tab }))
+    return screen.getByRole('combobox', { name })
+  }
+  it("keeps chart 1's series across leaving the page", async () => {
+    expect(await keeps(null, 'Chart 1 series', 'tx_bps_l1')).toHaveValue('tx_bps_l1')
+  })
+  it('keeps the Streams chart metric', async () => {
+    expect(await keeps('Streams', 'Chart metric', 'tx_bps_l1', () => pgidStore.push(wirePgid('tx')))).toHaveValue('tx_bps_l1')
+  })
+  it('keeps the Streams interval', async () => {
+    expect(await keeps('Streams', 'Streams interval', '300', () => pgidStore.push(wirePgid('tx')))).toHaveValue('300')
+  })
+  it('keeps the Latency chart metric', async () => {
+    expect(await keeps('Latency', 'Latency chart metric', 'lat_jitter', () => pgidStore.push(wirePgid('tx')))).toHaveValue('lat_jitter')
+  })
+  it('keeps the Latency interval', async () => {
+    expect(await keeps('Latency', 'Latency interval', '120', () => pgidStore.push(wirePgid('tx')))).toHaveValue('120')
+  })
+  it('keeps the histogram PG ID (the second of two latency ids)', async () => {
+    const sel = await keeps('Latency', 'Histogram PG ID', '2', () => pgidStore.push(manyPgids(2, 100)))
+    expect(sel).toHaveValue('2')
   })
 })
 

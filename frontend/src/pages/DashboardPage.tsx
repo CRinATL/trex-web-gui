@@ -84,8 +84,8 @@ export function DashboardPage() {
             </label>
             <YAxisToggle />
             <div className="chart-grid" style={{ display: 'grid', gridTemplateColumns: `repeat(${layout === 1 ? 1 : 2}, minmax(0, 1fr))`, gap: '0.5rem' }}>
-              {DEFAULT_CHARTS.slice(0, layout).map((id, i) => (
-                <StatsChart key={i} initialSeriesId={id} windowS={windowS} label={`Chart ${i + 1} series`} />
+              {DEFAULT_CHARTS.slice(0, layout).map((_, i) => (
+                <StatsChart key={i} index={i} windowS={windowS} label={`Chart ${i + 1} series`} />
               ))}
             </div>
           </section>

@@ -1,5 +1,6 @@
-import { useMemo, useState, useSyncExternalStore } from 'react'
-import { DEFAULT_INTERVAL } from '../chartSeries'
+import { useMemo, useSyncExternalStore } from 'react'
+import { dashboardPrefs } from '../dashboardPrefs'
+import { useDashView } from '../dashView'
 import { CAP_REASON, capReasonId } from '../pgidPalette'
 import { pgidStore, WINDOW_LEN } from '../pgidStats'
 import { cell } from '../statsFormat'
@@ -71,8 +72,8 @@ const METRICS: Metric[] = [
 export function LatencyTab({ visible = true }: { visible?: boolean }) {
   const version = useSyncExternalStore(pgidStore.subscribe, pgidStore.version)
   const ids = useMemo(() => pgidStore.latencyIds(), [version])   // eslint-disable-line react-hooks/exhaustive-deps
-  const [windowS, setWindowS] = useState<number>(DEFAULT_INTERVAL)
-  const [histId, setHistId] = useState<number | null>(null)
+  const { view, setView } = useDashView()
+  const { histId } = useSyncExternalStore(dashboardPrefs.subscribe, dashboardPrefs.get)
   // Stale before any message: the read has failed since connect, so "no streams" would be a claim nobody measured.
   const unheard = useStale(pgidSource) && pgidStore.latest() === null
   return (
@@ -83,10 +84,10 @@ export function LatencyTab({ visible = true }: { visible?: boolean }) {
           <div className="overview-grid">
             <div>
               {visible && (ids.length === 0 ? (unheard ? null : <p>No streams with latency are active.</p>) : <Table ids={ids} sel={sel} />)}
-              {visible && ids.length > 0 && <LatencyHistogram ids={ids} chosen={histId} onChoose={setHistId} />}
+              {visible && ids.length > 0 && <LatencyHistogram ids={ids} chosen={histId} onChoose={(id) => dashboardPrefs.set({ histId: id })} />}
             </div>
             <div>
-              <PgidChart title={(m) => `Latency: ${m.label} (µs)`} metrics={METRICS} metricLabel="Latency chart metric" intervalLabel="Latency interval" sel={sel} windowS={windowS} setWindowS={setWindowS} />
+              <PgidChart title={(m) => `Latency: ${m.label} (µs)`} metrics={METRICS} metricLabel="Latency chart metric" intervalLabel="Latency interval" sel={sel} windowS={view.latencyWindowS} setWindowS={(n) => setView({ latencyWindowS: n })} metric={view.latencyMetric} setMetric={(m) => setView({ latencyMetric: m })} />
             </div>
           </div>
         </>

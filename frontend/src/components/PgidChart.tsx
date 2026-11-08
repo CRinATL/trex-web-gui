@@ -1,4 +1,4 @@
-import { useState, useSyncExternalStore } from 'react'
+import { useSyncExternalStore } from 'react'
 import { INTERVALS } from '../chartSeries'
 import { dashboardPrefs } from '../dashboardPrefs'
 import { CAP_REASON, capReasonId } from '../pgidPalette'
@@ -21,7 +21,7 @@ export function ChartCheckbox({ tab, id, sel }: { tab: Tab; id: number; sel: Sel
 
 // The chart of one tab: a metric picker and an interval picker over a TimeChart with a series per selected pg_id.
 // A new metric is passed as dataKey, so the chart redraws at once without a remount (the pickers keep keyboard focus).
-export function PgidChart({ title, metrics, metricLabel, intervalLabel, sel, windowS, setWindowS }: {
+export function PgidChart({ title, metrics, metricLabel, intervalLabel, sel, windowS, setWindowS, metric, setMetric }: {
   title: (m: Metric) => string
   metrics: Metric[]
   metricLabel: string
@@ -29,9 +29,10 @@ export function PgidChart({ title, metrics, metricLabel, intervalLabel, sel, win
   sel: Selection
   windowS: number
   setWindowS: (n: number) => void
+  metric: SeriesKey
+  setMetric: (m: SeriesKey) => void
 }) {
   const { yFrom0 } = useSyncExternalStore(dashboardPrefs.subscribe, dashboardPrefs.get)
-  const [metric, setMetric] = useState<SeriesKey>(metrics[0].id)
   const m = metrics.find((x) => x.id === metric) ?? metrics[0]
   // Series share the message timestamps but a newly picked pg_id starts later, so the x axis is the union of their points.
   const data = (w: number): [number[], ...(number | null)[][]] => {

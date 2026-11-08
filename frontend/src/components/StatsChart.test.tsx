@@ -18,7 +18,7 @@ afterEach(() => { reset(); vi.restoreAllMocks() })
 
 describe('StatsChart', () => {
   it('uPlot is created once and destroyed on unmount', () => {
-    const { unmount } = render(<StatsChart initialSeriesId="tx_pps" windowS={60} label="Chart 1 series" />)
+    const { unmount } = render(<StatsChart index={0} windowS={60} label="Chart 1 series" />)
     expect(mock.instances).toHaveLength(1)
     act(() => statsStore.push(statsFromSample(3)))
     act(() => statsStore.push(statsFromSample(3)))
@@ -32,7 +32,7 @@ describe('StatsChart', () => {
   it('plots the total scope: x is ts, y is the chosen field', () => {
     const base = statsFromSample(3)
     statsStore.push({ ...base, total: { tx_pps: 5, rx_pps: 6, tx_bps: 70, rx_bps: 80, tx_bps_L1: 90, rx_bps_L1: 100 } })
-    render(<StatsChart initialSeriesId="tx_bps_l2" windowS={60} label="Chart 1 series" />)
+    render(<StatsChart index={2} windowS={60} label="Chart 1 series" />)
     expect(mock.instances[0].data).toEqual([[base.ts], [70]])
   })
 
@@ -55,7 +55,7 @@ describe('StatsChart', () => {
     vi.spyOn(window, 'getComputedStyle').mockReturnValue({
       getPropertyValue: (n: string) => ({ '--fg': '#eee', '--border': '#333', '--chart-grid': '#444', '--accent': '#8af' })[n] ?? '',
     } as unknown as CSSStyleDeclaration)
-    render(<StatsChart initialSeriesId="tx_bps_l2" windowS={60} label="Chart 1 series" />)
+    render(<StatsChart index={2} windowS={60} label="Chart 1 series" />)
     const o = mock.instances[0].opts as {
       axes: { stroke: string; grid: { stroke: string }; ticks: { stroke: string }; size?: unknown; values?: (u: unknown, s: number[]) => string[] }[]
       series: { stroke: string }[]
@@ -67,7 +67,7 @@ describe('StatsChart', () => {
   })
 
   it('a pps series formats ticks as pps', () => {
-    render(<StatsChart initialSeriesId="rx_pps" windowS={60} label="Chart 1 series" />)
+    render(<StatsChart index={1} windowS={60} label="Chart 1 series" />)
     const o = mock.instances[0].opts as { axes: { values?: (u: unknown, s: number[]) => string[] }[] }
     expect(o.axes[1].values?.(null, [1.5e9])).toEqual(['1.50 Gpps'])
   })
@@ -96,13 +96,13 @@ describe('StatsChart', () => {
 
 describe('StatsChart on TimeChart', () => {
   it('the series select is the chart caption', () => {
-    render(<StatsChart initialSeriesId="tx_pps" windowS={60} label="Chart 1 series" />)
+    render(<StatsChart index={0} windowS={60} label="Chart 1 series" />)
     const cap = screen.getByRole('combobox', { name: 'Chart 1 series' }).closest('figcaption')
     expect(cap).not.toBeNull()
     expect(screen.getByRole('figure', { name: 'Tx pps' })).toContainElement(cap)
   })
   it('choosing another series rebuilds the chart with that series label', async () => {
-    render(<StatsChart initialSeriesId="tx_pps" windowS={60} label="Chart 1 series" />)
+    render(<StatsChart index={0} windowS={60} label="Chart 1 series" />)
     await userEvent.selectOptions(screen.getByRole('combobox', { name: 'Chart 1 series' }), 'rx_pps')
     expect(mock.instances).toHaveLength(2)
     expect(mock.instances[0].destroyCalls).toBe(1)
