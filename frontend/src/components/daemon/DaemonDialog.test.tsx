@@ -139,7 +139,7 @@ describe('DaemonDialog', () => {
 
   it('Force stop asks again when the owners are unknown', async () => {
     const stop = vi.spyOn(api, 'daemonStop').mockRejectedValueOnce(new api.ApiError(409, 'owners_unknown', 'Cannot read who owns the ports'))
-      .mockResolvedValue({ running: false, stop_s: 1.2 })
+      .mockResolvedValue({ running: false, stop_s: 1.2, other_pids: [] })
     await open({ daemon: foreign })
     await userEvent.click(screen.getByRole('button', { name: 'Force stop' }))
     expect(within(dialog('Force stop TRex')).getByText(/This TRex was not started by this GUI\. Force stop kills the daemon's TRex on 127\.0\.0\.1 whoever started it; it is still refused while another user owns a port\./)).toBeInTheDocument()
@@ -277,7 +277,7 @@ describe('DaemonDialog', () => {
   })
 
   it('stop of our stateful run sends one confirm', async () => {
-    const stop = vi.spyOn(api, 'daemonStop').mockResolvedValue({ running: false, stop_s: 1.9 })
+    const stop = vi.spyOn(api, 'daemonStop').mockResolvedValue({ running: false, stop_s: 1.9, other_pids: [] })
     setApp({ daemon: stfRunning })
     render(<DaemonDialog onClose={() => undefined} />)
     expect(screen.queryByRole('button', { name: 'Force stop' })).toBeNull()
@@ -288,6 +288,15 @@ describe('DaemonDialog', () => {
     expect(stop).toHaveBeenCalledWith({ rpc_port: 4701, confirm: true, force: false, owners_unknown_ack: false })
     expect(screen.queryByRole('dialog', { name: 'Force stop anyway?' })).toBeNull()
     expect(screen.queryByRole('dialog', { name: 'Stop TRex' })).toBeNull()
+  })
+
+  it('shows what is still running after a stop beside a hand-started TRex', async () => {
+    vi.spyOn(api, 'daemonStop').mockResolvedValue({ running: false, stop_s: 1, other_pids: [2662] })
+    setApp({ daemon: stfRunning })
+    render(<DaemonDialog onClose={() => undefined} />)
+    await userEvent.click(screen.getByRole('button', { name: 'Stop' }))
+    await userEvent.click(within(dialog('Stop TRex')).getByRole('button', { name: 'Stop' }))
+    expect(await screen.findByText("The daemon's run stopped, but the TRex on command port 4701 is still running: the daemon did not start it (pid 2662). Stop it on the host.")).toBeInTheDocument()
   })
 
   it('closing disconnects', async () => {
@@ -458,7 +467,7 @@ describe('DaemonDialog', () => {
   })
 
   it('a bad command port typed in Stateless mode does not block Stop of a stateful run', async () => {
-    const stop = vi.spyOn(api, 'daemonStop').mockResolvedValue({ running: false, stop_s: 1 })
+    const stop = vi.spyOn(api, 'daemonStop').mockResolvedValue({ running: false, stop_s: 1, other_pids: [] })
     setApp({ daemon: stfRunning })
     render(<DaemonDialog onClose={() => undefined} />)
     fireEvent.change(screen.getByLabelText('TRex command port'), { target: { value: 'x' } })

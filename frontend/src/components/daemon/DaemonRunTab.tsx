@@ -128,9 +128,13 @@ export function DaemonRunTab({ daemon, pushed, onModal }: { daemon: DaemonMsg | 
     }
   }
   async function doStop(force: boolean, ack: boolean) {
-    const r = await daemonStop({ rpc_port: Number(portText), confirm: true, force, owners_unknown_ack: ack })
+    const rpcPort = Number(portText)
+    const r = await daemonStop({ rpc_port: rpcPort, confirm: true, force, owners_unknown_ack: ack })
     setConfirm(null)
-    setNote(r.running ? 'TRex is still running after the stop.' : null)
+    // other_pids: the daemon's run ended, but a TRex it did not start still answers on the command port.
+    if (r.other_pids.length > 0) {
+      setNote(`The daemon's run stopped, but the TRex on command port ${rpcPort} is still running: the daemon did not start it (pid ${r.other_pids.join(', ')}). Stop it on the host.`)
+    } else setNote(r.running ? 'TRex is still running after the stop.' : null)
   }
   // Force stop's owners_unknown asks once more; any other refusal stays in the first confirmation.
   async function doForce() {
