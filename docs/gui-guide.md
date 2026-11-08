@@ -485,7 +485,9 @@ the streams on the port were not assigned from this session, or that there are n
 **Enabled**, **Mode**, **Rate**, **Packet**, **Length**, **VM** columns, `Showing the first N of M streams` when cut. **Rate** reads
 as in the Editor's stream table: `4.00 kpps`, `250.00 Mbps L2`, `10 %`.
 **Show rate at ×1** (an owned port with streams) asks the server what ×1 means: `At ×1: max 1.1 kpps, L2 1.2
-Mbps, 0.012% line utilisation`, and a fold **Full validate response** with the raw answer.
+Mbps, 0.012% line utilisation`, and a fold **Full validate response** with the raw answer. Below it, while connected,
+`Measured now: Tx 7.79 kpps · L2 3.99 Mbps · L1 5.23 Mbps` is what the port is sending, from the same live stats as the
+Dashboard, so the requested and the observed rate are on one page.
 
 **Rate**:
 

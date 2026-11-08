@@ -1,12 +1,14 @@
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, useLocation } from 'react-router-dom'
-import { afterEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import * as api from '../api'
 import { humanBps, rateLine } from './rate'
 import type { Selection } from '../portActions'
 import { wirePort, wireProfiles } from '../testWire'
 import { trafficStore } from '../trafficStore'
+import { statsStore } from '../stats'
+import { statsFromSample } from '../testStats'
 import assignedReply from '../__fixtures__/assignedReply.json'
 import inspectReply from '../__fixtures__/inspectReply.json'
 import { TrafficTab } from './TrafficTab'
@@ -928,5 +930,42 @@ describe('TrafficTab library and Studio', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Library…' }))
     await userEvent.click(await screen.findByRole('button', { name: 'udp' }))
     expect(screen.queryByRole('alert')).toBeNull()
+  })
+})
+
+describe('TrafficTab measured rate (ui-recs-3)', () => {
+  const resetStats = () => { statsStore.onSession('connected'); statsStore.onSession('disconnected') }
+  beforeEach(() => { resetStats(); vi.spyOn(api, 'assignedOn').mockResolvedValue({ streams: false, assigned: null }) })
+  afterEach(resetStats)
+  const line = () => screen.getByText(/^Measured now:/)
+
+  it("shows the port's live Tx pps, L2 and L1 rates from the stats stream", () => {
+    statsStore.push(statsFromSample(3))   // tests/fixtures/p3/summary.json: port 0 under load
+    setup()
+    expect(line()).toHaveTextContent('Measured now: Tx 7.79 kpps · L2 3.99 Mbps · L1 5.23 Mbps')
+  })
+  it('follows each new stats message', () => {
+    statsStore.push(statsFromSample(3))
+    setup()
+    act(() => statsStore.push(statsFromSample(1)))   // idle
+    expect(line()).toHaveTextContent('Measured now: Tx 0.22 pps · L2 112 bps · L1 147 bps')
+  })
+  it('a reconnect drops the old reading: every value is a dash until stats arrive again', () => {
+    statsStore.push(statsFromSample(3))
+    setup()
+    act(() => resetStats())
+    expect(line()).toHaveTextContent('Measured now: Tx – · L2 – · L1 –')
+  })
+  it('reads its own port, not another one', () => {
+    const s = statsFromSample(3)
+    statsStore.push({ ...s, ports: { '0': s.ports['0'], '1': { ...s.ports['0'], tx_pps: 5 } } })
+    setup(port({ id: 1 }))
+    expect(line()).toHaveTextContent('Measured now: Tx 5 pps')
+  })
+  it('is not shown while disconnected', () => {
+    statsStore.push(statsFromSample(3))
+    const p = port()
+    render(<TrafficTab port={p} selection={{ kind: 'port', id: 0 }} ports={[p]} readOnly={false} connected={false} />)
+    expect(screen.queryByText(/^Measured now:/)).toBeNull()
   })
 })
