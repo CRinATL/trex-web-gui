@@ -23,6 +23,7 @@ from typing import Any, Literal, TypeVar
 
 from trex_web_gui import trexapi
 from trex_web_gui.hostinfo import read_cfg, resolve
+from trex_web_gui.netprobe import port_accepts
 from trex_web_gui.trexapi import ClientEvent, TrexApiError
 from trex_web_gui.trexproc import STOPPED, server_running, silence_message
 
@@ -360,7 +361,7 @@ class TrexSession(PortConfigCommands, CaptureCommands):
                 if left <= 0:
                     break
                 next_probe = now + RECONNECT_RETRY_S
-                if await self._port_accepts(p.host, p.sync_port, min(RECONNECT_RETRY_S, left)):
+                if await port_accepts(p.host, p.sync_port, min(RECONNECT_RETRY_S, left)):
                     try:
                         await self._await_done(asyncio.ensure_future(self.connect(p, failure_level="info")))
                         return                           # CONNECTED: connect() cleared `ended`
@@ -384,19 +385,6 @@ class TrexSession(PortConfigCommands, CaptureCommands):
         """Log the failure to Events as an error and publish recovery `reconnect_failed` with `error`."""
         self._log("error", f"Automatic reconnect failed: {error}")
         self.set_recovery({"kind": "reconnect_failed", "error": error})
-
-    @staticmethod
-    async def _port_accepts(host: str, port: int, timeout_s: float) -> bool:
-        """Whether a TCP connect to host:port succeeds within `timeout_s`; the socket is closed, and its close
-        awaited within the same bound (an error or timeout of the close is not the probe's answer)."""
-        try:
-            _r, w = await asyncio.wait_for(asyncio.open_connection(host, port), timeout_s)
-        except (OSError, TimeoutError):
-            return False
-        w.close()
-        with contextlib.suppress(OSError, TimeoutError):
-            await asyncio.wait_for(w.wait_closed(), timeout_s)
-        return True
 
     async def expect_stop(self, host: str, sync_port: int, daemon: str) -> bool:
         """A daemon stop of `daemon` ("host:port") is about to happen. Awaits cancel_reconnect(), then arms

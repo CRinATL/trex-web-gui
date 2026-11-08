@@ -401,7 +401,7 @@ def test_stop_reply_reports_running(fake_daemon: Any, fake_trex: Any,
         assert out["running"] is False and out["stop_s"] is not None and out["stop_s"] < 5
         await s.connect(stubborn.host, stubborn.port)
         await started(s)
-        assert await s.stop(f.rpc_port, True) == {"running": True, "stop_s": None}
+        assert await s.stop(f.rpc_port, True) == {"running": True, "stop_s": None, "other_pids": []}
         assert s.snapshot()["run"]["state"] == "running"
     drive(body)
 
@@ -569,6 +569,123 @@ def test_force_stop_with_a_held_seq_and_the_daemon_idle_is_refused_first(
         await refused(s.stop(f.rpc_port, True, force=True), "not_daemon_run")
         assert "expect" not in hooks.calls
         assert d.methods().count("force_trex_kill") == 1
+    drive(body, hooks=hooks)
+
+
+FOREIGN_PID = next(int(r["body"]["result"][0][0]) for r in
+                   map(json.loads, (FIXTURES / "p5" / "daemon.jsonl").read_text().splitlines())
+                   if r["method"] == "get_trex_cmds" and "legacy" in r["body"]["result"][0][1])
+DAEMON_PID = 4242               # the pid fake_daemon.py lists for its own run
+STILL_RUNNING = "a TRex the daemon did not start is still running there"
+
+
+def still_running_warnings(rec: Recorder) -> list[dict[str, Any]]:
+    """The warnings that report a TRex left running beside a stopped daemon run."""
+    return [m for m in warnings_of(rec) if STILL_RUNNING in m["message"]]
+
+
+def test_stop_beside_a_hand_started_trex_cancels(fake_daemon: Any, fake_trex: Any) -> None:
+    """Force stop with a hand-started TRex answering on the command port (daemon-force-3): the daemon's run
+    ends, but the hooks hear cancel, the reply names the pid still running, and one warning says so."""
+    d, f, hooks = fake_daemon("--daemon-run", "--foreign"), fake_trex(), Hooks()
+
+    async def body(s: DaemonSession, rec: Recorder) -> None:
+        """Connect, Force stop."""
+        await s.connect(d.host, d.port)
+        out = await s.stop(f.rpc_port, True, force=True)
+        assert out["running"] is False
+        assert out["other_pids"] == [FOREIGN_PID]
+        assert hooks.calls == ["expect", "cancel"]
+        logs = still_running_warnings(rec)
+        assert len(logs) == 1 and f"{d.host}:{f.rpc_port}" in logs[0]["message"]
+        assert str(FOREIGN_PID) in logs[0]["message"]
+    drive(body, hooks=hooks)
+
+
+def test_stop_beside_another_trex_on_a_dead_port_is_done(fake_daemon: Any) -> None:
+    """Force stop beside another TRex when nothing answers on the command port: done, no pids, no warning
+    about a TRex left running."""
+    d, hooks = fake_daemon("--daemon-run", "--foreign"), Hooks()
+    dead = free_port()
+
+    async def body(s: DaemonSession, rec: Recorder) -> None:
+        """Connect, Force stop with the ack (the owners of a dead port cannot be read)."""
+        await s.connect(d.host, d.port)
+        out = await s.stop(dead, True, force=True, owners_unknown_ack=True)
+        assert out["other_pids"] == []
+        assert hooks.calls == ["expect", "done"]
+        assert still_running_warnings(rec) == []
+    drive(body, hooks=hooks)
+
+
+def test_stop_waits_for_the_daemon_run_to_leave_the_list(fake_daemon: Any,
+                                                          monkeypatch: pytest.MonkeyPatch) -> None:
+    """The daemon reports Idle before its TRex exits (--exit-lag): the stop re-reads the process list until
+    the daemon's run has left it, and only then probes."""
+    monkeypatch.setattr(session_mod, "POLL_S", 60.0)
+    d = fake_daemon("--daemon-run", "--foreign", "--exit-lag", "0.6")
+    dead = free_port()
+
+    async def body(s: DaemonSession, rec: Recorder) -> None:
+        """Connect, time a Force stop."""
+        await s.connect(d.host, d.port)
+        before = d.methods().count("get_trex_cmds")
+        t0 = time.monotonic()
+        out = await s.stop(dead, True, force=True, owners_unknown_ack=True)
+        assert time.monotonic() - t0 >= 0.6
+        assert d.methods().count("get_trex_cmds") - before >= 4
+        assert out["other_pids"] == []
+    drive(body)
+
+
+def test_stop_check_is_bounded(fake_daemon: Any, fake_trex: Any, monkeypatch: pytest.MonkeyPatch) -> None:
+    """A daemon TRex that never leaves the list: the wait ends at STOP_WAIT_S and the probe still runs, so a
+    TRex answering on the command port cancels."""
+    monkeypatch.setattr(session_mod, "STOP_WAIT_S", 0.5)
+    d, f, hooks = fake_daemon("--daemon-run", "--foreign", "--exit-lag", "30"), fake_trex(), Hooks()
+
+    async def body(s: DaemonSession, rec: Recorder) -> None:
+        """Connect, time a Force stop."""
+        await s.connect(d.host, d.port)
+        t0 = time.monotonic()
+        out = await s.stop(f.rpc_port, True, force=True)
+        assert time.monotonic() - t0 < 5
+        assert out["other_pids"] == sorted([FOREIGN_PID, DAEMON_PID])
+        assert hooks.calls[-1] == "cancel"
+    drive(body, hooks=hooks)
+
+
+def test_stop_with_one_trex_skips_the_check(fake_daemon: Any, fake_trex: Any,
+                                            monkeypatch: pytest.MonkeyPatch) -> None:
+    """Only the daemon's run on the host: the two process-list reads a stop always makes (the pre-stop one and
+    the status fold-in after the wait), no more, no probe, done."""
+    monkeypatch.setattr(session_mod, "POLL_S", 60.0)
+    d, f, hooks = fake_daemon("--daemon-run"), fake_trex(), Hooks()
+
+    async def body(s: DaemonSession, rec: Recorder) -> None:
+        """Connect, Force stop."""
+        await s.connect(d.host, d.port)
+        before = d.methods().count("get_trex_cmds")
+        out = await s.stop(f.rpc_port, True, force=True)
+        assert d.methods().count("get_trex_cmds") - before == 2
+        assert out["other_pids"] == []
+        assert hooks.calls == ["expect", "done"]
+    drive(body, hooks=hooks)
+
+
+def test_plain_stop_of_our_run_beside_a_hand_started_trex_cancels(fake_daemon: Any, fake_trex: Any) -> None:
+    """A TRex started by hand after our Start, answering on the command port: a plain Stop of our run ends
+    in cancel and names that TRex."""
+    d, f, hooks = fake_daemon("--foreign-after-start"), fake_trex(), Hooks()
+
+    async def body(s: DaemonSession, rec: Recorder) -> None:
+        """Connect, start stateless, Stop."""
+        await s.connect(d.host, d.port)
+        await s.start(CFG, {}, "", 20, True, None, f.rpc_port)
+        out = await s.stop(f.rpc_port, True)
+        assert "force_trex_kill" not in d.methods()
+        assert out["other_pids"] == [FOREIGN_PID]
+        assert hooks.calls[-1] == "cancel"
     drive(body, hooks=hooks)
 
 
