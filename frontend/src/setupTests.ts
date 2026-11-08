@@ -4,6 +4,7 @@ import { afterEach, beforeEach, vi } from 'vitest'
 import UPlot from 'uplot'
 import { installMatchMedia, resetMatchMedia } from './testMatchMedia'
 import { resetThemeStore } from './theme'
+import { resetDashViewStore } from './dashView'
 import { dashboardPrefs } from './dashboardPrefs'
 import { monitorStore } from './monitorStore'
 import { trafficStore } from './trafficStore'
@@ -40,4 +41,4 @@ vi.mock('uplot', async () => {
 })
 
 beforeEach(() => { (UPlot as unknown as { instances: unknown[] }).instances.length = 0; installMatchMedia() })
-afterEach(() => { cleanup(); resetMatchMedia(); resetThemeStore(); trafficStore.reset(); monitorStore.reset(); dashboardPrefs.reset(); runInProgress.reset(); setupSession.reset() })
+afterEach(() => { cleanup(); resetMatchMedia(); resetThemeStore(); resetDashViewStore(); trafficStore.reset(); monitorStore.reset(); dashboardPrefs.reset(); runInProgress.reset(); setupSession.reset() })
