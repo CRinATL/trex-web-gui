@@ -739,8 +739,8 @@ Per-stream (PG ID) flow statistics; needs streams with flow stats or latency
   bps L1 and L2) and **Packet and byte counters** (Tx/Rx pkts and bytes, `since the stream was added, or Clear`). The
   chart's Metric select still offers the bit rates when the columns are hidden.
 - **Full-width table** (shared with Latency) stacks the chart under the table so the table uses the whole width.
-- The column choice, Full-width table, the chart's metric and interval and the Streams and Latency intervals are saved
-  per browser (see section 15).
+- The column choice, Full-width table, the chart's metric and the Streams and Latency intervals are saved per browser
+  (see section 15).
 - A **Page** select above 100 ids.
 - `Showing the first 1151 of N streams` when the backend caps the ids it reads.
 - `rx_err` / `tx_err` per port below.
@@ -760,7 +760,7 @@ Per-stream (PG ID) flow statistics; needs streams with flow stats or latency
 - **Full-width table**, as on Streams, stacks the chart under the table. Both choices are saved per browser.
 - A **Latency histogram** of one **PG ID** with **Bars** (11, 17 or All) and the counters Dropped, Duplicates, Out of
   order, Seq too high, Seq too low.
-- The chart **Latency: <metric> (µs)** (Average, Max, Last max, Jitter).
+- The chart **Latency: <metric> (µs)** (Average, Max, Last max, Jitter). Its metric is saved per browser too.
 
 ### 6.4 Utilization
 
@@ -1387,7 +1387,7 @@ dialog attaches it by itself ([12.3](#123-run-tab)).
 - The top bar has **Monitor** and **Settings** only.
 - Any other address goes to `/monitor`.
 - The status line sits in the footer.
-- Settings offers the theme alone.
+- Settings offers the theme and the density alone.
 - Ctrl+Shift+C is not bound.
 
 The backend answers 409 `This backend runs with --monitor-only` to every request that changes state and to the
@@ -1588,6 +1588,10 @@ The data directory also holds:
 
 **Theme**: **System**, **Light**, **Dark**, **High contrast**. Kept in this browser, applied at once, no Save.
 
+**Density**: **Comfortable** (the default: 32 px controls) or **Compact** (26 px controls, for more rows on a small
+screen). It sizes the buttons, inputs and selects; the text size stays the same. Kept in this browser, applied at once,
+no Save, and not part of Export settings.
+
 ### 13.2 Files on the backend host
 
 - **Templates directory** (your packet templates; empty means `<data dir>/templates`);
@@ -1671,7 +1675,7 @@ A port held under your own user name by another session reads `Port N is held by
 |---|---|---|
 | Saved connections, preferences, port names, test setups | backend data directory (default `~/.local/share/trex-web-gui`) | until changed; part of Export settings |
 | Editor profile library, user packet templates, saved capture files | backend data directory (or the directories set in Settings) | until deleted |
-| Theme, last Browse directory, Monitor host history, collapsed Monitor panels, histogram bar count, Dashboard columns, history, full width, chart series and metrics, Streams/Latency intervals | this browser (local storage) | per browser |
+| Theme, density, last Browse directory, Monitor host history, collapsed Monitor panels, histogram bar count, Dashboard columns, history, full width, chart series and metrics, Streams/Latency intervals | this browser (local storage) | per browser |
 | Traffic forms, Dashboard tab/interval/layout/Y axis, histogram PG ID, charted PG IDs, xstats pins and baselines, Clear stats baselines | this browser tab | until a new connection starts or the page is reloaded |
 | Event log | this browser tab | across reconnects; lost on reload |
 | RPC capture switch | backend session | survives a page reload |

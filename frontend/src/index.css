@@ -356,7 +356,7 @@ button.expander { min-height: 0; padding: 0 .2rem; }
 /* The Columns ▾ panel: positioned as a menu list, but a form group (check boxes), sized to its longest label. */
 .columns-panel { position: absolute; top: 100%; left: 0; z-index: 10;
   background: var(--bg); border: 1px solid var(--border); border-radius: 6px; padding: .4rem .6rem; margin: 0; min-width: max-content; }
-.columns-panel label { display: block; white-space: nowrap; }
+.columns-panel label { display: block; white-space: nowrap; clear: both; }   /* below the floated legend, not beside it */
 .columns-panel legend { padding: 0; float: left; width: 100%; font-weight: 600; }
 /* Test setups: a fixed-height master-detail; the list and the detail pane each scroll, the footer stays. */
 .setups-dialog { display: flex; flex-direction: column; width: min(56rem, 92vw); height: min(36rem, 85vh); }
