@@ -290,13 +290,13 @@ describe('DaemonDialog', () => {
     expect(screen.queryByRole('dialog', { name: 'Stop TRex' })).toBeNull()
   })
 
-  it('shows what is still running after a stop beside a hand-started TRex', async () => {
-    vi.spyOn(api, 'daemonStop').mockResolvedValue({ running: false, stop_s: 1, other_pids: [2662] })
+  it('names the processes still listed after a stop beside a hand-started TRex, not whose they are', async () => {
+    vi.spyOn(api, 'daemonStop').mockResolvedValue({ running: false, stop_s: 1, other_pids: [2662, 4242] })
     setApp({ daemon: stfRunning })
     render(<DaemonDialog onClose={() => undefined} />)
     await userEvent.click(screen.getByRole('button', { name: 'Stop' }))
     await userEvent.click(within(dialog('Stop TRex')).getByRole('button', { name: 'Stop' }))
-    expect(await screen.findByText("The daemon's run stopped, but the TRex on command port 4701 is still running: the daemon did not start it (pid 2662). Stop it on the host.")).toBeInTheDocument()
+    expect(await screen.findByText("The daemon's run stopped, but a TRex the daemon did not start still answers on command port 4701 (TRex processes still listed: pid 2662, 4242). Stop it on the host.")).toBeInTheDocument()
   })
 
   it('closing disconnects', async () => {

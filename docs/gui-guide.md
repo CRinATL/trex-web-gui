@@ -1524,9 +1524,10 @@ be read it asks once more, `Force stop anyway?`
 `TRex is still running after the stop.` when the daemon reports so. A Force stop that finds the daemon Idle (its run
 ended meanwhile) is refused with `The daemon did not start this TRex and cannot stop it…`.
 When another TRex the daemon did not start runs on the host and still answers on the command port after the
-daemon's run ended, the tab says `The daemon's run stopped, but the TRex on command port <port> is still running:
-the daemon did not start it (pid N). Stop it on the host.`, and Control keeps its session, since its TRex did not
-stop.
+daemon's run ended, the tab says `The daemon's run stopped, but a TRex the daemon did not start still answers on
+command port <port> (TRex processes still listed: pid N). Stop it on the host.`, and Control keeps its session, since
+its TRex did not stop. The pids are every TRex the host still lists, which can include the daemon's own if it has not
+exited yet.
 
 A stop of the TRex Control is connected to (same host and command port as the Control session) is not a loss:
 Control shows the **TRex stopped** dialog ([1.3](#13-the-status-bar)), and a later stateless Start from this dialog
