@@ -1,6 +1,7 @@
 # A sample systemd user unit for `trex-web-gui serve` (documentation, not installed by anything).
 # Copy it to ~/.config/systemd/user/trex-web-gui.service, then:
 #   systemctl --user daemon-reload && systemctl --user enable --now trex-web-gui
+# and, so that it keeps running after you log out: loginctl enable-linger
 # The login URL is printed to the journal: journalctl --user -u trex-web-gui
 [Unit]
 Description=trex-web-gui
