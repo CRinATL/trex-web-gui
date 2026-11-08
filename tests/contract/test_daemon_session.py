@@ -556,8 +556,8 @@ def test_force_stop_with_a_stale_seq_kills_the_new_run(fake_daemon: Any, fake_tr
 
 def test_force_stop_with_a_held_seq_and_the_daemon_idle_is_refused_first(
         fake_daemon: Any, fake_trex: Any, monkeypatch: pytest.MonkeyPatch) -> None:
-    """A held seq whose run already ended (the daemon Idle, no poll since): Force stop is not_daemon_run before
-    any stopping call, so the hooks hear nothing."""
+    """A held seq whose run already ended (the daemon Idle, no poll since): Force stop is not_daemon_run
+    before any stopping call, so the hooks hear nothing."""
     monkeypatch.setattr(session_mod, "POLL_S", 60.0)
     d, f, hooks = fake_daemon(), fake_trex(), Hooks()
 

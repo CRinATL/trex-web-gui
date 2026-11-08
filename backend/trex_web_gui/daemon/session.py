@@ -591,17 +591,16 @@ class DaemonSession:
     async def stop(self, rpc_port: int, confirm: bool, force: bool = False,
                    owners_unknown_ack: bool = False) -> dict[str, Any]:
         """Stop (or Force stop) TRex; returns {running, stop_s, other_pids} (other_pids: the TRexes still
-        listed when one the daemon did not start still answers on rpc_port, else []). Stop sends stop_trex with our seq; Force stop
-        always sends force_trex_kill, held seq or not (the daemon's two calls are the same for a live seq, and
-        a stale one is refused -33 or answered False while Idle). Refusals before any state-changing call:
-        confirm_required; not_daemon_run first for any Force stop while the daemon is Idle (its
-        force_trex_kill stops only a run the daemon started, never a TRex started by hand, and a held seq
-        whose run ended has nothing to kill, so no owner read or ack comes first); for a
-        stateful run that is not ours, not_ours (Stop) or owners_unknown (Force stop,
-        lifted by `owners_unknown_ack`); in_use when another user owns a port (never lifted);
-        owners_unknown when the owners cannot be read (lifted only for Force stop with the ack); not_ours
-        when no run of ours is held and `force` is not set. Our own STF run is stopped without a port read
-        (D12)."""
+        listed when one the daemon did not start still answers on rpc_port, else []). Stop sends stop_trex
+        with our seq; Force stop always sends force_trex_kill, held seq or not (the daemon's two calls are
+        the same for a live seq, and a stale one is refused -33 or answered False while Idle). Refusals
+        before any state-changing call: confirm_required; not_daemon_run first for any Force stop while the
+        daemon is Idle (its force_trex_kill stops only a run the daemon started, never a TRex started by
+        hand, and a held seq whose run ended has nothing to kill, so no owner read or ack comes first); for
+        a stateful run that is not ours, not_ours (Stop) or owners_unknown (Force stop, lifted by
+        `owners_unknown_ack`); in_use when another user owns a port (never lifted); owners_unknown when the
+        owners cannot be read (lifted only for Force stop with the ack); not_ours when no run of ours is
+        held and `force` is not set. Our own STF run is stopped without a port read (D12)."""
         if confirm is not True:
             raise DaemonRefused("confirm_required", "Stopping TRex needs confirm.")
         client = self._need_client()
@@ -641,11 +640,12 @@ class DaemonSession:
         """The stopping call and the wait for it, after every refusal: tell the hooks first (`expect`), then
         `done` when TRex stopped, else `cancel`; `cancel` too when anything raises, `expect` itself included
         (then no stop is sent). `kill_only` (every Force stop) sends force_trex_kill, logging the
-        owners_unknown_ack warning when `cause` is set; otherwise stop_trex(seq). A force_trex_kill answering anything but True found no daemon run to stop
-        (it ended meanwhile): not_daemon_run, and the hooks cancel. When `before`, the process list read
-        before the stop, held two or more TRexes, a stop that ended the daemon's run is checked by
-        _other_trex before `done`: a TRex still answering on rpc_port is not the one stopped, so the hooks
-        cancel and the reply's other_pids names what is still listed (daemon-force-3)."""
+        owners_unknown_ack warning when `cause` is set; otherwise stop_trex(seq). A force_trex_kill
+        answering anything but True found no daemon run to stop (it ended meanwhile): not_daemon_run, and
+        the hooks cancel. When `before`, the process list read before the stop, held two or more TRexes, a
+        stop that ended the daemon's run is checked by _other_trex before `done`: a TRex still answering on
+        rpc_port is not the one stopped, so the hooks cancel and the reply's other_pids names what is still
+        listed (daemon-force-3)."""
         hooks = self._hooks
         settled = False
         try:
