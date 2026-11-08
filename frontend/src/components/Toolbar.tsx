@@ -53,6 +53,7 @@ export function Toolbar({ ports, selection, readOnly, connected, statsConnected 
   const mine = portId === null ? [] : [portId]
   const start = find(onSelection, 'start')
   const startAll = find(root, 'start_all')
+  const stopAll = find(root, 'stop_all')   // enabled while a port runs: then it is the step, and Start all is quiet
   const toggle = paused ? find(onSelection, 'resume') : find(onSelection, 'pause')
   const ownership = sel?.owned ? find(onSelection, 'release') : find(onSelection, 'acquire')
   const label = portId === null ? 'Port —' : `Port ${portId}`
@@ -85,8 +86,8 @@ export function Toolbar({ ports, selection, readOnly, connected, statsConnected 
       </div>
       <div role="group" aria-label="All ports" className="tb-group">
         <span className="tb-label">All ports</span>
-        <RunButton kind="go" disabled={!startAll?.enabled || busy} onClick={() => onStartAll?.()}>Start all</RunButton>
-        {act('Stop all', find(root, 'stop_all'), () => dropPending(ports.map((p) => p.id)), undefined, 'stop')}
+        <RunButton kind="go" quiet={stopAll?.enabled} disabled={!startAll?.enabled || busy} onClick={() => onStartAll?.()}>Start all</RunButton>
+        {act('Stop all', stopAll, () => dropPending(ports.map((p) => p.id)), undefined, 'stop')}
         {act('Acquire all', find(root, 'acquire_all'))}
         {act('Release all', find(root, 'release_all'))}
         {/* shown only while another session of this user holds a port, e.g. a trex-web-gui that exited without releasing (RC1-25) */}

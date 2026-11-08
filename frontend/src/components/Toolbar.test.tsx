@@ -179,6 +179,14 @@ describe('Toolbar', () => {
     expect(screen.getByRole('button', { name: 'Stop' })).toHaveAttribute('data-quiet')
     expect(screen.getByRole('button', { name: 'Stop' })).toHaveAttribute('data-run', 'stop')
   })
+  it('All ports: Start all is quiet while a port runs', () => {
+    setup({ kind: 'root' }, [port(0, { owned: true, state: 'TX', profiles: { _: 'TX' } }), port(1, { owned: true, state: 'STREAMS', profiles: { _: 'STREAMS' } })])
+    expect(enabled('Start all')).toBe(true)
+    expect(enabled('Stop all')).toBe(true)
+    expect(screen.getByRole('button', { name: 'Start all' })).toHaveAttribute('data-quiet')
+    expect(screen.getByRole('button', { name: 'Stop all' })).not.toHaveAttribute('data-quiet')
+    expect(screen.getByRole('button', { name: 'Stop all' })).toHaveAttribute('data-run', 'stop')
+  })
   it('Pause and Stop drop a pending update', async () => {
     vi.spyOn(api, 'pause').mockResolvedValue({ ports: [] })
     vi.spyOn(api, 'stop').mockResolvedValue({ ports: [] })
