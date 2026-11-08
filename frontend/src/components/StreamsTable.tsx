@@ -147,7 +147,7 @@ function Table({ ids, ports, labelOf, sel }: { ids: number[]; ports: PortView[];
                     <ChartCheckbox tab="streams" id={id} sel={sel} />
                   </td>
                   <th scope="row">
-                    <button type="button" aria-expanded={expanded} aria-label={`PG ID ${id} ports`} onClick={() => toggleOpen(id)}>{expanded ? '▾' : '▸'}</button>
+                    <button type="button" className="expander" aria-expanded={expanded} aria-label={`PG ID ${id} ports`} onClick={() => toggleOpen(id)}>{expanded ? '▾' : '▸'}</button>
                     {' '}{id}
                   </th>
                   <td>{latency.has(id) ? 'latency' : 'flow'}</td>

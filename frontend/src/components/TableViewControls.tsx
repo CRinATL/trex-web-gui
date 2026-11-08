@@ -17,7 +17,7 @@ function ColumnsPanel({ id, close }: { id: string; close: () => void }) {
     return () => document.removeEventListener('mousedown', down)
   }, [close])
   return (
-    <fieldset id={id} className="setups-menu-list" ref={ref}>
+    <fieldset id={id} className="columns-panel" ref={ref}>
       <legend>Columns</legend>
       <label><input type="checkbox" checked={view.bitRates} onChange={(e) => setView({ bitRates: e.target.checked })} /> Bit rates (L1 and L2)</label>
       <label><input type="checkbox" checked={view.counters} onChange={(e) => setView({ counters: e.target.checked })} /> Packet and byte counters</label>

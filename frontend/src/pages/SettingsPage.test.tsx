@@ -2,6 +2,7 @@ import { act, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import * as api from '../api'
+import { resetDensityStore } from '../density'
 import { useTheme } from '../theme'
 import { SettingsPage } from './SettingsPage'
 import * as state from '../state'
@@ -10,7 +11,7 @@ import * as ws from '../ws'
 import preview from '../__fixtures__/bundlePreview.json'
 import { unsavedRows } from '../testUnsaved'
 
-beforeEach(() => { vi.spyOn(api, 'getAbout').mockResolvedValue({ app_version: '1', trex_pin: { upstream_sha: 'x', patches: [] }, supported: 's', host: 'trex-host' }) })
+beforeEach(() => { localStorage.clear(); resetDensityStore(); vi.spyOn(api, 'getAbout').mockResolvedValue({ app_version: '1', trex_pin: { upstream_sha: 'x', patches: [] }, supported: 's', host: 'trex-host' }) })
 afterEach(() => { vi.restoreAllMocks(); vi.unstubAllGlobals(); localStorage.clear(); delete document.documentElement.dataset.theme; delete document.documentElement.dataset.density })
 
 const PREFS = { templates_dir: '', wireshark_path: 'wireshark', workspace_dir: '', release_on_exit: true, trex_cfg_path: '/etc/trex_cfg.yaml' }
