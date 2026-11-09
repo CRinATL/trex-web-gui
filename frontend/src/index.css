@@ -396,7 +396,7 @@ button.expander { min-height: 0; padding: 0 .2rem; }
 fieldset.plain { border: 0; padding: 0; margin: 0; }
 fieldset.plain legend { padding: 0; font-weight: 600; font-size: 1.1em; margin-bottom: .5rem; }
 .badge.badge-alert { color: var(--bad); border-color: var(--bad); }
-.statusbar > [role="status"], .statusbar > [role="alert"] { flex: 1 1 16rem; }   /* a long message wraps in its own space; under ~16rem left, the end moves to a line of its own */
+.statusbar > [role="status"] { flex: 1 1 16rem; }   /* a long message wraps in its own space; under ~16rem left, the end moves to a line of its own */
 .statusbar .end { margin-left: auto; display: flex; flex-wrap: wrap; justify-content: flex-end; align-items: center; gap: .5rem; }
 .statusbar .app-version { white-space: nowrap; }   /* never broken into "trex-/web-/gui" */
 .statusbar .end button, .statusbar .end a { color: var(--fg); background: var(--panel); }

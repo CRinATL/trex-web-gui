@@ -3,11 +3,17 @@ import { useDashView } from '../dashView'
 import { useHotkey } from '../keys'
 
 // The open Columns panel: two check boxes that stay open while toggled. Escape (mounted only while open) and a press outside close it;
-// Escape hands the focus back to the Columns button, so it does not fall to the page when the focused check box unmounts.
-function ColumnsPanel({ id, close, escape }: { id: string; close: () => void; escape: () => void }) {
+// Escape from inside the panel hands the focus back to the Columns button, so it does not fall to the page when the focused
+// check box unmounts; Escape with the focus elsewhere (a dialog, the table) closes the panel and leaves the focus where it is.
+function ColumnsPanel({ id, close, focusButton }: { id: string; close: () => void; focusButton: () => void }) {
   const { view, setView } = useDashView()
-  useHotkey('escape', escape)
   const ref = useRef<HTMLFieldSetElement>(null)
+  const escape = useCallback(() => {
+    const inside = ref.current?.contains(document.activeElement) ?? false
+    close()
+    if (inside) focusButton()
+  }, [close, focusButton])
+  useHotkey('escape', escape)
   // a press outside the whole control (its button included, so the button's own click can toggle) closes the panel
   useEffect(() => {
     const down = (e: MouseEvent) => {
@@ -31,12 +37,12 @@ function ColumnsControl() {
   const [open, setOpen] = useState(false)
   const close = useCallback(() => setOpen(false), [])
   const button = useRef<HTMLButtonElement>(null)
-  const escape = useCallback(() => { setOpen(false); button.current?.focus() }, [])
+  const focusButton = useCallback(() => button.current?.focus(), [])
   const id = useId()
   return (
     <span className="setups-menu">
       <button type="button" ref={button} aria-expanded={open} aria-controls={id} onClick={() => setOpen((o) => !o)}>Columns ▾</button>
-      {open && <ColumnsPanel id={id} close={close} escape={escape} />}
+      {open && <ColumnsPanel id={id} close={close} focusButton={focusButton} />}
     </span>
   )
 }

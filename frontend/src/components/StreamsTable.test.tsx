@@ -298,6 +298,16 @@ describe('StreamsTab columns', () => {
     expect(screen.queryByRole('group', { name: 'Columns' })).toBeNull()
     expect(screen.getByRole('button', { name: 'Columns ▾' })).toHaveFocus()
   })
+  it('Escape with the focus outside the open Columns panel closes it and leaves the focus where it is', async () => {
+    pgidStore.push(wirePgid('tx'))
+    renderTab()
+    await openColumns()
+    const chip = screen.getByRole('button', { name: 'Full-width table' })
+    chip.focus()
+    await userEvent.keyboard('{Escape}')
+    expect(screen.queryByRole('group', { name: 'Columns' })).toBeNull()
+    expect(chip).toHaveFocus()
+  })
   it('a press outside closes the Columns panel, one inside does not', async () => {
     pgidStore.push(wirePgid('tx'))
     renderTab()
