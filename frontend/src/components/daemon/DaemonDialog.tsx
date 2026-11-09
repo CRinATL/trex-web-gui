@@ -59,7 +59,8 @@ export function DaemonDialog({ onClose, initialPushed }: { onClose: () => void; 
   // reply carries one that parses, else at the metadata's defaults (daemon-ui-1). It starts again only when the target or the
   // daemon's metadata differs from the one the form was started for: a reconnect to the same daemon keeps the form, another
   // daemon on the same TRex build does not (its config is its own). The defaults show at once; the parsed config replaces them
-  // only if nothing was edited meanwhile and the form is still the one started for this target.
+  // only if nothing was edited meanwhile (`v === seeded`: a later seed, for another target, is a new object, so a stale answer
+  // never lands). A reseed also leaves Edit YAML and drops its text: the text is the old daemon's config too.
   const seedKey = useRef<string | null>(null)
   function adopt(reply: Record<string, unknown>, target: string) {
     const read = readConnectInfo(reply)
@@ -70,10 +71,11 @@ export function DaemonDialog({ onClose, initialPushed }: { onClose: () => void; 
     seedKey.current = key
     const seeded = defaultsOf(read.metadata)
     setValues(seeded)
+    setEditing(false); setText('')
     if (read.configYaml === '') return
     daemonConfigPreview({ text: read.configYaml }).then((r) => {
       const server = r.values
-      if (server && seedKey.current === key) setValues((v) => (v === seeded ? server : v))
+      if (server) setValues((v) => (v === seeded ? server : v))
     }, () => undefined)   // unread: the defaults stay, and Load from server shows the error
   }
   function pushedConfig(p: PushedConfig) { if (daemon?.target) rememberPushed(daemon.target, p); setPushedSeq((n) => n + 1) }

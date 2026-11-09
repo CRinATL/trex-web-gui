@@ -67,7 +67,7 @@ function ProgressView({ progress, elapsed }: { progress: ConfirmProgress; elapse
   const ref = useRef<HTMLDivElement>(null)
   useEffect(() => { ref.current?.focus() }, [])
   return (
-    <div className="confirm-progress" tabIndex={-1} ref={ref}>
+    <div className="confirm-progress" role="group" aria-label={progress.label} tabIndex={-1} ref={ref}>
       <p role="status">{progress.label}…</p>
       <progress aria-label={progress.label} max={progress.limitS} value={Math.min(elapsed, progress.limitS)} />
       <p role="timer" className="muted">{mss(elapsed)} of up to {mss(progress.limitS)}</p>

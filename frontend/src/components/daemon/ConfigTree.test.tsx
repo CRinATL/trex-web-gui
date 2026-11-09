@@ -182,6 +182,19 @@ describe('Config and YAML tabs', () => {
     expect(screen.getByLabelText('Port limit')).toHaveValue(null)
   })
 
+  it('a connect to another daemon leaves Edit YAML and drops the first daemon\'s text', async () => {
+    await openConfig()
+    await connectTo('10.3.0.1')
+    await yamlTab()
+    const toggle = screen.getByRole('checkbox', { name: 'Edit YAML' })
+    await vi.waitFor(() => expect(toggle).toBeEnabled())
+    await userEvent.click(toggle)
+    fireEvent.change(screen.getByRole('textbox', { name: 'YAML text' }), { target: { value: '- version: 2\n  port_limit: 8\n' } })
+    await connectTo('10.3.0.2')
+    await vi.waitFor(() => expect(screen.queryByRole('textbox', { name: 'YAML text' })).toBeNull())
+    expect(screen.getByRole('checkbox', { name: 'Edit YAML' })).not.toBeChecked()
+  })
+
   it('a reconnect to the same daemon keeps the form and its edits', async () => {
     await openConfig()
     await connectTo('10.2.0.1')

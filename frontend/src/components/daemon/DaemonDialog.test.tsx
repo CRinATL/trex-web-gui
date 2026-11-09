@@ -328,6 +328,11 @@ describe('DaemonDialog', () => {
     await screen.findByText(msg)
     setApp({ daemon: { ...idle, state: 'disconnected' } }); rerender(<DaemonDialog onClose={() => undefined} />)
     expect(screen.queryByText(msg)).toBeNull()
+    // a reconnect does not bring the old note back before the first reply
+    vi.mocked(api.daemonLog).mockImplementation(() => new Promise(() => undefined))
+    setApp({ daemon: idle }); rerender(<DaemonDialog onClose={() => undefined} />)
+    await act(async () => { await new Promise((r) => setTimeout(r, 0)) })
+    expect(screen.queryByText(msg)).toBeNull()
   })
 
   it('Logs: any other failure stays an error', async () => {

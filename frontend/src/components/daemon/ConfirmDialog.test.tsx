@@ -65,7 +65,7 @@ describe('ConfirmDialog progress', () => {
     act(() => { fireEvent.click(screen.getByRole('button', { name: 'Start' })) })
     const dialog = screen.getByRole('dialog', { name: 'Start TRex' })
     expect(dialog).toContainElement(document.activeElement as HTMLElement)
-    expect(document.activeElement).toHaveClass('confirm-progress')
+    expect(screen.getByRole('group', { name: 'Starting TRex' })).toHaveFocus()   // the view, named, holds focus
     await userEvent.tab()
     expect(dialog).toContainElement(document.activeElement as HTMLElement)
     await act(async () => { fail(new Error('bad config')) })
