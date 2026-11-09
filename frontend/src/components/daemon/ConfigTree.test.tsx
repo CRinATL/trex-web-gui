@@ -117,9 +117,41 @@ describe('Config and YAML tabs', () => {
   }
   const yamlTab = () => userEvent.click(screen.getByRole('tab', { name: 'YAML' }))
 
+  it('a connect starts the editor from the daemon\'s own config when it has one (daemon-ui-1)', async () => {
+    await openConfig()
+    expect(api.daemonConfigPreview).toHaveBeenCalledWith({ text: SERVER_YAML })
+    await vi.waitFor(() => expect(screen.getByLabelText('Port limit')).toHaveValue(2))   // the stand-in's parse, not the defaults' empty field
+  })
+
+  it('a connect with no server config, or one that does not parse, starts from the defaults', async () => {
+    vi.mocked(api.daemonConnect).mockResolvedValue({ ...REPLY, config_yaml: '' })
+    const first = await openConfig()
+    expect(api.daemonConfigPreview).not.toHaveBeenCalledWith({ text: '' })
+    expect(screen.getByLabelText('Port limit')).toHaveValue(null)
+    first.unmount()
+    vi.mocked(api.daemonConnect).mockResolvedValue({ ...REPLY, metadata_version: 'v2', config_yaml: '- bad: [' })
+    await openConfig()
+    await vi.waitFor(() => expect(api.daemonConfigPreview).toHaveBeenCalledWith({ text: '- bad: [' }))
+    expect(screen.getByLabelText('Port limit')).toHaveValue(null)
+    expect(screen.getByLabelText('Version')).toHaveValue(2)
+  })
+
+  it('an edit made while the server config is read is kept', async () => {
+    let answer: (r: api.ConfigPreview) => void = () => undefined
+    vi.mocked(api.daemonConfigPreview).mockImplementation((b) => ('text' in b ? new Promise((r) => { answer = r }) : fakePreview(b)))
+    render(<DaemonDialog onClose={() => undefined} />)
+    await userEvent.click(screen.getByRole('button', { name: 'Connect' }))
+    await userEvent.click(screen.getByRole('tab', { name: 'Config' }))
+    fireEvent.change(await screen.findByLabelText('Version'), { target: { value: '7' } })
+    answer({ yaml: SERVER_YAML, values: { version: 2, port_limit: 2 }, errors: [] })
+    await new Promise((r) => setTimeout(r, 0))
+    expect(screen.getByLabelText('Version')).toHaveValue(7)
+    expect(screen.getByLabelText('Port limit')).toHaveValue(null)
+  })
+
   it('Load default fills version 2', async () => {
     await openConfig()
-    expect(screen.getByLabelText('Version')).toHaveValue(2)   // a connect starts at the defaults
+    expect(screen.getByLabelText('Version')).toHaveValue(2)   // a connect starts at the server's config (the stand-in's parse)
     fireEvent.change(screen.getByLabelText('Version'), { target: { value: '7' } })
     expect(screen.getByLabelText('Version')).toHaveValue(7)
     await userEvent.click(screen.getByRole('button', { name: 'Load default' }))

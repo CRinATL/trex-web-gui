@@ -49,6 +49,7 @@ REFUSALS: dict[tuple[Family, str], tuple[int, str]] = {
     ("daemon", "invalid_profile"): (409, "the profile is not a stock profile, or does not load, or changed "
                                        "during the upload"),
     ("daemon", "not_ours"): (409, "the run is not one this backend started, so Stop does not stop it"),
+    ("daemon", "no_trex_log"): (409, "TRex's log does not exist yet: the daemon has not started TRex"),
     ("daemon", "not_daemon_run"): (409, "the daemon has no run of its own (a TRex started by hand), so Force "
                                        "stop cannot stop it"),
     ("daemon", "owners_unknown"): (409, "who owns the ports cannot be told; acknowledge to go on"),

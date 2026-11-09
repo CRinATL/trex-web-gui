@@ -1,0 +1,1 @@
+{"t": 0.0, "method": "get_trex_log", "params": {}, "http_status": 200, "body": {"id": 1, "jsonrpc": "2.0", "error": {"code": -33, "message": "Can't get requested file /tmp/trex.txt: [Errno 2] No such file or directory: '/tmp/trex.txt'"}}}
