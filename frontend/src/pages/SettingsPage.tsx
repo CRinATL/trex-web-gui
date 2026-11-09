@@ -240,8 +240,10 @@ function FullSettingsPage() {
               <fieldset className="plain">
                 <legend>Back up and restore</legend>
                 <label className="check"><input type="checkbox" checked={includeTheme} onChange={(e) => setIncludeTheme(e.target.checked)} />Include theme</label>
-                <button type="button" onClick={() => void doExport()}>Export settings…</button>
-                <button type="button" onClick={() => fileInput.current?.click()}>Import settings…</button>
+                <div className="inline-actions">
+                  <button type="button" onClick={() => void doExport()}>Export settings…</button>
+                  <button type="button" onClick={() => fileInput.current?.click()}>Import settings…</button>
+                </div>
                 <input ref={fileInput} type="file" accept="application/json,.json" aria-label="Settings file" hidden onChange={(e) => void pickFile(e)} />
                 {transfer && <p role="status">{transfer}</p>}
                 <p className="muted">Covers preferences, saved connections, port labels and test setups. Nothing is written until you have seen the preview.</p>

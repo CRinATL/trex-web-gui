@@ -27,6 +27,13 @@ describe('SpoolFiles', () => {
     expect(screen.getByText('2 files')).toBeInTheDocument()
     expect(screen.getAllByRole('link', { name: 'Download' })[0]).toHaveAttribute('href', api.captureFileUrl('rec-1-<stamp>.pcap'))
   })
+  it('Download and Delete sit in one spaced row, so the link does not touch the button', async () => {
+    vi.spyOn(api, 'captureFiles').mockResolvedValue(two)
+    render(<Harness />)
+    const row = (await screen.findAllByRole('link', { name: 'Download' }))[0].parentElement
+    expect(row).toHaveClass('inline-actions')
+    expect(row).toContainElement(screen.getAllByRole('button', { name: 'Delete' })[0])
+  })
   it('Delete confirms and calls the API', async () => {
     const files = vi.spyOn(api, 'captureFiles').mockResolvedValue(two)
     const del = vi.spyOn(api, 'deleteCaptureFile').mockResolvedValue({})

@@ -66,7 +66,7 @@ table { font-variant-numeric: tabular-nums; }
 .topbar a { color: var(--muted); text-decoration: none; padding: .25rem .5rem; border-bottom: 2px solid transparent; }
 .topbar a.active { color: var(--fg); border-bottom-color: var(--accent); }
 main { padding: 1rem 1.5rem; overflow: auto; }
-.statusbar { display: flex; align-items: center; gap: 1rem; padding: .35rem 1rem; border-top: 1px solid var(--border); background: var(--panel); color: var(--muted); }   /* muted also reads a disconnected bar that carries an error */
+.statusbar { display: flex; flex-wrap: wrap; align-items: center; gap: .25rem 1rem; padding: .35rem 1rem; border-top: 1px solid var(--border); background: var(--panel); color: var(--muted); }   /* muted also reads a disconnected bar that carries an error */
 .statusbar.state-connected { color: var(--ok); }
 .statusbar.state-lost, .statusbar.state-offline { color: var(--bad); }
 .statusbar.state-connecting { color: var(--warn); }
@@ -202,6 +202,7 @@ button.chip[aria-pressed="true"]::before { content: "\2713\00a0"; }
 .profile-picker > p { flex-basis: 100%; margin: 0; }
 .profile-picker input[type="text"] { min-width: 22rem; }
 .profile-error { flex-basis: 100%; max-height: 16rem; overflow: auto; white-space: pre-wrap; padding: .5rem; background: var(--panel); border: 1px solid var(--border); border-radius: 4px; }
+.inline-actions { display: inline-flex; flex-wrap: wrap; align-items: center; gap: .5rem; }   /* a row of buttons or links that would otherwise touch */
 .tunables { display: flex; flex-wrap: wrap; gap: .5rem; margin: .5rem 0; }
 .streams, .ports-info { border-collapse: collapse; margin: .5rem 0; }
 .streams th, .streams td, .ports-info th, .ports-info td { text-align: left; padding: .15rem .6rem; border-bottom: 1px solid var(--border); }
@@ -395,8 +396,11 @@ button.expander { min-height: 0; padding: 0 .2rem; }
 fieldset.plain { border: 0; padding: 0; margin: 0; }
 fieldset.plain legend { padding: 0; font-weight: 600; font-size: 1.1em; margin-bottom: .5rem; }
 .badge.badge-alert { color: var(--bad); border-color: var(--bad); }
-.statusbar .end { margin-left: auto; display: flex; align-items: center; gap: .5rem; flex-shrink: 0; white-space: nowrap; }   /* the version and buttons keep their width; a long message wraps instead */
+.statusbar > [role="status"], .statusbar > [role="alert"] { flex: 1 1 16rem; }   /* a long message wraps in its own space; under ~16rem left, the end moves to a line of its own */
+.statusbar .end { margin-left: auto; display: flex; flex-wrap: wrap; justify-content: flex-end; align-items: center; gap: .5rem; }
+.statusbar .app-version { white-space: nowrap; }   /* never broken into "trex-/web-/gui" */
 .statusbar .end button, .statusbar .end a { color: var(--fg); background: var(--panel); }
+.statusbar .end button:not([data-run]):hover:enabled { background: color-mix(in srgb, var(--fg) 8%, var(--panel)); }   /* the base hover, which the panel background above outranks */
 .statusbar .end button[data-run]:enabled { box-shadow: 0 0 0 1px var(--panel), 0 0 0 2px var(--run); }   /* the box's gap in the bar's colour */
 
 /* P4a Studio: the library pane beside the editor (the pane reuses the .setups-list option styling) */

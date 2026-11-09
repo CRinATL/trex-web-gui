@@ -289,6 +289,15 @@ describe('StreamsTab columns', () => {
     expect(screen.getByRole('button', { name: 'Columns ▾' })).toHaveAttribute('aria-expanded', 'false')
     expect(screen.queryByRole('group', { name: 'Columns' })).toBeNull()
   })
+  it('Escape from a focused Columns check box hands the focus back to the Columns button', async () => {
+    pgidStore.push(wirePgid('tx'))
+    renderTab()
+    await openColumns()
+    screen.getByRole('checkbox', { name: 'Bit rates (L1 and L2)' }).focus()
+    await userEvent.keyboard('{Escape}')
+    expect(screen.queryByRole('group', { name: 'Columns' })).toBeNull()
+    expect(screen.getByRole('button', { name: 'Columns ▾' })).toHaveFocus()
+  })
   it('a press outside closes the Columns panel, one inside does not', async () => {
     pgidStore.push(wirePgid('tx'))
     renderTab()
