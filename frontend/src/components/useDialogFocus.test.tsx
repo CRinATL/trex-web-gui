@@ -37,4 +37,16 @@ describe('useDialogFocus trap', () => {
     await userEvent.tab()
     expect(screen.getByRole('button', { name: 'First' })).toHaveFocus()
   })
+  it('with nothing focusable inside (every button disabled while an action runs), Tab does not leave the dialog', async () => {
+    function Busy() {
+      const ref = useDialogFocus<HTMLDivElement>('.view')
+      return <div ref={ref} role="dialog"><div className="view" tabIndex={-1}>Working</div><button disabled>Cancel</button></div>
+    }
+    render(<><Busy /><button>Outside</button></>)
+    expect(screen.getByText('Working')).toHaveFocus()
+    await userEvent.tab()
+    expect(screen.getByText('Working')).toHaveFocus()
+    await userEvent.tab({ shift: true })
+    expect(screen.getByText('Working')).toHaveFocus()
+  })
 })

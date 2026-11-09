@@ -1465,7 +1465,9 @@ A form built from the daemon's own description of `trex_cfg.yaml`
 thread count, which it leaves to TRex's own defaults: a `platform` with only the master thread, or `c: 4` on a small
 host, would stop TRex from starting) and **Load from server** (the daemon's current file). A connect opens the form
 on the daemon's current file when it has one that parses, else on the same defaults; an edit made while that file is
-read is kept. The YAML tab shows what the form describes.
+read is kept. A reconnect to the same daemon keeps the form and its edits; a connect to another host or port starts it
+again from that daemon's file, so edits not yet pushed are dropped rather than pushed to the wrong daemon. The YAML tab
+shows what the form describes.
 
 ### 12.2 YAML tab
 

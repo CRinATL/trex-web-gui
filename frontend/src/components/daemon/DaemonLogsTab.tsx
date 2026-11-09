@@ -12,6 +12,9 @@ export function DaemonLogsTab({ connected }: { connected: boolean }) {
   const [note, setNote] = useState<string | null>(null)   // no TRex log yet (409 no_trex_log): a fact to read, not a failure
   const [tick, setTick] = useState(0)   // bumped by Refresh
   const inFlight = useRef(false)
+  // A disconnect drops the note, so a reconnect (perhaps to another daemon) does not show the old one before its first reply.
+  const [wasConnected, setWasConnected] = useState(connected)
+  if (wasConnected !== connected) { setWasConnected(connected); if (!connected) setNote(null) }
 
   useEffect(() => {
     if (!connected) return
