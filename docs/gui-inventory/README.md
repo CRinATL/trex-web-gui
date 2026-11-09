@@ -2,6 +2,12 @@
 
 ## Scope
 
+**Three screens and the EMU HOWTO re-shot after 1.5.0 (2026-11-08).** [49](screens/49-capture-saved-files.png),
+[56](screens/56-settings-backup.png) and [63](screens/63-import-result.png) were shot again on `main` after 1.5.0, so
+Download and Delete, and Export settings… and Import settings…, show the space between them that PR #114 added; the
+other screens are unchanged (their status bars still read `1.4.1`). The EMU HOWTO's ten screens
+(`docs/howto/emu-screens/`, last shot on 1.3.1) were shot again on the same build and show the control look.
+
 **Re-shot for the control look (2026-11-08).** Every screen was shot again on the `control-tokens` branch (ui-recs-5),
 against the same guest, and the HOWTO's screens with them (About, [57](screens/57-settings-about.png), shows `1.4.1`).
 What changed on screen: buttons, text inputs and selects
