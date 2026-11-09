@@ -320,6 +320,16 @@ describe('DaemonDialog', () => {
     expect(screen.queryByText(msg)).toBeNull()
   })
 
+  it('Logs: the no-TRex-log note goes when the daemon disconnects', async () => {
+    const msg = "There is no TRex log yet: this daemon has not started TRex, or TRex's log file was removed. The Daemon log shows what the daemon did."
+    vi.mocked(api.daemonLog).mockRejectedValue(new api.ApiError(409, 'no_trex_log', msg))
+    const { rerender } = await open()
+    fireEvent.click(screen.getByRole('tab', { name: 'Logs' }))
+    await screen.findByText(msg)
+    setApp({ daemon: { ...idle, state: 'disconnected' } }); rerender(<DaemonDialog onClose={() => undefined} />)
+    expect(screen.queryByText(msg)).toBeNull()
+  })
+
   it('Logs: any other failure stays an error', async () => {
     vi.mocked(api.daemonLog).mockRejectedValue(new api.ApiError(502, 'daemon_fault', '-33: something else'))
     await open()

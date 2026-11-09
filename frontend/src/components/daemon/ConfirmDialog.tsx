@@ -25,6 +25,13 @@ export function ConfirmDialog({ title, body, confirmLabel, cancelLabel = 'Cancel
     const t = setInterval(() => setElapsed(Math.floor((Date.now() - started) / 1000)), 1000)
     return () => clearInterval(t)
   }, [showProgress])
+  // While the progress view shows, both buttons are disabled: focus moves to the view (ProgressView), and back to the confirm
+  // button when the action fails and the body returns, so focus never drops to the page behind the dialog.
+  const wasProgress = useRef(false)
+  useEffect(() => {
+    if (wasProgress.current && !showProgress) ref.current?.querySelector<HTMLElement>('[data-autofocus]')?.focus()
+    wasProgress.current = showProgress
+  }, [showProgress, ref])
   const close = () => { if (!inFlight.current) onClose() }
   useHotkey('escape', close)
   async function confirm() {
@@ -54,10 +61,13 @@ export function ConfirmDialog({ title, body, confirmLabel, cancelLabel = 'Cancel
 const mss = (s: number) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`
 
 // The running action: a bar that fills over `limitS` (full, not overflowing, once past it) and the elapsed count. The count is
-// a timer role (not announced each second); the label is announced once, when the view appears.
+// a timer role (not announced each second); the label is announced once, when the view appears. The view takes focus when it
+// appears (tabIndex -1: focusable by script, not a Tab stop), since the button that had it is now disabled.
 function ProgressView({ progress, elapsed }: { progress: ConfirmProgress; elapsed: number }) {
+  const ref = useRef<HTMLDivElement>(null)
+  useEffect(() => { ref.current?.focus() }, [])
   return (
-    <div className="confirm-progress">
+    <div className="confirm-progress" tabIndex={-1} ref={ref}>
       <p role="status">{progress.label}…</p>
       <progress aria-label={progress.label} max={progress.limitS} value={Math.min(elapsed, progress.limitS)} />
       <p role="timer" className="muted">{mss(elapsed)} of up to {mss(progress.limitS)}</p>

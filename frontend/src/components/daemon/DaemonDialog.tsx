@@ -56,21 +56,24 @@ export function DaemonDialog({ onClose, initialPushed }: { onClose: () => void; 
   const preview = usePreview(editing ? { text } : values ? { values } : null)
 
   // A connect's reply: the form starts at the daemon's own config (its /etc/trex_cfg.yaml, parsed by the backend) when the
-  // reply carries one that parses, else at the metadata's defaults (daemon-ui-1); again only when the daemon's metadata is not
-  // the one it holds. The defaults show at once; the parsed config replaces them only if nothing was edited meanwhile.
-  const metadataVersion = useRef<string | null>(null)
-  function adopt(reply: Record<string, unknown>) {
+  // reply carries one that parses, else at the metadata's defaults (daemon-ui-1). It starts again only when the target or the
+  // daemon's metadata differs from the one the form was started for: a reconnect to the same daemon keeps the form, another
+  // daemon on the same TRex build does not (its config is its own). The defaults show at once; the parsed config replaces them
+  // only if nothing was edited meanwhile and the form is still the one started for this target.
+  const seedKey = useRef<string | null>(null)
+  function adopt(reply: Record<string, unknown>, target: string) {
     const read = readConnectInfo(reply)
     if (!read) return
     setInfo(read)
-    if (metadataVersion.current === read.metadataVersion) return
-    metadataVersion.current = read.metadataVersion
+    const key = `${target} ${read.metadataVersion}`
+    if (seedKey.current === key) return
+    seedKey.current = key
     const seeded = defaultsOf(read.metadata)
     setValues(seeded)
     if (read.configYaml === '') return
     daemonConfigPreview({ text: read.configYaml }).then((r) => {
       const server = r.values
-      if (server && metadataVersion.current === read.metadataVersion) setValues((v) => (v === seeded ? server : v))
+      if (server && seedKey.current === key) setValues((v) => (v === seeded ? server : v))
     }, () => undefined)   // unread: the defaults stay, and Load from server shows the error
   }
   function pushedConfig(p: PushedConfig) { if (daemon?.target) rememberPushed(daemon.target, p); setPushedSeq((n) => n + 1) }
@@ -83,7 +86,7 @@ export function DaemonDialog({ onClose, initialPushed }: { onClose: () => void; 
   async function connect(h: string, p: number) {
     if (inFlight.current) return
     inFlight.current = true; setBusy(true); setError(null)
-    try { adopt(await daemonConnect(h, p)); lastTarget = { host: h, port: p } }
+    try { adopt(await daemonConnect(h, p), `${h}:${p}`); lastTarget = { host: h, port: p } }
     catch (x) { setError(errText(x)) }
     finally { inFlight.current = false; setBusy(false) }
   }
@@ -105,7 +108,7 @@ export function DaemonDialog({ onClose, initialPushed }: { onClose: () => void; 
     const target = connected ? daemon?.target ?? null : lastTarget
     if (target && (!connected || info === null) && !inFlight.current) {
       inFlight.current = true
-      daemonConnect(target.host, target.port).then(adopt).catch((x) => setError(errText(x))).finally(() => { inFlight.current = false })
+      daemonConnect(target.host, target.port).then((r) => adopt(r, `${target.host}:${target.port}`)).catch((x) => setError(errText(x))).finally(() => { inFlight.current = false })
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps -- once, on open
   }, [])

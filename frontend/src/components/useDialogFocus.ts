@@ -15,7 +15,8 @@ export function useDialogFocus<T extends HTMLElement>(selector: string) {
       if (e.defaultPrevented || e.key !== 'Tab' || !node) return
       // a negative tabIndex (a roving-tabindex cell, `tabIndex={-1}`) is not a Tab stop, whatever matched the selector
       const items = Array.from(node.querySelectorAll<HTMLElement>(FOCUSABLE)).filter((el) => el.tabIndex >= 0)
-      if (!items.length) return
+      // nothing to Tab to (every button disabled while an action runs): Tab stays put rather than leaving the dialog
+      if (!items.length) { e.preventDefault(); return }
       const first = items[0], last = items[items.length - 1]
       if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus() }
       else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus() }

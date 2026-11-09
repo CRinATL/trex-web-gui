@@ -149,6 +149,53 @@ describe('Config and YAML tabs', () => {
     expect(screen.getByLabelText('Port limit')).toHaveValue(null)
   })
 
+  // Two daemons on the same TRex build share the metadata version; each one's config is its own.
+  const B_YAML = '- port_limit: 4\n  version: 2\n'
+  const perYaml = (b: { values: Values } | { text: string }) => ('text' in b && b.text === B_YAML
+    ? Promise.resolve({ yaml: b.text, values: { version: 2, port_limit: 4 }, errors: [] }) : fakePreview(b))
+  const connectTo = async (host: string) => {
+    fireEvent.change(screen.getByLabelText('Host'), { target: { value: host } })
+    await userEvent.click(screen.getByRole('button', { name: 'Connect' }))
+  }
+
+  it('a connect to another daemon with the same metadata starts from that daemon\'s config', async () => {
+    vi.mocked(api.daemonConfigPreview).mockImplementation(perYaml)
+    await openConfig()
+    await vi.waitFor(() => expect(screen.getByLabelText('Port limit')).toHaveValue(2))
+    vi.mocked(api.daemonConnect).mockResolvedValue({ ...REPLY, config_yaml: B_YAML })
+    await connectTo('10.0.0.2')
+    await vi.waitFor(() => expect(screen.getByLabelText('Port limit')).toHaveValue(4))
+  })
+
+  // Each test connects to hosts of its own: opening the dialog reconnects to the last target, which outlives a test.
+  it('the first daemon\'s config, read late, does not land on the second daemon\'s form', async () => {
+    const answers: ((r: api.ConfigPreview) => void)[] = []
+    vi.mocked(api.daemonConfigPreview).mockImplementation((b) => ('text' in b && b.text === SERVER_YAML
+      ? new Promise((r) => { answers.push(r) }) : fakePreview(b)))
+    await openConfig()
+    await connectTo('10.1.0.1')
+    await vi.waitFor(() => expect(answers.length).toBeGreaterThan(0))
+    vi.mocked(api.daemonConnect).mockResolvedValue({ ...REPLY, config_yaml: '' })
+    await connectTo('10.1.0.2')
+    for (const answer of answers) answer({ yaml: SERVER_YAML, values: { version: 2, port_limit: 2 }, errors: [] })
+    await new Promise((r) => setTimeout(r, 0))
+    expect(screen.getByLabelText('Port limit')).toHaveValue(null)
+  })
+
+  it('a reconnect to the same daemon keeps the form and its edits', async () => {
+    await openConfig()
+    await connectTo('10.2.0.1')
+    await vi.waitFor(() => expect(api.daemonConfigPreview).toHaveBeenCalledWith({ text: SERVER_YAML }))
+    await vi.waitFor(() => expect(screen.getByLabelText('Port limit')).toHaveValue(2))
+    const reads = vi.mocked(api.daemonConfigPreview).mock.calls.filter(([b]) => 'text' in b).length
+    fireEvent.change(screen.getByLabelText('Version'), { target: { value: '7' } })
+    await userEvent.click(screen.getByRole('button', { name: 'Connect' }))
+    await new Promise((r) => setTimeout(r, 0))
+    expect(api.daemonConnect).toHaveBeenLastCalledWith('10.2.0.1', 8090)
+    expect(screen.getByLabelText('Version')).toHaveValue(7)
+    expect(vi.mocked(api.daemonConfigPreview).mock.calls.filter(([b]) => 'text' in b)).toHaveLength(reads)
+  })
+
   it('Load default fills version 2', async () => {
     await openConfig()
     expect(screen.getByLabelText('Version')).toHaveValue(2)   // a connect starts at the server's config (the stand-in's parse)

@@ -1,5 +1,6 @@
 import { act, fireEvent, render, screen } from '@testing-library/react'
-import { describe, expect, it, vi } from 'vitest'
+import userEvent from '@testing-library/user-event'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import { ConfirmDialog } from './ConfirmDialog'
 
 const show = (danger?: boolean) => render(
@@ -18,6 +19,8 @@ describe('ConfirmDialog', () => {
 })
 
 describe('ConfirmDialog progress', () => {
+  afterEach(() => { vi.useRealTimers() })   // a failed assertion must not leave fake timers on for the next test
+
   it('while the action runs, shows the progress line and counts elapsed seconds against the limit', async () => {
     vi.useFakeTimers()
     let finish: () => void = () => undefined
@@ -41,7 +44,6 @@ describe('ConfirmDialog progress', () => {
     expect(bar).toHaveAttribute('value', '40')
     await act(async () => { finish() })
     expect(screen.queryByRole('progressbar')).toBeNull()
-    vi.useRealTimers()
   })
 
   it('a failed action leaves the progress view and shows the error over the body again', async () => {
@@ -52,5 +54,21 @@ describe('ConfirmDialog progress', () => {
     expect(screen.queryByRole('progressbar')).toBeNull()
     expect(screen.getByRole('alert')).toHaveTextContent('bad config')
     expect(screen.getByText('the command')).toBeInTheDocument()
+  })
+
+  it('focus stays inside the dialog while the action runs, and returns to the confirm button when it fails', async () => {
+    let fail: (e: Error) => void = () => undefined
+    const onConfirm = vi.fn(() => new Promise<void>((_, rej) => { fail = rej }))
+    render(<><ConfirmDialog title="Start TRex" body={<p>the command</p>} confirmLabel="Start" onConfirm={onConfirm} onClose={vi.fn()}
+      progress={{ label: 'Starting TRex', busyLabel: 'Starting…', limitS: 40 }} /><button>Behind</button></>)
+    expect(screen.getByRole('button', { name: 'Start' })).toHaveFocus()
+    act(() => { fireEvent.click(screen.getByRole('button', { name: 'Start' })) })
+    const dialog = screen.getByRole('dialog', { name: 'Start TRex' })
+    expect(dialog).toContainElement(document.activeElement as HTMLElement)
+    expect(document.activeElement).toHaveClass('confirm-progress')
+    await userEvent.tab()
+    expect(dialog).toContainElement(document.activeElement as HTMLElement)
+    await act(async () => { fail(new Error('bad config')) })
+    expect(screen.getByRole('button', { name: 'Start' })).toHaveFocus()
   })
 })

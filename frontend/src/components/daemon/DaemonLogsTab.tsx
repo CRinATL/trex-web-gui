@@ -44,7 +44,7 @@ export function DaemonLogsTab({ connected }: { connected: boolean }) {
         <button type="button" disabled={!connected} onClick={() => setTick((n) => n + 1)}>Refresh</button>
       </div>
       {!connected && <p className="muted">Not connected to a daemon.</p>}
-      {note && <p className="muted">{note}</p>}
+      {connected && note && <p className="muted">{note}</p>}
       {error && <p role="alert" className="error">{error}</p>}
       <pre className="log-tail" aria-label="Log text" tabIndex={0}>{text}</pre>
     </div>
