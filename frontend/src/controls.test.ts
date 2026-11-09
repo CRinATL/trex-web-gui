@@ -101,10 +101,17 @@ describe('control tokens and base rule', () => {
   it('the Columns panel keeps each label on one line', () => {
     expect(only('.columns-panel label').body).toContain('white-space: nowrap')
   })
-  it('the status bar keeps the version and its buttons on one line, so a long message wraps instead of them', () => {
-    const end = only('.statusbar .end').body
-    expect(end).toContain('flex-shrink: 0')
-    expect(end).toContain('white-space: nowrap')
+  it('the status bar: a long message wraps in its own space, the version never breaks, and a narrow bar moves the end to its own line', () => {
+    expect(only('.statusbar').body).toContain('flex-wrap: wrap')
+    expect(only('.statusbar > [role="status"]').body).toContain('flex: 1 1 16rem')
+    expect(only('.statusbar .app-version').body).toContain('white-space: nowrap')
+    expect(only('.statusbar .end').body).toContain('flex-wrap: wrap')
+  })
+  it("the status bar's plain buttons keep a hover, which its panel background would otherwise hide", () => {
+    expect(only('.statusbar .end button:not([data-run]):hover:enabled').body).toContain('color-mix(in srgb, var(--fg) 8%, var(--panel))')
+  })
+  it('an inline action row spaces its buttons and links', () => {
+    expect(only('.inline-actions').body).toContain('gap: .5rem')
   })
   it('each Columns label clears the floated legend, so the first one is not pushed beside it and out of the panel', () => {
     expect(only('.columns-panel legend').body).toContain('float: left')

@@ -36,10 +36,12 @@ export function SpoolFiles({ spool }: { spool: SpoolSource }) {
                   <td>{new Date(f.mtime * 1000).toLocaleString()}</td>
                   <td>{f.pkt_count ?? ''}</td>
                   <td>
-                    <a href={captureFileUrl(f.name)} download={f.name}>Download</a>
-                    <button type="button" onClick={() => void remove(f.name)} onBlur={() => setConfirming(null)}>
-                      {confirming === f.name ? 'Click again to confirm' : 'Delete'}
-                    </button>
+                    <span className="inline-actions">
+                      <a href={captureFileUrl(f.name)} download={f.name}>Download</a>
+                      <button type="button" onClick={() => void remove(f.name)} onBlur={() => setConfirming(null)}>
+                        {confirming === f.name ? 'Click again to confirm' : 'Delete'}
+                      </button>
+                    </span>
                   </td>
                 </tr>
               ))}

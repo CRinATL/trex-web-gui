@@ -230,6 +230,14 @@ describe('SettingsPage', () => {
     expect(names[0]).toMatch(/^trex-web-gui-settings-\d{8}T\d{6}Z\.json$/)
     expect(JSON.parse(await blobs[0].text()).sections.theme).toBeUndefined()
   })
+  it('Export and Import sit in one spaced row, so the two buttons do not touch', async () => {
+    vi.spyOn(api, 'getSettings').mockResolvedValue({ settings: settings(), load_error: null })
+    render(<SettingsPage />)
+    await section('Back up and restore')
+    const row = (await screen.findByRole('button', { name: 'Export settings…' })).parentElement
+    expect(row).toHaveClass('inline-actions')
+    expect(row).toContainElement(screen.getByRole('button', { name: 'Import settings…' }))
+  })
   it('Export with include theme adds the stored theme', async () => {
     localStorage.setItem('trex-web-gui.theme', 'contrast')
     vi.spyOn(api, 'getSettings').mockResolvedValue({ settings: settings(), load_error: null })
