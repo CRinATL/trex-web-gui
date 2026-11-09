@@ -15,6 +15,8 @@ const CFG_PATH_RE = /^\/[A-Za-z0-9_./-]*$/   // the backend's cfg_path rule
 const PREVIEW_DEBOUNCE_MS = 300
 const LOG_TAIL_LINES = 30
 const START_TIMEOUT_S = 40
+// The preview's `nice -n -19` is the daemon's default -n; the daemon has no call that reports its own value (daemon-ui-3).
+const NICE_NOTE = "nice -n -19 is the daemon's default; a daemon started with another -n (--nice) runs TRex at that value, which it does not report."
 
 type Confirm = 'start' | 'stop' | 'force' | 'force_ack'
 const mmss = (s: number) => `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`
@@ -201,7 +203,7 @@ export function DaemonRunTab({ daemon, pushed, onModal }: { daemon: DaemonMsg | 
       <section aria-labelledby="daemon-run-preview">
         <h3 id="daemon-run-preview">Command preview</h3>
         {preview?.text && preview.key === key
-          ? <code className="command-preview">{preview.text}</code>
+          ? <><code className="command-preview">{preview.text}</code>{preview.text.startsWith('nice -n -19 ') && <p className="muted">{NICE_NOTE}</p>}</>
           : preview?.error && preview.key === key ? <p role="status" className="error">{preview.error}</p>
           : <p className="muted">{body ? 'Reading the command…' : 'Complete the form to see the command.'}</p>}
       </section>
@@ -245,10 +247,15 @@ export function DaemonRunTab({ daemon, pushed, onModal }: { daemon: DaemonMsg | 
 
       {confirm === 'start' && startSnap && (
         <ConfirmDialog title="Start TRex" confirmLabel="Start" onConfirm={doStart} onClose={() => { setConfirm(null); setStartSnap(null) }}
+          progress={{
+            label: `Starting TRex on ${host}`, busyLabel: 'Starting…', limitS: startSnap.timeout,
+            detail: <p className="muted">The daemon launches TRex and waits until it answers; TRex first takes over and initialises the ports, which takes a while. This closes by itself once TRex answers, or shows the daemon&apos;s error if TRex is not up within the start timeout.</p>,
+          }}
           body={(
             <>
               <p>Start TRex on {host} (daemon port {daemonPort}) with this command?</p>
               <code className="command-preview">{startSnap.text}</code>
+              {startSnap.text.startsWith('nice -n -19 ') && <p className="muted">{NICE_NOTE}</p>}
               {startSnap.body.stf && <p>It runs as root on {host} for {startSnap.body.stf.d} s. A stateful run has no command port, so Control cannot connect to it; watch it on the Monitor.</p>}
             </>
           )} />

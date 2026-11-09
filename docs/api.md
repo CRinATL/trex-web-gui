@@ -61,6 +61,7 @@ code of that family. Sorted by family, then code.
 | `in_use` | daemon | 409 | a port is in use by another owner |
 | `invalid_config` | daemon | 409 | the config to push is invalid |
 | `invalid_profile` | daemon | 409 | the profile is not a stock profile, or does not load, or changed during the upload |
+| `no_trex_log` | daemon | 409 | TRex's log does not exist yet: the daemon has not started TRex |
 | `not_connected` | daemon | 409 | not connected to a TRex daemon |
 | `not_daemon_run` | daemon | 409 | the daemon has no run of its own (a TRex started by hand), so Force stop cannot stop it |
 | `not_ours` | daemon | 409 | the run is not one this backend started, so Stop does not stop it |
@@ -523,7 +524,8 @@ Drop the connection; returns the snapshot.
 
 ### GET /api/daemon/log
 
-{which, text}: the tail of TRex's log or the daemon's own.
+{which, text}: the tail of TRex's log or the daemon's own. 409 `no_trex_log` when TRex's log file
+does not exist yet (the daemon has not started TRex).
 
 **Query parameters**
 

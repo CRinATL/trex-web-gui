@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { ApiError, daemonConnect, daemonDisconnect } from '../../api'
+import { ApiError, daemonConfigPreview, daemonConnect, daemonDisconnect } from '../../api'
 import { useHotkey } from '../../keys'
 import { useAppState } from '../../state'
 import { Tabs, tabPanel } from '../../ui/Tabs'
@@ -55,13 +55,23 @@ export function DaemonDialog({ onClose, initialPushed }: { onClose: () => void; 
   useHotkey('escape', close, !confirmOpen)
   const preview = usePreview(editing ? { text } : values ? { values } : null)
 
-  // A connect's reply: the form starts at the metadata's defaults, again only when the daemon's metadata is not the one it holds.
+  // A connect's reply: the form starts at the daemon's own config (its /etc/trex_cfg.yaml, parsed by the backend) when the
+  // reply carries one that parses, else at the metadata's defaults (daemon-ui-1); again only when the daemon's metadata is not
+  // the one it holds. The defaults show at once; the parsed config replaces them only if nothing was edited meanwhile.
   const metadataVersion = useRef<string | null>(null)
   function adopt(reply: Record<string, unknown>) {
     const read = readConnectInfo(reply)
     if (!read) return
     setInfo(read)
-    if (metadataVersion.current !== read.metadataVersion) { metadataVersion.current = read.metadataVersion; setValues(defaultsOf(read.metadata)) }
+    if (metadataVersion.current === read.metadataVersion) return
+    metadataVersion.current = read.metadataVersion
+    const seeded = defaultsOf(read.metadata)
+    setValues(seeded)
+    if (read.configYaml === '') return
+    daemonConfigPreview({ text: read.configYaml }).then((r) => {
+      const server = r.values
+      if (server && metadataVersion.current === read.metadataVersion) setValues((v) => (v === seeded ? server : v))
+    }, () => undefined)   // unread: the defaults stay, and Load from server shows the error
   }
   function pushedConfig(p: PushedConfig) { if (daemon?.target) rememberPushed(daemon.target, p); setPushedSeq((n) => n + 1) }
   function setEditingText(on: boolean) {

@@ -1,0 +1,6 @@
+{
+  "recorded_utc": "2026-11-09T21:58:00Z",
+  "guest": "jammy, snapshot trex_ready, TRex v3.08",
+  "how": "vm/demo.sh up; vm/daemon.sh start (a fresh trex_daemon_server that has started no TRex; /tmp/trex.txt absent); one JSON-RPC POST of get_trex_log to the forwarded daemon port 8090 with curl",
+  "note": "the daemon's get_trex_log reads the output file of a run it started (trex_server.py _pull_file), so before its first start it answers this -33"
+}

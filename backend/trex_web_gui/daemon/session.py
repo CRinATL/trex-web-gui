@@ -97,6 +97,18 @@ def _stf_profile_of(cmd: str) -> str | None:
     return toks[i + 1] if 0 <= i < len(toks) - 1 else None
 
 
+NO_TREX_LOG_MSG = ("There is no TRex log yet: this daemon has not started TRex, or TRex's log file was "
+                   "removed. The Daemon log shows what the daemon did.")
+
+
+def is_missing_log(exc: DaemonFault) -> bool:
+    """True for the daemon's answer to a get_trex_log whose file does not exist: -33 `Can't get requested
+    file <path>: [Errno 2] ...` (trex_server.py _pull_file; recorded in tests/fixtures/daemon-ui). Its other
+    -33s, a path outside the package say, are not."""
+    msg = str(exc)
+    return exc.code == -33 and msg.startswith("Can't get requested file ") and "[Errno 2]" in msg
+
+
 def _state_name(raw: Any) -> str:
     """The daemon's running state as a name: 1/2/3 are Idle/Starting/Running, a string stays as it is."""
     if isinstance(raw, int) and not isinstance(raw, bool):
@@ -828,10 +840,17 @@ class DaemonSession:
             raise DaemonFault(-33, f"push_file returned false for {remote}")
 
     async def log(self, which: Literal["trex", "daemon"]) -> str:
-        """The tail of TRex's log (`trex`) or the daemon's own (`daemon`), at most LOG_TAIL_BYTES."""
+        """The tail of TRex's log (`trex`) or the daemon's own (`daemon`), at most LOG_TAIL_BYTES.
+        DaemonRefused no_trex_log when TRex's log file does not exist (is_missing_log), as before the daemon's
+        first start."""
         client = self._need_client()
         if which == "trex":
-            text: str = await self._call(client.trex_log)
+            try:
+                text: str = await self._call(client.trex_log)
+            except DaemonFault as exc:
+                if is_missing_log(exc):
+                    raise DaemonRefused("no_trex_log", NO_TREX_LOG_MSG) from exc
+                raise
         elif which == "daemon":
             text = await self._call(client.daemon_log)
         else:

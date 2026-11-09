@@ -1463,8 +1463,9 @@ A form built from the daemon's own description of `trex_cfg.yaml`
 
 **Load default** (the metadata's defaults, except the optional `platform`, `memory` and `tw` sections and the `c`
 thread count, which it leaves to TRex's own defaults: a `platform` with only the master thread, or `c: 4` on a small
-host, would stop TRex from starting) and **Load from server** (the daemon's current file). The form opens on the same
-defaults. The YAML tab shows what the form describes.
+host, would stop TRex from starting) and **Load from server** (the daemon's current file). A connect opens the form
+on the daemon's current file when it has one that parses, else on the same defaults; an edit made while that file is
+read is kept. The YAML tab shows what the form describes.
 
 ### 12.2 YAML tab
 
@@ -1509,10 +1510,45 @@ is Idle but a TRex process is listed, that TRex was started by hand, and the lin
 start this TRex, so neither Stop nor Force stop can stop it. Stop it on the host (pid N). Until then it blocks Start.`
 The daemon's `force_trex_kill` stops only a run the daemon started, so Force stop is not offered then.
 
+**What the command means.** The fields above become parts of the command: **Config path** is `--cfg <path>`, a file on
+the TRex host (the Config tab's draft is used only once pushed and named here); **Cores (-c)** is `-c N`, data-plane
+cores per pair of ports (left blank, `-c` is left off and TRex uses 1); **Mode** is `-i` (the interactive server
+Control drives) or `-f` with the stateful fields; **Extra arguments** follow `-i`. **Start timeout** and **TRex command
+port** are not on the command line: the first is how long the daemon waits for TRex to come up before it reports the
+start as failed, the second is the port trex-web-gui connects to afterwards, so it has to match `zmq_rpc_port` in the
+config file (changing the field does not change the port TRex listens on).
+
+The rest of the command is not a setting here: the daemon adds it to every command it runs (trex-core
+`trex_server.py`, `generate_run_cmd`), and the preview shows it so the command is the one that will run.
+
+- **`nice -n -19`** runs TRex at a high CPU scheduling priority (−20 is the most favoured, 19 the least), so other
+  work on the host does not upset its packet timing; the daemon runs as root, which lets it set a negative value. The
+  value is the daemon's own launch option `-n/--nice` (default −19; 0 drops the prefix), set when the daemon is
+  started, for example `./trex_daemon_server restart -n 0`. The daemon has no call that reports the value, so the
+  preview always shows `-19`, with the note `nice -n -19 is the daemon's default; a daemon started with another -n
+  (--nice) runs TRex at that value, which it does not report.` (also in the Start confirmation): for such a daemon,
+  the command used to start it is the one to trust.
+- **`--iom 0`** turns off TRex's live statistics screen (TRex's help: `0- silent, 1- normal , 2- short`; a TRex started
+  by hand with `./t-rex-64 -i` uses 1 and redraws the screen every second). The daemon writes TRex's output to a log
+  file (the Logs tab's TRex log), where a redrawn screen would only grow the file, so the log holds TRex's start and
+  shutdown messages; TRex also line-buffers its output then, so each line reaches the log at once. The Dashboard
+  reads the same counters over TRex's command port.
+- **`--no-key`** is TRex's daemon mode: TRex does not read the keyboard, so neither the keys that switch the
+  statistics views nor a keyboard quit do anything. The daemon starts TRex without a terminal, so there is nothing to
+  read; stop such a TRex with **Stop** or **Force stop** here, not with Ctrl+C.
+
+A TRex started by hand on the host (`cd <trex dir>; ./t-rex-64 -i`) runs the same server at normal priority, with the
+statistics screen and the keyboard.
+
 **Start** (enabled when connected, nothing runs and the form previews; lit as **● TRex running** while a TRex runs)
 asks `Start TRex on <host> (daemon port N) with this command?` with the command; for a stateful run also `It runs as
 root on <host> for N s. A stateful run has no command port, so Control cannot connect to it; watch it on the Monitor.`
 ([104](gui-inventory/screens/104-daemon-start-confirm.png)).
+
+TRex takes a while to come up (it takes over and initialises the ports first), and the daemon answers only once it does,
+so after **Start** the dialog shows `Starting TRex on <host>…` with a bar that fills over the Start timeout and the
+time so far (`0:12 of up to 0:40`); **Cancel** is off and the button reads **Starting…** until the daemon answers. The
+dialog then closes by itself, or goes back to the command with the daemon's error.
 
 A started stateful run shows the **Stateful run** block:
 
@@ -1551,7 +1587,10 @@ nothing for Control.
 
 ### 12.4 Logs tab
 
-**Log**: `TRex log` or `Daemon log`, **Refresh**; the text, refreshed every 2 s while the tab is shown.
+**Log**: `TRex log` or `Daemon log`, **Refresh**; the text, refreshed every 2 s while the tab is shown. TRex's log
+is the output file of a run the daemon started, so before the daemon's first start (or after the file is removed) the
+tab reads `There is no TRex log yet: this daemon has not started TRex, or TRex's log file was removed. The Daemon log
+shows what the daemon did.`
 
 ### 12.5 Uploading a stateful profile
 

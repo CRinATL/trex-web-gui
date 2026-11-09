@@ -538,3 +538,30 @@ def test_failed_api_connect_forgets_the_planned_stop(tmp_path: Path, fake_daemon
                                                   "async_port": free_port(), "timeout_s": 1})
         assert r.status_code == 502, r.text
         assert c.get("/api/session").json()["ended"] is None
+
+
+def test_trex_log_before_any_start_is_a_refusal_not_a_fault(tmp_path: Path, fake_daemon: Any) -> None:
+    """daemon-ui-2: a daemon that has not started TRex answers get_trex_log with the recorded missing-file -33
+    (tests/fixtures/daemon-ui); the route says so as 409 no_trex_log, and the daemon's log still reads."""
+    d = fake_daemon("--no-trex-log")
+    with authed(create_app(tmp_path, token=TEST_TOKEN)) as c:
+        connect(c, d)
+        r = c.get("/api/daemon/log", params={"which": "trex"})
+        assert r.status_code == 409, r.text
+        assert r.json()["error"] == "no_trex_log"
+        assert "has not started TRex" in r.json()["message"]
+        assert c.get("/api/daemon/log", params={"which": "daemon"}).status_code == 200
+
+
+def test_missing_log_test_matches_only_the_missing_file_fault() -> None:
+    """The recorded missing /tmp/trex.txt is a missing log; the recorded get_file refusal (also -33, a path
+    outside the package) and a fault with another code are not."""
+    import json
+    fix = Path(__file__).resolve().parent.parent / "fixtures"
+    missing = json.loads((fix / "daemon-ui" / "daemon.jsonl").read_text().splitlines()[0])["body"]["error"]
+    refused = json.loads((fix / "p5" / "summary.json").read_text())["faults"]["get_file"]
+    refused = refused.get("error", refused)
+    from trex_web_gui.daemon.client import DaemonFault
+    assert daemon_session.is_missing_log(DaemonFault(missing["code"], missing["message"]))
+    assert not daemon_session.is_missing_log(DaemonFault(refused["code"], refused["message"]))
+    assert not daemon_session.is_missing_log(DaemonFault(-32601, missing["message"]))

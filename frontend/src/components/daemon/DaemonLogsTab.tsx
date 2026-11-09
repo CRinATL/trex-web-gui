@@ -9,6 +9,7 @@ export function DaemonLogsTab({ connected }: { connected: boolean }) {
   const [which, setWhich] = useState<'trex' | 'daemon'>('trex')
   const [text, setText] = useState('')
   const [error, setError] = useState<string | null>(null)
+  const [note, setNote] = useState<string | null>(null)   // no TRex log yet (409 no_trex_log): a fact to read, not a failure
   const [tick, setTick] = useState(0)   // bumped by Refresh
   const inFlight = useRef(false)
 
@@ -19,8 +20,12 @@ export function DaemonLogsTab({ connected }: { connected: boolean }) {
       if (inFlight.current) return
       inFlight.current = true
       daemonLog(which).then(
-        (r) => { if (live) { setText(r.text); setError(null) } },
-        (x) => { if (live) setError(x instanceof ApiError || x instanceof Error ? x.message : String(x)) },
+        (r) => { if (live) { setText(r.text); setError(null); setNote(null) } },
+        (x) => {
+          if (!live) return
+          if (x instanceof ApiError && x.code === 'no_trex_log') { setNote(x.message); setError(null); setText(''); return }
+          setNote(null); setError(x instanceof ApiError || x instanceof Error ? x.message : String(x))
+        },
       ).finally(() => { inFlight.current = false })
     }
     load()
@@ -32,13 +37,14 @@ export function DaemonLogsTab({ connected }: { connected: boolean }) {
     <div className="daemon-logs">
       <div className="form-row">
         <label htmlFor="log-which">Log</label>
-        <select id="log-which" value={which} onChange={(e) => { setText(''); setWhich(e.target.value as 'trex' | 'daemon') }}>
+        <select id="log-which" value={which} onChange={(e) => { setText(''); setNote(null); setWhich(e.target.value as 'trex' | 'daemon') }}>
           <option value="trex">TRex log</option>
           <option value="daemon">Daemon log</option>
         </select>
         <button type="button" disabled={!connected} onClick={() => setTick((n) => n + 1)}>Refresh</button>
       </div>
       {!connected && <p className="muted">Not connected to a daemon.</p>}
+      {note && <p className="muted">{note}</p>}
       {error && <p role="alert" className="error">{error}</p>}
       <pre className="log-tail" aria-label="Log text" tabIndex={0}>{text}</pre>
     </div>

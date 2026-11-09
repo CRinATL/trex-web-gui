@@ -73,6 +73,29 @@ describe('DaemonDialog', () => {
     expect(screen.queryByRole('dialog', { name: 'Start TRex' })).toBeNull()
   })
 
+  it('while the daemon starts TRex, the Start confirm shows progress against the start timeout', async () => {
+    let finish: (v: Awaited<ReturnType<typeof api.daemonStart>>) => void = () => undefined
+    vi.spyOn(api, 'daemonStart').mockImplementation(() => new Promise((r) => { finish = r }))
+    await open()
+    fireEvent.change(screen.getByLabelText('Start timeout (s)'), { target: { value: '25' } })
+    await userEvent.click(screen.getByRole('button', { name: 'Start' }))
+    await userEvent.click(within(dialog('Start TRex')).getByRole('button', { name: 'Start' }))
+    const confirm = dialog('Start TRex')
+    expect(within(confirm).getByRole('progressbar', { name: 'Starting TRex on 127.0.0.1' })).toHaveAttribute('max', '25')
+    expect(within(confirm).getByRole('timer')).toHaveTextContent('0:00 of up to 0:25')
+    expect(within(confirm).getByText(/closes by itself once TRex answers/)).toBeInTheDocument()
+    await act(async () => { finish({ seq: 7, command_preview: PREVIEW, run: ours.run! }) })
+    expect(screen.queryByRole('dialog', { name: 'Start TRex' })).toBeNull()
+  })
+
+  it('the preview and the Start confirm say the nice value is the daemon\'s default (daemon-ui-3)', async () => {
+    await open()
+    const NOTE = /nice -n -19 is the daemon's default; a daemon started with another -n \(--nice\) runs TRex at that value, which it does not report/
+    expect(screen.getByText(NOTE)).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: 'Start' }))
+    expect(within(dialog('Start TRex')).getByText(NOTE)).toBeInTheDocument()
+  })
+
   it('Start sends the command port', async () => {
     const start = vi.spyOn(api, 'daemonStart').mockResolvedValue({ seq: 7, command_preview: PREVIEW, run: ours.run! })
     await open()
@@ -280,6 +303,28 @@ describe('DaemonDialog', () => {
     setApp({ daemon: { ...ended, last_error: null, busy: true } }); rerender(<DaemonDialog onClose={() => undefined} />)
     await act(async () => { await vi.advanceTimersByTimeAsync(10) })
     expect(api.daemonLog).toHaveBeenCalledTimes(1)
+  })
+
+  it('Logs: no TRex log yet reads as a note, not an error (daemon-ui-2)', async () => {
+    // the backend's 409 for the daemon's recorded missing-file fault (tests/fixtures/daemon-ui; session.py NO_TREX_LOG_MSG)
+    const msg = "There is no TRex log yet: this daemon has not started TRex, or TRex's log file was removed. The Daemon log shows what the daemon did."
+    vi.mocked(api.daemonLog).mockImplementation((which) => (which === 'trex'
+      ? Promise.reject(new api.ApiError(409, 'no_trex_log', msg)) : Promise.resolve({ which: 'daemon', text: 'daemon line' })))
+    await open()
+    fireEvent.click(screen.getByRole('tab', { name: 'Logs' }))
+    const note = await screen.findByText(msg)
+    expect(note).toHaveClass('muted')
+    expect(screen.queryByRole('alert')).toBeNull()
+    await userEvent.selectOptions(screen.getByLabelText('Log'), 'daemon')
+    expect(await screen.findByText('daemon line')).toBeInTheDocument()
+    expect(screen.queryByText(msg)).toBeNull()
+  })
+
+  it('Logs: any other failure stays an error', async () => {
+    vi.mocked(api.daemonLog).mockRejectedValue(new api.ApiError(502, 'daemon_fault', '-33: something else'))
+    await open()
+    fireEvent.click(screen.getByRole('tab', { name: 'Logs' }))
+    expect(await screen.findByRole('alert')).toHaveTextContent('-33: something else')
   })
 
   it('a stopped stateful run says Stopped', async () => {

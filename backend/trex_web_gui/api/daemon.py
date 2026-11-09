@@ -285,7 +285,8 @@ def daemon_router(daemon: Callable[[], DaemonSession]) -> APIRouter:
 
     @router.get("/api/daemon/log", response_model=None, responses=answers(*DAEMON_ANSWERS))
     async def log(which: Literal["trex", "daemon"]) -> Any:
-        """{which, text}: the tail of TRex's log or the daemon's own."""
+        """{which, text}: the tail of TRex's log or the daemon's own. 409 `no_trex_log` when TRex's log file
+        does not exist yet (the daemon has not started TRex)."""
         out = await _answer(lambda: daemon().log(which))
         return out if isinstance(out, JSONResponse) else {"which": which, "text": out}
 
