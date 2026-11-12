@@ -149,6 +149,90 @@ describe('DaemonDialog', () => {
     expect(screen.queryByRole('button', { name: 'Start' })).toBeNull()
   })
 
+  // Clicks Stop, confirms, waits for the refusal in the Stop dialog and cancels it.
+  async function refuseStop() {
+    await userEvent.click(screen.getByRole('button', { name: 'Stop' }))
+    await userEvent.click(within(dialog('Stop TRex')).getByRole('button', { name: 'Stop' }))
+    await within(dialog('Stop TRex')).findByRole('alert')
+    await userEvent.click(within(dialog('Stop TRex')).getByRole('button', { name: 'Cancel' }))
+  }
+  const forceBtn = () => screen.queryByRole('button', { name: 'Force stop' })
+  const redraw = (over: Partial<state.AppState>, rerender: (ui: React.ReactElement) => void) => { setApp(over); rerender(<DaemonDialog onClose={() => undefined} />) }
+
+  it('Force stop is offered for our own run once its Stop was refused', async () => {
+    const stop = vi.spyOn(api, 'daemonStop').mockRejectedValue(new api.ApiError(409, 'owners_unknown', 'Cannot read who owns the ports'))
+    await open({ daemon: ours })
+    expect(forceBtn()).toBeNull()
+    await refuseStop()
+    expect(forceBtn()).toBeInTheDocument()
+    await userEvent.click(forceBtn()!)
+    const force = dialog('Force stop TRex')
+    expect(force).toHaveTextContent('This GUI started this TRex, but its Stop did not work. Force stop kills it on 127.0.0.1; it is still refused while another user owns a port.')
+    expect(force).not.toHaveTextContent('was not started by this GUI')
+    await userEvent.click(within(force).getByRole('button', { name: 'Force stop' }))
+    expect(await screen.findByRole('dialog', { name: 'Force stop anyway?' })).toBeInTheDocument()
+    expect(stop).toHaveBeenLastCalledWith({ rpc_port: 4701, confirm: true, force: true, owners_unknown_ack: false })
+  })
+
+  it.each([
+    { running: true, stop_s: null, other_pids: [], confirmed: true, still_answering: false },
+    { running: true, stop_s: null, other_pids: [], confirmed: false, still_answering: false },
+  ])('Force stop is offered after a Stop reply that says TRex still runs or is unconfirmed', async (reply) => {
+    vi.spyOn(api, 'daemonStop').mockResolvedValue(reply)
+    await open({ daemon: ours })
+    await userEvent.click(screen.getByRole('button', { name: 'Stop' }))
+    await userEvent.click(within(dialog('Stop TRex')).getByRole('button', { name: 'Stop' }))
+    await vi.waitFor(() => expect(screen.queryByRole('dialog', { name: 'Stop TRex' })).toBeNull())
+    expect(forceBtn()).toBeInTheDocument()
+  })
+
+  it('a successful Stop forgets an earlier failure', async () => {
+    vi.spyOn(api, 'daemonStop').mockRejectedValueOnce(new api.ApiError(409, 'busy', 'busy'))
+      .mockResolvedValueOnce({ running: false, stop_s: 1, other_pids: [], confirmed: true, still_answering: false })
+    await open({ daemon: ours })
+    await refuseStop()
+    expect(forceBtn()).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: 'Stop' }))
+    await userEvent.click(within(dialog('Stop TRex')).getByRole('button', { name: 'Stop' }))
+    await vi.waitFor(() => expect(screen.queryByRole('dialog', { name: 'Stop TRex' })).toBeNull())
+    expect(screen.getByText('yes (Running)')).toBeInTheDocument()
+    expect(forceBtn()).toBeNull()
+  })
+
+  it('the Stop failure is tied to its run, its connection and its backend', async () => {
+    vi.spyOn(api, 'daemonStop').mockRejectedValue(new api.ApiError(409, 'owners_unknown', 'Cannot read who owns the ports'))
+    const at = (seq: number): api.DaemonMsg => ({ ...ours, running_seq: seq, run: { ...ours.run!, seq } })
+    // (a) another run: the failure of seq 68 is dropped, not just hidden
+    const { rerender } = await open({ daemon: ours })
+    await refuseStop()
+    expect(forceBtn()).toBeInTheDocument()
+    redraw({ daemon: at(69) }, rerender)
+    expect(forceBtn()).toBeNull()
+    redraw({ daemon: ours }, rerender)
+    expect(forceBtn()).toBeNull()
+    // (b) a disconnect (the real shape) in between
+    redraw({ daemon: at(69) }, rerender)
+    await refuseStop()
+    expect(forceBtn()).toBeInTheDocument()
+    redraw({ daemon: { ...at(69), state: 'disconnected', target: null, status: null } }, rerender)
+    redraw({ daemon: at(69) }, rerender)
+    expect(forceBtn()).toBeNull()
+    // (c) a poll error in between
+    await refuseStop()
+    expect(forceBtn()).toBeInTheDocument()
+    redraw({ daemon: { ...at(69), state: 'error' } }, rerender)
+    redraw({ daemon: at(69) }, rerender)
+    expect(forceBtn()).toBeNull()
+    // (d) a backend restart: the run is still Running but has no seq
+    redraw({ daemon: ours }, rerender)
+    await refuseStop()
+    expect(forceBtn()).toBeInTheDocument()
+    redraw({ daemon: foreign }, rerender)
+    expect(forceBtn()).toBeInTheDocument()
+    await userEvent.click(forceBtn()!)
+    expect(dialog('Force stop TRex')).toHaveTextContent('This TRex was not started by this GUI.')
+  })
+
   it('says the daemon cannot stop a TRex started by hand (daemon-force-1)', async () => {
     const note = /The daemon did not start this TRex, so neither Stop nor Force stop can stop it\. Stop it on the host \(pid 2662\)\./
     const { rerender } = await open()

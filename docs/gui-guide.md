@@ -1581,6 +1581,10 @@ be read it asks once more, `Force stop anyway?`
 (`TRex's command port did not answer, so the GUI cannot see who owns its ports…`, or for a `-f` run
 `A stateful (-f) run has no command port, so the GUI cannot see who is using it…`).
 
+Force stop is also offered, with its own wording (`This GUI started this TRex, but its Stop did not work. Force stop kills it on <host>; it is
+still refused while another user owns a port.`), for a run this GUI started once **Stop** was refused or failed, including a reply that
+TRex still runs or could not be confirmed stopped.
+
 `TRex is still running after the stop.` when the daemon reports so, or
 `The stop was sent, but the daemon stopped answering, so the GUI could not confirm TRex stopped.` when the daemon
 stopped answering during the wait (the daemon's error shows too, and Control keeps its session). A Force stop that finds the daemon Idle (its run
