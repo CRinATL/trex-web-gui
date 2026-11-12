@@ -350,6 +350,10 @@ Source: `frontend/src/components/DevicesTree.tsx`.
   profile `_` is controllable). The profile row selects the same port panel
   ([12](screens/12-control-profile-selected.png)).
 - Click selects; right-click selects and opens the context menu.
+- **Readiness strip:** with a connected session and a port selected, a muted line under the port's title shows
+  Acquire → Assign a profile → Start with the current step in bold and a sentence for the next move (none of the three
+  is marked when the port is read-only, owned by someone else or held by another session of yours). **Hide readiness
+  strip** removes it; Settings → Appearance brings it back (source: `frontend/src/components/ReadinessStrip.tsx`).
 
 ### 2.6 Context menus
 
@@ -1192,8 +1196,8 @@ Route `/settings` (also Ctrl+Shift+P). Source: `frontend/src/pages/SettingsPage.
   unsaved edits is marked "· unsaved" in the list. Beside Save, **N unsaved changes** is a button: it opens a floating table
   (**Field**, **Saved**, **Edited**) of the section's edited fields, closed by Escape or a click elsewhere, as an ⓘ note is.
   - **Appearance:** the Theme radios **System**, **Light**, **Dark**, **High contrast**, and the Density radios
-    **Comfortable** (the default) and **Compact**. Each choice is kept in this browser only, takes effect at once, and needs
-    no Save.
+    **Comfortable** (the default) and **Compact**, and the checkbox **Show the Control readiness strip** (full Settings only).
+    Each choice is kept in this browser only, takes effect at once, and needs no Save.
   - **Files on the backend host:** **Templates directory** (the user packet templates; empty means `<data dir>/templates`), **Workspace directory** (where
     Browse opens when it has no remembered directory; empty means the backend user's home), **Profile library directory** (ⓘ: empty
     means `<data dir>/profiles`; an absolute path on the backend host; P4a), **TRex config file (on the backend host)**

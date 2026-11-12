@@ -4,6 +4,7 @@ import { MemoryRouter, useNavigate } from 'react-router-dom'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import * as api from '../api'
 import { monitorStore } from '../monitorStore'
+import { READINESS_HIDDEN_KEY, resetReadinessStore } from '../readiness'
 import daemonStf from '../__fixtures__/daemonMsgStf.json'
 import monitorStateful from '../__fixtures__/monitorStateful.json'
 import { wirePort, wireProfiles } from '../testWire'
@@ -586,5 +587,93 @@ describe('ControlPage More ▾ Reset', () => {
     expect(screen.getByRole('dialog', { name: 'Reset ports' })).toBeInTheDocument()
     rerender(el(false))
     expect(document.querySelector('[role="dialog"]')).toBeNull()
+  })
+})
+
+describe('ControlPage readiness strip', () => {
+  const owned0 = (o: Partial<api.PortView> = {}): api.PortView => ({ ...port0, state: 'IDLE', profiles: wireProfiles('IDLE'), ...o })
+  const IDLE_TEXT = 'Assign a profile on the Traffic tab, then start.'
+  const ACQUIRE_TEXT = 'Acquire the port, then assign a profile and start.'
+  const stripText = () => document.querySelector('p.readiness')
+  const withState = async (over: Record<string, unknown>) => {
+    const state = await import('../state')
+    const spy = vi.spyOn(state, 'useAppState')
+    const base = { ...state.initialState, backendOnline: true, session: connected, ports: [owned0()] }
+    spy.mockReturnValue({ ...base, ...over })
+    return { spy, base, state }
+  }
+  afterEach(() => { localStorage.clear(); resetReadinessStore() })
+
+  it('connected with a port selected shows the strip below the port h2 and above the tabs', async () => {
+    await withState({})
+    render(<ControlPage />)
+    await userEvent.click(screen.getByRole('treeitem', { name: /^Port 0,/ }))
+    const strip = stripText()!
+    expect(strip).toHaveTextContent(IDLE_TEXT)
+    const h2 = screen.getByRole('heading', { level: 2, name: /^Port 0/ })
+    expect(h2.compareDocumentPosition(strip) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    expect(strip.compareDocumentPosition(screen.getByRole('tab', { name: 'Control' })) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+  })
+  it('no port selected (root) shows no strip', async () => {
+    await withState({})
+    render(<ControlPage />)
+    expect(stripText()).toBeNull()
+  })
+  it('disconnected shows no strip', async () => {
+    await withState({ session: { ...connected, state: 'disconnected' }, ports: [] })
+    render(<ControlPage />)
+    expect(stripText()).toBeNull()
+  })
+  it('lost with port 0 selected shows no strip, though the ports are kept', async () => {
+    const { spy, base } = await withState({})
+    const { rerender } = render(<ControlPage />)
+    await userEvent.click(screen.getByRole('treeitem', { name: /^Port 0,/ }))
+    expect(stripText()).not.toBeNull()
+    spy.mockReturnValue({ ...base, session: { ...connected, state: 'lost', error: 'x' }, ports: [owned0()] })
+    rerender(<ControlPage />)
+    expect(screen.getByRole('heading', { level: 2, name: /^Port 0/ })).toBeInTheDocument()
+    expect(stripText()).toBeNull()
+  })
+  it('selecting another port changes the text with no stale text from the first', async () => {
+    await withState({ ports: [owned0(), { ...owned0({ id: 1 }), owned: false, owner: '' }] })
+    render(<ControlPage />)
+    await userEvent.click(screen.getByRole('treeitem', { name: /^Port 0,/ }))
+    expect(stripText()).toHaveTextContent(IDLE_TEXT)
+    await userEvent.click(screen.getByRole('treeitem', { name: /^Port 1,/ }))
+    expect(stripText()).toHaveTextContent(ACQUIRE_TEXT)
+    expect(screen.queryByText(IDLE_TEXT)).toBeNull()
+  })
+  it('a ports update that changes the selected port changes the text: acquired, then running', async () => {
+    const { spy, base } = await withState({ ports: [owned0({ owned: false, owner: '' })] })
+    const { rerender } = render(<ControlPage />)
+    await userEvent.click(screen.getByRole('treeitem', { name: /^Port 0,/ }))
+    expect(stripText()).toHaveTextContent(ACQUIRE_TEXT)
+    spy.mockReturnValue({ ...base, ports: [owned0()] })
+    rerender(<ControlPage />)
+    expect(stripText()).toHaveTextContent(IDLE_TEXT)
+    spy.mockReturnValue({ ...base, ports: [owned0({ state: 'TX', profiles: wireProfiles('TX') })] })
+    rerender(<ControlPage />)
+    expect(stripText()).toHaveTextContent('Traffic is running.')
+  })
+  it('a disconnect then reconnect with a fresh PortView for the same id shows the new port step', async () => {
+    const { spy, base } = await withState({ ports: [owned0({ state: 'TX', profiles: wireProfiles('TX') })] })
+    const { rerender } = render(<ControlPage />)
+    await userEvent.click(screen.getByRole('treeitem', { name: /^Port 0,/ }))
+    expect(stripText()).toHaveTextContent('Traffic is running.')
+    spy.mockReturnValue({ ...base, session: { ...connected, state: 'disconnected' }, ports: [] })
+    rerender(<ControlPage />)
+    expect(stripText()).toBeNull()
+    spy.mockReturnValue({ ...base, ports: [owned0({ owned: false, owner: '' })] })
+    rerender(<ControlPage />)
+    await userEvent.click(screen.getByRole('treeitem', { name: /^Port 0,/ }))
+    expect(stripText()).toHaveTextContent(ACQUIRE_TEXT)
+    expect(screen.queryByText('Traffic is running.')).toBeNull()
+  })
+  it('the hidden choice removes the strip', async () => {
+    localStorage.setItem(READINESS_HIDDEN_KEY, '1'); resetReadinessStore()
+    await withState({})
+    render(<ControlPage />)
+    await userEvent.click(screen.getByRole('treeitem', { name: /^Port 0,/ }))
+    expect(stripText()).toBeNull()
   })
 })

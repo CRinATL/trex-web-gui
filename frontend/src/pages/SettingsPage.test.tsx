@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import * as api from '../api'
 import { resetDensityStore } from '../density'
+import { READINESS_HIDDEN_KEY, resetReadinessStore } from '../readiness'
 import { useTheme } from '../theme'
 import { SettingsPage } from './SettingsPage'
 import * as state from '../state'
@@ -11,7 +12,7 @@ import * as ws from '../ws'
 import preview from '../__fixtures__/bundlePreview.json'
 import { unsavedRows } from '../testUnsaved'
 
-beforeEach(() => { localStorage.clear(); resetDensityStore(); vi.spyOn(api, 'getAbout').mockResolvedValue({ app_version: '1', trex_pin: { upstream_sha: 'x', patches: [] }, supported: 's', host: 'trex-host' }) })
+beforeEach(() => { localStorage.clear(); resetDensityStore(); resetReadinessStore(); vi.spyOn(api, 'getAbout').mockResolvedValue({ app_version: '1', trex_pin: { upstream_sha: 'x', patches: [] }, supported: 's', host: 'trex-host' }) })
 afterEach(() => { vi.restoreAllMocks(); vi.unstubAllGlobals(); localStorage.clear(); delete document.documentElement.dataset.theme; delete document.documentElement.dataset.density })
 
 const PREFS = { templates_dir: '', wireshark_path: 'wireshark', workspace_dir: '', release_on_exit: true, trex_cfg_path: '/etc/trex_cfg.yaml' }
@@ -202,6 +203,23 @@ describe('SettingsPage', () => {
     await userEvent.click(within(group).getByRole('radio', { name: 'Compact' }))
     expect(document.documentElement.dataset.density).toBe('compact')
     expect(within(group).getByRole('radio', { name: 'Compact' })).toBeChecked()
+  })
+  it('Appearance offers Show the Control readiness strip, which sets the store', async () => {
+    vi.spyOn(api, 'getSettings').mockResolvedValue({ settings: settings(), load_error: null })
+    render(<SettingsPage />)
+    const box = screen.getByRole('checkbox', { name: 'Show the Control readiness strip' })
+    expect(box).toBeChecked()
+    await userEvent.click(box)
+    expect(localStorage.getItem(READINESS_HIDDEN_KEY)).toBe('1')
+    expect(box).not.toBeChecked()
+    await userEvent.click(box)
+    expect(localStorage.getItem(READINESS_HIDDEN_KEY)).toBeNull()
+    expect(box).toBeChecked()
+  })
+  it('the --monitor-only page does not offer the readiness strip checkbox', () => {
+    vi.spyOn(state, 'useAppState').mockReturnValue({ ...state.initialState, monitorOnly: true })
+    render(<SettingsPage />)
+    expect(screen.queryByRole('checkbox', { name: /readiness strip/ })).toBeNull()
   })
   it('the --monitor-only page shows the Density group too', () => {
     vi.spyOn(state, 'useAppState').mockReturnValue({ ...state.initialState, monitorOnly: true })

@@ -301,6 +301,16 @@ While the thing a Start began is running, that Start is lit and names the state 
 A lit button is disabled and keeps its width, so the buttons beside it do not move. Buttons that do one thing once
 (Clear, Download pcap, Acquire, Release, Reset displayed counters) stay uncoloured.
 
+### 3.2a The readiness strip
+
+With a connected session and a port selected, one muted line sits under the port's title and above its tabs. It reads
+**Acquire → Assign a profile → Start** with the current step in bold, and a sentence naming the next move: acquire the
+port; assign a profile on the Traffic tab; start on the Traffic tab (with a link-down warning when the link is down,
+because TRex, not the GUI, refuses a Start); or that traffic is running. When the port cannot be acted on (a read-only
+session, a port owned by someone else, a port held by another session of yours) no step is marked and the sentence says
+why. **Hide readiness strip** removes it; Settings → Appearance → **Show the Control readiness strip** brings it back.
+The choice is kept in this browser.
+
 ### 3.3 The context menus
 
 Right-click a tree row. Disabled items stay listed, greyed ([09](gui-inventory/screens/09-context-menu-root.png),
@@ -1387,7 +1397,7 @@ dialog attaches it by itself ([12.3](#123-run-tab)).
 - The top bar has **Monitor** and **Settings** only.
 - Any other address goes to `/monitor`.
 - The status line sits in the footer.
-- Settings offers the theme and the density alone.
+- Settings offers the theme and the density alone (no readiness-strip checkbox).
 - Ctrl+Shift+C is not bound.
 
 The backend answers 409 `This backend runs with --monitor-only` to every request that changes state and to the
@@ -1633,6 +1643,10 @@ The data directory also holds:
 screen). It sizes the buttons, inputs and selects; the text size stays the same. Kept in this browser, applied at once,
 no Save, and not part of Export settings.
 
+**Control page**: **Show the Control readiness strip** (on by default) brings back the strip that **Hide readiness strip**
+on the Control page hides ([3.2a](#32a-the-readiness-strip)). Kept in this browser, applied at once, no Save, and not part of
+Export settings.
+
 ### 13.2 Files on the backend host
 
 - **Templates directory** (your packet templates; empty means `<data dir>/templates`);
@@ -1716,7 +1730,7 @@ A port held under your own user name by another session reads `Port N is held by
 |---|---|---|
 | Saved connections, preferences, port names, test setups | backend data directory (default `~/.local/share/trex-web-gui`) | until changed; part of Export settings |
 | Editor profile library, user packet templates, saved capture files | backend data directory (or the directories set in Settings) | until deleted |
-| Theme, density, last Browse directory, Monitor host history, collapsed Monitor panels, histogram bar count, Dashboard columns, history, full width, chart series and metrics, Streams/Latency intervals | this browser (local storage) | per browser |
+| Theme, density, the Control readiness strip's hide choice, last Browse directory, Monitor host history, collapsed Monitor panels, histogram bar count, Dashboard columns, history, full width, chart series and metrics, Streams/Latency intervals | this browser (local storage) | per browser |
 | Traffic forms, Dashboard tab/interval/layout/Y axis, histogram PG ID, charted PG IDs, xstats pins and baselines, Reset displayed counters baselines | this browser tab | until a new connection starts or the page is reloaded |
 | Event log | this browser tab | across reconnects; lost on reload |
 | RPC capture switch | backend session | survives a page reload |

@@ -4,6 +4,7 @@ import { DaemonDialog } from '../components/daemon/DaemonDialog'
 import { ContextMenu } from '../components/ContextMenu'
 import { OpenMonitorLink } from '../components/OpenMonitorLink'
 import { DevicesTree } from '../components/DevicesTree'
+import { ReadinessStrip } from '../components/ReadinessStrip'
 import { PortPanel, type PanelRequest } from '../components/PortPanel'
 import { SaveSetupDialog } from '../components/setups/SaveSetupDialog'
 import { SetupDialog } from '../components/setups/SetupDialog'
@@ -182,6 +183,7 @@ export function ControlPage({ active = true, onConnect }: { active?: boolean; on
           {notConnected && <p>{notConnected}</p>}
           {selectedPort !== null && selectedPortView && <h2>{portTitle(selectedPortView, labelOf(selectedPortView))}</h2>}
           {showPanel && selectedPort !== null && !selectedPortView && <h2>Port {selectedPort}</h2>}
+          {connected && selection.kind === 'port' && selectedPortView && <ReadinessStrip port={selectedPortView} readOnly={readOnly} />}
           {showPanel && <PortPanel selection={selection} ports={ports} info={info} readOnly={readOnly} connected={connected} request={panelRequest} active={active} labelOf={labelOf} ifaces={session.ifaces} ifacesNote={session.ifaces_note} onResolved={() => setError(null)} />}
         </div>
       </div>
