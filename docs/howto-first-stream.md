@@ -108,15 +108,15 @@ machine.
    ![A new profile in the Editor](howto/screens/10-studio-new-profile.png)
 
 9. **Edit the packet.** Select the stream, open its **Stream packet** tab and press **Edit packet**. The embedded editor opens
-   with **Presets…**, **Cancel** and **Save**. Press **Expand all** and read the three layers: `Ether`, `IP`, `UDP`
+   with **Presets…**, **Cancel** and **Save to stream**. Press **Expand all** and read the three layers: `Ether`, `IP`, `UDP`
    (and the payload, `Raw`). Leave `Ether` alone. Its **Destination** reads `00:00:00:01:00:00`, scapy's placeholder,
    and is not what is sent: the stream's **Destination MAC** (on its **Stream settings** tab) is `From config file`, so
    port 0 sends to the address of step 4. Editing this field would switch the stream to From packet.
 
    ![The embedded packet editor](howto/screens/11-studio-edit-packet.png)
 
-   Change the UDP **dport** field to `5000`, so the stream is yours and **Save** has a change to save, then press
-   **Save**.
+   Change the UDP **dport** field to `5000`, so the stream is yours and **Save to stream** has a change to save, then press
+   **Save to stream**.
 
    ![dport changed to 5000](howto/screens/12-studio-dport-changed.png)
 

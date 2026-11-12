@@ -175,6 +175,14 @@ describe('PortControlTab', () => {
     // the Service row left the table: the control carries the mode
     expect(within(screen.getByRole('radiogroup', { name: 'Service mode' })).getByLabelText('Filtered')).toBeChecked()
   })
+  it('says attribute changes apply at once, directly after the Attributes toggles and outside service mode', () => {
+    render(<PortControlTab port={port()} readOnly={false} />)
+    const note = screen.getByText('Attribute changes apply to the port at once; there is no Save.')
+    expect(note).toHaveClass('muted')
+    const toggles = screen.getByLabelText('Promiscuous').closest('.toggles')!
+    expect(toggles.nextElementSibling).toBe(note)
+    expect(screen.getByRole('radiogroup', { name: 'Service mode' })).not.toContainElement(note)
+  })
   it('link down on a transmitting port warns first and proceeds on the second click', async () => {
     const set = vi.spyOn(api, 'setAttr').mockResolvedValue({ ports: [] })
     render(<PortControlTab port={port({ state: 'TX', info: { ...info, is_link_supported: true } })} readOnly={false} />)

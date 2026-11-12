@@ -135,6 +135,7 @@ export function PortControlTab({ port, ports, readOnly, connected = true, select
           {port.fc_mode === null || port.fc_mode < 0 ? <option value="">–</option> : null}
           {FC.map((n, i) => <option key={n} value={i}>{n}</option>)}</select></label>
       </div>
+      <p className="muted">Attribute changes apply to the port at once; there is no Save.</p>
 
       {confirmLink && <p role="status" className="error">Link down while transmitting can hang the TRex v3.08 server (upstream issue #1207). Stop traffic first, or click again to proceed.</p>}
 

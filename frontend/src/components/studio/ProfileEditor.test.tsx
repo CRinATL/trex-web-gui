@@ -653,7 +653,7 @@ describe('ProfileEditor', () => {
       vi.spyOn(api, 'streamSidecar').mockResolvedValue({ rev: page.rev, entry: {} })
       vi.spyOn(api, 'putStreams').mockResolvedValue({ rev: 'r1', stream_count: 2, renamed: {}, cleared: [], warnings: [] })
       expect(tableUndo()).toBeDisabled()
-      await user.click(screen.getByRole('button', { name: 'Save' }))
+      await user.click(screen.getByRole('button', { name: 'Save to stream' }))
       await vi.waitFor(() => expect(tableUndo()).toBeEnabled())
       expect(tableUndo()).toHaveAttribute('title', 'Undo editing stream 0 (Ctrl+Z)')
     })

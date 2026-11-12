@@ -413,7 +413,7 @@ Source: `frontend/src/components/PortControlTab.tsx`, `frontend/src/components/P
   - **Name** block: **Name** (limit 40) and **Description** (limit 500) fields as rows of one aligned form, each with a live count beside it, and one action bar with **Save** and **Revert**,
     in place of the old Name dialog. A port with no name starts from the confirmed kernel interface name if there is one.
   - **Attributes:** checkboxes **Promiscuous**, **Multicast**, **Link up**, **LED**, and a **Flow control** select. Each
-    applies at once; disabled with a tooltip when not connected, read-only, not yours, or unsupported by the driver (on
+    applies at once, and a note under them says there is no Save; disabled with a tooltip when not connected, read-only, not yours, or unsupported by the driver (on
     this guest Link up, LED and Flow control are unsupported). Link down on a transmitting port first shows a warning.
   - **Service mode:** radios **Off**, **On**, **Filtered**; Filtered reveals the mask checkboxes (**No TCP/UDP**, **BGP**, **DHCP**, **Transport**, **mDNS**, **All**) and
     **Apply filter**; the tab notes that Filtered mode needs the TRex server started with `--software`.
@@ -1091,7 +1091,7 @@ range), **Add layer…**, and the hex view under them.
   the one picked ([111](screens/111-packet-pcap-picker.png)).
 - **Add to profile…** chooses a library profile; a `.py` profile carries a muted note that editor changes to it are not sent
   ([112](screens/112-packet-add-to-profile.png)).
-- In the Editor, a stream's Stream packet tab has **Edit packet**: the same editor with **Presets…**, **Cancel** and **Save** above it
+- In the Editor, a stream's Stream packet tab has **Edit packet**: the same editor with **Presets…**, **Cancel** and **Save to stream** above it
   ([113](screens/113-studio-embedded-packet-editor.png)); a `.py` profile's information bar has **View source…**
   ([114](screens/114-studio-py-source.png)).
 

@@ -1,5 +1,8 @@
 import { act, cleanup, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+/// <reference types="node" />
+import { readFileSync } from 'node:fs'
+import { resolve } from 'node:path'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { StreamJson, StreamPage } from '../../api'
 import streams from '../../__fixtures__/studioStreams.json'
@@ -300,5 +303,15 @@ describe('StreamProperties', () => {
       expect(screen.getByLabelText('Start paused')).toHaveClass('edited')
       expect(await unsavedRows('1 unsaved change')).toEqual([['Start paused', 'no', 'yes']])
     })
+  })
+
+  // jsdom computes no layout, so read the stylesheet: the bar stays in view in a pane taller than the window.
+  it('the action bar is sticky at the bottom of the pane (read from index.css)', () => {
+    const css = readFileSync(resolve(import.meta.dirname, '../../index.css'), 'utf8')
+    const rules = [...css.matchAll(/(^|\n)([^{}\n]*\.stream-properties \.action-bar[^{}]*)\{([^}]*)\}/g)]
+    const sticky = rules.find((m) => /position:\s*sticky/.test(m[3]))
+    expect(sticky).toBeDefined()
+    expect(sticky![3]).toMatch(/bottom:\s*0/)
+    expect(sticky![3]).toMatch(/background:\s*var\(--bg\)/)
   })
 })

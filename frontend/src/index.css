@@ -198,6 +198,8 @@ button.chip[aria-pressed="true"]::before { content: "\2713\00a0"; }
 .traffic-tab label, .control-tab label { display: inline-flex; align-items: center; gap: .4rem; margin-right: 1rem; }
 .traffic-tab .action-bar, .config-tab .action-bar, .cfg-tab .action-bar, .stream-properties .action-bar { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; }
 .traffic-tab .form-grid label { margin-right: 0; }
+/* Properties' bar stays in view in a pane taller than the window, as .setups-actions does. */
+.stream-properties .action-bar { position: sticky; bottom: 0; background: var(--bg); padding: .5rem 0; border-top: 1px solid var(--border); }
 .profile-picker { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; }
 .profile-picker > p { flex-basis: 100%; margin: 0; }
 .profile-picker input[type="text"] { min-width: 22rem; }

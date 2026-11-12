@@ -1180,7 +1180,7 @@ async def step_packet(c):
     await b.click_css("table.stream-table tbody tr", 0)
     await b.click("Stream packet", "[role=tab]")
     await b.click("Edit packet", "button")
-    await b.wait_for("Save", "button")
+    await b.wait_for("Save to stream", "button")
     await b.wait_text("Destination")
     await b.shot("113-studio-embedded-packet-editor")
     await b.click("Cancel", "button")

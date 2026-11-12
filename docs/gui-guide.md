@@ -393,7 +393,7 @@ Shown in [13](gui-inventory/screens/13-port-control-top.png), [14](gui-inventory
   - Unreadable file: `The port names file could not be read (<error>); it is kept as it is.`
 - **Attributes**: **Promiscuous**, **Multicast**, **Link up**, **LED** checkboxes and a **Flow control** select
   (NONE, TX, RX, FULL).
-  - Each applies at once.
+  - Each applies at once; a note under them says so (`Attribute changes apply to the port at once; there is no Save.`).
   - A control is disabled with the reason as its tooltip: `not connected`, `read-only session`,
     `select the default profile`, `acquire the port first`, or `not supported by <driver>` when the driver
     reports no support (the test guest's af_packet supports none of Link up, LED and Flow control).
@@ -1089,7 +1089,7 @@ an optional `k`, `M` or `G`, or `%` of the line rate.
 **Previous** and **Next** move between streams (with unsaved edits: `Discard changes?`, **Discard** / **Keep
 editing**). **Cancel** puts the stored values back. **Save** sends only the changed fields and is disabled until
 there is a change and while a field is invalid. Each field it would send is marked `edited`, and
-`N unsaved changes` shows beside it ([1.4](#14-shortcuts-and-dialogs)). The name is not here: rename in the table.
+`N unsaved changes` shows beside it ([1.4](#14-shortcuts-and-dialogs)). The bar stays in view at the bottom of the pane when the form is taller than the window. The name is not here: rename in the table.
 
 ### 9.6 Stream packet tab
 
@@ -1101,7 +1101,7 @@ there is a change and while a field is invalid. Each field it would send is mark
 - **Export ▾** (**pcap**, written by the browser from the stored bytes; **YAML**, from the backend).
 
 **Edit packet** opens the embedded packet editor ([10.2](#102-the-editor) onwards) with **Presets…**, **Cancel**
-and **Save** above it, and an `edited` tag beside Save while the packet differs from the one opened
+and **Save to stream** above it, and an `edited` tag beside it while the packet differs from the one opened
 ([113](gui-inventory/screens/113-studio-embedded-packet-editor.png)).
 
 Save builds the packet on the backend and writes the stream's packet, field engine and editor document:
