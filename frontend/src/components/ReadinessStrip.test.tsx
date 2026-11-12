@@ -1,4 +1,6 @@
 import { render, screen } from '@testing-library/react'
+import { readFileSync } from 'node:fs'
+import { resolve } from 'node:path'
 import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { PortView } from '../api'
@@ -56,5 +58,19 @@ describe('ReadinessStrip', () => {
     localStorage.setItem(READINESS_HIDDEN_KEY, '1'); resetReadinessStore()
     const { container } = render(<ReadinessStrip port={port()} readOnly={false} />)
     expect(container).toBeEmptyDOMElement()
+  })
+  // jsdom computes no layout, so read the stylesheet.
+  const rule = (selector: string) => {
+    const css = readFileSync(resolve(import.meta.dirname, '../index.css'), 'utf8')
+    const m = [...css.matchAll(/(^|\n)([^{}\n]+)\{([^}]*)\}/g)].find((x) => x[2].trim() === selector)
+    expect(m).toBeDefined()
+    return m![3]
+  }
+  it('the strip wraps in a narrow window (read from index.css)', () => {
+    expect(rule('.readiness-strip')).toMatch(/flex-wrap:\s*wrap/)
+    expect(rule('.readiness-strip')).toMatch(/white-space:\s*normal/)
+  })
+  it('the trail arrow has an empty alternative text so a screen reader skips it (read from index.css)', () => {
+    expect(rule('.readiness-trail li:not(:last-child)::after')).toMatch(/\/\s*''/)
   })
 })

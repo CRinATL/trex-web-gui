@@ -16,7 +16,7 @@ export function readiness(port: PortView, readOnly: boolean): { step: Step; text
     if (port.owner === '') return { step: 'acquire', text: 'Acquire the port, then assign a profile and start.' }
     return { step: 'blocked', text: `Owned by ${port.owner}: use Force acquire to take it.` }
   }
-  if (isRunning(port)) return { step: 'running', text: 'Traffic is running.' }
+  if (isRunning(port)) return { step: 'running', text: port.state === 'PAUSE' ? 'Traffic is paused.' : 'Traffic is running.' }
   const streams = defaultState(port) === 'STREAMS'
   if (streams && port.link_up === false) return { step: 'start', text: 'Link is down: Start on the Traffic tab may be refused by TRex.' }
   if (streams) return { step: 'start', text: 'Start on the Traffic tab.' }

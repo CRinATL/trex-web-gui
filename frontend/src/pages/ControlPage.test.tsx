@@ -665,9 +665,19 @@ describe('ControlPage readiness strip', () => {
     expect(stripText()).toBeNull()
     spy.mockReturnValue({ ...base, ports: [owned0({ owned: false, owner: '' })] })
     rerender(<ControlPage />)
-    await userEvent.click(screen.getByRole('treeitem', { name: /^Port 0,/ }))
     expect(stripText()).toHaveTextContent(ACQUIRE_TEXT)
     expect(screen.queryByText('Traffic is running.')).toBeNull()
+  })
+  it('a profile row selected (the default _ and another) shows no strip', async () => {
+    await withState({ ports: [owned0({ profiles: { _: 'IDLE', bench: 'IDLE' } })] })
+    render(<ControlPage />)
+    const rows = screen.getAllByRole('treeitem', { name: /^Profile / })
+    expect(rows.length).toBeGreaterThan(0)
+    for (const row of rows) {
+      await userEvent.click(row)
+      expect(screen.getByRole('heading', { level: 2, name: /^Port 0/ })).toBeInTheDocument()
+      expect(stripText()).toBeNull()
+    }
   })
   it('the hidden choice removes the strip', async () => {
     localStorage.setItem(READINESS_HIDDEN_KEY, '1'); resetReadinessStore()

@@ -306,7 +306,7 @@ A lit button is disabled and keeps its width, so the buttons beside it do not mo
 With a connected session and a port selected, one muted line sits under the port's title and above its tabs. It reads
 **Acquire → Assign a profile → Start** with the current step in bold, and a sentence naming the next move: acquire the
 port; assign a profile on the Traffic tab; start on the Traffic tab (with a link-down warning when the link is down,
-because TRex, not the GUI, refuses a Start); or that traffic is running. When the port cannot be acted on (a read-only
+because TRex, not the GUI, refuses a Start); or that traffic is running (or paused). When the port cannot be acted on (a read-only
 session, a port owned by someone else, a port held by another session of yours) no step is marked and the sentence says
 why. **Hide readiness strip** removes it; Settings → Appearance → **Show the Control readiness strip** brings it back.
 The choice is kept in this browser.
@@ -743,10 +743,11 @@ has its own legend under it, with no standing time entry (hovering adds the time
 Per-stream (PG ID) flow statistics; needs streams with flow stats or latency
 ([37](gui-inventory/screens/37-dash-streams.png)).
 
-- A table **Chart** (checkbox), **PG ID** (▸/▾ expands the per-port rows), **Type** (`flow` or `latency`), Tx/Rx pps,
-  under the group **Loss**, **Packets** and **Packets/s**. These are the default columns; they fit a 1400 px window beside the chart.
+- A table **Chart** (checkbox), **PG ID** (▸/▾ expands the per-port rows), **Type** (`flow` or `latency`), the group
+  **Packet rates** (Tx pps and Rx pps) and the group **Loss** (**Packets** and **Packets/s**). These are the default
+  columns; they fit a 1400 px window beside the chart.
 - **Columns ▾** opens a panel with two check boxes that add columns after Packets/s: **Bit rates (L1 and L2)** (Tx/Rx
-  bps L1 and L2) and **Packet and byte counters** (Tx/Rx pkts and bytes, `since the stream was added, or Reset displayed counters`). The
+  bps L1 and L2) and **Packet and byte counters** (Tx/Rx pkts and bytes, counted since the stream was added or Reset displayed counters). The
   chart's Metric select still offers the bit rates when the columns are hidden.
 - **Full-width table** (shared with Latency) stacks the chart under the table so the table uses the whole width.
 - The column choice, Full-width table, the chart's metric and the Streams and Latency intervals are saved per browser

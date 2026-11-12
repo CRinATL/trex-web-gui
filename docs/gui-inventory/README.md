@@ -350,10 +350,6 @@ Source: `frontend/src/components/DevicesTree.tsx`.
   profile `_` is controllable). The profile row selects the same port panel
   ([12](screens/12-control-profile-selected.png)).
 - Click selects; right-click selects and opens the context menu.
-- **Readiness strip:** with a connected session and a port selected, a muted line under the port's title shows
-  Acquire → Assign a profile → Start with the current step in bold and a sentence for the next move (none of the three
-  is marked when the port is read-only, owned by someone else or held by another session of yours). **Hide readiness
-  strip** removes it; Settings → Appearance brings it back (source: `frontend/src/components/ReadinessStrip.tsx`).
 
 ### 2.6 Context menus
 
@@ -395,6 +391,10 @@ Source: `frontend/src/components/PortPanel.tsx`.
   from the menu switch to Traffic. Each port's Traffic form is kept per port in a store, so selecting another port and
   coming back finds it as it was; it survives switching tabs or pages and is **reset on a new connection** (a reconnect
   empties it, as the setups steps showed).
+- **Readiness strip:** with a connected session and a port selected, a muted line under the port's title shows
+  Acquire → Assign a profile → Start with the current step in bold and a sentence for the next move (none of the three
+  is marked when the port is read-only, owned by someone else or held by another session of yours). **Hide readiness
+  strip** removes it; Settings → Appearance brings it back (source: `frontend/src/components/ReadinessStrip.tsx`).
 
 ![Profile row selected](screens/12-control-profile-selected.png)
 

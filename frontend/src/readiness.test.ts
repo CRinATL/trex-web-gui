@@ -36,6 +36,9 @@ describe('readiness', () => {
   it('a running port reads running', () => {
     expect(readiness(port(0, { owned: true, state: 'TX' }), false)).toEqual({ step: 'running', text: 'Traffic is running.' })
   })
+  it('a paused port reads running with the paused text', () => {
+    expect(readiness(port(0, { owned: true, state: 'PAUSE', profiles: { _: 'PAUSE' } }), false)).toEqual({ step: 'running', text: 'Traffic is paused.' })
+  })
   it('a DOWN port with a running profile reads running', () => {
     expect(readiness(port(0, { owned: true, state: 'DOWN', link_up: false, profiles: { _: 'TX' } }), false).step).toBe('running')
   })

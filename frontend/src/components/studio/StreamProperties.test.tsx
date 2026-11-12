@@ -1,6 +1,5 @@
 import { act, cleanup, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-/// <reference types="node" />
 import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { afterEach, describe, expect, it, vi } from 'vitest'
@@ -313,5 +312,13 @@ describe('StreamProperties', () => {
     expect(sticky).toBeDefined()
     expect(sticky![3]).toMatch(/bottom:\s*0/)
     expect(sticky![3]).toMatch(/background:\s*var\(--bg\)/)
+  })
+
+  // The scroll container is main: Tab scrolls a field clear of the sticky bar only with a bottom scroll padding.
+  it('main reserves scroll-padding-bottom so a tabbed field clears the sticky bar (read from index.css)', () => {
+    const css = readFileSync(resolve(import.meta.dirname, '../../index.css'), 'utf8')
+    const main = css.match(/(^|\n)main\s*\{([^}]*)\}/)
+    expect(main).not.toBeNull()
+    expect(main![2]).toMatch(/scroll-padding-bottom:\s*4\.5rem/)
   })
 })
