@@ -792,7 +792,7 @@ Source: `frontend/src/components/StreamsTable.tsx`, `frontend/src/components/Pgi
 
 - **Purpose:** per-stream (PG ID) flow statistics.
 - **Contents:** **Columns ▾** and **Full-width table** over a table grouped as Packet rates / Loss; the default columns
-  **Chart** (checkbox), **PG ID** (with a ▸/▾ toggle for per-port rows), **Type**, Tx/Rx pps, **Loss**, **Loss/s** fit the
+  **Chart** (checkbox), **PG ID** (with a ▸/▾ toggle for per-port rows), **Type**, Tx/Rx pps, **Packets**, **Packets/s** (under **Loss**) fit the
   column at 1400 px (Columns ▾ adds the bit rates and the packet and byte counters); a pager when there are many; global
   **rx_err** / **tx_err**; a chart "Streams: <metric>" with **Metric** and **Interval** selects, a **Y axis** Fit / From 0
   control and a ✓/✗ chip per stream under it, to the right. Needs streams with flow stats (here `flow_latency.py` on port 0:

@@ -744,8 +744,8 @@ Per-stream (PG ID) flow statistics; needs streams with flow stats or latency
 ([37](gui-inventory/screens/37-dash-streams.png)).
 
 - A table **Chart** (checkbox), **PG ID** (▸/▾ expands the per-port rows), **Type** (`flow` or `latency`), Tx/Rx pps,
-  **Loss**, **Loss/s**. These are the default columns; they fit a 1400 px window beside the chart.
-- **Columns ▾** opens a panel with two check boxes that add columns after Loss/s: **Bit rates (L1 and L2)** (Tx/Rx
+  under the group **Loss**, **Packets** and **Packets/s**. These are the default columns; they fit a 1400 px window beside the chart.
+- **Columns ▾** opens a panel with two check boxes that add columns after Packets/s: **Bit rates (L1 and L2)** (Tx/Rx
   bps L1 and L2) and **Packet and byte counters** (Tx/Rx pkts and bytes, `since the stream was added, or Reset displayed counters`). The
   chart's Metric select still offers the bit rates when the columns are hidden.
 - **Full-width table** (shared with Latency) stacks the chart under the table so the table uses the whole width.
@@ -754,8 +754,8 @@ Per-stream (PG ID) flow statistics; needs streams with flow stats or latency
 - A **Page** select above 100 ids.
 - `Showing the first 1151 of N streams` when the backend caps the ids it reads.
 - `rx_err` / `tx_err` per port below.
-- The chart **Streams: <metric>** with **Metric** (Tx pps, Rx pps, Tx bps L1, Tx bps L2, Rx bps L2, Loss/s) and
-  **Interval**. The first four ids are charted by themselves, and the checkbox is disabled with
+- The chart **Streams: <metric>** with **Metric** (Tx pps, Rx pps, Tx bps L1, Tx bps L2, Rx bps L2, Loss/s; the option names the quantity charted, so it keeps its name
+  while the table columns read Packets and Packets/s) and **Interval**. The first four ids are charted by themselves, and the checkbox is disabled with
   `At most 8 streams can be charted; untick one first` once every colour is used.
 - `No streams with a PG ID are active.` when there are none, followed by how a stream gets one (Editor > Stream settings:
   RX stats Flow stats or Latency, with a PG ID; then assign and start) and what it adds.

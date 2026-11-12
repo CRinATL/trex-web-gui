@@ -127,7 +127,7 @@ function Table({ ids, ports, labelOf, sel }: { ids: number[]; ports: PortView[];
           <tr>
             <th scope="col">Chart</th><th scope="col">PG ID</th><th scope="col">Type</th>
             <th scope="col" className="num">Tx pps</th><th scope="col" className="num">Rx pps</th>
-            <th scope="col" className="num" title={COUNTER_NOTE}>Loss</th><th scope="col" className="num">Loss/s</th>
+            <th scope="col" className="num" title={COUNTER_NOTE}>Packets</th><th scope="col" className="num">Packets/s</th>
             {view.bitRates && <><th scope="col" className="num">Tx bps L1</th><th scope="col" className="num">Tx bps L2</th><th scope="col" className="num">Rx bps L1</th><th scope="col" className="num">Rx bps L2</th></>}
             {view.counters && <>
               <th scope="col" className="num" title={COUNTER_NOTE}>Tx pkts</th><th scope="col" className="num" title={COUNTER_NOTE}>Rx pkts</th>

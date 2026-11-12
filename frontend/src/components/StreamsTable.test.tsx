@@ -184,7 +184,7 @@ describe('StreamsTab table', () => {
 })
 
 describe('StreamsTab columns', () => {
-  const DEFAULT_HEADS = ['Chart', 'PG ID', 'Type', 'Tx pps', 'Rx pps', 'Loss', 'Loss/s']
+  const DEFAULT_HEADS = ['Chart', 'PG ID', 'Type', 'Tx pps', 'Rx pps', 'Packets', 'Packets/s']
   const BITS = ['Tx bps L1', 'Tx bps L2', 'Rx bps L1', 'Rx bps L2']
   const COUNTS = ['Tx pkts', 'Rx pkts', 'Tx bytes', 'Rx bytes']
   const openColumns = async () => { await userEvent.click(screen.getByRole('button', { name: 'Columns ▾' })) }
@@ -192,6 +192,8 @@ describe('StreamsTab columns', () => {
     pgidStore.push(wirePgid('tx'))
     renderTab()
     expect(headerTexts()).toEqual(DEFAULT_HEADS)
+    expect(screen.getByRole('columnheader', { name: 'Loss' })).toHaveAttribute('colspan', '2')
+    expect(screen.queryByRole('columnheader', { name: 'Loss/s' })).toBeNull()
   })
   it('Columns ▾ shows the bit rates', async () => {
     pgidStore.push(wirePgid('tx'))
