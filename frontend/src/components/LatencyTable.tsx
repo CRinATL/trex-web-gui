@@ -10,8 +10,8 @@ import { TableViewControls } from './TableViewControls'
 import { PgidSelector, type Selection } from './PgidSelector'
 import { ChartCheckbox, PgidChart, type Metric } from './PgidChart'
 
-const MAX_NOTE = 'the largest last max seen since connect or Clear'
-const SERVER_MAX_NOTE = 'the server\'s maximum since the stream was added; Clear does not reset it'
+const MAX_NOTE = 'the largest last max seen since connect or Reset displayed counters'
+const SERVER_MAX_NOTE = 'the server\'s maximum since the stream was added; Reset displayed counters does not reset it'
 const LAST_NOTE = 'the server\'s maximum over its latest sample period'
 
 const num = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v)
@@ -38,7 +38,7 @@ function Table({ ids, sel }: { ids: number[]; sel: Selection }) {
             <th scope="col" className="num" title={SERVER_MAX_NOTE}>Server max (µs)</th>
             <th scope="col" className="num">Avg (µs)</th>
             <th scope="col" className="num">Jitter (µs)</th>
-            <th scope="col" className="num" title="sequence too low plus sequence too high, since Clear">Errors</th>
+            <th scope="col" className="num" title="sequence too low plus sequence too high, since Reset displayed counters">Errors</th>
             {lastCols.map((i) => <th key={i} scope="col" className="num" title={LAST_NOTE}>{i === 0 ? 'Last (µs)' : `Last-${i} (µs)`}</th>)}
           </tr>
         </thead>

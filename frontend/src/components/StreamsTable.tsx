@@ -11,7 +11,7 @@ import { pgidSource, useStale } from '../useStale'
 import { ChartCheckbox, PgidChart, type Metric } from './PgidChart'
 
 export const PAGE_SIZE = 100
-const COUNTER_NOTE = 'since the stream was added, or Clear'
+const COUNTER_NOTE = 'since the stream was added, or Reset displayed counters'
 // The empty Streams tab says how a stream gets a PG ID and what it buys (RC1-39).
 export const PGID_HOW = 'A stream gets one in Editor > Stream settings: set RX stats to Flow stats or Latency and give it a '
   + 'PG ID, then assign the profile and start the port. TRex then counts that stream on its own, sent and received back '

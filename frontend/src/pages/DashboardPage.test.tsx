@@ -23,7 +23,7 @@ afterEach(() => { dashboardPrefs.reset(); vi.useRealTimers(); vi.restoreAllMocks
 
 const session = (st: api.SessionSnapshot['state']): api.SessionSnapshot => ({ type: 'session', state: st, params: null, info: null, error: null, rpc_console: false, include_polling: false })
 
-describe('DashboardPage Clear stats', () => {
+describe('DashboardPage Reset displayed counters', () => {
   beforeEach(() => { localStorage.clear(); resetDashViewStore() })
   afterEach(() => { localStorage.clear() })
   it('calls statsStore.clear and nothing else when connected', async () => {
@@ -32,7 +32,7 @@ describe('DashboardPage Clear stats', () => {
     const fetchSpy = vi.spyOn(globalThis, 'fetch')
     const stop = vi.spyOn(api, 'stop')
     render(<DashboardPage />)
-    await userEvent.click(screen.getByRole('button', { name: 'Clear stats' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Reset displayed counters' }))
     expect(clear).toHaveBeenCalledTimes(1)
     expect(fetchSpy).not.toHaveBeenCalled()
     expect(stop).not.toHaveBeenCalled()
@@ -43,10 +43,10 @@ describe('DashboardPage Clear stats', () => {
     pgidStore.push(wirePgid('tx'))
     expect(pgidStore.relative(5, 'tx_pkts', 'total')).toBe(90909)
     render(<DashboardPage />)
-    await userEvent.click(screen.getByRole('button', { name: 'Clear stats' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Reset displayed counters' }))
     expect(pgidStore.relative(5, 'tx_pkts', 'total')).toBe(0)
   })
-  it('Clear stats zeroes the rendered Streams table counters', async () => {
+  it('Reset displayed counters zeroes the rendered Streams table counters', async () => {
     vi.spyOn(state, 'useAppState').mockReturnValue({ ...state.initialState, session: session('connected') })
     pgidStore.reset()
     pgidStore.push(wirePgid('tx'))
@@ -56,10 +56,10 @@ describe('DashboardPage Clear stats', () => {
     await userEvent.click(screen.getByRole('tab', { name: 'Streams' }))
     const row = () => within(screen.getByRole('table', { name: 'Streams' })).getAllByRole('row')[2]
     expect(within(row()).getAllByText('90,909')).toHaveLength(2)
-    await userEvent.click(screen.getByRole('button', { name: 'Clear stats' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Reset displayed counters' }))
     expect(within(row()).queryByText('90,909')).toBeNull()
   })
-  it('Clear stats empties the Latency tab Max, and renders its table only while that tab is shown', async () => {
+  it('Reset displayed counters empties the Latency tab Max, and renders its table only while that tab is shown', async () => {
     vi.spyOn(state, 'useAppState').mockReturnValue({ ...state.initialState, session: session('connected') })
     localStorage.setItem(DASH_VIEW_KEY, '{"history":true}'); resetDashViewStore()   // Last is a history column
     pgidStore.reset()
@@ -69,22 +69,23 @@ describe('DashboardPage Clear stats', () => {
     await userEvent.click(screen.getByRole('tab', { name: 'Latency' }))
     const row = () => within(screen.getByRole('table', { name: 'Latency' })).getAllByRole('row')[1]
     expect(within(row()).getAllByText('1,135').length).toBeGreaterThanOrEqual(2)   // Max and Last
-    await userEvent.click(screen.getByRole('button', { name: 'Clear stats' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Reset displayed counters' }))
     expect(within(row()).queryByText('1,135')).toBeNull()
     await userEvent.click(screen.getByRole('tab', { name: 'Overview' }))
     expect(screen.queryByRole('table', { name: 'Latency' })).toBeNull()
   })
-  it('Clear stats sits at the end of the tab strip', () => {
+  it('Reset displayed counters sits at the end of the tab strip', () => {
     vi.spyOn(state, 'useAppState').mockReturnValue({ ...state.initialState, session: session('connected') })
     const { container } = render(<DashboardPage />)
     const end = container.querySelector('.tabs-end')!
-    expect(within(end as HTMLElement).getByRole('button', { name: 'Clear stats' })).toBeInTheDocument()
-    expect(within(screen.getByRole('tablist', { name: 'Dashboard' })).queryByRole('button', { name: 'Clear stats' })).toBeNull()
+    expect(within(end as HTMLElement).getByRole('button', { name: 'Reset displayed counters' })).toBeInTheDocument()
+    expect(within(screen.getByRole('tablist', { name: 'Dashboard' })).queryByRole('button', { name: 'Reset displayed counters' })).toBeNull()
+    expect(screen.queryByRole('button', { name: 'Clear stats' })).toBeNull()
   })
   it('is disabled unless the session is connected', () => {
     vi.spyOn(state, 'useAppState').mockReturnValue({ ...state.initialState, session: session('lost') })
     render(<DashboardPage />)
-    expect(screen.getByRole('button', { name: 'Clear stats' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Reset displayed counters' })).toBeDisabled()
   })
 })
 

@@ -50,11 +50,11 @@ describe('StreamsTab table', () => {
     expect(within(r[0]).getAllByText('90,909')).toHaveLength(2)       // Tx and Rx pkts
     expect(within(r[0]).getAllByText('7,818,181')).toHaveLength(2)
   })
-  it('heads the counter columns with "since the stream was added, or Clear"', () => {
+  it('heads the counter columns with "since the stream was added, or Reset displayed counters"', () => {
     showAll()
     pgidStore.push(wirePgid('tx'))
     renderTab()
-    expect(screen.getByRole('columnheader', { name: /since the stream was added, or Clear/ })).toBeInTheDocument()
+    expect(screen.getByRole('columnheader', { name: /since the stream was added, or Reset displayed counters/ })).toBeInTheDocument()
   })
   it('computes Rx bps L1 when the server sends no rx_bps_l1', () => {
     showAll()
@@ -208,7 +208,7 @@ describe('StreamsTab columns', () => {
     await openColumns()
     await userEvent.click(screen.getByRole('checkbox', { name: 'Packet and byte counters' }))
     expect(headerTexts()).toEqual([...DEFAULT_HEADS, ...COUNTS])
-    expect(screen.getByRole('columnheader', { name: /since the stream was added, or Clear/ })).toBeInTheDocument()
+    expect(screen.getByRole('columnheader', { name: /since the stream was added, or Reset displayed counters/ })).toBeInTheDocument()
   })
   it('keeps the choice across a remount', async () => {
     pgidStore.push(wirePgid('tx'))

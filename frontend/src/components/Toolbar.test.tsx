@@ -245,36 +245,37 @@ describe('Toolbar', () => {
       unmount()
     }
   })
-  it('Clear stats calls statsStore.clear, and nothing else: no fetch, no api call', async () => {
+  it('Reset displayed counters calls statsStore.clear, and nothing else: no fetch, no api call', async () => {
     const clear = vi.spyOn(statsStore, 'clear')
     const fetchSpy = vi.spyOn(globalThis, 'fetch')
     const stop = vi.spyOn(api, 'stop'); const release = vi.spyOn(api, 'release')
     setup({ kind: 'root' }, [wirePort('tx_owned')])
-    await userEvent.click(screen.getByRole('button', { name: 'Clear stats' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Reset displayed counters' }))
     expect(clear).toHaveBeenCalledTimes(1)
     expect(fetchSpy).not.toHaveBeenCalled()
     expect(stop).not.toHaveBeenCalled(); expect(release).not.toHaveBeenCalled()
   })
-  it('Clear stats says in its tooltip that it resets only what this browser shows', () => {
+  it('Reset displayed counters says in its tooltip that it resets only what this browser shows', () => {
     setup({ kind: 'root' }, [wirePort('tx_owned')])
-    expect(screen.getByRole('button', { name: 'Clear stats' })).toHaveAttribute('title', 'Resets the counters shown in this browser; nothing is sent to TRex')
+    expect(screen.getByRole('button', { name: 'Reset displayed counters' })).toHaveAttribute('title', 'Resets the counters shown in this browser; nothing is sent to TRex')
+    expect(screen.queryByRole('button', { name: 'Clear stats' })).toBeNull()
   })
-  it('Clear stats also clears the PGID counters', async () => {
+  it('Reset displayed counters also clears the PGID counters', async () => {
     pgidStore.reset()
     pgidStore.push(wirePgid('tx'))
     expect(pgidStore.relative(5, 'tx_pkts', 'total')).toBe(90909)
     setup({ kind: 'root' }, [wirePort('tx_owned')])
-    await userEvent.click(screen.getByRole('button', { name: 'Clear stats' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Reset displayed counters' }))
     expect(pgidStore.relative(5, 'tx_pkts', 'total')).toBe(0)
     pgidStore.reset()
   })
-  it('Clear stats is disabled while connecting (connected-or-connecting is not enough)', () => {
+  it('Reset displayed counters is disabled while connecting (connected-or-connecting is not enough)', () => {
     setup({ kind: 'root' }, [], false, true, false)
-    expect(screen.getByRole('button', { name: 'Clear stats' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Reset displayed counters' })).toBeDisabled()
   })
-  it('Clear stats is disabled while not connected', () => {
+  it('Reset displayed counters is disabled while not connected', () => {
     setup({ kind: 'root' }, [], false, false)
-    expect(screen.getByRole('button', { name: 'Clear stats' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Reset displayed counters' })).toBeDisabled()
   })
   it('TRex daemon… is enabled while disconnected and calls onDaemon', async () => {
     const onDaemon = vi.fn()
@@ -293,8 +294,8 @@ describe('Toolbar', () => {
     render(<Toolbar ports={[port(0), port(1)]} selection={{ kind: 'port', id: 1 }} readOnly={false} connected onError={vi.fn()} onReset={onReset} onDaemon={vi.fn()} />)
     const [first, second] = Array.from(document.querySelectorAll('.tb-row')) as HTMLElement[]
     expect(within(first).getAllByRole('group').map((g) => g.getAttribute('aria-label'))).toEqual(['Port 1', 'All ports'])
-    expect(within(first).queryByRole('button', { name: /Reset|Clear stats|daemon/ })).toBeNull()
-    expect(within(second).getAllByRole('button').map((b) => b.textContent)).toEqual(['Clear stats', 'TRex daemon…', 'More ▾'])
+    expect(within(first).queryByRole('button', { name: /Reset|Reset displayed counters|daemon/ })).toBeNull()
+    expect(within(second).getAllByRole('button').map((b) => b.textContent)).toEqual(['Reset displayed counters', 'TRex daemon…', 'More ▾'])
     await userEvent.click(within(second).getByRole('button', { name: 'More ▾' }))
     expect(within(screen.getByRole('menu', { name: 'More' })).getAllByRole('menuitem').map((b) => b.textContent)).toEqual(['Reset port 1…', 'Reset all ports…'])
     await userEvent.click(screen.getByRole('menuitem', { name: 'Reset port 1…' }))

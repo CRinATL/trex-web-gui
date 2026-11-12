@@ -326,7 +326,7 @@ read-only session and whenever the session is not `connected`):
 | **All ports** | **Start all** | all owned ports | any owned port has its default profile in STREAMS. Opens the [Start all dialog](#27-start-all-dialog). |
 | | **Stop all** | owned running ports | any owned port is running. |
 | | **Acquire all**, **Release all** | all ports / your ports | there are ports / you own one. |
-| (ungrouped) | **Clear stats** | the browser's stats baselines | session connected. |
+| (ungrouped) | **Reset displayed counters** | the browser's stats baselines | session connected. |
 | | **Setups ▾** | the saved test setups ([2.17](#217-saved-test-setups)) | always enabled; its menu has **Save current…** (needs a session, connecting included) and **Manage setups…**. |
 | | **TRex daemon…** | the [daemon dialog](#58-trex-daemon-dialog) | always enabled, disconnected too (the daemon starts a TRex before anyone connects). Last in the row. |
 
@@ -745,7 +745,7 @@ The same dialog in a 1400x540 window: the dialog shrinks, the list and the detai
 Route `/dashboard`. Source: `frontend/src/pages/DashboardPage.tsx`, `frontend/src/useStale.ts`.
 
 - **Frame:** heading; a tab strip **Overview**, **Streams**, **Latency**, **Utilization** (the same style as the port panel's),
-  with **Clear stats** at the right end of the strip (the same action as the Control toolbar's; disabled when not connected).
+  with **Reset displayed counters** at the right end of the strip (the same action as the Control toolbar's; disabled when not connected).
   All panels stay mounted, so charts keep their history across tabs; the tab, interval and layout survive leaving the page and
   reset on a new connection.
 - Each tab judges its own read: when no message has arrived for 3 × the stats interval, an orange banner "<Statistics | Stream
@@ -767,7 +767,7 @@ Source: `frontend/src/components/GlobalTiles.tsx`, `frontend/src/components/Port
   page heading, on every Dashboard tab, when any port is in service mode.
 - **Ports table**, left: **Show** select (All / My) and a **Show bytes** button; columns Metric, one per port (by name),
   Total; the rate rows first (Tx/Rx L1 bps, Tx/Rx L2 bps, Tx/Rx pps, with ▲/▼ trend marks), then "Counters: since connect,
-  Reset or Clear" (packets, errors; the bytes rows are folded behind Show bytes).
+  a port Reset or Reset displayed counters" (packets, errors; the bytes rows are folded behind Show bytes).
 - **Charts**, right: **Interval** (60, 90, 120, 300 s) and **Layout** (1, 2 or 4 charts) selects above the charts; each
   chart's title is its series select (`Chart N series`: Tx pps, Rx pps, Tx bps L2/L1, Rx bps L2/L1) and a legend line below
   (`latest <value>`, or the hovered time and value); a **Y axis** Fit / From 0 control beside Layout.

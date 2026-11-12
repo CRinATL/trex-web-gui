@@ -23,7 +23,7 @@ describe('PortsTable', () => {
     for (const n of ['Port 0', 'Port 1', 'Total']) expect(screen.getByRole('columnheader', { name: n })).toBeInTheDocument()
     expect(screen.getByRole('rowheader', { name: 'Tx L1 bps' })).toBeInTheDocument()
     expect(screen.getByRole('rowheader', { name: 'Rx packets' })).toBeInTheDocument()
-    expect(screen.getByText(/since connect, Reset or Clear/)).toBeInTheDocument()
+    expect(screen.getByText(/since connect, a port Reset or Reset displayed counters/)).toBeInTheDocument()
   })
   it('reads the values from the stats message', () => {
     const m = statsFromSample(3, { ports: { '0': { opackets: 1234567, tx_bps_L1: null }, '1': {} }, total: { opackets: 7 } })

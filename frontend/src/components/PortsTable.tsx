@@ -115,7 +115,7 @@ export function PortsTable({ ports, labelOf = NO_LABEL }: { ports: PortView[]; l
         </thead>
         <tbody>
           {body(ROWS, true)}
-          <tr><th colSpan={scopes.length + 1} scope="colgroup">Counters: since connect, Reset or Clear</th></tr>
+          <tr><th colSpan={scopes.length + 1} scope="colgroup">Counters: since connect, a port Reset or Reset displayed counters</th></tr>
           {body(PACKET_ROWS)}
         </tbody>
         <tbody id={bytesId} hidden={!bytes}>{body(BYTES_ROWS)}</tbody>
