@@ -177,7 +177,7 @@ describe('DaemonDialog', () => {
   it.each([
     { running: true, stop_s: null, other_pids: [], confirmed: true, still_answering: false },
     { running: true, stop_s: null, other_pids: [], confirmed: false, still_answering: false },
-  ])('Force stop is offered after a Stop reply that says TRex still runs or is unconfirmed', async (reply) => {
+  ])('Force stop is offered after a Stop reply that says TRex still runs or is unconfirmed (confirmed: $confirmed)', async (reply) => {
     vi.spyOn(api, 'daemonStop').mockResolvedValue(reply)
     await open({ daemon: ours })
     await userEvent.click(screen.getByRole('button', { name: 'Stop' }))
@@ -417,6 +417,52 @@ describe('DaemonDialog', () => {
     setApp({ daemon: idle }); rerender(<DaemonDialog onClose={() => undefined} />)
     await act(async () => { await new Promise((r) => setTimeout(r, 0)) })
     expect(screen.queryByText(msg)).toBeNull()
+  })
+
+  it("Logs: a Connect to another daemon drops the first daemon's text, error and note", async () => {
+    const other = { ...idle, target: { host: '192.0.2.9', port: idle.target!.port } }
+    const msg = 'There is no TRex log yet: first daemon.'
+    const replies = [
+      { first: () => Promise.resolve({ which: 'trex' as const, text: 'first daemon line' }), gone: () => screen.queryByText('first daemon line') },
+      { first: () => Promise.reject(new api.ApiError(500, 'x', 'first daemon failed')), gone: () => screen.queryByRole('alert') },
+      { first: () => Promise.reject(new api.ApiError(409, 'no_trex_log', msg)), gone: () => screen.queryByText(msg) },
+    ]
+    for (const r of replies) {
+      vi.mocked(api.daemonLog).mockImplementation(r.first)
+      const { rerender, unmount } = await open()
+      fireEvent.click(screen.getByRole('tab', { name: 'Logs' }))
+      await vi.waitFor(() => expect(r.gone()).not.toBeNull())
+      vi.mocked(api.daemonLog).mockImplementation(() => new Promise(() => undefined))
+      setApp({ daemon: other }); rerender(<DaemonDialog onClose={() => undefined} />)
+      await act(async () => { await new Promise((x) => setTimeout(x, 0)) })
+      expect(r.gone()).toBeNull()
+      unmount()
+      setApp({ daemon: idle })
+    }
+  })
+
+  it('Logs: a disconnect or a poll error drops the log text and the alert', async () => {
+    const pending = () => vi.mocked(api.daemonLog).mockImplementation(() => new Promise(() => undefined))
+    for (const mid of [{ ...idle, state: 'disconnected', target: null, status: null }, { ...idle, state: 'error' }] as api.DaemonMsg[]) {
+      vi.mocked(api.daemonLog).mockResolvedValue({ which: 'trex', text: 'first line' })
+      const { rerender, unmount } = await open()
+      fireEvent.click(screen.getByRole('tab', { name: 'Logs' }))
+      await screen.findByText('first line')
+      setApp({ daemon: mid }); rerender(<DaemonDialog onClose={() => undefined} />)
+      expect(screen.queryByText('first line')).toBeNull()
+      pending()
+      setApp({ daemon: idle }); rerender(<DaemonDialog onClose={() => undefined} />)
+      await act(async () => { await new Promise((x) => setTimeout(x, 0)) })
+      expect(screen.getByLabelText('Log text')).toHaveTextContent('')
+      unmount()
+    }
+    vi.mocked(api.daemonLog).mockRejectedValue(new api.ApiError(500, 'x', 'first daemon failed'))
+    const { rerender } = await open()
+    fireEvent.click(screen.getByRole('tab', { name: 'Logs' }))
+    await screen.findByRole('alert')
+    pending()
+    setApp({ daemon: { ...idle, state: 'error' } }); rerender(<DaemonDialog onClose={() => undefined} />)
+    expect(screen.queryByRole('alert')).toBeNull()
   })
 
   it('Logs: any other failure stays an error', async () => {
