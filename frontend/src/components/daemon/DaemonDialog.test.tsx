@@ -78,12 +78,15 @@ describe('DaemonDialog', () => {
     vi.spyOn(api, 'daemonStart').mockImplementation(() => new Promise((r) => { finish = r }))
     await open()
     fireEvent.change(screen.getByLabelText('Start timeout (s)'), { target: { value: '25' } })
+    vi.useFakeTimers({ toFake: ['Date', 'setInterval', 'clearInterval'] })   // setTimeout stays real so userEvent runs
     await userEvent.click(screen.getByRole('button', { name: 'Start' }))
     await userEvent.click(within(dialog('Start TRex')).getByRole('button', { name: 'Start' }))
     const confirm = dialog('Start TRex')
     expect(within(confirm).getByRole('progressbar', { name: 'Starting TRex on 127.0.0.1' })).toHaveAttribute('max', '25')
     expect(within(confirm).getByRole('timer')).toHaveTextContent('0:00 of up to 0:25')
     expect(within(confirm).getByText(/closes by itself once TRex answers/)).toBeInTheDocument()
+    await act(async () => { await vi.advanceTimersByTimeAsync(26_000) })
+    expect(within(confirm).getByRole('timer')).toHaveTextContent("0:26, past the start timeout: still waiting for the daemon's answer")
     await act(async () => { finish({ seq: 7, command_preview: PREVIEW, run: ours.run! }) })
     expect(screen.queryByRole('dialog', { name: 'Start TRex' })).toBeNull()
   })
@@ -421,7 +424,7 @@ describe('DaemonDialog', () => {
 
   it("Logs: a Connect to another daemon drops the first daemon's text, error and note", async () => {
     const other = { ...idle, target: { host: '192.0.2.9', port: idle.target!.port } }
-    const msg = 'There is no TRex log yet: first daemon.'
+    const msg = "There is no TRex log yet: this daemon has not started TRex, or TRex's log file was removed. The Daemon log shows what the daemon did."
     const replies = [
       { first: () => Promise.resolve({ which: 'trex' as const, text: 'first daemon line' }), gone: () => screen.queryByText('first daemon line') },
       { first: () => Promise.reject(new api.ApiError(500, 'x', 'first daemon failed')), gone: () => screen.queryByRole('alert') },
@@ -463,6 +466,21 @@ describe('DaemonDialog', () => {
     pending()
     setApp({ daemon: { ...idle, state: 'error' } }); rerender(<DaemonDialog onClose={() => undefined} />)
     expect(screen.queryByRole('alert')).toBeNull()
+  })
+
+  it('Logs: a target change or a poll error puts the selector back to TRex log', async () => {
+    vi.mocked(api.daemonLog).mockResolvedValue({ which: 'daemon', text: 'daemon line' })
+    const other = { ...idle, target: { host: '192.0.2.9', port: idle.target!.port } }
+    for (const mid of [other, { ...idle, state: 'error' }] as api.DaemonMsg[]) {
+      const { rerender, unmount } = await open()
+      fireEvent.click(screen.getByRole('tab', { name: 'Logs' }))
+      await userEvent.selectOptions(screen.getByLabelText('Log'), 'daemon')
+      expect(screen.getByLabelText('Log')).toHaveValue('daemon')
+      setApp({ daemon: mid }); rerender(<DaemonDialog onClose={() => undefined} />)
+      expect(screen.getByLabelText('Log')).toHaveValue('trex')
+      unmount()
+      setApp({ daemon: idle })
+    }
   })
 
   it('Logs: any other failure stays an error', async () => {

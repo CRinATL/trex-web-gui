@@ -26,7 +26,7 @@ describe('ConfirmDialog progress', () => {
     let finish: () => void = () => undefined
     const onConfirm = vi.fn(() => new Promise<void>((r) => { finish = r }))
     render(<ConfirmDialog title="Start TRex" body={<p>the command</p>} confirmLabel="Start" onConfirm={onConfirm} onClose={vi.fn()}
-      progress={{ label: 'Starting TRex', busyLabel: 'Starting…', limitS: 40, detail: <p>detail text</p> }} />)
+      progress={{ label: 'Starting TRex', busyLabel: 'Starting…', limitS: 40, pastLimit: "past the start timeout: still waiting for the daemon's answer", detail: <p>detail text</p> }} />)
     expect(screen.queryByRole('progressbar')).toBeNull()
     act(() => { fireEvent.click(screen.getByRole('button', { name: 'Start' })) })
     const bar = screen.getByRole('progressbar', { name: 'Starting TRex' })
@@ -39,11 +39,27 @@ describe('ConfirmDialog progress', () => {
     act(() => { vi.advanceTimersByTime(12_000) })
     expect(screen.getByRole('timer')).toHaveTextContent('0:12 of up to 0:40')
     expect(bar).toHaveAttribute('value', '12')
-    act(() => { vi.advanceTimersByTime(60_000) })   // past the limit: the bar stays full, the count goes on
-    expect(screen.getByRole('timer')).toHaveTextContent('1:12 of up to 0:40')
+    const PAST = "past the start timeout: still waiting for the daemon's answer"
+    act(() => { vi.advanceTimersByTime(28_000) })   // exactly the limit: still "of up to"
+    expect(screen.getByRole('timer')).toHaveTextContent('0:40 of up to 0:40')
+    act(() => { vi.advanceTimersByTime(1_000) })
+    expect(screen.getByRole('timer')).toHaveTextContent(`0:41, ${PAST}`)
+    expect(screen.getByRole('timer')).not.toHaveTextContent(/of up to/)
+    act(() => { vi.advanceTimersByTime(31_000) })   // well past the limit: the bar stays full, the count goes on
+    expect(screen.getByRole('timer')).toHaveTextContent(`1:12, ${PAST}`)
+    expect(screen.getByRole('timer')).not.toHaveTextContent(/of up to/)
     expect(bar).toHaveAttribute('value', '40')
     await act(async () => { finish() })
     expect(screen.queryByRole('progressbar')).toBeNull()
+  })
+
+  it('a progress without pastLimit keeps "of up to" past the limit', () => {
+    vi.useFakeTimers()
+    render(<ConfirmDialog title="Start TRex" body={<p>the command</p>} confirmLabel="Start" onConfirm={() => new Promise<void>(() => undefined)} onClose={vi.fn()}
+      progress={{ label: 'Starting TRex', busyLabel: 'Starting…', limitS: 40 }} />)
+    act(() => { fireEvent.click(screen.getByRole('button', { name: 'Start' })) })
+    act(() => { vi.advanceTimersByTime(72_000) })
+    expect(screen.getByRole('timer')).toHaveTextContent('1:12 of up to 0:40')
   })
 
   it('a failed action leaves the progress view and shows the error over the body again', async () => {

@@ -257,6 +257,7 @@ export function DaemonRunTab({ daemon, pushed, onModal }: { daemon: DaemonMsg | 
         <ConfirmDialog title="Start TRex" confirmLabel="Start" onConfirm={doStart} onClose={() => { setConfirm(null); setStartSnap(null) }}
           progress={{
             label: `Starting TRex on ${host}`, busyLabel: 'Starting…', limitS: startSnap.timeout,
+            pastLimit: 'past the start timeout: still waiting for the daemon\'s answer',
             detail: <p className="muted">The daemon launches TRex and waits until it answers; TRex first takes over and initialises the ports, which takes a while. This closes by itself once TRex answers, or shows the daemon&apos;s error if TRex is not up within the start timeout.</p>,
           }}
           body={(

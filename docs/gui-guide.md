@@ -1560,8 +1560,9 @@ root on <host> for N s. A stateful run has no command port, so Control cannot co
 
 TRex takes a while to come up (it takes over and initialises the ports first), and the daemon answers only once it does,
 so after **Start** the dialog shows `Starting TRex on <host>…` with a bar that fills over the Start timeout and the
-time so far (`0:12 of up to 0:40`); **Cancel** is off and the button reads **Starting…** until the daemon answers. The
-dialog then closes by itself, or goes back to the command with the daemon's error.
+time so far (`0:12 of up to 0:40`); **Cancel** is off and the button reads **Starting…** until the daemon answers. Past
+the timeout the line reads `<time>, past the start timeout: still waiting for the daemon's answer` (the daemon waits a few
+seconds longer than the timeout). The dialog then closes by itself, or goes back to the command with the daemon's error.
 
 A started stateful run shows the **Stateful run** block:
 
