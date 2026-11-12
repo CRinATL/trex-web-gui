@@ -9,6 +9,7 @@ import { Tabs, tabPanel } from '../ui/Tabs'
 import { useAppState } from '../state'
 import { THEMES, readTheme, useTheme, type Theme } from '../theme'
 import { DENSITIES, useDensity } from '../density'
+import { useReadinessStrip } from '../readiness'
 
 const sameSettings = (a: Settings | null, b: Settings | null) => JSON.stringify(a) === JSON.stringify(b)
 const stamp = () => new Date().toISOString().replace(/[-:]/g, '').replace(/\.\d+Z$/, 'Z')
@@ -54,6 +55,17 @@ function DensityFieldset() {
       {DENSITIES.map(([value, label]) => (
         <label key={value}><input type="radio" name="density" checked={density === value} onChange={() => setDensity(value)} /> {label}</label>
       ))}
+    </fieldset>
+  )
+}
+
+// The Control readiness strip's visibility: per browser, effective at once.
+function ReadinessFieldset() {
+  const { shown, setShown } = useReadinessStrip()
+  return (
+    <fieldset>
+      <legend>Control page</legend>
+      <label><input type="checkbox" checked={shown} onChange={(e) => setShown(e.target.checked)} /> Show the Control readiness strip</label>
     </fieldset>
   )
 }
@@ -208,7 +220,7 @@ function FullSettingsPage() {
       <div className="side-layout">
         <Tabs label="Settings sections" idPrefix="settings" orientation="vertical" tabs={tabs} selected={sel} onSelect={setSel} />
         <div>
-          <div {...tabPanel('settings', 'appearance', sel)}><ThemeFieldset /><DensityFieldset /></div>
+          <div {...tabPanel('settings', 'appearance', sel)}><ThemeFieldset /><DensityFieldset /><ReadinessFieldset /></div>
           <div {...tabPanel('settings', 'files', sel)}>
             {s && (
               <div className="form-grid">

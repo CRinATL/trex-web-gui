@@ -1,5 +1,7 @@
 import { act, cleanup, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { readFileSync } from 'node:fs'
+import { resolve } from 'node:path'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { StreamJson, StreamPage } from '../../api'
 import streams from '../../__fixtures__/studioStreams.json'
@@ -300,5 +302,23 @@ describe('StreamProperties', () => {
       expect(screen.getByLabelText('Start paused')).toHaveClass('edited')
       expect(await unsavedRows('1 unsaved change')).toEqual([['Start paused', 'no', 'yes']])
     })
+  })
+
+  // jsdom computes no layout, so read the stylesheet: the bar stays in view in a pane taller than the window.
+  it('the action bar is sticky at the bottom of the pane (read from index.css)', () => {
+    const css = readFileSync(resolve(import.meta.dirname, '../../index.css'), 'utf8')
+    const rules = [...css.matchAll(/(^|\n)([^{}\n]*\.stream-properties \.action-bar[^{}]*)\{([^}]*)\}/g)]
+    const sticky = rules.find((m) => /position:\s*sticky/.test(m[3]))
+    expect(sticky).toBeDefined()
+    expect(sticky![3]).toMatch(/bottom:\s*0/)
+    expect(sticky![3]).toMatch(/background:\s*var\(--bg\)/)
+  })
+
+  // The scroll container is main: Tab scrolls a field clear of the sticky bar only with a bottom scroll padding.
+  it('main reserves scroll-padding-bottom so a tabbed field clears the sticky bar (read from index.css)', () => {
+    const css = readFileSync(resolve(import.meta.dirname, '../../index.css'), 'utf8')
+    const main = css.match(/(^|\n)main\s*\{([^}]*)\}/)
+    expect(main).not.toBeNull()
+    expect(main![2]).toMatch(/scroll-padding-bottom:\s*4\.5rem/)
   })
 })

@@ -326,7 +326,7 @@ read-only session and whenever the session is not `connected`):
 | **All ports** | **Start all** | all owned ports | any owned port has its default profile in STREAMS. Opens the [Start all dialog](#27-start-all-dialog). |
 | | **Stop all** | owned running ports | any owned port is running. |
 | | **Acquire all**, **Release all** | all ports / your ports | there are ports / you own one. |
-| (ungrouped) | **Clear stats** | the browser's stats baselines | session connected. |
+| (ungrouped) | **Reset displayed counters** | the browser's stats baselines | session connected. |
 | | **Setups ▾** | the saved test setups ([2.17](#217-saved-test-setups)) | always enabled; its menu has **Save current…** (needs a session, connecting included) and **Manage setups…**. |
 | | **TRex daemon…** | the [daemon dialog](#58-trex-daemon-dialog) | always enabled, disconnected too (the daemon starts a TRex before anyone connects). Last in the row. |
 
@@ -391,6 +391,10 @@ Source: `frontend/src/components/PortPanel.tsx`.
   from the menu switch to Traffic. Each port's Traffic form is kept per port in a store, so selecting another port and
   coming back finds it as it was; it survives switching tabs or pages and is **reset on a new connection** (a reconnect
   empties it, as the setups steps showed).
+- **Readiness strip:** with a connected session and a port selected, a muted line under the port's title shows
+  Acquire → Assign a profile → Start with the current step in bold and a sentence for the next move (none of the three
+  is marked when the port is read-only, owned by someone else or held by another session of yours). **Hide readiness
+  strip** removes it; Settings → Appearance brings it back (source: `frontend/src/components/ReadinessStrip.tsx`).
 
 ![Profile row selected](screens/12-control-profile-selected.png)
 
@@ -409,7 +413,7 @@ Source: `frontend/src/components/PortControlTab.tsx`, `frontend/src/components/P
   - **Name** block: **Name** (limit 40) and **Description** (limit 500) fields as rows of one aligned form, each with a live count beside it, and one action bar with **Save** and **Revert**,
     in place of the old Name dialog. A port with no name starts from the confirmed kernel interface name if there is one.
   - **Attributes:** checkboxes **Promiscuous**, **Multicast**, **Link up**, **LED**, and a **Flow control** select. Each
-    applies at once; disabled with a tooltip when not connected, read-only, not yours, or unsupported by the driver (on
+    applies at once, and a note under them says there is no Save; disabled with a tooltip when not connected, read-only, not yours, or unsupported by the driver (on
     this guest Link up, LED and Flow control are unsupported). Link down on a transmitting port first shows a warning.
   - **Service mode:** radios **Off**, **On**, **Filtered**; Filtered reveals the mask checkboxes (**No TCP/UDP**, **BGP**, **DHCP**, **Transport**, **mDNS**, **All**) and
     **Apply filter**; the tab notes that Filtered mode needs the TRex server started with `--software`.
@@ -745,7 +749,7 @@ The same dialog in a 1400x540 window: the dialog shrinks, the list and the detai
 Route `/dashboard`. Source: `frontend/src/pages/DashboardPage.tsx`, `frontend/src/useStale.ts`.
 
 - **Frame:** heading; a tab strip **Overview**, **Streams**, **Latency**, **Utilization** (the same style as the port panel's),
-  with **Clear stats** at the right end of the strip (the same action as the Control toolbar's; disabled when not connected).
+  with **Reset displayed counters** at the right end of the strip (the same action as the Control toolbar's; disabled when not connected).
   All panels stay mounted, so charts keep their history across tabs; the tab, interval and layout survive leaving the page and
   reset on a new connection.
 - Each tab judges its own read: when no message has arrived for 3 × the stats interval, an orange banner "<Statistics | Stream
@@ -767,7 +771,7 @@ Source: `frontend/src/components/GlobalTiles.tsx`, `frontend/src/components/Port
   page heading, on every Dashboard tab, when any port is in service mode.
 - **Ports table**, left: **Show** select (All / My) and a **Show bytes** button; columns Metric, one per port (by name),
   Total; the rate rows first (Tx/Rx L1 bps, Tx/Rx L2 bps, Tx/Rx pps, with ▲/▼ trend marks), then "Counters: since connect,
-  Reset or Clear" (packets, errors; the bytes rows are folded behind Show bytes).
+  a port Reset or Reset displayed counters" (packets, errors; the bytes rows are folded behind Show bytes).
 - **Charts**, right: **Interval** (60, 90, 120, 300 s) and **Layout** (1, 2 or 4 charts) selects above the charts; each
   chart's title is its series select (`Chart N series`: Tx pps, Rx pps, Tx bps L2/L1, Rx bps L2/L1) and a legend line below
   (`latest <value>`, or the hovered time and value); a **Y axis** Fit / From 0 control beside Layout.
@@ -788,7 +792,7 @@ Source: `frontend/src/components/StreamsTable.tsx`, `frontend/src/components/Pgi
 
 - **Purpose:** per-stream (PG ID) flow statistics.
 - **Contents:** **Columns ▾** and **Full-width table** over a table grouped as Packet rates / Loss; the default columns
-  **Chart** (checkbox), **PG ID** (with a ▸/▾ toggle for per-port rows), **Type**, Tx/Rx pps, **Loss**, **Loss/s** fit the
+  **Chart** (checkbox), **PG ID** (with a ▸/▾ toggle for per-port rows), **Type**, Tx/Rx pps, **Packets**, **Packets/s** (under **Loss**) fit the
   column at 1400 px (Columns ▾ adds the bit rates and the packet and byte counters); a pager when there are many; global
   **rx_err** / **tx_err**; a chart "Streams: <metric>" with **Metric** and **Interval** selects, a **Y axis** Fit / From 0
   control and a ✓/✗ chip per stream under it, to the right. Needs streams with flow stats (here `flow_latency.py` on port 0:
@@ -1087,7 +1091,7 @@ range), **Add layer…**, and the hex view under them.
   the one picked ([111](screens/111-packet-pcap-picker.png)).
 - **Add to profile…** chooses a library profile; a `.py` profile carries a muted note that editor changes to it are not sent
   ([112](screens/112-packet-add-to-profile.png)).
-- In the Editor, a stream's Stream packet tab has **Edit packet**: the same editor with **Presets…**, **Cancel** and **Save** above it
+- In the Editor, a stream's Stream packet tab has **Edit packet**: the same editor with **Presets…**, **Cancel** and **Save to stream** above it
   ([113](screens/113-studio-embedded-packet-editor.png)); a `.py` profile's information bar has **View source…**
   ([114](screens/114-studio-py-source.png)).
 
@@ -1192,8 +1196,8 @@ Route `/settings` (also Ctrl+Shift+P). Source: `frontend/src/pages/SettingsPage.
   unsaved edits is marked "· unsaved" in the list. Beside Save, **N unsaved changes** is a button: it opens a floating table
   (**Field**, **Saved**, **Edited**) of the section's edited fields, closed by Escape or a click elsewhere, as an ⓘ note is.
   - **Appearance:** the Theme radios **System**, **Light**, **Dark**, **High contrast**, and the Density radios
-    **Comfortable** (the default) and **Compact**. Each choice is kept in this browser only, takes effect at once, and needs
-    no Save.
+    **Comfortable** (the default) and **Compact**, and the checkbox **Show the Control readiness strip** (full Settings only).
+    Each choice is kept in this browser only, takes effect at once, and needs no Save.
   - **Files on the backend host:** **Templates directory** (the user packet templates; empty means `<data dir>/templates`), **Workspace directory** (where
     Browse opens when it has no remembered directory; empty means the backend user's home), **Profile library directory** (ⓘ: empty
     means `<data dir>/profiles`; an absolute path on the backend host; P4a), **TRex config file (on the backend host)**

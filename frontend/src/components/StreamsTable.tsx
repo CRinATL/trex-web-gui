@@ -11,7 +11,7 @@ import { pgidSource, useStale } from '../useStale'
 import { ChartCheckbox, PgidChart, type Metric } from './PgidChart'
 
 export const PAGE_SIZE = 100
-const COUNTER_NOTE = 'since the stream was added, or Clear'
+const COUNTER_NOTE = 'since the stream was added, or Reset displayed counters'
 // The empty Streams tab says how a stream gets a PG ID and what it buys (RC1-39).
 export const PGID_HOW = 'A stream gets one in Editor > Stream settings: set RX stats to Flow stats or Latency and give it a '
   + 'PG ID, then assign the profile and start the port. TRex then counts that stream on its own, sent and received back '
@@ -127,7 +127,7 @@ function Table({ ids, ports, labelOf, sel }: { ids: number[]; ports: PortView[];
           <tr>
             <th scope="col">Chart</th><th scope="col">PG ID</th><th scope="col">Type</th>
             <th scope="col" className="num">Tx pps</th><th scope="col" className="num">Rx pps</th>
-            <th scope="col" className="num" title={COUNTER_NOTE}>Loss</th><th scope="col" className="num">Loss/s</th>
+            <th scope="col" className="num" title={COUNTER_NOTE}>Packets</th><th scope="col" className="num">Packets/s</th>
             {view.bitRates && <><th scope="col" className="num">Tx bps L1</th><th scope="col" className="num">Tx bps L2</th><th scope="col" className="num">Rx bps L1</th><th scope="col" className="num">Rx bps L2</th></>}
             {view.counters && <>
               <th scope="col" className="num" title={COUNTER_NOTE}>Tx pkts</th><th scope="col" className="num" title={COUNTER_NOTE}>Rx pkts</th>

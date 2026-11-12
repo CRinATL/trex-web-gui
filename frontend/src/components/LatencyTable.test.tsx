@@ -56,6 +56,13 @@ describe('LatencyTab view', () => {
     expect(screen.getByRole('columnheader', { name: 'Last (µs)' })).toHaveAttribute('title', "the server's maximum over its latest sample period")
     expect(screen.getByRole('button', { name: 'Show history (Last … Last-9)' })).toHaveAttribute('aria-pressed', 'true')
   })
+  it('names the Reset displayed counters button in the Max, Server max and Errors header titles', () => {
+    pgidStore.push(wirePgid('tx'))
+    render(<LatencyTab />)
+    expect(screen.getByRole('columnheader', { name: 'Max (µs)' })).toHaveAttribute('title', 'the largest last max seen since connect or Reset displayed counters')
+    expect(screen.getByRole('columnheader', { name: 'Server max (µs)' })).toHaveAttribute('title', "the server's maximum since the stream was added; Reset displayed counters does not reset it")
+    expect(screen.getByRole('columnheader', { name: 'Errors' })).toHaveAttribute('title', 'sequence too low plus sequence too high, since Reset displayed counters')
+  })
   it('Show history turns off again', async () => {
     pgidStore.push(wirePgid('tx'))
     render(<LatencyTab />)

@@ -96,7 +96,7 @@ export function Toolbar({ ports, selection, readOnly, connected, statsConnected 
       </div>
       </div>
       <div className="tb-row">
-      <button type="button" disabled={!statsConnected} title={CLEAR_STATS_HINT} onClick={clearAll}>Clear stats</button>
+      <button type="button" disabled={!statsConnected} title={CLEAR_STATS_HINT} onClick={clearAll}>Reset displayed counters</button>
       {onSaveSetup && onManageSetups && <SetupsMenu connected={connected} onSave={onSaveSetup} onManage={onManageSetups} />}
       {onDaemon && <button type="button" onClick={onDaemon}>TRex daemon…</button>}
       {onReset && <DropMenu name="More" items={[

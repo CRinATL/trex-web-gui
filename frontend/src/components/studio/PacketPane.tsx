@@ -31,7 +31,7 @@ interface Edit { base: PacketDoc; doc: PacketDoc; flags: number | null; opened: 
 
 // The selected stream's packet: as information (the summary, its size, the length of its field engine program, a viewer
 // and this stream's export: pcap written in the browser from the stored bytes, R2; YAML from the backend), or, after
-// Edit packet, in the embedded packet editor with Presets…, Cancel and Save. A row with `length` null has no usable packet.
+// Edit packet, in the embedded packet editor with Presets…, Cancel and Save to stream. A row with `length` null has no usable packet.
 // Save is one write through the profile's `writer`, and its undo entry goes to `history` (R11). `onDirty` hears whether
 // the editor holds unsaved edits; `onSaved` runs when a Save has landed. `disabled`: the table's lock or an ended writer.
 export function PacketPane({ slug, row, writer, history, onSaved, onDirty, disabled = false, active = true }: {
@@ -169,7 +169,7 @@ export function PacketPane({ slug, row, writer, history, onSaved, onDirty, disab
         <div className="setups-buttons" role="toolbar" aria-label="Edit packet">
           <button type="button" disabled={saving || disabled} onClick={() => setPresets({ origin: edit.doc })}>Presets…</button>
           <button type="button" disabled={saving} onClick={close}>Cancel</button>
-          <button type="button" disabled={saving || disabled} onClick={() => void save()}>Save</button>
+          <button type="button" disabled={saving || disabled} onClick={() => void save()}>Save to stream</button>
           {/* the packet as a whole differs from the one it was opened with (RC1-31) */}
           {dirty && <EditedTag />}
         </div>
