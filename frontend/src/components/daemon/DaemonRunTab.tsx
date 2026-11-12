@@ -44,14 +44,17 @@ export function DaemonRunTab({ daemon, pushed, onModal }: { daemon: DaemonMsg | 
   const [startSnap, setStartSnap] = useState<{ body: StartBody; timeout: number; text: string; rpcPort?: number } | null>(null)   // what the Start confirm shows and sends
   const [now, setNow] = useState(() => Date.now())
   const [finalLog, setFinalLog] = useState<{ seq: number; text: string } | null>(null)
-  const [stopFailedSeq, setStopFailedSeq] = useState<number | null>(null)   // the running_seq whose Stop was refused or failed
+  const [stopFailed, setStopFailed] = useState<{ seq: number | null; host: string; port: number } | null>(null)   // the run (and daemon) whose Stop was refused or failed
 
   const connected = daemon?.state === 'connected'
-  // The Stop failure belongs to one run on one connection: a disconnect, a poll error (both leave `connected`), a new run or a
-  // backend restart (a different running_seq) drops it. State adjusted while rendering; the `!== null` guard stops a render loop.
-  if (stopFailedSeq !== null && (!connected || daemon?.running_seq !== stopFailedSeq)) setStopFailedSeq(null)
   const host = daemon?.target?.host ?? ''
   const daemonPort = daemon?.target?.port ?? 0
+  // The Stop failure belongs to one run on one daemon: a disconnect (the target goes null, so it differs), another daemon, a
+  // new run or a backend restart (a different running_seq) drops it. A poll error (`state: 'error'`) keeps it: a Stop that fails because the daemon stops answering is what
+  // causes that error, and Force stop must still be there once the daemon answers again (`canForce` hides the button meanwhile).
+  // State adjusted while rendering; the `!== null` guard stops a render loop.
+  if (stopFailed !== null && (!daemon || daemon.running_seq !== stopFailed.seq
+    || host !== stopFailed.host || daemonPort !== stopFailed.port)) setStopFailed(null)
   const run = daemon?.run ?? null
   const state = daemon?.status?.state ?? null
   const running = state !== null && state !== 'Idle'
@@ -138,10 +141,10 @@ export function DaemonRunTab({ daemon, pushed, onModal }: { daemon: DaemonMsg | 
     const rpcPort = Number(portText)
     let r
     try { r = await daemonStop({ rpc_port: rpcPort, confirm: true, force, owners_unknown_ack: ack }) }
-    catch (x) { setStopFailedSeq(daemon?.running_seq ?? null); throw x }
+    catch (x) { setStopFailed({ seq: daemon?.running_seq ?? null, host, port: daemonPort }); throw x }
     setConfirm(null)
     // A reply that says TRex still runs (or could not be confirmed stopped) is a failed Stop too.
-    setStopFailedSeq(r.running ? (daemon?.running_seq ?? null) : null)
+    setStopFailed(r.running ? { seq: daemon?.running_seq ?? null, host, port: daemonPort } : null)
     // still_answering: the daemon's run ended, but a TRex it did not start still answers on the command port.
     // other_pids are the TRexes still listed, which may include the daemon's own still exiting, so the copy names
     // none as the other; the list may also be empty, and an empty listing does not mean that TRex stopped.
@@ -164,7 +167,7 @@ export function DaemonRunTab({ daemon, pushed, onModal }: { daemon: DaemonMsg | 
   }
 
   const stopOk = connected && daemon?.running_seq != null && !problems.cmdPort
-  const canForce = connected && running && (daemon?.running_seq == null || stopFailedSeq === daemon.running_seq)
+  const canForce = connected && running && (daemon?.running_seq == null || stopFailed?.seq === daemon.running_seq)
   const startOk = connected && !running && !daemon?.busy && body !== null && preview?.key === key && !!preview.text
   const tail = finalLog && finalLog.seq === stfRun?.seq ? finalLog.text.split('\n').slice(-LOG_TAIL_LINES).join('\n') : null
   const left = endMs === null ? null : Math.max(0, Math.ceil((endMs - now) / 1000))

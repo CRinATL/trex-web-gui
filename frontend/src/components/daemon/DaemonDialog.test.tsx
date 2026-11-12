@@ -202,7 +202,7 @@ describe('DaemonDialog', () => {
     expect(forceBtn()).toBeNull()
   })
 
-  it('the Stop failure is tied to its run, its connection and its backend', async () => {
+  it('the Stop failure is tied to its run, its daemon and its backend', async () => {
     vi.spyOn(api, 'daemonStop').mockRejectedValue(new api.ApiError(409, 'owners_unknown', 'Cannot read who owns the ports'))
     const at = (seq: number): api.DaemonMsg => ({ ...ours, running_seq: seq, run: { ...ours.run!, seq } })
     // (a) another run: the failure of seq 68 is dropped, not just hidden
@@ -220,11 +220,22 @@ describe('DaemonDialog', () => {
     redraw({ daemon: { ...at(69), state: 'disconnected', target: null, status: null } }, rerender)
     redraw({ daemon: at(69) }, rerender)
     expect(forceBtn()).toBeNull()
-    // (c) a poll error in between
+    // (c) a poll error in between keeps it (the failed Stop is what makes the daemon stop answering); the button hides meanwhile
     await refuseStop()
     expect(forceBtn()).toBeInTheDocument()
     redraw({ daemon: { ...at(69), state: 'error' } }, rerender)
+    expect(forceBtn()).toBeNull()
     redraw({ daemon: at(69) }, rerender)
+    expect(forceBtn()).toBeInTheDocument()
+    // (c2) another daemon at the same seq drops it
+    redraw({ daemon: { ...at(69), target: { ...at(69).target!, host: '192.0.2.99' } } }, rerender)
+    expect(forceBtn()).toBeNull()
+    redraw({ daemon: at(69) }, rerender)
+    expect(forceBtn()).toBeNull()
+    // (c3) the same host on another port drops it too
+    await refuseStop()
+    expect(forceBtn()).toBeInTheDocument()
+    redraw({ daemon: { ...at(69), target: { ...at(69).target!, port: at(69).target!.port + 1 } } }, rerender)
     expect(forceBtn()).toBeNull()
     // (d) a backend restart: the run is still Running but has no seq
     redraw({ daemon: ours }, rerender)
