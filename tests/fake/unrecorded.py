@@ -365,7 +365,8 @@ REGISTER: dict[str, Entry] = {
         "fake_daemon",
         "behaviour",
         "--foreign-ends-with-run empties the foreign process from get_trex_cmds the moment the run ends.",
-        "open: modelled; the real list lags the status, which --exit-lag models",
+        "open: modelled; settling it needs a TRex started by hand beside a daemon run and a get_trex_cmds "
+        "read the moment the run stops (the real list lags the status, which --exit-lag models)",
     ),
     "daemon-trex-log-after-start": Entry(
         "fake_daemon",
@@ -379,6 +380,118 @@ REGISTER: dict[str, Entry] = {
         "--trex-log-fault answers get_trex_log with the recorded get_file -33 refusal, a fault that is not "
         "the missing log.",
         "hook: --trex-log-fault",
+    ),
+    "daemon-starting-status-text": Entry(
+        "fake_daemon",
+        "text",
+        "While Starting, get_running_status says the text trex_server.py start sets.",
+        "open: read from trex_server.py start (set_verbose_status); start_trex blocks until Running, so a "
+        "real test needs a second client reading get_running_status mid-start",
+        text="TRex is starting (data is not available yet)",
+    ),
+    "daemon-trex-log-before-start": Entry(
+        "fake_daemon",
+        "behaviour",
+        "Without --no-trex-log, get_trex_log answers the recorded p5 body (recorded after a start) even "
+        "before any start_trex.",
+        "open: a real daemon that never started TRex answers the missing-file -33 (the --no-trex-log "
+        "recording), and one with a log from an earlier run reads it, so the answer depends on history no "
+        "test controls",
+    ),
+    "daemon-push-file-basename": Entry(
+        "fake_daemon",
+        "behaviour",
+        "push_file stores os.path.basename(name) and answers False when the file cannot be opened "
+        "(empty, '.', '..', a trailing slash).",
+        "open: read from trex_server.py push_file; a real test pushing 'a/b.yaml' and '' through "
+        "DaemonClient would settle it",
+    ),
+    "daemon-force-kill-results": Entry(
+        "fake_daemon",
+        "behaviour",
+        "force_trex_kill answers True when it ends the fake's run and the recorded idle stop_trex reply "
+        "(False) while Idle.",
+        "open: trex_server.py force_trex_kill and stop_trex return True after a join and False while Idle "
+        "(a Fault when an errcode is set, which the fake does not model), but the one recording is a -11 "
+        "(p5 daemon.jsonl, a failed run); a real kill of a live run would settle it",
+    ),
+    "daemon-hook-push-false": Entry(
+        "fake_daemon",
+        "hook",
+        "--push-false: push_file answers false and writes nothing.",
+        "hook: --push-false",
+    ),
+    "daemon-hook-reserved": Entry(
+        "fake_daemon",
+        "hook",
+        "--reserved: is_reserved answers true.",
+        "hook: --reserved",
+    ),
+    "daemon-hook-hang": Entry(
+        "fake_daemon",
+        "hook",
+        "--hang: the named method sleeps 30 s before it answers.",
+        "hook: --hang",
+    ),
+    "daemon-hook-drip": Entry(
+        "fake_daemon",
+        "hook",
+        "--drip: the named method's reply goes out one byte per second.",
+        "hook: --drip",
+    ),
+    "daemon-hook-huge": Entry(
+        "fake_daemon",
+        "hook",
+        "--huge: the named method answers a 9 MiB string.",
+        "hook: --huge",
+    ),
+    "daemon-hook-redirect": Entry(
+        "fake_daemon",
+        "hook",
+        "--redirect: every call is answered with a 302.",
+        "hook: --redirect",
+    ),
+    "daemon-hook-stop-keeps-running": Entry(
+        "fake_daemon",
+        "hook",
+        "--stop-keeps-running: stop_trex says True but the run goes on.",
+        "hook: --stop-keeps-running",
+    ),
+    "daemon-hook-run-ends-before-kill": Entry(
+        "fake_daemon",
+        "hook",
+        "--run-ends-before-kill: the run ends on its own just as force_trex_kill arrives.",
+        "hook: --run-ends-before-kill",
+    ),
+    "daemon-hook-daemon-run": Entry(
+        "fake_daemon",
+        "hook",
+        "--daemon-run: the fake starts Running a stateless run whose seq this backend never saw.",
+        "hook: --daemon-run",
+    ),
+    "daemon-hook-list-hides-pushed": Entry(
+        "fake_daemon",
+        "hook",
+        "--list-hides-pushed: get_files_list omits what push_file wrote.",
+        "hook: --list-hides-pushed",
+    ),
+    "daemon-hook-stf-scale": Entry(
+        "fake_daemon",
+        "hook",
+        "--stf-scale: an STF run lasts d*F seconds.",
+        "hook: --stf-scale",
+    ),
+    "daemon-hook-start-fails": Entry(
+        "fake_daemon",
+        "hook",
+        "--start-fails: start_trex answers the recorded start_bad_cfg fault.",
+        "hook: --start-fails",
+    ),
+    "daemon-hook-stf-fails": Entry(
+        "fake_daemon",
+        "hook",
+        "--stf-fails: an STF start_trex answers the recorded start_bad_cfg fault.",
+        "hook: --stf-fails",
     ),
 }
 

@@ -567,6 +567,19 @@ def test_a_trex_log_fault_other_than_the_missing_file_stays_a_502(tmp_path: Path
         assert c.get("/api/daemon/log", params={"which": "daemon"}).status_code == 200
 
 
+def test_daemon_run_with_no_trex_log_still_reads_the_log(tmp_path: Path, fake_daemon: Any) -> None:
+    """A run the fake starts Running (--daemon-run) was started through the daemon, so its log exists even
+    with --no-trex-log, which only models a daemon that has never started TRex. AGENTS.md, "Data that depends
+    on a context is tied to it": the missing-log answer belongs to a daemon that never started TRex
+    (daemon-register-pr-b-10)."""
+    d = fake_daemon("--daemon-run", "--no-trex-log")
+    with authed(create_app(tmp_path, token=TEST_TOKEN)) as c:
+        connect(c, d)
+        r = c.get("/api/daemon/log", params={"which": "trex"})
+        assert r.status_code == 200, r.text
+        assert r.json()["which"] == "trex" and r.json()["text"].strip(), r.text
+
+
 def test_missing_log_test_matches_only_the_missing_file_fault() -> None:
     """The recorded missing /tmp/trex.txt is a missing log; the recorded get_file refusal (also -33, a path
     outside the package) and a fault with another code are not."""

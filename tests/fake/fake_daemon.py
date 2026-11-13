@@ -6,9 +6,8 @@ see the Control session survive a hung daemon must not rely on this fake's concu
 
 Most bodies it answers are recorded ones: tests/fixtures/p5/daemon.jsonl and summary.json (faults),
 tests/fixtures/p5-stf/ (STF run, listings, outcomes) and tests/fixtures/daemon-ui/ (the missing TRex log). Not
-all are: the register in tests/fake/unrecorded.py lists only the flag assumptions under "Known divergences"
-below, and the "TRex is Starting" status text, the default pre-start get_trex_log, the bad-name push_file
-refusal and most hook flags are not yet listed there. It
+all are: the register in tests/fake/unrecorded.py lists every answer no recording backs (the divergences below
+and each hook flag, except --foreign and --foreign-stf, which list recorded processes). It
 keeps the state Idle -> Starting -> Running, a seq counter (stop_trex answers False while idle and -33 for a
 wrong seq while running) and a temp dir that push_file writes into. It prints one `[fake-daemon] method
 <name>` line per request, so a test can read the log of what was called, `push <name>` for each push_file
@@ -25,11 +24,11 @@ force_trex_kill arrives, so the kill finds the daemon Idle), --exit-lag S (after
 fake's run, its process stays listed by get_trex_cmds for S seconds while get_running_status already says
 Idle: trex_launch_thread.py `run` sends SIGUSR1 to the TRex process group and sets the status Idle at once,
 without waiting for `_t-rex-64` to exit), --no-trex-log (get_trex_log answers the recorded missing-file -33 of
-tests/fixtures/daemon-ui until a start_trex has succeeded, as a fresh daemon does), --foreign-after-start
-(lists the --foreign process only once a start_trex has succeeded, as when a TRex is started by hand beside
-this backend's run), --foreign-ends-with-run (lists the --foreign process only while the fake's own run is
-going, so a stop empties the list at once), --trex-log-fault (get_trex_log answers the recorded get_file
-refusal, a -33 that is not the missing file: the fault `daemon/session.py` `log` must re-raise).
+tests/fixtures/daemon-ui until a start_trex has been accepted, as a fresh daemon does), --foreign-after-start
+(lists the --foreign process only once a start_trex has been accepted, as when a TRex is started by hand
+beside this backend's run), --foreign-ends-with-run (lists the --foreign process only while the fake's own
+run is going, so a stop empties the list at once), --trex-log-fault (get_trex_log answers the recorded
+get_file refusal, a -33 that is not the missing file: the fault `daemon/session.py` `log` must re-raise).
 
 Known divergences from the real server:
 - --exit-lag keeps the ended run's process listed for S seconds after the status is Idle: read from
@@ -43,6 +42,14 @@ Known divergences from the real server:
   a start is the assumption. [U:daemon-trex-log-after-start]
 - --trex-log-fault answers get_trex_log with the recorded get_file refusal; the daemon's own answer to a
   get_trex_log it cannot serve for another reason is not recorded. [U:daemon-hook-trex-log-fault]
+- The status text while Starting is read from trex_server.py `start`, not recorded: start_trex blocks until
+  Running, so no recording caught it. [U:daemon-starting-status-text]
+- Without --no-trex-log, get_trex_log answers the recorded p5 body even before any start_trex; a daemon that
+  never started TRex answers the missing-file -33. [U:daemon-trex-log-before-start]
+- push_file stores the name's basename and answers False for a name it cannot open: read from trex_server.py
+  `push_file`, not recorded. [U:daemon-push-file-basename]
+- force_trex_kill answers True when it ends the fake's run and the idle stop_trex reply while Idle: the one
+  recording is a -11. [U:daemon-force-kill-results]
 
 force_trex_kill stops only the daemon's own run: the real daemon's force_trex_kill and stop_trex both call
 CTRex.stop_trex (trex_server.py), which answers False while Idle and never touches a TRex the daemon did not
@@ -67,8 +74,8 @@ IDLE, STARTING, RUNNING = 1, 2, 3
 HUGE_BYTES = 9 * 1024 * 1024
 HANG_S = 30
 START_S = 0.05
-# trex_server.py start: set_verbose_status(...); read from the source, not recorded (see unrecorded.py)
-STARTING_VERBOSE = "TRex is starting (data is not available yet)"
+# the text trex_server.py `start` sets (read from its source; the register entry says so)
+STARTING_VERBOSE = "TRex is starting (data is not available yet)"  # [U:daemon-starting-status-text]
 
 
 def rows(fixture: str) -> list[dict[str, Any]]:
@@ -118,7 +125,9 @@ class Daemon:
         self.end_at: float | None = None        # an STF run's end; None for a stateless run
         self.outcome = "TRex is Idle"
         self.stf_run = False
-        self.started = False    # a start_trex succeeded (--foreign-after-start, --no-trex-log)
+        # a start_trex was accepted (--foreign-after-start, --no-trex-log); a --daemon-run run was started
+        # through the daemon, so the log exists
+        self.started = bool(args.daemon_run)
         self.lingering: list[tuple[str, str, float]] = []   # (pid, cmd, until): ended runs still listed
         self.tmp = tempfile.TemporaryDirectory(prefix="fake-daemon-")
         if args.daemon_run:
@@ -152,9 +161,11 @@ class Daemon:
             out.append(list(STF["stf_cmd"]))
         with self.lock:
             self._settle()
-            # [U:daemon-foreign-after-start] [U:daemon-foreign-ends-with-run]
-            if self.args.foreign or (self.args.foreign_after_start and self.started) \
-                    or (self.args.foreign_ends_with_run and self.run_seq is not None):
+            foreign_late = self.args.foreign_after_start and self.started  # [U:daemon-foreign-after-start]
+            foreign_scoped = (  # [U:daemon-foreign-ends-with-run]
+                self.args.foreign_ends_with_run and self.run_seq is not None
+            )
+            if self.args.foreign or foreign_late or foreign_scoped:
                 out.insert(0, list(FOREIGN_CMD[0]))
             if self.run_seq is not None:
                 out.append(["4242", self.run_cmd])
@@ -220,7 +231,7 @@ class Daemon:
             if self.args.run_ends_before_kill and self.run_seq is not None:
                 self._end("stopped")
         if self.state() == IDLE:
-            return STF["stop_after_end"]["result"]
+            return STF["stop_after_end"]["result"]    # [U:daemon-force-kill-results]
         with self.lock:
             self._end("stopped")
         return True
@@ -237,7 +248,7 @@ class Daemon:
         if self.args.push_false:
             return ("result", False)
         try:
-            target = Path(self.tmp.name) / os.path.basename(name)
+            target = Path(self.tmp.name) / os.path.basename(name)    # [U:daemon-push-file-basename]
             target.write_bytes(base64.b64decode(params.get("bin_data", "")))
         except OSError:
             return ("result", False)
@@ -292,7 +303,7 @@ class Daemon:
         # [U:daemon-trex-log-after-start]
         if method == "get_trex_log" and self.args.no_trex_log and not self.started:
             return ("error", NO_TREX_LOG)
-        if method in STATIC:
+        if method in STATIC:      # [U:daemon-trex-log-before-start] get_trex_log reads before any start
             return ("result", STATIC[method])
         err = dict(fault(P5["faults"]["unknown_method"]))
         err["message"] = f"Method {method} not supported."
@@ -349,19 +360,19 @@ def build_parser() -> argparse.ArgumentParser:
     ap.add_argument("port", type=int)
     ap.add_argument("--foreign", action="store_true")
     ap.add_argument("--foreign-stf", action="store_true")
-    ap.add_argument("--reserved", action="store_true")
-    ap.add_argument("--start-fails", action="store_true")
-    ap.add_argument("--stf-fails", action="store_true")
-    ap.add_argument("--push-false", action="store_true")
-    ap.add_argument("--list-hides-pushed", action="store_true")
-    ap.add_argument("--stf-scale", type=float, default=1.0)
-    ap.add_argument("--hang")
-    ap.add_argument("--drip")
-    ap.add_argument("--huge")
-    ap.add_argument("--redirect", action="store_true")
-    ap.add_argument("--stop-keeps-running", action="store_true")
-    ap.add_argument("--daemon-run", action="store_true")
-    ap.add_argument("--run-ends-before-kill", action="store_true")
+    ap.add_argument("--reserved", action="store_true")  # [U:daemon-hook-reserved]
+    ap.add_argument("--start-fails", action="store_true")  # [U:daemon-hook-start-fails]
+    ap.add_argument("--stf-fails", action="store_true")  # [U:daemon-hook-stf-fails]
+    ap.add_argument("--push-false", action="store_true")  # [U:daemon-hook-push-false]
+    ap.add_argument("--list-hides-pushed", action="store_true")  # [U:daemon-hook-list-hides-pushed]
+    ap.add_argument("--stf-scale", type=float, default=1.0)  # [U:daemon-hook-stf-scale]
+    ap.add_argument("--hang")  # [U:daemon-hook-hang]
+    ap.add_argument("--drip")  # [U:daemon-hook-drip]
+    ap.add_argument("--huge")  # [U:daemon-hook-huge]
+    ap.add_argument("--redirect", action="store_true")  # [U:daemon-hook-redirect]
+    ap.add_argument("--stop-keeps-running", action="store_true")  # [U:daemon-hook-stop-keeps-running]
+    ap.add_argument("--daemon-run", action="store_true")  # [U:daemon-hook-daemon-run]
+    ap.add_argument("--run-ends-before-kill", action="store_true")  # [U:daemon-hook-run-ends-before-kill]
     ap.add_argument("--exit-lag", type=float, default=0.0)
     ap.add_argument("--foreign-after-start", action="store_true")
     ap.add_argument("--no-trex-log", action="store_true")
