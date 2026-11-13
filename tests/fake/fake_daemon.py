@@ -241,6 +241,10 @@ class Daemon:
             self._end("stopped")
         return True
 
+    def close(self) -> None:
+        """Remove the temp dir push_file wrote into; safe to call twice."""
+        self.tmp.cleanup()
+
     def pushed(self) -> list[str]:
         """The names of the files push_file has written."""
         return sorted(p.name for p in Path(self.tmp.name).iterdir())
@@ -400,7 +404,7 @@ def main() -> None:
     try:
         httpd.serve_forever()
     finally:
-        daemon.tmp.cleanup()
+        daemon.close()
 
 
 if __name__ == "__main__":
