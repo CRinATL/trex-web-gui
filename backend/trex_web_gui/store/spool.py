@@ -55,6 +55,10 @@ class SpoolBusy(Exception):
     """The file is open in a Writer; the caller answers 409 capture_busy."""
 
 
+class RecordRefused(ValueError):
+    """A record pcap cannot hold; the caller answers 409 spool_error."""
+
+
 def _is_int(v: object) -> TypeGuard[int]:
     """An int that is not a bool (a sidecar's `true` is not a count or an id)."""
     return isinstance(v, int) and not isinstance(v, bool)
@@ -116,13 +120,13 @@ class Writer:
         self.count = count
 
     def write(self, ts_rel: float, raw: bytes, wirelen: int) -> None:
-        """Append one record; ValueError once closed or for a record pcap cannot hold (negative ts_rel,
-        wirelen below the captured bytes: nothing is written), OSError on a failed write (a torn tail is
-        uncounted)."""
+        """Append one record; RecordRefused for a record pcap cannot hold (negative ts_rel, wirelen below
+        the captured bytes: nothing is written), a plain ValueError once closed, OSError on a failed write
+        (a torn tail is uncounted)."""
         if self._fd is None:
             raise ValueError("writer is closed")
         if ts_rel < 0 or wirelen < len(raw):
-            raise ValueError(f"not a pcap record: ts_rel={ts_rel}, wirelen={wirelen}, captured={len(raw)}")
+            raise RecordRefused(f"not a pcap record: ts_rel={ts_rel}, wirelen={wirelen}, captured={len(raw)}")
         pcap.write_all(self._fd, pcap.pack_record(ts_rel, raw, wirelen))
         self.count += 1             # only once the whole record is out
 

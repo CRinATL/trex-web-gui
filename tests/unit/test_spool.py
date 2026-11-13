@@ -8,7 +8,7 @@ from pathlib import Path
 import pytest
 from trex_web_gui import trexapi
 from trex_web_gui.store import pcap
-from trex_web_gui.store.spool import CaptureKey, Spool, SpoolBusy, _scan
+from trex_web_gui.store.spool import CaptureKey, RecordRefused, Spool, SpoolBusy, _scan
 
 trexapi.load()      # Scapy is importable only after the vendored tree is on the path
 
@@ -503,10 +503,19 @@ def test_an_open_files_row_takes_no_identity_from_its_sidecar(tmp_path: Path) ->
 def test_write_refuses_what_pcap_cannot_hold(tmp_path: Path, args: tuple[float, bytes, int]) -> None:
     sp = _spool(tmp_path)
     w = sp.writer(KEY)
-    with pytest.raises(ValueError):
+    with pytest.raises(RecordRefused):
         w.write(*args)
     assert w.count == 0
     assert sp.path(w.suspend()["name"]).read_bytes() == pcap.HEADER
+
+
+def test_a_closed_writer_is_not_a_refused_record(tmp_path: Path) -> None:
+    sp = _spool(tmp_path)
+    w = sp.writer(KEY)
+    w.close()
+    with pytest.raises(ValueError) as e:
+        w.write(*FRAMES[0])
+    assert not isinstance(e.value, RecordRefused)
 
 
 def _linked_partial(sp: Spool) -> tuple[Path, Path]:
