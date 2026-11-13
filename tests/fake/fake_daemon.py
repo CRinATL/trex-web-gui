@@ -51,6 +51,7 @@ processes stay listed."""
 import argparse
 import base64
 import json
+import os
 import shlex
 import signal
 import sys
@@ -66,6 +67,8 @@ IDLE, STARTING, RUNNING = 1, 2, 3
 HUGE_BYTES = 9 * 1024 * 1024
 HANG_S = 30
 START_S = 0.05
+# trex_server.py start: set_verbose_status(...); read from the source, not recorded (see unrecorded.py)
+STARTING_VERBOSE = "TRex is starting (data is not available yet)"
 
 
 def rows(fixture: str) -> list[dict[str, Any]]:
@@ -139,7 +142,7 @@ class Daemon:
     def status(self) -> dict[str, Any]:
         """The get_running_status result: the recorded shape, {state, verbose}."""
         st = self.state()
-        verbose = {IDLE: self.outcome, STARTING: "TRex is Starting", RUNNING: "TRex is Running"}[st]
+        verbose = {IDLE: self.outcome, STARTING: STARTING_VERBOSE, RUNNING: "TRex is Running"}[st]
         return {"state": st, "verbose": verbose}
 
     def cmds(self) -> list[list[str]]:
@@ -227,14 +230,17 @@ class Daemon:
         return sorted(p.name for p in Path(self.tmp.name).iterdir())
 
     def push(self, params: dict[str, Any]) -> Any:
-        """push_file: base64-decode into the temp dir; a name with a path in it is refused."""
+        """push_file: base64-decode into the temp dir under the name's basename, as trex_server.py does; a
+        name that cannot be opened (empty, `.`, `..`, a trailing slash) answers False, as its IOError does."""
         name = params.get("filename", "")
         print(f"[fake-daemon] push {name}", flush=True)
         if self.args.push_false:
             return ("result", False)
-        if not name or "/" in name or name in (".", ".."):
-            return ("error", fault(P5["faults"]["get_file"]))
-        (Path(self.tmp.name) / name).write_bytes(base64.b64decode(params.get("bin_data", "")))
+        try:
+            target = Path(self.tmp.name) / os.path.basename(name)
+            target.write_bytes(base64.b64decode(params.get("bin_data", "")))
+        except OSError:
+            return ("result", False)
         return ("result", True)
 
     def files_list(self, path: str) -> Any:
@@ -337,8 +343,8 @@ def make_handler(daemon: Daemon, args: argparse.Namespace) -> type[BaseHTTPReque
     return Handler
 
 
-def main() -> None:
-    """Parse the flags, serve on 127.0.0.1:<port> until SIGTERM."""
+def build_parser() -> argparse.ArgumentParser:
+    """The flags of the fake: the port and the behaviour hooks."""
     ap = argparse.ArgumentParser()
     ap.add_argument("port", type=int)
     ap.add_argument("--foreign", action="store_true")
@@ -361,7 +367,12 @@ def main() -> None:
     ap.add_argument("--no-trex-log", action="store_true")
     ap.add_argument("--trex-log-fault", action="store_true")
     ap.add_argument("--foreign-ends-with-run", action="store_true")
-    args = ap.parse_args()
+    return ap
+
+
+def main() -> None:
+    """Parse the flags, serve on 127.0.0.1:<port> until SIGTERM."""
+    args = build_parser().parse_args()
     daemon = Daemon(args)
     httpd = ThreadingHTTPServer(("127.0.0.1", args.port), make_handler(daemon, args))
     httpd.daemon_threads = True
