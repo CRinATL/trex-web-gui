@@ -110,7 +110,7 @@ class Writer:
                 fd, self._fd = self._fd, None
                 os.close(fd)
         finally:
-            self._spool._held.discard(self._name)
+            self._spool._held.pop(self._name, None)
 
     def suspend(self) -> SpoolFile:
         """Keep the partial file for a later resume(); the sidecar records the key."""
@@ -140,7 +140,7 @@ class Spool:
         self.dir = dir
         self.dir.mkdir(mode=0o700, parents=True, exist_ok=True)
         os.chmod(self.dir, 0o700)
-        self._held: set[str] = set()
+        self._held: dict[str, Writer] = {}      # name -> the open Writer that owns it
         self.skipped: list[str] = []        # partials resume() matched but could not read: left untouched
 
     def path(self, name: str) -> Path:
@@ -197,8 +197,9 @@ class Spool:
                 self._unlink(name)          # a file with no whole header would only be an unreadable partial
                 self._unlink(name + ".json")
                 raise
-            self._held.add(name)
-            return Writer(self, key, name, fd, 0)
+            w = Writer(self, key, name, fd, 0)
+            self._held[name] = w
+            return w
         raise OSError("no free capture file name")
 
     def resume(self, key: CaptureKey) -> Writer | None:
@@ -223,8 +224,9 @@ class Spool:
             except OSError:
                 os.close(fd)
                 raise
-            self._held.add(p.name)
-            return Writer(self, key, p.name, fd, count)
+            w = Writer(self, key, p.name, fd, count)
+            self._held[p.name] = w
+            return w
         return None
 
     def _unlink(self, name: str) -> None:
@@ -271,8 +273,9 @@ class Spool:
         """The SpoolFile row for name from its stat and sidecar; FileNotFoundError if the file is gone."""
         st = (self.dir / name).stat()
         partial = name.endswith(_PARTIAL)
-        if side is not None and name in self._held:
-            side = None                     # a sidecar of an open file is stale: count the records
+        held = self._held.get(name)
+        if side is not None and held is not None:
+            side = None                     # a sidecar of an open file is stale: its Writer knows the count
         m = _ID.match(name)
         cid = side.get("capture_id") if side else None
         # a partial's count is always the whole records on disk: its sidecar was written at open with 0 and
@@ -285,5 +288,6 @@ class Spool:
             capture_id=cid if _is_int(cid) else (int(m.group(1)) if m else None),
             server=server if isinstance(server, str) else None,
             start_ts=float(start) if _is_int(start) or isinstance(start, float) else None,
-            pkt_count=count if _is_int(count) else _count(self.dir / name),
+            pkt_count=held.count if held is not None else (
+                count if _is_int(count) else _count(self.dir / name)),
             partial=partial)

@@ -437,3 +437,30 @@ def test_scan_ignores_a_record_header_claiming_more_than_the_file_holds(tmp_path
     with open(p, "ab") as f:
         f.write(struct.pack("<IIII", 1, 2, 10**9, 10**9))
     assert _scan(p) == (2, whole)
+
+
+def test_list_counts_an_open_save_from_its_writer_without_scanning(
+        tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    sp = _spool(tmp_path)
+    w = sp.writer(KEY)
+    w.write(*FRAMES[0])
+    w.write(*FRAMES[1])
+
+    def no_scan(path: Path) -> None:
+        raise AssertionError("scanned an open file")
+    monkeypatch.setattr("trex_web_gui.store.spool._scan", no_scan)
+    (row,) = sp.list()
+    assert row["pkt_count"] == 2 and row["partial"] is True
+    w.write(*FRAMES[2])
+    assert sp.list()[0]["pkt_count"] == 3
+
+
+def test_a_torn_write_is_not_in_an_open_files_row(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    sp = _spool(tmp_path)
+    w = sp.writer(KEY)
+    w.write(*FRAMES[0])
+    monkeypatch.setattr(os, "write", _FakeOs(step=10, fail_after=2))
+    with pytest.raises(OSError):
+        w.write(*FRAMES[1])
+    monkeypatch.undo()
+    assert sp.list()[0]["pkt_count"] == 1
