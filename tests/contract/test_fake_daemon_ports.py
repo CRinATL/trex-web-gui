@@ -130,7 +130,6 @@ def test_methods_waits_for_the_reader_to_catch_up(fake_daemon) -> None:
     d = fake_daemon()
     d.lines = _SlowList(d.lines)
     c = http.client.HTTPConnection(d.host, d.port, timeout=5)
-    c.request("POST", "/", body=json.dumps({"jsonrpc": "2.0", "id": 1, "method": "get_trex_version"}),
-              headers={"Content-Length": "0"} if False else {})
+    c.request("POST", "/", body=json.dumps({"jsonrpc": "2.0", "id": 1, "method": "get_trex_version"}))
     assert c.getresponse().status == 200
     assert d.methods() == ["get_trex_version"]
