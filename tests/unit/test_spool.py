@@ -509,6 +509,95 @@ def test_a_partial_already_linked_to_its_final_is_swept(tmp_path: Path) -> None:
     assert [r["name"] for r in sp.list()] == [final.name]
 
 
+def _side(p: Path) -> Path:
+    """The sidecar path of the file at p."""
+    return p.with_name(p.name + ".json")
+
+
+def test_the_sweep_moves_a_linked_partials_key_to_its_final(tmp_path: Path) -> None:
+    p, final = _linked_partial(_spool(tmp_path))
+    sp = Spool(p.parent)
+    assert json.loads(_side(final).read_text()) == {
+        "server": "lab-a:4501", "start_ts": 100.0, "capture_id": 7, "pkt_count": 2, "partial": False}
+    assert not p.exists() and not _side(p).exists()
+    (row,) = sp.list()
+    assert row["server"] == "lab-a:4501" and row["start_ts"] == 100.0
+
+
+def test_the_sweep_never_replaces_a_finals_sidecar(tmp_path: Path) -> None:
+    p, final = _linked_partial(_spool(tmp_path))
+    _side(final).write_text(json.dumps({"server": "lab-a:4501", "start_ts": 100.0, "capture_id": 7,
+                                        "pkt_count": 99, "partial": False}))
+    Spool(p.parent)
+    assert json.loads(_side(final).read_text())["pkt_count"] == 99
+
+
+def test_the_sweep_accepts_an_int_start_ts(tmp_path: Path) -> None:
+    p, final = _linked_partial(_spool(tmp_path))
+    side = json.loads(_side(p).read_text())
+    side["start_ts"] = 100
+    _side(p).write_text(json.dumps(side))
+    Spool(p.parent)
+    assert json.loads(_side(final).read_text())["server"] == "lab-a:4501"
+
+
+def test_the_sweep_replaces_an_unparsable_finals_sidecar(tmp_path: Path) -> None:
+    p, final = _linked_partial(_spool(tmp_path))
+    _side(final).write_text("{")
+    Spool(p.parent)
+    assert json.loads(_side(final).read_text())["server"] == "lab-a:4501"
+
+
+@pytest.mark.parametrize("field,value", [
+    (None, None), ("server", 1), ("start_ts", True), ("start_ts", "100"), ("capture_id", True),
+    ("capture_id", 7.0)], ids=["no-sidecar", "server-int", "start-ts-bool", "start-ts-str",
+                               "capture-id-bool", "capture-id-float"])
+def test_a_linked_partial_without_a_usable_sidecar_is_still_swept(
+        tmp_path: Path, field: str | None, value: object) -> None:
+    p, final = _linked_partial(_spool(tmp_path))
+    if field is None:
+        _side(p).unlink()
+    else:
+        side = json.loads(_side(p).read_text())
+        side[field] = value
+        _side(p).write_text(json.dumps(side))
+    Spool(p.parent)
+    assert not p.exists() and not _side(final).exists()
+
+
+def test_a_failed_sidecar_write_in_the_sweep_does_not_stop_the_spool_opening(
+        tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    p, final = _linked_partial(_spool(tmp_path))
+
+    def full(*a: object, **k: object) -> None:
+        raise OSError(errno.ENOSPC, "No space left on device")
+
+    monkeypatch.setattr(Spool, "_write_sidecar", full)
+    Spool(p.parent)
+    assert not p.exists() and final.exists()
+
+
+def test_a_final_removed_during_the_sweep_does_not_take_its_partial(
+        tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    p, final = _linked_partial(_spool(tmp_path))
+    real_iterdir, real_lstat = Path.iterdir, Path.lstat
+
+    def iterdir(self: Path):  # type: ignore[no-untyped-def]
+        return iter(sorted(real_iterdir(self), key=lambda q: q != final))
+
+    def lstat(self: Path):  # type: ignore[no-untyped-def]
+        st = real_lstat(self)
+        if self == final:
+            final.unlink()          # another process removes it between the two snapshots
+        return st
+
+    monkeypatch.setattr(Path, "iterdir", iterdir)
+    monkeypatch.setattr(Path, "lstat", lstat)
+    Spool(p.parent)
+    monkeypatch.undo()
+    assert p.exists() and _side(p).exists()
+
+
 def test_a_partial_with_one_link_survives_construction(tmp_path: Path) -> None:
     p = _suspended(_spool(tmp_path))
     sp = Spool(p.parent)
@@ -527,9 +616,12 @@ def test_a_hard_link_to_something_else_is_not_swept(tmp_path: Path) -> None:
 def test_orphan_sidecar_temps_are_removed(tmp_path: Path) -> None:
     sp = _spool(tmp_path)
     keep = _suspended(sp)
+    (sp.dir / "notes.tmp").write_text("keep")
+    (sp.dir / ".sidecar-keep").write_text("keep")
     (sp.dir / ".sidecar-x.tmp").write_text("{")
     Spool(sp.dir)
-    assert sorted(q.name for q in sp.dir.iterdir()) == sorted([keep.name, keep.name + ".json"])
+    assert sorted(q.name for q in sp.dir.iterdir()) == sorted(
+        [keep.name, keep.name + ".json", "notes.tmp", ".sidecar-keep"])
 
 
 def test_resume_skips_a_partial_a_writer_holds(tmp_path: Path) -> None:

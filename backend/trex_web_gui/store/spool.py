@@ -7,7 +7,8 @@ back: `list()` and `resume()` count its whole records on disk (an open file's, i
 capture's identity is `CaptureKey(server, start_ts, capture_id)`, not the id: ids restart at 1 with every
 TRex process. A partial file resumes only for the key in its sidecar. The directory is 0700 (also when it
 pre-existed), files 0600.
-A new Spool sweeps what a crash left: orphan temp sidecars and a partial already linked to its final name.
+A new Spool sweeps what a crash left: orphan temp sidecars and a partial already linked to its final name
+(the final gets the partial's key as its sidecar when it has none).
 Names are opened with O_EXCL and take a numeric suffix on collision; nothing is ever overwritten.
 `held()` names the files an open Writer owns; `delete` refuses them (`SpoolBusy`). The path of a file is
 never taken from a request: `path()` accepts only `^[\\w.-]+\\.pcap$` (fullmatch: a trailing newline fails).
@@ -94,6 +95,17 @@ def _scan(path: Path) -> tuple[int, int] | None:
     return n, pos
 
 
+def _key_of(side: dict[str, object] | None) -> CaptureKey | None:
+    """The CaptureKey a sidecar holds, or None unless `server` is a str, `start_ts` an int (not a bool) or
+    a float, and `capture_id` an int (not a bool)."""
+    if side is None:
+        return None
+    server, ts, cid = side.get("server"), side.get("start_ts"), side.get("capture_id")
+    if isinstance(server, str) and (_is_int(ts) or isinstance(ts, float)) and _is_int(cid):
+        return CaptureKey(server, ts, cid)
+    return None
+
+
 class Writer:
     def __init__(self, spool: "Spool", key: CaptureKey, name: str, fd: int, count: int) -> None:
         """Spool.writer() and resume() build it around an open fd; the spool already lists name as held."""
@@ -159,20 +171,30 @@ class Spool:
         """Remove what a crash leaves: `.sidecar-*.tmp` files (one lives only inside a `_write_sidecar` call
         on this thread, so none is in use at construction), and a partial `close()` had already hard-linked to
         its final name (it would resume as a stale duplicate). A partial is swept only when another link to
-        its inode is a non-partial .pcap in this directory; a lone partial or a foreign link stays."""
+        its inode is a non-partial .pcap in this directory; a lone partial or a foreign link stays. Before it
+        goes, its key moves to the final's sidecar when the final has no readable one and the partial's holds
+        a key (`_key_of`); the count is the final's whole records, never the partial's `pkt_count`. A failed
+        write does not stop the sweep. If two final names share the inode, only the last listed gets the
+        key."""
         entries: list[tuple[Path, os.stat_result]] = []
         for q in self.dir.iterdir():
             with contextlib.suppress(OSError):          # a vanished or dangling entry is not ours to sweep
                 st = q.lstat()
                 if stat.S_ISREG(st.st_mode):
                     entries.append((q, st))
-        finals = {st.st_ino for q, st in entries
+        finals = {st.st_ino: q.name for q, st in entries
                   if q.name.endswith(".pcap") and not q.name.endswith(_PARTIAL)}
         for q, st in entries:
             with contextlib.suppress(FileNotFoundError):
                 if q.name.startswith(".sidecar-") and q.name.endswith(".tmp"):
                     q.unlink()
                 elif q.name.endswith(_PARTIAL) and st.st_nlink > 1 and st.st_ino in finals:
+                    final = finals[st.st_ino]
+                    key = _key_of(self._read_sidecar(q.name))
+                    count = _count(self.dir / final)
+                    if key is not None and count is not None and self._read_sidecar(final) is None:
+                        with contextlib.suppress(OSError):
+                            self._write_sidecar(final, key, count, False)
                     q.unlink()
                     self._unlink(q.name + ".json")
 
