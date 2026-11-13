@@ -126,21 +126,33 @@ def spawn_ready(argv: Sequence[str], ready: re.Pattern[str],
                 what: str) -> tuple[subprocess.Popen[str], re.Match[str]]:
     """Start `argv` with its output piped and match its first line against `ready`; return the process and the
     match (the caller stops the process). A first line that does not match kills it and raises RuntimeError
-    with everything it printed, so a start failure shows its whole traceback (docs-cleanup-81)."""
+    with everything it printed, so a start failure shows its whole traceback (docs-cleanup-81). On any failure
+    the child is killed if still alive and its stdout closed before the exception propagates
+    (fake-daemon-leftovers-1); a decode error from the first line propagates as itself."""
     proc = subprocess.Popen(argv, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
-    first = proc.stdout.readline() if proc.stdout else ""
-    m = ready.match(first.rstrip("\n"))
-    if not m:
-        try:                                     # a failed start is usually exiting: let it finish writing
-            proc.wait(timeout=2)
-        except subprocess.TimeoutExpired:
-            proc.kill()
-            proc.wait(timeout=5)
-        # Read through the text wrapper: readline() may already hold the rest in its buffer, which
-        # communicate() bypasses (it reads the raw pipe), so a failure used to show only its first line.
-        rest = proc.stdout.read() if proc.stdout else ""
-        raise RuntimeError(f"HARNESS ERROR: {what} did not start: {first + rest!r}")
-    return proc, m
+    try:
+        first = proc.stdout.readline() if proc.stdout else ""
+        m = ready.match(first.rstrip("\n"))
+        if not m:
+            try:                                 # a failed start is usually exiting: let it finish writing
+                proc.wait(timeout=2)
+            except subprocess.TimeoutExpired:
+                proc.kill()
+                proc.wait(timeout=5)
+            # Read through the text wrapper: readline() may already hold the rest in its buffer, which
+            # communicate() bypasses (it reads the raw pipe), so a failure used to show only its first line.
+            rest = proc.stdout.read() if proc.stdout else ""
+            raise RuntimeError(f"HARNESS ERROR: {what} did not start: {first + rest!r}")
+        return proc, m
+    except BaseException:
+        try:
+            if proc.poll() is None:
+                proc.kill()
+                proc.wait(timeout=5)
+        finally:                                 # even when the wait above raises
+            if proc.stdout is not None:
+                proc.stdout.close()
+        raise
 
 
 DEMO_PORTS_LOCK = Path(tempfile.gettempdir()) / f"trex-web-gui-demo-ports-{os.getuid()}.lock"
