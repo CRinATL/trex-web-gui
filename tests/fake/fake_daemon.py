@@ -19,25 +19,27 @@ fake did not start), --reserved, --start-fails, --stf-fails, --stf-scale F (an S
 push_file wrote), --hang METHOD (sleep 30 s), --drip METHOD (one byte per second), --huge METHOD (a 9 MiB
 reply), --redirect (302 to every call), --stop-keeps-running (stop_trex says True but the run goes on),
 --daemon-run (the fake starts Running a stateless run of its own whose seq this backend never saw, as when
-another client started it through the daemon), --run-ends-before-kill (the run ends on its own just as
-force_trex_kill arrives, so the kill finds the daemon Idle), --exit-lag S (after a stop or kill ends the
-fake's run, its process stays listed by get_trex_cmds for S seconds while get_running_status already says
-Idle: trex_launch_thread.py `run` sends SIGUSR1 to the TRex process group and sets the status Idle at once,
-without waiting for `_t-rex-64` to exit), --no-trex-log (get_trex_log answers the recorded missing-file -33 of
-tests/fixtures/daemon-ui until a start_trex has been accepted, as a fresh daemon does), --foreign-after-start
-(lists the --foreign process only once a start_trex has been accepted, as when a TRex is started by hand
-beside this backend's run), --foreign-ends-with-run (lists the --foreign process only while the fake's own
-run is going, so a stop empties the list at once), --trex-log-fault (get_trex_log answers the recorded
-get_file refusal, a -33 that is not the missing file: the fault `daemon/session.py` `log` must re-raise).
+another client started it through the daemon; it counts as a start_trex already accepted, so --no-trex-log
+reads the log and --foreign-after-start lists its process at once), --run-ends-before-kill (the run ends on
+its own just as force_trex_kill arrives, so the kill finds the daemon Idle), --exit-lag S (after a stop or
+kill ends the fake's run, its process stays listed by get_trex_cmds for S seconds while get_running_status
+already says Idle: trex_launch_thread.py `run` sends SIGUSR1 to the TRex process group and sets the status
+Idle at once, without waiting for `_t-rex-64` to exit), --no-trex-log (get_trex_log answers the recorded
+missing-file -33 of tests/fixtures/daemon-ui until a start_trex has been accepted, as a fresh daemon does),
+--foreign-after-start (lists the --foreign process only once a start_trex has been accepted, as when a TRex is
+started by hand beside this backend's run), --foreign-ends-with-run (lists the --foreign process only while
+the fake's own run is going, so a stop empties the list at once), --trex-log-fault (get_trex_log answers the
+recorded get_file refusal, a -33 that is not the missing file: the fault `daemon/session.py` `log` must
+re-raise).
 
 Known divergences from the real server:
 - --exit-lag keeps the ended run's process listed for S seconds after the status is Idle: read from
   trex_launch_thread.py, not recorded. [U:daemon-exit-lag-listing]
-- --foreign-after-start lists a hand-started TRex only once a start_trex has succeeded: modelled, not
+- --foreign-after-start lists a hand-started TRex only once a start_trex has been accepted: modelled, not
   recorded. [U:daemon-foreign-after-start]
 - --foreign-ends-with-run drops the foreign process from the list at the moment the run ends: modelled, not
   recorded; the real list lags (see --exit-lag). [U:daemon-foreign-ends-with-run]
-- --no-trex-log answers the recorded missing-file -33 only until a start_trex has succeeded; the recorded
+- --no-trex-log answers the recorded missing-file -33 only until a start_trex has been accepted; the recorded
   daemon-ui body is the answer of a daemon that has never started TRex, and the log's reading normally after
   a start is the assumption. [U:daemon-trex-log-after-start]
 - --trex-log-fault answers get_trex_log with the recorded get_file refusal; the daemon's own answer to a
@@ -220,8 +222,8 @@ class Daemon:
         stays listed for that long. Lock held."""
         self.outcome = STF["outcomes"][how] if self.stf_run else "TRex is Idle"
         if self.args.exit_lag > 0 and self.run_seq is not None:
-            # [U:daemon-exit-lag-listing]
-            self.lingering.append(("4242", self.run_cmd, time.monotonic() + self.args.exit_lag))
+            linger_until = time.monotonic() + self.args.exit_lag  # [U:daemon-exit-lag-listing]
+            self.lingering.append(("4242", self.run_cmd, linger_until))
         self.run_seq, self.end_at = None, None
 
     def kill(self) -> Any:
@@ -300,8 +302,8 @@ class Daemon:
             return self.get_file(params.get("filepath", ""))
         if method == "get_trex_log" and self.args.trex_log_fault:   # [U:daemon-hook-trex-log-fault]
             return ("error", fault(P5["faults"]["get_file"]))
-        # [U:daemon-trex-log-after-start]
-        if method == "get_trex_log" and self.args.no_trex_log and not self.started:
+        log_unstarted = self.args.no_trex_log and not self.started  # [U:daemon-trex-log-after-start]
+        if method == "get_trex_log" and log_unstarted:
             return ("error", NO_TREX_LOG)
         if method in STATIC:      # [U:daemon-trex-log-before-start] get_trex_log reads before any start
             return ("result", STATIC[method])

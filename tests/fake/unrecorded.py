@@ -358,12 +358,12 @@ REGISTER: dict[str, Entry] = {
     "daemon-foreign-after-start": Entry(
         "fake_daemon",
         "behaviour",
-        "--foreign-after-start lists a hand-started TRex only once a start_trex has succeeded.",
+        "--foreign-after-start lists a hand-started TRex only once a start_trex has been accepted.",
         "open: a TRex started by hand beside the run is modelled; no real test starts one mid-run",
     ),
     "daemon-foreign-ends-with-run": Entry(
         "fake_daemon",
-        "behaviour",
+        "model",
         "--foreign-ends-with-run empties the foreign process from get_trex_cmds the moment the run ends.",
         "open: modelled; settling it needs a TRex started by hand beside a daemon run and a get_trex_cmds "
         "read the moment the run stops (the real list lags the status, which --exit-lag models)",
@@ -371,7 +371,7 @@ REGISTER: dict[str, Entry] = {
     "daemon-trex-log-after-start": Entry(
         "fake_daemon",
         "behaviour",
-        "After a start_trex has succeeded, get_trex_log reads normally (the recorded p5 body).",
+        "After a start_trex has been accepted, get_trex_log reads normally (the recorded p5 body).",
         "real:tests/real/test_daemon_real.py::test_daemon_push_start_stop_cycle",
     ),
     "daemon-hook-trex-log-fault": Entry(
@@ -466,7 +466,8 @@ REGISTER: dict[str, Entry] = {
     "daemon-hook-daemon-run": Entry(
         "fake_daemon",
         "hook",
-        "--daemon-run: the fake starts Running a stateless run whose seq this backend never saw.",
+        "--daemon-run: the fake starts Running a stateless run whose seq this backend never saw, and counts "
+        "it as a start_trex already accepted (the log reads, --foreign-after-start lists at once).",
         "hook: --daemon-run",
     ),
     "daemon-hook-list-hides-pushed": Entry(
