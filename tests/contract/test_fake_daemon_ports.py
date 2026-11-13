@@ -98,3 +98,15 @@ def test_an_undecodable_first_line_kills_the_child_and_closes_its_pipe(popens) -
     [proc] = popens
     assert proc.returncode == -signal.SIGKILL
     assert proc.stdout is not None and proc.stdout.closed
+
+
+@pytest.mark.parametrize("killed_first", [False, True], ids=["running", "already-exited"])
+def test_a_stopped_fake_daemon_has_closed_its_pipe(fake_daemon, killed_first: bool) -> None:
+    """The fixture's reader closes the pipe at EOF and stop() waits for it, so no unclosed-file warning is
+    left behind, whether stop() ends the fake or a test already did."""
+    d = fake_daemon()
+    if killed_first:
+        d.proc.kill()
+        d.proc.wait(timeout=5)
+    d.stop()
+    assert d.proc.stdout is not None and d.proc.stdout.closed

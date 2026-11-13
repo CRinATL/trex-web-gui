@@ -211,6 +211,7 @@ class FakeDaemon:
     port: int
     proc: subprocess.Popen[str]
     lines: list[str] = field(default_factory=list, repr=False)
+    reader: threading.Thread | None = field(default=None, repr=False)
 
     def methods(self) -> list[str]:
         """The JSON-RPC methods the fake has received so far, in order."""
@@ -228,7 +229,8 @@ class FakeDaemon:
         raise AssertionError(f"fake daemon never printed {line!r}; it printed {self.lines!r}")
 
     def stop(self) -> None:
-        """SIGTERM the fake (SIGKILL after 5 s); does nothing once it has exited."""
+        """SIGTERM the fake (SIGKILL after 5 s) if it is still running, and wait for the reader to close the
+        pipe, so `lines` is complete and no unclosed file is left behind."""
         if self.proc.poll() is None:
             self.proc.terminate()
             try:
@@ -236,6 +238,8 @@ class FakeDaemon:
             except subprocess.TimeoutExpired:
                 self.proc.kill()
                 self.proc.wait()
+        if self.reader is not None:
+            self.reader.join(timeout=5)
 
 
 @pytest.fixture
@@ -253,11 +257,13 @@ def fake_daemon() -> Iterator[Callable[..., FakeDaemon]]:
         d = FakeDaemon("127.0.0.1", int(m[1]), proc, [m[0]])
 
         def collect() -> None:
-            """Append each further stdout line to d.lines until the pipe closes."""
+            """Append each further stdout line to d.lines until the pipe ends, then close it."""
             assert proc.stdout is not None
-            for ln in proc.stdout:
-                d.lines.append(ln.rstrip("\n"))
-        threading.Thread(target=collect, daemon=True).start()
+            with proc.stdout:
+                for ln in proc.stdout:
+                    d.lines.append(ln.rstrip("\n"))
+        d.reader = threading.Thread(target=collect, daemon=True)
+        d.reader.start()
         started.append(d)
         return d
 
