@@ -25,7 +25,8 @@ without waiting for `_t-rex-64` to exit), --no-trex-log (get_trex_log answers th
 tests/fixtures/daemon-ui until a start_trex has succeeded, as a fresh daemon does), --foreign-after-start
 (lists the --foreign process only once a start_trex has succeeded, as when a TRex is started by hand beside
 this backend's run), --foreign-ends-with-run (lists the --foreign process only while the fake's own run is
-going, so a stop empties the list at once).
+going, so a stop empties the list at once), --trex-log-fault (get_trex_log answers the recorded get_file
+refusal, a -33 that is not the missing file: the fault `daemon/session.py` `log` must re-raise).
 
 Known divergences from the real server:
 - --exit-lag keeps the ended run's process listed for S seconds after the status is Idle: read from
@@ -37,6 +38,8 @@ Known divergences from the real server:
 - --no-trex-log answers the recorded missing-file -33 only until a start_trex has succeeded; the recorded
   daemon-ui body is the answer of a daemon that has never started TRex, and the log's reading normally after
   a start is the assumption. [U:daemon-trex-log-after-start]
+- --trex-log-fault answers get_trex_log with the recorded get_file refusal; the daemon's own answer to a
+  get_trex_log it cannot serve for another reason is not recorded. [U:daemon-hook-trex-log-fault]
 
 force_trex_kill stops only the daemon's own run: the real daemon's force_trex_kill and stop_trex both call
 CTRex.stop_trex (trex_server.py), which answers False while Idle and never touches a TRex the daemon did not
@@ -275,6 +278,8 @@ class Daemon:
             return self.files_list(params.get("path", ""))
         if method == "get_file":
             return self.get_file(params.get("filepath", ""))
+        if method == "get_trex_log" and self.args.trex_log_fault:   # [U:daemon-hook-trex-log-fault]
+            return ("error", fault(P5["faults"]["get_file"]))
         # [U:daemon-trex-log-after-start]
         if method == "get_trex_log" and self.args.no_trex_log and not self.started:
             return ("error", NO_TREX_LOG)
@@ -351,6 +356,7 @@ def main() -> None:
     ap.add_argument("--exit-lag", type=float, default=0.0)
     ap.add_argument("--foreign-after-start", action="store_true")
     ap.add_argument("--no-trex-log", action="store_true")
+    ap.add_argument("--trex-log-fault", action="store_true")
     ap.add_argument("--foreign-ends-with-run", action="store_true")
     args = ap.parse_args()
     daemon = Daemon(args)

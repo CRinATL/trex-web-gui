@@ -553,6 +553,20 @@ def test_trex_log_before_any_start_is_a_refusal_not_a_fault(tmp_path: Path, fake
         assert c.get("/api/daemon/log", params={"which": "daemon"}).status_code == 200
 
 
+def test_a_trex_log_fault_other_than_the_missing_file_stays_a_502(tmp_path: Path, fake_daemon: Any) -> None:
+    """daemon/session.py `log` re-raises a get_trex_log fault that is not the missing file: the route answers
+    502 daemon_fault with the daemon's code first, never the 409 no_trex_log, and the daemon's log still reads
+    (release-1.5.1-2)."""
+    d = fake_daemon("--trex-log-fault")
+    with authed(create_app(tmp_path, token=TEST_TOKEN)) as c:
+        connect(c, d)
+        r = c.get("/api/daemon/log", params={"which": "trex"})
+        assert r.status_code == 502, r.text
+        assert r.json()["error"] == "daemon_fault"
+        assert r.json()["message"].startswith("-33: Can't get requested file "), r.text
+        assert c.get("/api/daemon/log", params={"which": "daemon"}).status_code == 200
+
+
 def test_missing_log_test_matches_only_the_missing_file_fault() -> None:
     """The recorded missing /tmp/trex.txt is a missing log; the recorded get_file refusal (also -33, a path
     outside the package) and a fault with another code are not."""

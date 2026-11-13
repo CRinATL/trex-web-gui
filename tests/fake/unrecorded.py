@@ -373,6 +373,13 @@ REGISTER: dict[str, Entry] = {
         "After a start_trex has succeeded, get_trex_log reads normally (the recorded p5 body).",
         "real:tests/real/test_daemon_real.py::test_daemon_push_start_stop_cycle",
     ),
+    "daemon-hook-trex-log-fault": Entry(
+        "fake_daemon",
+        "hook",
+        "--trex-log-fault answers get_trex_log with the recorded get_file -33 refusal, a fault that is not "
+        "the missing log.",
+        "hook: --trex-log-fault",
+    ),
 }
 
 
