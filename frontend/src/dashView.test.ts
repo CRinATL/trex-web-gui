@@ -14,6 +14,16 @@ describe('dashView', () => {
     expect(DASH_VIEW_DEFAULTS.overviewSeries).toEqual(['tx_pps', 'rx_pps', 'tx_bps_l2', 'rx_bps_l2'])
   })
 
+  it('freezes the defaults and their overview series', () => {
+    expect(Object.isFrozen(DASH_VIEW_DEFAULTS)).toBe(true)
+    expect(Object.isFrozen(DASH_VIEW_DEFAULTS.overviewSeries)).toBe(true)
+  })
+
+  it('freezes a stored overview series after sanitizing it', () => {
+    store({ overviewSeries: ['tx_bps_l1', 'rx_pps', 'tx_pps', 'rx_pps'] })
+    expect(Object.isFrozen(readDashView().overviewSeries)).toBe(true)
+  })
+
   it('keeps each valid field and defaults each bad one', () => {
     store({ bitRates: true, counters: 'yes', wide: 1, streamsMetric: 'rx_pps', latencyMetric: 'nope', streamsWindowS: 90, latencyWindowS: 45 })
     expect(readDashView()).toMatchObject({
