@@ -36,7 +36,11 @@ def test_a_sigterm_removes_the_fakes_temp_dir(tmp_path: Path) -> None:
         assert len(list(tmp_path.glob("fake-daemon-*"))) == 1
     finally:
         proc.terminate()
-        proc.communicate(timeout=5)
+        try:
+            proc.communicate(timeout=5)
+        except subprocess.TimeoutExpired:
+            proc.kill()
+            proc.communicate(timeout=5)
     assert list(tmp_path.glob("fake-daemon-*")) == []
 
 

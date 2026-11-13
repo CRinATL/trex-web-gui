@@ -58,7 +58,7 @@ Known divergences from the real server:
 
 force_trex_kill stops only the daemon's own run: the real daemon's force_trex_kill always calls
 CTRex.stop_trex (trex_server.py), and stop_trex does only when the seq matches (Idle with another seq answers
-False itself, Running with another seq is the -33 Fault); CTRex.stop_trex answers False while Idle and never
+False itself, any other state with another seq is the -33 Fault); CTRex.stop_trex answers False while Idle and never
 touches a TRex the daemon did not start. So an idle kill answers the recorded idle stop_trex reply (p5-stf
 `stop_after_end`), and the --foreign processes stay listed."""
 import argparse
