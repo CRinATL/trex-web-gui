@@ -515,3 +515,17 @@ def test_orphan_sidecar_temps_are_removed(tmp_path: Path) -> None:
     (sp.dir / ".sidecar-x.tmp").write_text("{")
     Spool(sp.dir)
     assert sorted(q.name for q in sp.dir.iterdir()) == sorted([keep.name, keep.name + ".json"])
+
+
+def test_resume_skips_a_partial_a_writer_holds(tmp_path: Path) -> None:
+    sp = _spool(tmp_path)
+    sp.writer(KEY)
+    assert sp.resume(KEY) is None and sp.skipped == []
+
+
+def test_delete_of_a_missing_file_raises_and_touches_nothing(tmp_path: Path) -> None:
+    sp = _spool(tmp_path)
+    done = sp.writer(KEY).close()
+    with pytest.raises(FileNotFoundError):
+        sp.delete("rec-9-20260101T000000Z.pcap")
+    assert sorted(q.name for q in sp.dir.iterdir()) == sorted([done["name"], done["name"] + ".json"])
