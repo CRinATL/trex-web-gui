@@ -127,7 +127,8 @@ class Writer:
         if self._fd is None:
             raise ValueError("writer is closed")
         if ts_rel < 0 or wirelen < len(raw):
-            raise RecordRefused(f"not a pcap record: ts_rel={ts_rel}, wirelen={wirelen}, captured={len(raw)}")
+            raise RecordRefused(
+                f"not a pcap record: ts_rel={ts_rel:.6f}, wirelen={wirelen}, captured={len(raw)}")
         pcap.write_all(self._fd, pcap.pack_record(ts_rel, raw, wirelen))
         self.count += 1             # only once the whole record is out
 
@@ -180,7 +181,9 @@ class Spool:
         goes, its key moves to the final's sidecar when the final has no readable one and the partial's holds
         a key (`_key_of`); the count is the final's whole records, never the partial's `pkt_count`, and when
         the final cannot be counted (gone or unreadable) the partial stays. A failed write does not stop the
-        sweep. If two final names share the inode, only the last listed gets the key."""
+        sweep. If two final names share the inode, only the last listed gets the key. The link count is read
+        afresh just before the unlink, so a final removed after the listing keeps the partial; the window
+        between that read and the unlink (microseconds) remains."""
         entries: list[tuple[Path, os.stat_result]] = []
         for q in self.dir.iterdir():
             with contextlib.suppress(OSError):          # a vanished or dangling entry is not ours to sweep
@@ -202,6 +205,8 @@ class Spool:
                             continue
                         with contextlib.suppress(OSError):
                             self._write_sidecar(final, key, count, False)
+                    if q.lstat().st_nlink < 2:      # the final went after the snapshot: maybe the last copy
+                        continue
                     q.unlink()
                     self._unlink(q.name + ".json")
 
