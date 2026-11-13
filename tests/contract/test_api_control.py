@@ -1,6 +1,7 @@
 """HTTP surface for P2 (Task 7)."""
 import time
 from pathlib import Path
+from typing import Any
 
 import pytest
 from support import FIXTURES, authed
@@ -201,6 +202,25 @@ def test_a_command_on_a_session_lost_to_a_restart_is_409(tmp_path: Path, fake_tr
         r = c.post("/api/ports/start", json={"ports": [0], "mult": "1kpps"})
         assert r.status_code == 409 and r.json()["error"] == "not_connected", r.text
         assert "restarted" in c.get("/api/session").json()["error"]
+
+
+@pytest.mark.parametrize("raised", [
+    trexapi.ServerRestarted("TRex server restarted"),
+    trexapi.ServerUnreachable("the server went away"),
+], ids=["restarted", "unreachable"])
+def test_a_loss_class_error_from_a_command_is_502_unreachable(tmp_path: Path, monkeypatch, raised) -> None:
+    """run()'s mapping, without the restart race of test_restarted_server_is_reported_as_restarted: a
+    command whose session call raises ServerRestarted or ServerUnreachable answers 502 unreachable with the
+    error's message. The messages are not server replies: run() passes any text through, so any text proves
+    the mapping."""
+    with client(tmp_path) as c:
+        async def start_fails(*_a: Any, **_k: Any) -> None:
+            """The session call meets the loss."""
+            raise raised
+        monkeypatch.setattr(c.app.state.session, "start", start_fails)
+        r = c.post("/api/ports/start", json={"ports": [0], "mult": "1kpps"})
+        assert r.status_code == 502, r.text
+        assert r.json() == {"error": "unreachable", "message": raised.message}
 
 
 @pytest.mark.parametrize("path, body", [
