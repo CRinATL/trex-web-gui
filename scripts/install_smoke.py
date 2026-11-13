@@ -156,7 +156,8 @@ class Proc:
                                   stderr=subprocess.STDOUT, text=True, start_new_session=True)
         self.lines: list[str] = []
         self.q: queue.Queue[str] = queue.Queue()
-        threading.Thread(target=self._pump, daemon=True).start()
+        self._pump_thread = threading.Thread(target=self._pump, daemon=True)
+        self._pump_thread.start()
 
     def _pump(self) -> None:
         """Copies stdout lines to the list and the queue until EOF."""
@@ -196,11 +197,16 @@ class Proc:
         return time.monotonic() - t0
 
     def kill(self) -> None:
-        """SIGKILL to the whole group, then reap."""
+        """SIGKILL to the whole group, reap, then join the pump thread and close the stdout pipe."""
         with contextlib.suppress(ProcessLookupError):
             os.killpg(self.p.pid, signal.SIGKILL)
         with contextlib.suppress(subprocess.TimeoutExpired):
             self.p.wait(5)
+        self._pump_thread.join(5)
+        # A thread still reading (a process outside the group holds the pipe) keeps the file open: closing
+        # it under the reader would break the read.
+        if not self._pump_thread.is_alive() and self.p.stdout:
+            self.p.stdout.close()
 
 
 def uv_install(root: Path, python: str, wheel: Path) -> float:

@@ -208,3 +208,13 @@ def test_a_wheel_without_a_bundled_template_is_refused(smoke: ModuleType, tmp_pa
         member = f"trex_web_gui/studio/templates/{name}.trp"
         members = [m for m in good_members() if m[0] != member]
         assert f"no {member}" in problems(smoke, tmp_path, members, [t for t in TRACKED if t != member])
+
+
+def test_proc_kill_closes_its_stdout_and_a_second_kill_is_safe(smoke: ModuleType, tmp_path: Path) -> None:
+    """kill() reaps the child, joins the pump thread and closes the pipe; a second kill raises nothing."""
+    code = "import time; print('x', flush=True); time.sleep(300)"
+    p = smoke.Proc([sys.executable, "-I", "-c", code], {"PATH": os.environ["PATH"]}, tmp_path)
+    p.wait_line("x", 5)
+    p.kill()
+    assert p.p.stdout.closed
+    p.kill()
