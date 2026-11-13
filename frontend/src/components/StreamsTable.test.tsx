@@ -236,6 +236,36 @@ describe('StreamsTab columns', () => {
       unmount()
     }
   })
+  it("keeps a port row's blank cells under Loss in every combination", async () => {
+    // A cell's first column is the sum of the colSpans before it.
+    const starts = (tr: Element) => {
+      let at = 0
+      return Array.from(tr.children, (c) => { const s = at; at += (c as HTMLTableCellElement).colSpan || 1; return s })
+    }
+    for (const bitRates of [false, true]) for (const counters of [false, true]) {
+      const label = `bitRates=${bitRates} counters=${counters}`
+      localStorage.clear(); showColumns({ bitRates, counters })
+      pgidStore.reset(); pgidStore.track('streams', []); pgidStore.push(wirePgid('tx'))
+      const { unmount } = renderTab()
+      await userEvent.click(screen.getByRole('button', { name: 'PG ID 5 ports' }))
+      const table = screen.getByRole('table', { name: 'Streams' })
+      const groups = table.querySelectorAll('thead tr')[0]
+      const lossAt = starts(groups)[Array.from(groups.children).findIndex((h) => h.textContent === 'Loss')]
+      const inLoss = (tr: Element) => Array.from(tr.children).filter((_, i) => starts(tr)[i] >= lossAt && starts(tr)[i] < lossAt + 2)
+      const total = table.querySelector('tbody tr') as Element
+      expect(inLoss(total).some((c) => c.textContent !== ''), label).toBe(true)
+      const portRows = table.querySelectorAll('tr.port-row')
+      expect(portRows.length, label).toBeGreaterThan(0)
+      for (const tr of portRows) {
+        const blank = inLoss(tr)
+        expect(blank, label).toHaveLength(2)
+        for (const c of blank) expect(c.tagName === 'TD' && c.textContent === '', label).toBe(true)
+        const filled = Array.from(tr.children).filter((c) => !blank.includes(c))
+        for (const c of filled.slice(1)) expect(c.textContent, label).not.toBe('')   // after the leading Chart cell
+      }
+      unmount()
+    }
+  })
   it('right-aligns the numbers', () => {
     showAll()
     pgidStore.push(wirePgid('tx'))
