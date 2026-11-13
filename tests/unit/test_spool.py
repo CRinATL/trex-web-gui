@@ -7,6 +7,7 @@ from pathlib import Path
 
 import pytest
 from trex_web_gui import trexapi
+from trex_web_gui.store import pcap
 from trex_web_gui.store.spool import CaptureKey, Spool, SpoolBusy, _scan
 
 trexapi.load()      # Scapy is importable only after the vendored tree is on the path
@@ -464,3 +465,14 @@ def test_a_torn_write_is_not_in_an_open_files_row(tmp_path: Path, monkeypatch: p
         w.write(*FRAMES[1])
     monkeypatch.undo()
     assert sp.list()[0]["pkt_count"] == 1
+
+
+@pytest.mark.parametrize("args", [(-0.5, b"\x01" * 60, 60), (0.5, b"\x01" * 60, 59)],
+                         ids=["negative-timestamp", "wirelen-shorter-than-bytes"])
+def test_write_refuses_what_pcap_cannot_hold(tmp_path: Path, args: tuple[float, bytes, int]) -> None:
+    sp = _spool(tmp_path)
+    w = sp.writer(KEY)
+    with pytest.raises(ValueError):
+        w.write(*args)
+    assert w.count == 0
+    assert sp.path(w.suspend()["name"]).read_bytes() == pcap.HEADER
