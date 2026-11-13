@@ -98,7 +98,8 @@ class Writer:
 
     def write(self, ts_rel: float, raw: bytes, wirelen: int) -> None:
         """Append one record; ValueError once closed or for a record pcap cannot hold (negative ts_rel,
-        wirelen below the captured bytes: nothing is written), OSError on a failed write (torn tail uncounted)."""
+        wirelen below the captured bytes: nothing is written), OSError on a failed write (a torn tail is
+        uncounted)."""
         if self._fd is None:
             raise ValueError("writer is closed")
         if ts_rel < 0 or wirelen < len(raw):
