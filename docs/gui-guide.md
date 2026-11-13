@@ -1560,8 +1560,10 @@ root on <host> for N s. A stateful run has no command port, so Control cannot co
 
 TRex takes a while to come up (it takes over and initialises the ports first), and the daemon answers only once it does,
 so after **Start** the dialog shows `Starting TRex on <host>…` with a bar that fills over the Start timeout and the
-time so far (`0:12 of up to 0:40`); **Cancel** is off and the button reads **Starting…** until the daemon answers. The
-dialog then closes by itself, or goes back to the command with the daemon's error.
+time so far (`0:12 of up to 0:40`); **Cancel** is off and the button reads **Starting…** until the daemon answers. Past
+the timeout the line reads `<time>, past the start timeout: still waiting for the daemon's answer` (the GUI waits a few
+seconds longer than the timeout for the daemon's answer). The dialog then closes by itself, or goes back to the command
+with the daemon's error.
 
 A started stateful run shows the **Stateful run** block:
 
@@ -1580,6 +1582,10 @@ daemon's TRex on <host> whoever started it; it is still refused while another us
 be read it asks once more, `Force stop anyway?`
 (`TRex's command port did not answer, so the GUI cannot see who owns its ports…`, or for a `-f` run
 `A stateful (-f) run has no command port, so the GUI cannot see who is using it…`).
+
+Force stop is also offered, with its own wording (`This GUI started this TRex, but its Stop did not work. Force stop kills it on <host>; it is
+still refused while another user owns a port.`), for a run this GUI started once **Stop** was refused or failed, including a reply that
+TRex still runs or could not be confirmed stopped.
 
 `TRex is still running after the stop.` when the daemon reports so, or
 `The stop was sent, but the daemon stopped answering, so the GUI could not confirm TRex stopped.` when the daemon

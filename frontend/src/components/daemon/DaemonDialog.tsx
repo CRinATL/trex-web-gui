@@ -150,7 +150,7 @@ export function DaemonDialog({ onClose, initialPushed }: { onClose: () => void; 
             filesPath={daemon?.files_path ?? info?.filesPath ?? null} onEditing={setEditingText} onText={setText} onPushed={pushedConfig} onModal={onYamlModal} />
         </div>
         <div {...tabPanel('daemon', 'run', tab)}><DaemonRunTab daemon={daemon} pushed={pushed} onModal={onRunModal} /></div>
-        <div {...tabPanel('daemon', 'logs', tab)}>{tab === 'logs' && <DaemonLogsTab connected={connected} />}</div>
+        <div {...tabPanel('daemon', 'logs', tab)}>{tab === 'logs' && <DaemonLogsTab key={connected ? (daemon?.target ? `${daemon.target.host}:${daemon.target.port}` : 'connected') : ''} connected={connected} />}</div>
       </div>
       <div className="dialog-footer"><div className="end"><button type="button" onClick={close}>Close</button></div></div>
     </div>

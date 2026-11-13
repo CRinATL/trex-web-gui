@@ -7,7 +7,7 @@ import { useDialogFocus } from '../useDialogFocus'
 // message (a 409 refusal shows the backend's own); when it resolves, the caller has already closed or replaced the dialog.
 // `danger` styles the confirm button as destructive (Force stop, Discard). `progress`, for an action that can take a while
 // (Start waits for TRex to come up), replaces the body while it runs with a bar and an elapsed count against `limitS`.
-export interface ConfirmProgress { label: string; busyLabel: string; limitS: number; detail?: ReactNode }
+export interface ConfirmProgress { label: string; busyLabel: string; limitS: number; pastLimit?: string; detail?: ReactNode }
 export function ConfirmDialog({ title, body, confirmLabel, cancelLabel = 'Cancel', danger = false, progress, onConfirm, onClose }: {
   title: string; body: ReactNode; confirmLabel: string; cancelLabel?: string; danger?: boolean; progress?: ConfirmProgress
   onConfirm: () => Promise<void>; onClose: () => void
@@ -62,7 +62,8 @@ const mss = (s: number) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '
 
 // The running action: a bar that fills over `limitS` (full, not overflowing, once past it) and the elapsed count. The count is
 // a timer role (not announced each second); the label is announced once, when the view appears. The view takes focus when it
-// appears (tabIndex -1: focusable by script, not a Tab stop), since the button that had it is now disabled.
+// appears (tabIndex -1: focusable by script, not a Tab stop), since the button that had it is now disabled. Past `limitS` the
+// line says `pastLimit` instead of "of up to" a smaller number (Start: the backend waits `timeout_s + 5`, so the answer can come late).
 function ProgressView({ progress, elapsed }: { progress: ConfirmProgress; elapsed: number }) {
   const ref = useRef<HTMLDivElement>(null)
   useEffect(() => { ref.current?.focus() }, [])
@@ -70,7 +71,10 @@ function ProgressView({ progress, elapsed }: { progress: ConfirmProgress; elapse
     <div className="confirm-progress" role="group" aria-label={progress.label} tabIndex={-1} ref={ref}>
       <p role="status">{progress.label}…</p>
       <progress aria-label={progress.label} max={progress.limitS} value={Math.min(elapsed, progress.limitS)} />
-      <p role="timer" className="muted">{mss(elapsed)} of up to {mss(progress.limitS)}</p>
+      <p role="timer" className="muted">
+        {progress.pastLimit !== undefined && elapsed > progress.limitS
+          ? `${mss(elapsed)}, ${progress.pastLimit}` : `${mss(elapsed)} of up to ${mss(progress.limitS)}`}
+      </p>
       {progress.detail}
     </div>
   )

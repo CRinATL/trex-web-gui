@@ -5,6 +5,9 @@ const REFRESH_MS = 2000
 
 // The Logs tab: TRex's log or the daemon's own, in a <pre>, refreshed every 2 s while this tab is mounted (the dialog mounts it
 // only while shown). A reply for the log that was selected before is dropped.
+// The dialog keys this component on the daemon target and on `connected`, so a new target, a disconnect or a poll error
+// (`state: 'error'`) remounts it and nothing carries over: the text, error and note are dropped and the selector returns to
+// the TRex log.
 export function DaemonLogsTab({ connected }: { connected: boolean }) {
   const [which, setWhich] = useState<'trex' | 'daemon'>('trex')
   const [text, setText] = useState('')
@@ -12,9 +15,6 @@ export function DaemonLogsTab({ connected }: { connected: boolean }) {
   const [note, setNote] = useState<string | null>(null)   // no TRex log yet (409 no_trex_log): a fact to read, not a failure
   const [tick, setTick] = useState(0)   // bumped by Refresh
   const inFlight = useRef(false)
-  // A disconnect drops the note, so a reconnect (perhaps to another daemon) does not show the old one before its first reply.
-  const [wasConnected, setWasConnected] = useState(connected)
-  if (wasConnected !== connected) { setWasConnected(connected); if (!connected) setNote(null) }
 
   useEffect(() => {
     if (!connected) return
