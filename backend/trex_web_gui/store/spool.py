@@ -3,9 +3,11 @@
 Layout: `rec-<id>-<UTC stamp>[-<n>].partial.pcap` while a Save is incomplete, renamed to `.pcap` at close.
 Next to each file, `<name>.json` is a sidecar `{server, start_ts, capture_id, pkt_count, partial}` written
 to a temp file and `os.replace`d, so a reader never sees half of it. A partial's `pkt_count` is never read
-back: `list()` and `resume()` count its whole records on disk. A capture's identity is
-`CaptureKey(server, start_ts, capture_id)`, not the id: ids restart at 1 with every TRex process. A partial
-file resumes only for the key in its sidecar. The directory is 0700 (also when it pre-existed), files 0600.
+back: `list()` and `resume()` count its whole records on disk (an open file's, its Writer's `count`). A
+capture's identity is `CaptureKey(server, start_ts, capture_id)`, not the id: ids restart at 1 with every
+TRex process. A partial file resumes only for the key in its sidecar. The directory is 0700 (also when it
+pre-existed), files 0600.
+A new Spool sweeps what a crash left: orphan temp sidecars and a partial already linked to its final name.
 Names are opened with O_EXCL and take a numeric suffix on collision; nothing is ever overwritten.
 `held()` names the files an open Writer owns; `delete` refuses them (`SpoolBusy`). The path of a file is
 never taken from a request: `path()` accepts only `^[\\w.-]+\\.pcap$` (fullmatch: a trailing newline fails).
@@ -15,6 +17,7 @@ import contextlib
 import json
 import os
 import re
+import stat
 import struct
 import tempfile
 import time
@@ -65,20 +68,25 @@ def _count(path: Path) -> int | None:
 def _scan(path: Path) -> tuple[int, int] | None:
     """(whole records, byte offset after the last whole one); a torn tail after valid records is dropped.
     None when the file cannot be read or does not start with a pcap header: that is not "no records", and
-    the caller must leave such a file as it is."""
+    the caller must leave such a file as it is. Streams: it holds one record header, never the file."""
     try:
-        data = path.read_bytes()
+        with path.open("rb") as f:
+            size = os.fstat(f.fileno()).st_size
+            head = f.read(pcap.GLOBAL.size)
+            if len(head) < pcap.GLOBAL.size or struct.unpack_from("<I", head)[0] != pcap.MAGIC:
+                return None
+            pos, n = pcap.GLOBAL.size, 0
+            while True:
+                rec = f.read(pcap.RECORD.size)
+                if len(rec) < pcap.RECORD.size:
+                    break
+                end = pos + pcap.RECORD.size + pcap.RECORD.unpack(rec)[2]
+                if end > size:
+                    break
+                f.seek(end)
+                pos, n = end, n + 1
     except OSError:
         return None
-    if len(data) < pcap.GLOBAL.size or struct.unpack_from("<I", data)[0] != pcap.MAGIC:
-        return None
-    pos, n = pcap.GLOBAL.size, 0
-    while pos + pcap.RECORD.size <= len(data):
-        incl = pcap.RECORD.unpack_from(data, pos)[2]
-        if pos + pcap.RECORD.size + incl > len(data):
-            break
-        pos += pcap.RECORD.size + incl
-        n += 1
     return n, pos
 
 
@@ -92,9 +100,13 @@ class Writer:
         self.count = count
 
     def write(self, ts_rel: float, raw: bytes, wirelen: int) -> None:
-        """Append one record; ValueError once closed, OSError on a failed write (a torn tail uncounted)."""
+        """Append one record; ValueError once closed or for a record pcap cannot hold (negative ts_rel,
+        wirelen below the captured bytes: nothing is written), OSError on a failed write (a torn tail is
+        uncounted)."""
         if self._fd is None:
             raise ValueError("writer is closed")
+        if ts_rel < 0 or wirelen < len(raw):
+            raise ValueError(f"not a pcap record: ts_rel={ts_rel}, wirelen={wirelen}, captured={len(raw)}")
         pcap.write_all(self._fd, pcap.pack_record(ts_rel, raw, wirelen))
         self.count += 1             # only once the whole record is out
 
@@ -105,7 +117,7 @@ class Writer:
                 fd, self._fd = self._fd, None
                 os.close(fd)
         finally:
-            self._spool._held.discard(self._name)
+            self._spool._held.pop(self._name, None)
 
     def suspend(self) -> SpoolFile:
         """Keep the partial file for a later resume(); the sidecar records the key."""
@@ -135,8 +147,30 @@ class Spool:
         self.dir = dir
         self.dir.mkdir(mode=0o700, parents=True, exist_ok=True)
         os.chmod(self.dir, 0o700)
-        self._held: set[str] = set()
+        self._held: dict[str, Writer] = {}      # name -> the open Writer that owns it
         self.skipped: list[str] = []        # partials resume() matched but could not read: left untouched
+        self._sweep()
+
+    def _sweep(self) -> None:
+        """Remove what a crash leaves: `.sidecar-*.tmp` files (one lives only inside a `_write_sidecar` call
+        on this thread, so none is in use at construction), and a partial `close()` had already hard-linked to
+        its final name (it would resume as a stale duplicate). A partial is swept only when another link to
+        its inode is a non-partial .pcap in this directory; a lone partial or a foreign link stays."""
+        entries: list[tuple[Path, os.stat_result]] = []
+        for q in self.dir.iterdir():
+            with contextlib.suppress(OSError):          # a vanished or dangling entry is not ours to sweep
+                st = q.lstat()
+                if stat.S_ISREG(st.st_mode):
+                    entries.append((q, st))
+        finals = {st.st_ino for q, st in entries
+                  if q.name.endswith(".pcap") and not q.name.endswith(_PARTIAL)}
+        for q, st in entries:
+            with contextlib.suppress(FileNotFoundError):
+                if q.name.startswith(".sidecar-") and q.name.endswith(".tmp"):
+                    q.unlink()
+                elif q.name.endswith(_PARTIAL) and st.st_nlink > 1 and st.st_ino in finals:
+                    q.unlink()
+                    self._unlink(q.name + ".json")
 
     def path(self, name: str) -> Path:
         """The file's path in the spool; ValueError unless name is a plain .pcap name. No existence check."""
@@ -192,8 +226,9 @@ class Spool:
                 self._unlink(name)          # a file with no whole header would only be an unreadable partial
                 self._unlink(name + ".json")
                 raise
-            self._held.add(name)
-            return Writer(self, key, name, fd, 0)
+            w = Writer(self, key, name, fd, 0)
+            self._held[name] = w
+            return w
         raise OSError("no free capture file name")
 
     def resume(self, key: CaptureKey) -> Writer | None:
@@ -218,8 +253,9 @@ class Spool:
             except OSError:
                 os.close(fd)
                 raise
-            self._held.add(p.name)
-            return Writer(self, key, p.name, fd, count)
+            w = Writer(self, key, p.name, fd, count)
+            self._held[p.name] = w
+            return w
         return None
 
     def _unlink(self, name: str) -> None:
@@ -266,8 +302,9 @@ class Spool:
         """The SpoolFile row for name from its stat and sidecar; FileNotFoundError if the file is gone."""
         st = (self.dir / name).stat()
         partial = name.endswith(_PARTIAL)
-        if side is not None and name in self._held:
-            side = None                     # a sidecar of an open file is stale: count the records
+        held = self._held.get(name)
+        if side is not None and held is not None:
+            side = None                     # a sidecar of an open file is stale: its Writer knows the count
         m = _ID.match(name)
         cid = side.get("capture_id") if side else None
         # a partial's count is always the whole records on disk: its sidecar was written at open with 0 and
@@ -280,5 +317,6 @@ class Spool:
             capture_id=cid if _is_int(cid) else (int(m.group(1)) if m else None),
             server=server if isinstance(server, str) else None,
             start_ts=float(start) if _is_int(start) or isinstance(start, float) else None,
-            pkt_count=count if _is_int(count) else _count(self.dir / name),
+            pkt_count=held.count if held is not None else (
+                count if _is_int(count) else _count(self.dir / name)),
             partial=partial)

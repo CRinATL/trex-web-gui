@@ -7,7 +7,8 @@ from pathlib import Path
 
 import pytest
 from trex_web_gui import trexapi
-from trex_web_gui.store.spool import CaptureKey, Spool, SpoolBusy
+from trex_web_gui.store import pcap
+from trex_web_gui.store.spool import CaptureKey, Spool, SpoolBusy, _scan
 
 trexapi.load()      # Scapy is importable only after the vendored tree is on the path
 
@@ -259,13 +260,13 @@ def test_resume_leaves_an_unreadable_partial_untouched(tmp_path: Path,
     sp = _spool(tmp_path)
     p = _suspended(sp)
     before = p.read_bytes()
-    real = Path.read_bytes
+    real = Path.open
 
-    def broken(self: Path) -> bytes:
+    def broken(self: Path, *a: object, **k: object) -> object:
         if self == p:
             raise OSError(5, "Input/output error")
-        return real(self)
-    monkeypatch.setattr(Path, "read_bytes", broken)
+        return real(self, *a, **k)
+    monkeypatch.setattr(Path, "open", broken)
     assert sp.resume(KEY) is None
     assert sp.skipped == [p.name] and not sp.held()
     monkeypatch.undo()
@@ -420,3 +421,124 @@ def test_resume_closes_the_fd_when_ftruncate_fails(tmp_path: Path, monkeypatch: 
     with pytest.raises(OSError):
         sp.resume(KEY)
     assert len(closed) == 1 and not sp.held()
+
+
+def test_scan_does_not_read_the_file_whole(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    p = _suspended(_spool(tmp_path))
+
+    def whole(self: Path) -> bytes:
+        raise AssertionError("read whole")
+    monkeypatch.setattr(Path, "read_bytes", whole)
+    assert _scan(p) == (2, p.stat().st_size)
+
+
+def test_scan_ignores_a_record_header_claiming_more_than_the_file_holds(tmp_path: Path) -> None:
+    p = _suspended(_spool(tmp_path))
+    whole = p.stat().st_size
+    with open(p, "ab") as f:
+        f.write(struct.pack("<IIII", 1, 2, 10**9, 10**9))
+    assert _scan(p) == (2, whole)
+
+
+def test_list_counts_an_open_save_from_its_writer_without_scanning(
+        tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    sp = _spool(tmp_path)
+    w = sp.writer(KEY)
+    w.write(*FRAMES[0])
+    w.write(*FRAMES[1])
+
+    def no_scan(path: Path) -> None:
+        raise AssertionError("scanned an open file")
+    monkeypatch.setattr("trex_web_gui.store.spool._scan", no_scan)
+    (row,) = sp.list()
+    assert row["pkt_count"] == 2 and row["partial"] is True
+    w.write(*FRAMES[2])
+    assert sp.list()[0]["pkt_count"] == 3
+
+
+def test_a_torn_write_is_not_in_an_open_files_row(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    sp = _spool(tmp_path)
+    w = sp.writer(KEY)
+    w.write(*FRAMES[0])
+    monkeypatch.setattr(os, "write", _FakeOs(step=10, fail_after=2))
+    with pytest.raises(OSError):
+        w.write(*FRAMES[1])
+    monkeypatch.undo()
+    assert sp.list()[0]["pkt_count"] == 1
+
+
+@pytest.mark.parametrize("args", [(-0.5, b"\x01" * 60, 60), (0.5, b"\x01" * 60, 59)],
+                         ids=["negative-timestamp", "wirelen-shorter-than-bytes"])
+def test_write_refuses_what_pcap_cannot_hold(tmp_path: Path, args: tuple[float, bytes, int]) -> None:
+    sp = _spool(tmp_path)
+    w = sp.writer(KEY)
+    with pytest.raises(ValueError):
+        w.write(*args)
+    assert w.count == 0
+    assert sp.path(w.suspend()["name"]).read_bytes() == pcap.HEADER
+
+
+def _linked_partial(sp: Spool) -> tuple[Path, Path]:
+    """A suspended partial hard-linked to a final name: the state a close() leaves if it dies after link()."""
+    p = _suspended(sp)
+    final = p.with_name(p.name[:-len(".partial.pcap")] + ".pcap")
+    os.link(p, final)
+    return p, final
+
+
+def test_a_partial_already_linked_to_its_final_is_swept(tmp_path: Path) -> None:
+    p, final = _linked_partial(_spool(tmp_path))
+    sp = Spool(p.parent)
+    assert not p.exists() and not (p.parent / (p.name + ".json")).exists() and final.exists()
+    assert sp.resume(KEY) is None
+    assert [r["name"] for r in sp.list()] == [final.name]
+
+
+def test_a_partial_with_one_link_survives_construction(tmp_path: Path) -> None:
+    p = _suspended(_spool(tmp_path))
+    sp = Spool(p.parent)
+    assert p.exists()
+    w = sp.resume(KEY)
+    assert w is not None and w.count == 2
+
+
+def test_a_hard_link_to_something_else_is_not_swept(tmp_path: Path) -> None:
+    p = _suspended(_spool(tmp_path))
+    os.link(p, tmp_path / "elsewhere")
+    Spool(p.parent)
+    assert p.exists()
+
+
+def test_orphan_sidecar_temps_are_removed(tmp_path: Path) -> None:
+    sp = _spool(tmp_path)
+    keep = _suspended(sp)
+    (sp.dir / ".sidecar-x.tmp").write_text("{")
+    Spool(sp.dir)
+    assert sorted(q.name for q in sp.dir.iterdir()) == sorted([keep.name, keep.name + ".json"])
+
+
+def test_resume_skips_a_partial_a_writer_holds(tmp_path: Path) -> None:
+    sp = _spool(tmp_path)
+    sp.writer(KEY)
+    assert sp.resume(KEY) is None and sp.skipped == []
+
+
+def test_delete_of_a_missing_file_raises_and_touches_nothing(tmp_path: Path) -> None:
+    sp = _spool(tmp_path)
+    done = sp.writer(KEY).close()
+    with pytest.raises(FileNotFoundError):
+        sp.delete("rec-9-20260101T000000Z.pcap")
+    assert sorted(q.name for q in sp.dir.iterdir()) == sorted([done["name"], done["name"] + ".json"])
+
+
+def test_a_dangling_symlink_named_pcap_does_not_stop_the_spool_opening(tmp_path: Path) -> None:
+    sp = _spool(tmp_path)
+    os.symlink(tmp_path / "nope", sp.dir / "x.pcap")
+    assert Spool(sp.dir).list() == []
+
+
+def test_a_symlink_to_a_lone_partial_does_not_sweep_it(tmp_path: Path) -> None:
+    p = _suspended(_spool(tmp_path))
+    os.symlink(p, p.with_name("rec-7-link.pcap"))
+    Spool(p.parent)
+    assert p.exists()
