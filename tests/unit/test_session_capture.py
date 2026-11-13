@@ -1204,6 +1204,22 @@ def test_a_spool_write_error_during_save_is_a_shaped_spool_error_and_keeps_the_p
     assert rig.server.n("remove") == 0
 
 
+def test_a_refused_record_during_save_is_a_shaped_spool_error_and_keeps_the_partial(rig: Rig) -> None:
+    rig.server.add(7)
+    # The second body is synthetic by design: no recorded server reply has a wirelen below its bytes, and
+    # that is the case under test.
+    rig.server.queue(7, Fetched(pkts(50), 50, 100.0),
+                     Fetched([{**pkt(51, 100.6), "wirelen": 1}], 0, 100.0))
+
+    async def body(s: TrexSession) -> None:
+        with refused("spool_error") as e:
+            await s.recorder_save(7)
+        assert "not a pcap record" in e.value.message
+        assert [(f["partial"], f["pkt_count"]) for f in Spool(rig.spool_dir).list()] == [(True, 50)]
+    rig.run(body)
+    assert rig.server.n("remove") == 0
+
+
 def test_a_sidecar_failure_inside_the_save_error_handler_is_still_a_shaped_spool_error(
         rig: Rig, monkeypatch: pytest.MonkeyPatch) -> None:
     rig.server.add(7)

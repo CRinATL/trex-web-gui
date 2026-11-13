@@ -7,7 +7,8 @@ back: `list()` and `resume()` count its whole records on disk (an open file's, i
 capture's identity is `CaptureKey(server, start_ts, capture_id)`, not the id: ids restart at 1 with every
 TRex process. A partial file resumes only for the key in its sidecar. The directory is 0700 (also when it
 pre-existed), files 0600.
-A new Spool sweeps what a crash left: orphan temp sidecars and a partial already linked to its final name.
+A new Spool sweeps what a crash left: orphan temp sidecars and a partial already linked to its final name
+(the final gets the partial's key as its sidecar when it has none).
 Names are opened with O_EXCL and take a numeric suffix on collision; nothing is ever overwritten.
 `held()` names the files an open Writer owns; `delete` refuses them (`SpoolBusy`). The path of a file is
 never taken from a request: `path()` accepts only `^[\\w.-]+\\.pcap$` (fullmatch: a trailing newline fails).
@@ -54,6 +55,10 @@ class SpoolBusy(Exception):
     """The file is open in a Writer; the caller answers 409 capture_busy."""
 
 
+class RecordRefused(ValueError):
+    """A record pcap cannot hold; the caller answers 409 spool_error."""
+
+
 def _is_int(v: object) -> TypeGuard[int]:
     """An int that is not a bool (a sidecar's `true` is not a count or an id)."""
     return isinstance(v, int) and not isinstance(v, bool)
@@ -68,7 +73,12 @@ def _count(path: Path) -> int | None:
 def _scan(path: Path) -> tuple[int, int] | None:
     """(whole records, byte offset after the last whole one); a torn tail after valid records is dropped.
     None when the file cannot be read or does not start with a pcap header: that is not "no records", and
-    the caller must leave such a file as it is. Streams: it holds one record header, never the file."""
+    the caller must leave such a file as it is. Streams: it holds one record header, never the file.
+    Its time is linear in the record count (about 0.35 s per million on the dev box). A file saved from a
+    recorder this app started holds at most that recorder's limit, which is at most 100 000 (the ceiling of
+    `limit` in `api/capture.py`'s start route; its defaults are 100 and 1000) records; `recorder_save` can
+    also save a recorder another TRex client started, with that client's limit, and a foreign pcap in the
+    spool costs its full scan on each `list()`, by choice."""
     try:
         with path.open("rb") as f:
             size = os.fstat(f.fileno()).st_size
@@ -90,6 +100,17 @@ def _scan(path: Path) -> tuple[int, int] | None:
     return n, pos
 
 
+def _key_of(side: dict[str, object] | None) -> CaptureKey | None:
+    """The CaptureKey a sidecar holds, or None unless `server` is a str, `start_ts` an int (not a bool) or
+    a float, and `capture_id` an int (not a bool)."""
+    if side is None:
+        return None
+    server, ts, cid = side.get("server"), side.get("start_ts"), side.get("capture_id")
+    if isinstance(server, str) and (_is_int(ts) or isinstance(ts, float)) and _is_int(cid):
+        return CaptureKey(server, ts, cid)
+    return None
+
+
 class Writer:
     def __init__(self, spool: "Spool", key: CaptureKey, name: str, fd: int, count: int) -> None:
         """Spool.writer() and resume() build it around an open fd; the spool already lists name as held."""
@@ -100,13 +121,13 @@ class Writer:
         self.count = count
 
     def write(self, ts_rel: float, raw: bytes, wirelen: int) -> None:
-        """Append one record; ValueError once closed or for a record pcap cannot hold (negative ts_rel,
-        wirelen below the captured bytes: nothing is written), OSError on a failed write (a torn tail is
-        uncounted)."""
+        """Append one record; RecordRefused for a record pcap cannot hold (negative ts_rel, wirelen below
+        the captured bytes: nothing is written), a plain ValueError once closed, OSError on a failed write
+        (a torn tail is uncounted)."""
         if self._fd is None:
             raise ValueError("writer is closed")
         if ts_rel < 0 or wirelen < len(raw):
-            raise ValueError(f"not a pcap record: ts_rel={ts_rel}, wirelen={wirelen}, captured={len(raw)}")
+            raise RecordRefused(f"not a pcap record: ts_rel={ts_rel}, wirelen={wirelen}, captured={len(raw)}")
         pcap.write_all(self._fd, pcap.pack_record(ts_rel, raw, wirelen))
         self.count += 1             # only once the whole record is out
 
@@ -155,20 +176,32 @@ class Spool:
         """Remove what a crash leaves: `.sidecar-*.tmp` files (one lives only inside a `_write_sidecar` call
         on this thread, so none is in use at construction), and a partial `close()` had already hard-linked to
         its final name (it would resume as a stale duplicate). A partial is swept only when another link to
-        its inode is a non-partial .pcap in this directory; a lone partial or a foreign link stays."""
+        its inode is a non-partial .pcap in this directory; a lone partial or a foreign link stays. Before it
+        goes, its key moves to the final's sidecar when the final has no readable one and the partial's holds
+        a key (`_key_of`); the count is the final's whole records, never the partial's `pkt_count`, and when
+        the final cannot be counted (gone or unreadable) the partial stays. A failed write does not stop the
+        sweep. If two final names share the inode, only the last listed gets the key."""
         entries: list[tuple[Path, os.stat_result]] = []
         for q in self.dir.iterdir():
             with contextlib.suppress(OSError):          # a vanished or dangling entry is not ours to sweep
                 st = q.lstat()
                 if stat.S_ISREG(st.st_mode):
                     entries.append((q, st))
-        finals = {st.st_ino for q, st in entries
+        finals = {st.st_ino: q.name for q, st in entries
                   if q.name.endswith(".pcap") and not q.name.endswith(_PARTIAL)}
         for q, st in entries:
             with contextlib.suppress(FileNotFoundError):
                 if q.name.startswith(".sidecar-") and q.name.endswith(".tmp"):
                     q.unlink()
                 elif q.name.endswith(_PARTIAL) and st.st_nlink > 1 and st.st_ino in finals:
+                    final = finals[st.st_ino]
+                    key = _key_of(self._read_sidecar(q.name))
+                    if key is not None and self._read_sidecar(final) is None:
+                        count = _count(self.dir / final)
+                        if count is None:       # final gone or unreadable: the partial may be the only copy
+                            continue
+                        with contextlib.suppress(OSError):
+                            self._write_sidecar(final, key, count, False)
                     q.unlink()
                     self._unlink(q.name + ".json")
 
@@ -304,7 +337,10 @@ class Spool:
         partial = name.endswith(_PARTIAL)
         held = self._held.get(name)
         if side is not None and held is not None:
-            side = None                     # a sidecar of an open file is stale: its Writer knows the count
+            # an open file's sidecar is stale: its Writer knows the count, so the row never scans. Dropping
+            # it also drops server/start_ts until the file is released, so the Recorders page does not
+            # offer a Resume for the Save in flight.
+            side = None
         m = _ID.match(name)
         cid = side.get("capture_id") if side else None
         # a partial's count is always the whole records on disk: its sidecar was written at open with 0 and

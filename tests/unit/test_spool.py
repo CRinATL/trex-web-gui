@@ -8,7 +8,8 @@ from pathlib import Path
 import pytest
 from trex_web_gui import trexapi
 from trex_web_gui.store import pcap
-from trex_web_gui.store.spool import CaptureKey, Spool, SpoolBusy, _scan
+from trex_web_gui.store import spool as spool_module
+from trex_web_gui.store.spool import CaptureKey, RecordRefused, Spool, SpoolBusy, _scan
 
 trexapi.load()      # Scapy is importable only after the vendored tree is on the path
 
@@ -440,6 +441,21 @@ def test_scan_ignores_a_record_header_claiming_more_than_the_file_holds(tmp_path
     assert _scan(p) == (2, whole)
 
 
+def test_scan_drops_a_tail_shorter_than_a_record_header(tmp_path: Path) -> None:
+    p = _suspended(_spool(tmp_path))
+    whole = p.stat().st_size
+    with open(p, "ab") as f:
+        f.write(b"12345")
+    assert _scan(p) == (2, whole)
+
+
+def test_scan_refuses_a_file_shorter_than_the_pcap_header(tmp_path: Path) -> None:
+    sp = _spool(tmp_path)
+    q = sp.dir / "short.pcap"
+    q.write_bytes(pcap.HEADER[:10])
+    assert _scan(q) is None
+
+
 def test_list_counts_an_open_save_from_its_writer_without_scanning(
         tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     sp = _spool(tmp_path)
@@ -464,7 +480,23 @@ def test_a_torn_write_is_not_in_an_open_files_row(tmp_path: Path, monkeypatch: p
     with pytest.raises(OSError):
         w.write(*FRAMES[1])
     monkeypatch.undo()
+
+    def no_scan(path: Path) -> None:
+        raise AssertionError("scanned an open file")
+
+    monkeypatch.setattr("trex_web_gui.store.spool._scan", no_scan)
     assert sp.list()[0]["pkt_count"] == 1
+
+
+def test_an_open_files_row_takes_no_identity_from_its_sidecar(tmp_path: Path) -> None:
+    sp = _spool(tmp_path)
+    w = sp.writer(KEY)
+    w.write(*FRAMES[0])
+    (row,) = sp.list()
+    assert (row["server"], row["start_ts"], row["capture_id"], row["pkt_count"]) == (None, None, 7, 1)
+    w.suspend()
+    (row,) = sp.list()
+    assert (row["server"], row["start_ts"]) == ("lab-a:4501", 100.0)
 
 
 @pytest.mark.parametrize("args", [(-0.5, b"\x01" * 60, 60), (0.5, b"\x01" * 60, 59)],
@@ -472,10 +504,19 @@ def test_a_torn_write_is_not_in_an_open_files_row(tmp_path: Path, monkeypatch: p
 def test_write_refuses_what_pcap_cannot_hold(tmp_path: Path, args: tuple[float, bytes, int]) -> None:
     sp = _spool(tmp_path)
     w = sp.writer(KEY)
-    with pytest.raises(ValueError):
+    with pytest.raises(RecordRefused):
         w.write(*args)
     assert w.count == 0
     assert sp.path(w.suspend()["name"]).read_bytes() == pcap.HEADER
+
+
+def test_a_closed_writer_is_not_a_refused_record(tmp_path: Path) -> None:
+    sp = _spool(tmp_path)
+    w = sp.writer(KEY)
+    w.close()
+    with pytest.raises(ValueError) as e:
+        w.write(*FRAMES[0])
+    assert not isinstance(e.value, RecordRefused)
 
 
 def _linked_partial(sp: Spool) -> tuple[Path, Path]:
@@ -492,6 +533,99 @@ def test_a_partial_already_linked_to_its_final_is_swept(tmp_path: Path) -> None:
     assert not p.exists() and not (p.parent / (p.name + ".json")).exists() and final.exists()
     assert sp.resume(KEY) is None
     assert [r["name"] for r in sp.list()] == [final.name]
+
+
+def _side(p: Path) -> Path:
+    """The sidecar path of the file at p."""
+    return p.with_name(p.name + ".json")
+
+
+def test_the_sweep_moves_a_linked_partials_key_to_its_final(tmp_path: Path) -> None:
+    p, final = _linked_partial(_spool(tmp_path))
+    side = json.loads(_side(p).read_text())
+    side["pkt_count"] = 99          # the final's count is the scanned 2, never the partial's
+    _side(p).write_text(json.dumps(side))
+    sp = Spool(p.parent)
+    assert json.loads(_side(final).read_text()) == {
+        "server": "lab-a:4501", "start_ts": 100.0, "capture_id": 7, "pkt_count": 2, "partial": False}
+    assert not p.exists() and not _side(p).exists()
+    (row,) = sp.list()
+    assert row["server"] == "lab-a:4501" and row["start_ts"] == 100.0
+
+
+def test_the_sweep_never_replaces_a_finals_sidecar(tmp_path: Path) -> None:
+    p, final = _linked_partial(_spool(tmp_path))
+    _side(final).write_text(json.dumps({"server": "lab-a:4501", "start_ts": 100.0, "capture_id": 7,
+                                        "pkt_count": 99, "partial": False}))
+    Spool(p.parent)
+    assert json.loads(_side(final).read_text())["pkt_count"] == 99
+
+
+def test_the_sweep_accepts_an_int_start_ts(tmp_path: Path) -> None:
+    p, final = _linked_partial(_spool(tmp_path))
+    side = json.loads(_side(p).read_text())
+    side["start_ts"] = 100
+    _side(p).write_text(json.dumps(side))
+    Spool(p.parent)
+    written = json.loads(_side(final).read_text())
+    assert written["server"] == "lab-a:4501" and written["start_ts"] == 100
+
+
+def test_the_sweep_replaces_an_unparsable_finals_sidecar(tmp_path: Path) -> None:
+    p, final = _linked_partial(_spool(tmp_path))
+    _side(final).write_text("{")
+    Spool(p.parent)
+    assert json.loads(_side(final).read_text())["server"] == "lab-a:4501"
+
+
+@pytest.mark.parametrize("field,value", [
+    (None, None), ("server", 1), ("start_ts", True), ("start_ts", "100"), ("capture_id", True),
+    ("capture_id", 7.0)], ids=["no-sidecar", "server-int", "start-ts-bool", "start-ts-str",
+                               "capture-id-bool", "capture-id-float"])
+def test_a_linked_partial_without_a_usable_sidecar_is_still_swept(
+        tmp_path: Path, field: str | None, value: object) -> None:
+    p, final = _linked_partial(_spool(tmp_path))
+    if field is None:
+        _side(p).unlink()
+    else:
+        side = json.loads(_side(p).read_text())
+        side[field] = value
+        _side(p).write_text(json.dumps(side))
+    Spool(p.parent)
+    assert not p.exists() and not _side(final).exists()
+
+
+def test_a_failed_sidecar_write_in_the_sweep_does_not_stop_the_spool_opening(
+        tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    p, final = _linked_partial(_spool(tmp_path))
+
+    def full(*a: object, **k: object) -> None:
+        raise OSError(errno.ENOSPC, "No space left on device")
+
+    monkeypatch.setattr(Spool, "_write_sidecar", full)
+    Spool(p.parent)
+    assert not p.exists() and final.exists()
+
+
+def test_a_final_removed_during_the_sweep_does_not_take_its_partial(
+        tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    p, final = _linked_partial(_spool(tmp_path))
+    real_iterdir, real_lstat = Path.iterdir, Path.lstat
+
+    def iterdir(self: Path):  # type: ignore[no-untyped-def]
+        return iter(sorted(real_iterdir(self), key=lambda q: q != final))
+
+    def lstat(self: Path):  # type: ignore[no-untyped-def]
+        st = real_lstat(self)
+        if self == final:
+            final.unlink()          # another process removes it between the two snapshots
+        return st
+
+    monkeypatch.setattr(Path, "iterdir", iterdir)
+    monkeypatch.setattr(Path, "lstat", lstat)
+    Spool(p.parent)
+    monkeypatch.undo()
+    assert p.exists() and _side(p).exists()
 
 
 def test_a_partial_with_one_link_survives_construction(tmp_path: Path) -> None:
@@ -512,9 +646,12 @@ def test_a_hard_link_to_something_else_is_not_swept(tmp_path: Path) -> None:
 def test_orphan_sidecar_temps_are_removed(tmp_path: Path) -> None:
     sp = _spool(tmp_path)
     keep = _suspended(sp)
+    (sp.dir / "notes.tmp").write_text("keep")
+    (sp.dir / ".sidecar-keep").write_text("keep")
     (sp.dir / ".sidecar-x.tmp").write_text("{")
     Spool(sp.dir)
-    assert sorted(q.name for q in sp.dir.iterdir()) == sorted([keep.name, keep.name + ".json"])
+    assert sorted(q.name for q in sp.dir.iterdir()) == sorted(
+        [keep.name, keep.name + ".json", "notes.tmp", ".sidecar-keep"])
 
 
 def test_resume_skips_a_partial_a_writer_holds(tmp_path: Path) -> None:
@@ -542,3 +679,18 @@ def test_a_symlink_to_a_lone_partial_does_not_sweep_it(tmp_path: Path) -> None:
     os.symlink(p, p.with_name("rec-7-link.pcap"))
     Spool(p.parent)
     assert p.exists()
+
+
+def test_a_final_removed_after_the_sweep_listed_it_does_not_take_its_partial(
+        tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    p, final = _linked_partial(_spool(tmp_path))
+    real_count = spool_module._count
+
+    def count(path: Path) -> int | None:
+        final.unlink()              # the final goes after the sweep listed it, before it is counted
+        return real_count(path)
+
+    monkeypatch.setattr(spool_module, "_count", count)
+    Spool(p.parent)
+    monkeypatch.undo()
+    assert p.exists() and _side(p).exists()

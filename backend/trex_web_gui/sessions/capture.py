@@ -44,7 +44,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 from trex_web_gui import trexapi
-from trex_web_gui.store.spool import CaptureKey, Spool, SpoolFile
+from trex_web_gui.store.spool import CaptureKey, RecordRefused, Spool, SpoolFile
 from trex_web_gui.trexapi import TrexApiError, decode, lldp, scapy_exec
 
 from . import wireshark
@@ -670,10 +670,10 @@ class CaptureCommands:
         changed between peek and first fetch (a file this save created is deleted) or SAVE_EMPTY_CUTOFF
         fetches in a row bring nothing while packets are still pending. A failure once the file is open keeps
         what was written as a partial file (that deleted new file aside); any failure publishes a
-        `capture_save` error (not on a cancel), "not found" also resyncs, and a spool OSError becomes
-        spool_error. On success: capture_remove (a failure is logged, not raised, though a lost connection
-        still marks the session lost), forgets `id` as ours, the final `capture_save`, a log line, and a
-        status resync while the same clients are connected."""
+        `capture_save` error (not on a cancel), "not found" also resyncs, and a spool OSError or refused
+        record becomes spool_error. On success: capture_remove (a failure is logged, not raised, though a
+        lost connection still marks the session lost), forgets `id` as ours, the final `capture_save`, a log
+        line, and a status resync while the same clients are connected."""
         c = self.require_control()
         r = self._reader
         spool = self.spool()
@@ -752,7 +752,7 @@ class CaptureCommands:
                                    **({"note": state["note"]} if state["note"] else {})})
                 if isinstance(e, TrexApiError) and trexapi.is_not_found(e):
                     await self._sync_quietly()               # the row is gone: drop it from the table
-                if isinstance(e, OSError):                   # the spool failed: shaped, the partial is kept
+                if isinstance(e, (OSError, RecordRefused)):  # the spool failed: shaped, the partial is kept
                     raise trexapi.CommandRefused(
                         "spool_error", f"The capture file could not be written: {reason}") from e
                 raise
