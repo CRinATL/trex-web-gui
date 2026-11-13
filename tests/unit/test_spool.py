@@ -702,6 +702,7 @@ def _drop_final_on_first_sidecar_read(monkeypatch: pytest.MonkeyPatch, final: Pa
     calls: list[str] = []
 
     def read(self: Spool, name: str):  # type: ignore[no-untyped-def]
+        """The real read; the first call removes the final first."""
         if not calls:
             final.unlink()
         calls.append(name)
