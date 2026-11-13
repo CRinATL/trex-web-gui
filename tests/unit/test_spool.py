@@ -529,3 +529,16 @@ def test_delete_of_a_missing_file_raises_and_touches_nothing(tmp_path: Path) -> 
     with pytest.raises(FileNotFoundError):
         sp.delete("rec-9-20260101T000000Z.pcap")
     assert sorted(q.name for q in sp.dir.iterdir()) == sorted([done["name"], done["name"] + ".json"])
+
+
+def test_a_dangling_symlink_named_pcap_does_not_stop_the_spool_opening(tmp_path: Path) -> None:
+    sp = _spool(tmp_path)
+    os.symlink(tmp_path / "nope", sp.dir / "x.pcap")
+    assert Spool(sp.dir).list() == []
+
+
+def test_a_symlink_to_a_lone_partial_does_not_sweep_it(tmp_path: Path) -> None:
+    p = _suspended(_spool(tmp_path))
+    os.symlink(p, p.with_name("rec-7-link.pcap"))
+    Spool(p.parent)
+    assert p.exists()

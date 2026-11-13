@@ -17,6 +17,7 @@ import contextlib
 import json
 import os
 import re
+import stat
 import struct
 import tempfile
 import time
@@ -155,12 +156,19 @@ class Spool:
         on this thread, so none is in use at construction), and a partial `close()` had already hard-linked to
         its final name (it would resume as a stale duplicate). A partial is swept only when another link to
         its inode is a non-partial .pcap in this directory; a lone partial or a foreign link stays."""
-        finals = {q.stat().st_ino for q in self.dir.glob("*.pcap") if not q.name.endswith(_PARTIAL)}
+        entries: list[tuple[Path, os.stat_result]] = []
         for q in self.dir.iterdir():
+            with contextlib.suppress(OSError):          # a vanished or dangling entry is not ours to sweep
+                st = q.lstat()
+                if stat.S_ISREG(st.st_mode):
+                    entries.append((q, st))
+        finals = {st.st_ino for q, st in entries
+                  if q.name.endswith(".pcap") and not q.name.endswith(_PARTIAL)}
+        for q, st in entries:
             with contextlib.suppress(FileNotFoundError):
                 if q.name.startswith(".sidecar-") and q.name.endswith(".tmp"):
                     q.unlink()
-                elif q.name.endswith(_PARTIAL) and q.stat().st_nlink > 1 and q.stat().st_ino in finals:
+                elif q.name.endswith(_PARTIAL) and st.st_nlink > 1 and st.st_ino in finals:
                     q.unlink()
                     self._unlink(q.name + ".json")
 
