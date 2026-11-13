@@ -4,8 +4,11 @@ It is a ThreadingHTTPServer so that one hung or dripping request does not stop t
 is a single-threaded SimpleJSONRPCServer (trex_server.py), which would serialise them: a test that needs to
 see the Control session survive a hung daemon must not rely on this fake's concurrency being the daemon's.
 
-Every body it answers is a recorded one: tests/fixtures/p5/daemon.jsonl and summary.json (faults),
-tests/fixtures/p5-stf/ (STF run, listings, outcomes) and tests/fixtures/daemon-ui/ (the missing TRex log). It
+Most bodies it answers are recorded ones: tests/fixtures/p5/daemon.jsonl and summary.json (faults),
+tests/fixtures/p5-stf/ (STF run, listings, outcomes) and tests/fixtures/daemon-ui/ (the missing TRex log). Not
+all are: the register in tests/fake/unrecorded.py lists only the flag assumptions under "Known divergences"
+below, and the "TRex is Starting" status text, the default pre-start get_trex_log, the bad-name push_file
+refusal and most hook flags are not yet listed there. It
 keeps the state Idle -> Starting -> Running, a seq counter (stop_trex answers False while idle and -33 for a
 wrong seq while running) and a temp dir that push_file writes into. It prints one `[fake-daemon] method
 <name>` line per request, so a test can read the log of what was called, `push <name>` for each push_file
