@@ -1,13 +1,13 @@
 """What the test fakes assume without a recording, and the check that keeps the list honest.
 
-A fake (`fake_emu.py`, `fake_trex.py`) answers from recorded fixtures where it can. Where it cannot, it
-invents a text or a behaviour, and each such assumption is an `Entry` in `REGISTER` below, keyed by an id
-matching `^(emu|trex)-[a-z0-9-]+$`. `tests/unit/test_fake_register.py` runs under `make check` and fails on an
-assumption that is not registered and tagged.
+A fake (`fake_emu.py`, `fake_trex.py`, `fake_daemon.py`) answers from recorded fixtures where it can. Where it
+cannot, it invents a text or a behaviour, and each such assumption is an `Entry` in `REGISTER` below, keyed
+by an id matching `^(emu|trex|daemon)-[a-z0-9-]+$`. `tests/unit/test_fake_register.py` runs under
+`make check` and fails on an assumption that is not registered and tagged.
 
 The shape of an entry:
 
-- `fake` is "fake_emu" or "fake_trex".
+- `fake` is "fake_emu", "fake_trex" or "fake_daemon".
 - `kind` is "text" (a reply text), "behaviour" (what the fake does where the server was not recorded),
   "model" (a simplification of the server) or "hook" (a test hook, never a claim about the server).
 - `assumes` is one sentence on what the fake assumes.
@@ -40,7 +40,7 @@ settle form."""
 
 from dataclasses import dataclass
 
-FAKE_NAMES = ("fake_emu", "fake_trex")
+FAKE_NAMES = ("fake_emu", "fake_trex", "fake_daemon")
 SETTLE_FORMS = ("real", "open", "hook")
 
 
@@ -346,6 +346,32 @@ REGISTER: dict[str, Entry] = {
         "model",
         "xstats follow the port counters.",
         "open: a modelling choice",
+    ),
+    "daemon-exit-lag-listing": Entry(
+        "fake_daemon",
+        "behaviour",
+        "--exit-lag keeps an ended run's process listed by get_trex_cmds for S seconds after the status "
+        "is Idle.",
+        "open: read from trex_launch_thread.py `run` (SIGUSR1, then Idle at once); nothing recorded it, "
+        "and a real test would need a TRex slow to exit",
+    ),
+    "daemon-foreign-after-start": Entry(
+        "fake_daemon",
+        "behaviour",
+        "--foreign-after-start lists a hand-started TRex only once a start_trex has succeeded.",
+        "open: a TRex started by hand beside the run is modelled; no real test starts one mid-run",
+    ),
+    "daemon-foreign-ends-with-run": Entry(
+        "fake_daemon",
+        "behaviour",
+        "--foreign-ends-with-run empties the foreign process from get_trex_cmds the moment the run ends.",
+        "open: modelled; the real list lags the status, which --exit-lag models",
+    ),
+    "daemon-trex-log-after-start": Entry(
+        "fake_daemon",
+        "behaviour",
+        "After a start_trex has succeeded, get_trex_log reads normally (the recorded p5 body).",
+        "real:tests/real/test_daemon_real.py::test_daemon_push_start_stop_cycle",
     ),
 }
 

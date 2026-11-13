@@ -17,14 +17,15 @@ ROOT = Path(__file__).resolve().parent.parent.parent
 FAKES: dict[str, Path] = {
     "fake_emu": ROOT / "tests" / "fake" / "fake_emu.py",
     "fake_trex": ROOT / "tests" / "fake" / "fake_trex.py",
+    "fake_daemon": ROOT / "tests" / "fake" / "fake_daemon.py",
 }
 
-TAG = re.compile(r"\[U:((?:emu|trex)-[a-z0-9-]+)\]")
+TAG = re.compile(r"\[U:((?:emu|trex|daemon)-[a-z0-9-]+)\]")
 MARKER = re.compile(r"(?i)\b(made[- ]up|not recorded|invented|assumed|unverified)\b")
 HEADER = "Known divergences from the real server:"
 UPPER = re.compile(r"[A-Z][A-Z0-9_]*")
 PLACEHOLDER = re.compile(r"\{[^{}]*\}")    # a skeleton's f-string field
-ID = re.compile(r"^(emu|trex)-[a-z0-9-]+$")
+ID = re.compile(r"^(emu|trex|daemon)-[a-z0-9-]+$")
 KINDS = {"text", "behaviour", "model", "hook"}
 SETTLE_REAL = re.compile(r"^real:(tests/real/[\w]+\.py)::(test_\w+)$")
 HOW = "register it in tests/fake/unrecorded.py and tag it [U:<id>] (the rule is in that module's docstring)"
@@ -464,8 +465,8 @@ def register_problems(register: dict[str, Entry], root: Path) -> list[str]:
             problems.append(f"{key}: id does not match {ID.pattern}")
         elif key.split("-", 1)[0] != e.fake.removeprefix("fake_"):
             problems.append(f"{key}: id prefix does not match fake {e.fake!r}")
-        if e.fake not in ("fake_emu", "fake_trex"):
-            problems.append(f"{key}: fake {e.fake!r} is neither fake_emu nor fake_trex")
+        if e.fake not in FAKES:
+            problems.append(f"{key}: fake {e.fake!r} is none of fake_emu, fake_trex, fake_daemon")
         if e.kind not in KINDS:
             problems.append(f"{key}: kind {e.kind!r} is not one of {sorted(KINDS)}")
         if not e.assumes.strip():
@@ -504,12 +505,13 @@ def test_register_problems_reports_each_rule() -> None:
         "emu-h": Entry("fake_emu", "hook", "x", "open: y"),
         "emu-i": Entry("fake_emu", "behaviour", "x", gone),
         "emu-ok": Entry("fake_emu", "hook", "x", "hook: --flag"),
+        "daemon-ok": Entry("fake_daemon", "behaviour", "x", "open: y"),
     }
     assert register_problems(bad, ROOT) == [
         f"Bad_id: id does not match {ID.pattern}",
         "trex-a: id prefix does not match fake 'fake_emu'",
         "emu-b: id prefix does not match fake 'fake_other'",
-        "emu-b: fake 'fake_other' is neither fake_emu nor fake_trex",
+        "emu-b: fake 'fake_other' is none of fake_emu, fake_trex, fake_daemon",
         f"emu-c: kind 'guess' is not one of {sorted(KINDS)}",
         "emu-d: assumes is empty",
         "emu-e: a text entry needs text",
