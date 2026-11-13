@@ -476,3 +476,42 @@ def test_write_refuses_what_pcap_cannot_hold(tmp_path: Path, args: tuple[float, 
         w.write(*args)
     assert w.count == 0
     assert sp.path(w.suspend()["name"]).read_bytes() == pcap.HEADER
+
+
+def _linked_partial(sp: Spool) -> tuple[Path, Path]:
+    """A suspended partial hard-linked to a final name: the state a close() leaves if it dies after link()."""
+    p = _suspended(sp)
+    final = p.with_name(p.name[:-len(".partial.pcap")] + ".pcap")
+    os.link(p, final)
+    return p, final
+
+
+def test_a_partial_already_linked_to_its_final_is_swept(tmp_path: Path) -> None:
+    p, final = _linked_partial(_spool(tmp_path))
+    sp = Spool(p.parent)
+    assert not p.exists() and not (p.parent / (p.name + ".json")).exists() and final.exists()
+    assert sp.resume(KEY) is None
+    assert [r["name"] for r in sp.list()] == [final.name]
+
+
+def test_a_partial_with_one_link_survives_construction(tmp_path: Path) -> None:
+    p = _suspended(_spool(tmp_path))
+    sp = Spool(p.parent)
+    assert p.exists()
+    w = sp.resume(KEY)
+    assert w is not None and w.count == 2
+
+
+def test_a_hard_link_to_something_else_is_not_swept(tmp_path: Path) -> None:
+    p = _suspended(_spool(tmp_path))
+    os.link(p, tmp_path / "elsewhere")
+    Spool(p.parent)
+    assert p.exists()
+
+
+def test_orphan_sidecar_temps_are_removed(tmp_path: Path) -> None:
+    sp = _spool(tmp_path)
+    keep = _suspended(sp)
+    (sp.dir / ".sidecar-x.tmp").write_text("{")
+    Spool(sp.dir)
+    assert sorted(q.name for q in sp.dir.iterdir()) == sorted([keep.name, keep.name + ".json"])

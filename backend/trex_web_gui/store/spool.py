@@ -3,9 +3,11 @@
 Layout: `rec-<id>-<UTC stamp>[-<n>].partial.pcap` while a Save is incomplete, renamed to `.pcap` at close.
 Next to each file, `<name>.json` is a sidecar `{server, start_ts, capture_id, pkt_count, partial}` written
 to a temp file and `os.replace`d, so a reader never sees half of it. A partial's `pkt_count` is never read
-back: `list()` and `resume()` count its whole records on disk. A capture's identity is
-`CaptureKey(server, start_ts, capture_id)`, not the id: ids restart at 1 with every TRex process. A partial
-file resumes only for the key in its sidecar. The directory is 0700 (also when it pre-existed), files 0600.
+back: `list()` and `resume()` count its whole records on disk (an open file's, its Writer's `count`). A
+capture's identity is `CaptureKey(server, start_ts, capture_id)`, not the id: ids restart at 1 with every
+TRex process. A partial file resumes only for the key in its sidecar. The directory is 0700 (also when it
+pre-existed), files 0600.
+A new Spool sweeps what a crash left: orphan temp sidecars and a partial already linked to its final name.
 Names are opened with O_EXCL and take a numeric suffix on collision; nothing is ever overwritten.
 `held()` names the files an open Writer owns; `delete` refuses them (`SpoolBusy`). The path of a file is
 never taken from a request: `path()` accepts only `^[\\w.-]+\\.pcap$` (fullmatch: a trailing newline fails).
@@ -146,6 +148,21 @@ class Spool:
         os.chmod(self.dir, 0o700)
         self._held: dict[str, Writer] = {}      # name -> the open Writer that owns it
         self.skipped: list[str] = []        # partials resume() matched but could not read: left untouched
+        self._sweep()
+
+    def _sweep(self) -> None:
+        """Remove what a crash leaves: `.sidecar-*.tmp` files (one lives only inside a `_write_sidecar` call
+        on this thread, so none is in use at construction), and a partial `close()` had already hard-linked to
+        its final name (it would resume as a stale duplicate). A partial is swept only when another link to
+        its inode is a non-partial .pcap in this directory; a lone partial or a foreign link stays."""
+        finals = {q.stat().st_ino for q in self.dir.glob("*.pcap") if not q.name.endswith(_PARTIAL)}
+        for q in self.dir.iterdir():
+            with contextlib.suppress(FileNotFoundError):
+                if q.name.startswith(".sidecar-") and q.name.endswith(".tmp"):
+                    q.unlink()
+                elif q.name.endswith(_PARTIAL) and q.stat().st_nlink > 1 and q.stat().st_ino in finals:
+                    q.unlink()
+                    self._unlink(q.name + ".json")
 
     def path(self, name: str) -> Path:
         """The file's path in the spool; ValueError unless name is a plain .pcap name. No existence check."""
