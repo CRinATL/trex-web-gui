@@ -402,7 +402,7 @@ REGISTER: dict[str, Entry] = {
         "fake_daemon",
         "behaviour",
         "push_file stores os.path.basename(name) and answers False when the file cannot be opened "
-        "(empty, '.', '..', a trailing slash).",
+        "(empty, '.', '..', a trailing slash); bad base64 and a NUL in the name are not modelled.",
         "open: read from trex_server.py push_file; a real test pushing 'a/b.yaml' and '' through "
         "DaemonClient would settle it",
     ),
@@ -411,7 +411,8 @@ REGISTER: dict[str, Entry] = {
         "behaviour",
         "force_trex_kill answers True when it ends the fake's run and the recorded idle stop_trex reply "
         "(False) while Idle.",
-        "open: trex_server.py force_trex_kill and stop_trex return True after a join and False while Idle "
+        "open: CTRex.stop_trex (trex_server.py; force_trex_kill always calls it, stop_trex when the seq "
+        "matches) returns True after a join and False while Idle "
         "(a Fault when an errcode is set, which the fake does not model), but the one recording is a -11 "
         "(p5 daemon.jsonl, a failed run); a real kill of a live run would settle it",
     ),
