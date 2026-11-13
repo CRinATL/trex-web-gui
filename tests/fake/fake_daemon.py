@@ -28,7 +28,8 @@ Idle at once, without waiting for `_t-rex-64` to exit), --no-trex-log (get_trex_
 missing-file -33 of tests/fixtures/daemon-ui until a start_trex has been accepted, as a fresh daemon does),
 --foreign-after-start (lists the --foreign process only once a start_trex has been accepted, as when a TRex is
 started by hand beside this backend's run), --foreign-ends-with-run (lists the --foreign process only while
-the fake's own run is going, so a stop empties the list at once), --trex-log-fault (get_trex_log answers the
+the fake's own run is going, so a stop empties the list at once), --tmp-root DIR (the temp dir is made under
+DIR, not the system temp dir, so a test can see it removed), --trex-log-fault (get_trex_log answers the
 recorded get_file refusal, a -33 that is not the missing file: the fault `daemon/session.py` `log` must
 re-raise).
 
@@ -48,15 +49,18 @@ Known divergences from the real server:
   Running, so no recording caught it. [U:daemon-starting-status-text]
 - Without --no-trex-log, get_trex_log answers the recorded p5 body even before any start_trex; a daemon that
   never started TRex answers the missing-file -33. [U:daemon-trex-log-before-start]
-- push_file stores the name's basename and answers False for a name it cannot open: read from trex_server.py
-  `push_file`, not recorded. [U:daemon-push-file-basename]
+- push_file stores the name's basename and answers False for a name it cannot open (empty, `.`, `..`, a
+  trailing slash): read from trex_server.py `push_file`, not recorded. Bad base64 and a NUL in the name are
+  not modelled: the real server raises on both (its `except` takes only IOError) and the Fault it then sends
+  is unrecorded; the backend cannot send either. [U:daemon-push-file-basename]
 - force_trex_kill answers True when it ends the fake's run and the idle stop_trex reply while Idle: the one
   recording is a -11. [U:daemon-force-kill-results]
 
-force_trex_kill stops only the daemon's own run: the real daemon's force_trex_kill and stop_trex both call
-CTRex.stop_trex (trex_server.py), which answers False while Idle and never touches a TRex the daemon did not
-start. So an idle kill answers the recorded idle stop_trex reply (p5-stf `stop_after_end`), and the --foreign
-processes stay listed."""
+force_trex_kill stops only the daemon's own run: the real daemon's force_trex_kill always calls
+CTRex.stop_trex (trex_server.py), and stop_trex does only when the seq matches (Idle with another seq
+answers False itself, any other state with another seq is the -33 Fault); CTRex.stop_trex answers False
+while Idle and never touches a TRex the daemon did not start. So an idle kill answers the recorded idle
+stop_trex reply (p5-stf `stop_after_end`), and the --foreign processes stay listed."""
 import argparse
 import base64
 import json
@@ -131,7 +135,7 @@ class Daemon:
         # through the daemon, so the log exists
         self.started = bool(args.daemon_run)
         self.lingering: list[tuple[str, str, float]] = []   # (pid, cmd, until): ended runs still listed
-        self.tmp = tempfile.TemporaryDirectory(prefix="fake-daemon-")
+        self.tmp = tempfile.TemporaryDirectory(prefix="fake-daemon-", dir=args.tmp_root)
         if args.daemon_run:
             self.seq = self.run_seq = 1
             self.run_cmd = STATELESS_CMD.format(cfg="/etc/trex_cfg.yaml", c="", args="")
@@ -227,8 +231,8 @@ class Daemon:
         self.run_seq, self.end_at = None, None
 
     def kill(self) -> Any:
-        """force_trex_kill: the fake's own run ends at once (True); while Idle it answers what stop_trex
-        answers while Idle (CTRex.stop_trex serves both), and the --foreign processes go on."""
+        """force_trex_kill: the fake's own run ends at once (True); while Idle it answers what CTRex.stop_trex
+        answers while Idle (force_trex_kill always calls it), and the --foreign processes go on."""
         with self.lock:
             if self.args.run_ends_before_kill and self.run_seq is not None:
                 self._end("stopped")
@@ -238,13 +242,19 @@ class Daemon:
             self._end("stopped")
         return True
 
+    def close(self) -> None:
+        """Remove the temp dir push_file wrote into; safe to call twice."""
+        self.tmp.cleanup()
+
     def pushed(self) -> list[str]:
         """The names of the files push_file has written."""
         return sorted(p.name for p in Path(self.tmp.name).iterdir())
 
     def push(self, params: dict[str, Any]) -> Any:
         """push_file: base64-decode into the temp dir under the name's basename, as trex_server.py does; a
-        name that cannot be opened (empty, `.`, `..`, a trailing slash) answers False, as its IOError does."""
+        name that cannot be opened (empty, `.`, `..`, a trailing slash) answers False, as its IOError does.
+        Bad base64 and a NUL in the name are not modelled (the real server raises, and the Fault is
+        unrecorded)."""
         name = params.get("filename", "")
         print(f"[fake-daemon] push {name}", flush=True)
         if self.args.push_false:
@@ -380,6 +390,7 @@ def build_parser() -> argparse.ArgumentParser:
     ap.add_argument("--no-trex-log", action="store_true")
     ap.add_argument("--trex-log-fault", action="store_true")
     ap.add_argument("--foreign-ends-with-run", action="store_true")
+    ap.add_argument("--tmp-root")  # [U:daemon-hook-tmp-root]
     return ap
 
 
@@ -395,7 +406,7 @@ def main() -> None:
     try:
         httpd.serve_forever()
     finally:
-        daemon.tmp.cleanup()
+        daemon.close()
 
 
 if __name__ == "__main__":
