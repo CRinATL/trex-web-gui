@@ -60,6 +60,20 @@ def test_connect_and_get(tmp_path: Path, fake_daemon: Any) -> None:
         assert c.get("/api/daemon").json()["state"] == "disconnected"
 
 
+def test_config_push_the_daemon_refuses_is_a_502_fault(tmp_path: Path, fake_daemon: Any) -> None:
+    """A push_file the daemon answers with false is 502 daemon_fault -33, not a 200 with a path that was
+    never written: the fake's --push-false (daemon-hook-push-false) is the daemon's false answer
+    (fake-daemon-register-2-4)."""
+    d = fake_daemon("--push-false")
+    with authed(create_app(tmp_path, token=TEST_TOKEN)) as c:
+        reply = connect(c, d)
+        r = c.post("/api/daemon/config/push",
+                   json={"yaml": reply["config_yaml"], "filename": "mine.yaml", "confirm": True})
+        assert r.status_code == 502, r.text
+        assert r.json()["error"] == "daemon_fault"
+        assert r.json()["message"].startswith("-33: push_file returned false"), r.text
+
+
 def test_config_preview_takes_exactly_one(tmp_path: Path) -> None:
     with authed(create_app(tmp_path, token=TEST_TOKEN)) as c:
         for body in ({}, {"values": {}, "text": ""}):

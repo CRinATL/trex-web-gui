@@ -143,6 +143,21 @@ def test_connect_reply_and_push(fake_daemon: Any) -> None:
     drive(body)
 
 
+def test_push_refused_by_the_daemon_is_a_fault_and_records_no_path(fake_daemon: Any) -> None:
+    """A daemon that answers push_file with false (a full disk, a permission error) is DaemonFault -33, as
+    the tg- upload path already treats it, and no path is recorded as pushed (fake-daemon-register-2-4)."""
+    d = fake_daemon("--push-false")
+
+    async def body(s: DaemonSession, rec: Recorder) -> None:
+        """Connect, push the daemon's own config, and see the refusal."""
+        r = await s.connect(d.host, d.port)
+        with pytest.raises(DaemonFault) as e:
+            await s.push(r["config_yaml"], "my-config.yaml", True)
+        assert e.value.code == -33 and "push_file returned false for my-config.yaml" in str(e.value)
+        assert s.snapshot()["pushed"] == []
+    drive(body)
+
+
 def test_start_refuses_beside_a_foreign_trex(fake_daemon: Any) -> None:
     """A TRex the daemon lists that this backend did not start is foreign_trex, naming its pid and command."""
     d = fake_daemon("--foreign")
