@@ -330,7 +330,10 @@ class Spool:
         partial = name.endswith(_PARTIAL)
         held = self._held.get(name)
         if side is not None and held is not None:
-            side = None                     # a sidecar of an open file is stale: its Writer knows the count
+            # an open file's sidecar is stale: its Writer knows the count, so the row never scans. Dropping
+            # it also drops server/start_ts until the file is released, so the Recorders page does not
+            # offer a Resume for the Save in flight.
+            side = None
         m = _ID.match(name)
         cid = side.get("capture_id") if side else None
         # a partial's count is always the whole records on disk: its sidecar was written at open with 0 and

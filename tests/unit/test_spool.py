@@ -479,7 +479,23 @@ def test_a_torn_write_is_not_in_an_open_files_row(tmp_path: Path, monkeypatch: p
     with pytest.raises(OSError):
         w.write(*FRAMES[1])
     monkeypatch.undo()
+
+    def no_scan(path: Path) -> None:
+        raise AssertionError("scanned an open file")
+
+    monkeypatch.setattr("trex_web_gui.store.spool._scan", no_scan)
     assert sp.list()[0]["pkt_count"] == 1
+
+
+def test_an_open_files_row_takes_no_identity_from_its_sidecar(tmp_path: Path) -> None:
+    sp = _spool(tmp_path)
+    w = sp.writer(KEY)
+    w.write(*FRAMES[0])
+    (row,) = sp.list()
+    assert (row["server"], row["start_ts"], row["capture_id"], row["pkt_count"]) == (None, None, 7, 1)
+    w.suspend()
+    (row,) = sp.list()
+    assert (row["server"], row["start_ts"]) == ("lab-a:4501", 100.0)
 
 
 @pytest.mark.parametrize("args", [(-0.5, b"\x01" * 60, 60), (0.5, b"\x01" * 60, 59)],
