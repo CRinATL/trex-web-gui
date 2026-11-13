@@ -28,7 +28,8 @@ Idle at once, without waiting for `_t-rex-64` to exit), --no-trex-log (get_trex_
 missing-file -33 of tests/fixtures/daemon-ui until a start_trex has been accepted, as a fresh daemon does),
 --foreign-after-start (lists the --foreign process only once a start_trex has been accepted, as when a TRex is
 started by hand beside this backend's run), --foreign-ends-with-run (lists the --foreign process only while
-the fake's own run is going, so a stop empties the list at once), --trex-log-fault (get_trex_log answers the
+the fake's own run is going, so a stop empties the list at once), --tmp-root DIR (the temp dir is made under
+DIR, not the system temp dir, so a test can see it removed), --trex-log-fault (get_trex_log answers the
 recorded get_file refusal, a -33 that is not the missing file: the fault `daemon/session.py` `log` must
 re-raise).
 
@@ -134,7 +135,7 @@ class Daemon:
         # through the daemon, so the log exists
         self.started = bool(args.daemon_run)
         self.lingering: list[tuple[str, str, float]] = []   # (pid, cmd, until): ended runs still listed
-        self.tmp = tempfile.TemporaryDirectory(prefix="fake-daemon-")
+        self.tmp = tempfile.TemporaryDirectory(prefix="fake-daemon-", dir=args.tmp_root)
         if args.daemon_run:
             self.seq = self.run_seq = 1
             self.run_cmd = STATELESS_CMD.format(cfg="/etc/trex_cfg.yaml", c="", args="")
@@ -389,6 +390,7 @@ def build_parser() -> argparse.ArgumentParser:
     ap.add_argument("--no-trex-log", action="store_true")
     ap.add_argument("--trex-log-fault", action="store_true")
     ap.add_argument("--foreign-ends-with-run", action="store_true")
+    ap.add_argument("--tmp-root")  # [U:daemon-hook-tmp-root]
     return ap
 
 

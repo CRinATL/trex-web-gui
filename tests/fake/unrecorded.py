@@ -416,6 +416,12 @@ REGISTER: dict[str, Entry] = {
         "(a Fault when an errcode is set, which the fake does not model), but the one recording is a -11 "
         "(p5 daemon.jsonl, a failed run); a real kill of a live run would settle it",
     ),
+    "daemon-hook-tmp-root": Entry(
+        "fake_daemon",
+        "hook",
+        "--tmp-root DIR: the fake's temp dir is made under DIR, so a test can watch it go.",
+        "hook: --tmp-root",
+    ),
     "daemon-hook-push-false": Entry(
         "fake_daemon",
         "hook",
