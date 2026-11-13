@@ -8,6 +8,7 @@ from pathlib import Path
 import pytest
 from trex_web_gui import trexapi
 from trex_web_gui.store import pcap
+from trex_web_gui.store import spool as spool_module
 from trex_web_gui.store.spool import CaptureKey, RecordRefused, Spool, SpoolBusy, _scan
 
 trexapi.load()      # Scapy is importable only after the vendored tree is on the path
@@ -541,6 +542,9 @@ def _side(p: Path) -> Path:
 
 def test_the_sweep_moves_a_linked_partials_key_to_its_final(tmp_path: Path) -> None:
     p, final = _linked_partial(_spool(tmp_path))
+    side = json.loads(_side(p).read_text())
+    side["pkt_count"] = 99          # the final's count is the scanned 2, never the partial's
+    _side(p).write_text(json.dumps(side))
     sp = Spool(p.parent)
     assert json.loads(_side(final).read_text()) == {
         "server": "lab-a:4501", "start_ts": 100.0, "capture_id": 7, "pkt_count": 2, "partial": False}
@@ -563,7 +567,8 @@ def test_the_sweep_accepts_an_int_start_ts(tmp_path: Path) -> None:
     side["start_ts"] = 100
     _side(p).write_text(json.dumps(side))
     Spool(p.parent)
-    assert json.loads(_side(final).read_text())["server"] == "lab-a:4501"
+    written = json.loads(_side(final).read_text())
+    assert written["server"] == "lab-a:4501" and written["start_ts"] == 100
 
 
 def test_the_sweep_replaces_an_unparsable_finals_sidecar(tmp_path: Path) -> None:
@@ -674,3 +679,18 @@ def test_a_symlink_to_a_lone_partial_does_not_sweep_it(tmp_path: Path) -> None:
     os.symlink(p, p.with_name("rec-7-link.pcap"))
     Spool(p.parent)
     assert p.exists()
+
+
+def test_a_final_removed_after_the_sweep_listed_it_does_not_take_its_partial(
+        tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    p, final = _linked_partial(_spool(tmp_path))
+    real_count = spool_module._count
+
+    def count(path: Path) -> int | None:
+        final.unlink()              # the final goes after the sweep listed it, before it is counted
+        return real_count(path)
+
+    monkeypatch.setattr(spool_module, "_count", count)
+    Spool(p.parent)
+    monkeypatch.undo()
+    assert p.exists() and _side(p).exists()

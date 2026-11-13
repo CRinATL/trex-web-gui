@@ -75,9 +75,10 @@ def _scan(path: Path) -> tuple[int, int] | None:
     None when the file cannot be read or does not start with a pcap header: that is not "no records", and
     the caller must leave such a file as it is. Streams: it holds one record header, never the file.
     Its time is linear in the record count (about 0.35 s per million on the dev box). A file saved from a
-    recorder this app started holds at most that recorder's limit (100 000, set in `api/capture.py`'s start
-    route) records; `recorder_save` can also save a recorder another TRex client started, with that client's
-    limit, and a foreign pcap in the spool costs its full scan on each `list()`, by choice."""
+    recorder this app started holds at most that recorder's limit, which is at most 100 000 (the ceiling of
+    `limit` in `api/capture.py`'s start route; its defaults are 100 and 1000) records; `recorder_save` can
+    also save a recorder another TRex client started, with that client's limit, and a foreign pcap in the
+    spool costs its full scan on each `list()`, by choice."""
     try:
         with path.open("rb") as f:
             size = os.fstat(f.fileno()).st_size
@@ -177,9 +178,9 @@ class Spool:
         its final name (it would resume as a stale duplicate). A partial is swept only when another link to
         its inode is a non-partial .pcap in this directory; a lone partial or a foreign link stays. Before it
         goes, its key moves to the final's sidecar when the final has no readable one and the partial's holds
-        a key (`_key_of`); the count is the final's whole records, never the partial's `pkt_count`. A failed
-        write does not stop the sweep. If two final names share the inode, only the last listed gets the
-        key."""
+        a key (`_key_of`); the count is the final's whole records, never the partial's `pkt_count`, and when
+        the final cannot be counted (gone or unreadable) the partial stays. A failed write does not stop the
+        sweep. If two final names share the inode, only the last listed gets the key."""
         entries: list[tuple[Path, os.stat_result]] = []
         for q in self.dir.iterdir():
             with contextlib.suppress(OSError):          # a vanished or dangling entry is not ours to sweep
@@ -195,8 +196,10 @@ class Spool:
                 elif q.name.endswith(_PARTIAL) and st.st_nlink > 1 and st.st_ino in finals:
                     final = finals[st.st_ino]
                     key = _key_of(self._read_sidecar(q.name))
-                    count = _count(self.dir / final)
-                    if key is not None and count is not None and self._read_sidecar(final) is None:
+                    if key is not None and self._read_sidecar(final) is None:
+                        count = _count(self.dir / final)
+                        if count is None:       # final gone or unreadable: the partial may be the only copy
+                            continue
                         with contextlib.suppress(OSError):
                             self._write_sidecar(final, key, count, False)
                     q.unlink()
