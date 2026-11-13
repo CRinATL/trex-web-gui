@@ -11,7 +11,7 @@ from functools import cache
 from pathlib import Path
 
 import pytest
-from fake.unrecorded import REGISTER, Entry
+from fake.unrecorded import FAKE_NAMES, REGISTER, Entry
 
 ROOT = Path(__file__).resolve().parent.parent.parent
 FAKES: dict[str, Path] = {
@@ -29,6 +29,12 @@ ID = re.compile(r"^(emu|trex|daemon)-[a-z0-9-]+$")
 KINDS = {"text", "behaviour", "model", "hook"}
 SETTLE_REAL = re.compile(r"^real:(tests/real/[\w]+\.py)::(test_\w+)$")
 HOW = "register it in tests/fake/unrecorded.py and tag it [U:<id>] (the rule is in that module's docstring)"
+
+
+def test_fakes_dict_lists_the_register_names() -> None:
+    """The fakes this module scans are the register's FAKE_NAMES, in order: a fourth fake added to one list
+    only would be scanned without a register, or registered without a scan (daemon-register-pr-b-13)."""
+    assert tuple(FAKES) == FAKE_NAMES
 
 
 def tags(text: str) -> list[str]:
@@ -466,7 +472,7 @@ def register_problems(register: dict[str, Entry], root: Path) -> list[str]:
         elif key.split("-", 1)[0] != e.fake.removeprefix("fake_"):
             problems.append(f"{key}: id prefix does not match fake {e.fake!r}")
         if e.fake not in FAKES:
-            problems.append(f"{key}: fake {e.fake!r} is none of fake_emu, fake_trex, fake_daemon")
+            problems.append(f"{key}: fake {e.fake!r} is none of {', '.join(FAKES)}")
         if e.kind not in KINDS:
             problems.append(f"{key}: kind {e.kind!r} is not one of {sorted(KINDS)}")
         if not e.assumes.strip():
