@@ -65,20 +65,25 @@ def _count(path: Path) -> int | None:
 def _scan(path: Path) -> tuple[int, int] | None:
     """(whole records, byte offset after the last whole one); a torn tail after valid records is dropped.
     None when the file cannot be read or does not start with a pcap header: that is not "no records", and
-    the caller must leave such a file as it is."""
+    the caller must leave such a file as it is. Streams: it holds one record header, never the file."""
     try:
-        data = path.read_bytes()
+        with path.open("rb") as f:
+            size = os.fstat(f.fileno()).st_size
+            head = f.read(pcap.GLOBAL.size)
+            if len(head) < pcap.GLOBAL.size or struct.unpack_from("<I", head)[0] != pcap.MAGIC:
+                return None
+            pos, n = pcap.GLOBAL.size, 0
+            while True:
+                rec = f.read(pcap.RECORD.size)
+                if len(rec) < pcap.RECORD.size:
+                    break
+                end = pos + pcap.RECORD.size + pcap.RECORD.unpack(rec)[2]
+                if end > size:
+                    break
+                f.seek(end)
+                pos, n = end, n + 1
     except OSError:
         return None
-    if len(data) < pcap.GLOBAL.size or struct.unpack_from("<I", data)[0] != pcap.MAGIC:
-        return None
-    pos, n = pcap.GLOBAL.size, 0
-    while pos + pcap.RECORD.size <= len(data):
-        incl = pcap.RECORD.unpack_from(data, pos)[2]
-        if pos + pcap.RECORD.size + incl > len(data):
-            break
-        pos += pcap.RECORD.size + incl
-        n += 1
     return n, pos
 
 

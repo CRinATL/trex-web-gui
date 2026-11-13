@@ -7,7 +7,7 @@ from pathlib import Path
 
 import pytest
 from trex_web_gui import trexapi
-from trex_web_gui.store.spool import CaptureKey, Spool, SpoolBusy
+from trex_web_gui.store.spool import CaptureKey, Spool, SpoolBusy, _scan
 
 trexapi.load()      # Scapy is importable only after the vendored tree is on the path
 
@@ -259,13 +259,13 @@ def test_resume_leaves_an_unreadable_partial_untouched(tmp_path: Path,
     sp = _spool(tmp_path)
     p = _suspended(sp)
     before = p.read_bytes()
-    real = Path.read_bytes
+    real = Path.open
 
-    def broken(self: Path) -> bytes:
+    def broken(self: Path, *a: object, **k: object) -> object:
         if self == p:
             raise OSError(5, "Input/output error")
-        return real(self)
-    monkeypatch.setattr(Path, "read_bytes", broken)
+        return real(self, *a, **k)
+    monkeypatch.setattr(Path, "open", broken)
     assert sp.resume(KEY) is None
     assert sp.skipped == [p.name] and not sp.held()
     monkeypatch.undo()
@@ -420,3 +420,20 @@ def test_resume_closes_the_fd_when_ftruncate_fails(tmp_path: Path, monkeypatch: 
     with pytest.raises(OSError):
         sp.resume(KEY)
     assert len(closed) == 1 and not sp.held()
+
+
+def test_scan_does_not_read_the_file_whole(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    p = _suspended(_spool(tmp_path))
+
+    def whole(self: Path) -> bytes:
+        raise AssertionError("read whole")
+    monkeypatch.setattr(Path, "read_bytes", whole)
+    assert _scan(p) == (2, p.stat().st_size)
+
+
+def test_scan_ignores_a_record_header_claiming_more_than_the_file_holds(tmp_path: Path) -> None:
+    p = _suspended(_spool(tmp_path))
+    whole = p.stat().st_size
+    with open(p, "ab") as f:
+        f.write(struct.pack("<IIII", 1, 2, 10**9, 10**9))
+    assert _scan(p) == (2, whole)
