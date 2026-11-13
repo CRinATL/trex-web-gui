@@ -556,7 +556,8 @@ def test_trex_log_before_any_start_is_a_refusal_not_a_fault(tmp_path: Path, fake
 def test_a_trex_log_fault_other_than_the_missing_file_stays_a_502(tmp_path: Path, fake_daemon: Any) -> None:
     """daemon/session.py `log` re-raises a get_trex_log fault that is not the missing file: the route answers
     502 daemon_fault with the daemon's code first, never the 409 no_trex_log, and the daemon's log still reads
-    (release-1.5.1-2)."""
+    (release-1.5.1-2). AGENTS.md, "An `except` on a base error class re-raises the loss and refusal subclasses
+    first", is the rule it pins (daemon-register-pr-b-14)."""
     d = fake_daemon("--trex-log-fault")
     with authed(create_app(tmp_path, token=TEST_TOKEN)) as c:
         connect(c, d)
