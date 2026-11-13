@@ -68,7 +68,11 @@ def _count(path: Path) -> int | None:
 def _scan(path: Path) -> tuple[int, int] | None:
     """(whole records, byte offset after the last whole one); a torn tail after valid records is dropped.
     None when the file cannot be read or does not start with a pcap header: that is not "no records", and
-    the caller must leave such a file as it is. Streams: it holds one record header, never the file."""
+    the caller must leave such a file as it is. Streams: it holds one record header, never the file.
+    Its time is linear in the record count (about 0.35 s per million on the dev box). A file saved from a
+    recorder this app started holds at most that recorder's limit (100 000, set in `api/capture.py`'s start
+    route) records; `recorder_save` can also save a recorder another TRex client started, with that client's
+    limit, and a foreign pcap in the spool costs its full scan on each `list()`, by choice."""
     try:
         with path.open("rb") as f:
             size = os.fstat(f.fileno()).st_size

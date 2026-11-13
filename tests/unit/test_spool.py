@@ -440,6 +440,21 @@ def test_scan_ignores_a_record_header_claiming_more_than_the_file_holds(tmp_path
     assert _scan(p) == (2, whole)
 
 
+def test_scan_drops_a_tail_shorter_than_a_record_header(tmp_path: Path) -> None:
+    p = _suspended(_spool(tmp_path))
+    whole = p.stat().st_size
+    with open(p, "ab") as f:
+        f.write(b"12345")
+    assert _scan(p) == (2, whole)
+
+
+def test_scan_refuses_a_file_shorter_than_the_pcap_header(tmp_path: Path) -> None:
+    sp = _spool(tmp_path)
+    q = sp.dir / "short.pcap"
+    q.write_bytes(pcap.HEADER[:10])
+    assert _scan(q) is None
+
+
 def test_list_counts_an_open_save_from_its_writer_without_scanning(
         tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     sp = _spool(tmp_path)
