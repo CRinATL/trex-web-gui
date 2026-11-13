@@ -4,8 +4,11 @@ It is a ThreadingHTTPServer so that one hung or dripping request does not stop t
 is a single-threaded SimpleJSONRPCServer (trex_server.py), which would serialise them: a test that needs to
 see the Control session survive a hung daemon must not rely on this fake's concurrency being the daemon's.
 
-Every body it answers is a recorded one: tests/fixtures/p5/daemon.jsonl and summary.json (faults),
-tests/fixtures/p5-stf/ (STF run, listings, outcomes) and tests/fixtures/daemon-ui/ (the missing TRex log). It
+Most bodies it answers are recorded ones: tests/fixtures/p5/daemon.jsonl and summary.json (faults),
+tests/fixtures/p5-stf/ (STF run, listings, outcomes) and tests/fixtures/daemon-ui/ (the missing TRex log). Not
+all are: the register in tests/fake/unrecorded.py lists only the flag assumptions under "Known divergences"
+below, and the "TRex is Starting" status text, the default pre-start get_trex_log, the bad-name push_file
+refusal and most hook flags are not yet listed there. It
 keeps the state Idle -> Starting -> Running, a seq counter (stop_trex answers False while idle and -33 for a
 wrong seq while running) and a temp dir that push_file writes into. It prints one `[fake-daemon] method
 <name>` line per request, so a test can read the log of what was called, `push <name>` for each push_file
@@ -25,7 +28,21 @@ without waiting for `_t-rex-64` to exit), --no-trex-log (get_trex_log answers th
 tests/fixtures/daemon-ui until a start_trex has succeeded, as a fresh daemon does), --foreign-after-start
 (lists the --foreign process only once a start_trex has succeeded, as when a TRex is started by hand beside
 this backend's run), --foreign-ends-with-run (lists the --foreign process only while the fake's own run is
-going, so a stop empties the list at once).
+going, so a stop empties the list at once), --trex-log-fault (get_trex_log answers the recorded get_file
+refusal, a -33 that is not the missing file: the fault `daemon/session.py` `log` must re-raise).
+
+Known divergences from the real server:
+- --exit-lag keeps the ended run's process listed for S seconds after the status is Idle: read from
+  trex_launch_thread.py, not recorded. [U:daemon-exit-lag-listing]
+- --foreign-after-start lists a hand-started TRex only once a start_trex has succeeded: modelled, not
+  recorded. [U:daemon-foreign-after-start]
+- --foreign-ends-with-run drops the foreign process from the list at the moment the run ends: modelled, not
+  recorded; the real list lags (see --exit-lag). [U:daemon-foreign-ends-with-run]
+- --no-trex-log answers the recorded missing-file -33 only until a start_trex has succeeded; the recorded
+  daemon-ui body is the answer of a daemon that has never started TRex, and the log's reading normally after
+  a start is the assumption. [U:daemon-trex-log-after-start]
+- --trex-log-fault answers get_trex_log with the recorded get_file refusal; the daemon's own answer to a
+  get_trex_log it cannot serve for another reason is not recorded. [U:daemon-hook-trex-log-fault]
 
 force_trex_kill stops only the daemon's own run: the real daemon's force_trex_kill and stop_trex both call
 CTRex.stop_trex (trex_server.py), which answers False while Idle and never touches a TRex the daemon did not
@@ -132,6 +149,7 @@ class Daemon:
             out.append(list(STF["stf_cmd"]))
         with self.lock:
             self._settle()
+            # [U:daemon-foreign-after-start] [U:daemon-foreign-ends-with-run]
             if self.args.foreign or (self.args.foreign_after_start and self.started) \
                     or (self.args.foreign_ends_with_run and self.run_seq is not None):
                 out.insert(0, list(FOREIGN_CMD[0]))
@@ -188,6 +206,7 @@ class Daemon:
         stays listed for that long. Lock held."""
         self.outcome = STF["outcomes"][how] if self.stf_run else "TRex is Idle"
         if self.args.exit_lag > 0 and self.run_seq is not None:
+            # [U:daemon-exit-lag-listing]
             self.lingering.append(("4242", self.run_cmd, time.monotonic() + self.args.exit_lag))
         self.run_seq, self.end_at = None, None
 
@@ -262,6 +281,9 @@ class Daemon:
             return self.files_list(params.get("path", ""))
         if method == "get_file":
             return self.get_file(params.get("filepath", ""))
+        if method == "get_trex_log" and self.args.trex_log_fault:   # [U:daemon-hook-trex-log-fault]
+            return ("error", fault(P5["faults"]["get_file"]))
+        # [U:daemon-trex-log-after-start]
         if method == "get_trex_log" and self.args.no_trex_log and not self.started:
             return ("error", NO_TREX_LOG)
         if method in STATIC:
@@ -337,6 +359,7 @@ def main() -> None:
     ap.add_argument("--exit-lag", type=float, default=0.0)
     ap.add_argument("--foreign-after-start", action="store_true")
     ap.add_argument("--no-trex-log", action="store_true")
+    ap.add_argument("--trex-log-fault", action="store_true")
     ap.add_argument("--foreign-ends-with-run", action="store_true")
     args = ap.parse_args()
     daemon = Daemon(args)
