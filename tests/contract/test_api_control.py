@@ -1,4 +1,5 @@
 """HTTP surface for P2 (Task 7)."""
+import time
 from pathlib import Path
 
 import pytest
@@ -158,15 +159,48 @@ def test_server_refusal_is_400_trex_error(tmp_path: Path, fake_trex):
         assert "profile [_] does not exist in the port [0]" in r.json()["message"], r.text
 
 
-def test_restarted_server_is_502_unreachable(tmp_path: Path, fake_trex):
+def wait_lost(c, limit_s: float = 10.0) -> dict:
+    """GET /api/session until its state is "lost" and return that body; fail with the last body after
+    `limit_s`. The session goes LOST by itself once a poll meets a restarted server."""
+    deadline = time.monotonic() + limit_s
+    while True:
+        body = c.get("/api/session").json()
+        if body.get("state") == "lost":
+            return body
+        assert time.monotonic() < deadline, f"the session never went lost: {body}"
+        time.sleep(0.05)
+
+
+def test_restarted_server_is_reported_as_restarted(tmp_path: Path, fake_trex):
+    """ui-controls-and-tables-27: after a restart, either order is the design. The start's own RPC meets
+    the restart first (502 unreachable, "restarted"), or the fake's 0.5 s subscriber poll does
+    ([U:trex-restart-applied-late] in tests/fake/fake_trex.py applies it before the next message, whoever
+    sends it) and the session is already LOST, so the start is the documented 409 not_connected. Either way
+    the session ends LOST naming the restart."""
     f = fake_trex()
     with client(tmp_path) as c:
         assigned(c, f)
-        # applied by the fake before the next request: api_h no longer matches
         f.restart()
         r = c.post("/api/ports/start", json={"ports": [0], "mult": "1kpps"})
-        assert r.status_code == 502 and r.json()["error"] == "unreachable", r.text
-        assert "restarted" in r.json()["message"], r.text
+        assert r.status_code in (502, 409), r.text
+        if r.status_code == 502:
+            assert r.json()["error"] == "unreachable" and "restarted" in r.json()["message"], r.text
+        else:
+            assert r.json()["error"] == "not_connected", r.text
+        assert "restarted" in wait_lost(c)["error"]
+
+
+def test_a_command_on_a_session_lost_to_a_restart_is_409(tmp_path: Path, fake_trex):
+    """Once the session has gone LOST to a restart (waited for, so no race), a command is 409 not_connected
+    and the session error still names the restart."""
+    f = fake_trex()
+    with client(tmp_path) as c:
+        assigned(c, f)
+        f.restart()
+        wait_lost(c)
+        r = c.post("/api/ports/start", json={"ports": [0], "mult": "1kpps"})
+        assert r.status_code == 409 and r.json()["error"] == "not_connected", r.text
+        assert "restarted" in c.get("/api/session").json()["error"]
 
 
 @pytest.mark.parametrize("path, body", [
