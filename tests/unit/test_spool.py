@@ -694,3 +694,44 @@ def test_a_final_removed_after_the_sweep_listed_it_does_not_take_its_partial(
     Spool(p.parent)
     monkeypatch.undo()
     assert p.exists() and _side(p).exists()
+
+
+def _drop_final_on_first_sidecar_read(monkeypatch: pytest.MonkeyPatch, final: Path) -> None:
+    """Make the sweep's first sidecar read delete `final`: the snapshot is taken, the unlink has not run."""
+    real = Spool._read_sidecar
+    calls: list[str] = []
+
+    def read(self: Spool, name: str):  # type: ignore[no-untyped-def]
+        """The real read; the first call removes the final first."""
+        if not calls:
+            final.unlink()
+        calls.append(name)
+        return real(self, name)
+
+    monkeypatch.setattr(Spool, "_read_sidecar", read)
+
+
+def test_a_final_removed_after_the_sweep_listed_it_keeps_a_keyless_partial(
+        tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    p, final = _linked_partial(_spool(tmp_path))
+    _side(p).unlink()           # no key to move: the branch never counts the final
+    _drop_final_on_first_sidecar_read(monkeypatch, final)
+    Spool(p.parent)
+    assert p.exists() and not final.exists()
+
+
+def test_a_final_removed_after_the_sweep_listed_it_keeps_a_partial_whose_final_has_a_sidecar(
+        tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    sp = _spool(tmp_path)
+    p, final = _linked_partial(sp)
+    sp._write_sidecar(final.name, KEY, 0, False)        # a readable sidecar: the branch never counts either
+    _drop_final_on_first_sidecar_read(monkeypatch, final)
+    Spool(p.parent)
+    assert p.exists() and not final.exists()
+
+
+def test_a_refused_record_message_rounds_the_timestamp(tmp_path: Path) -> None:
+    w = _spool(tmp_path).writer(KEY)
+    with pytest.raises(RecordRefused) as e:
+        w.write(-0.5999999999999943, b"\x01" * 60, 60)
+    assert "ts_rel=-0.600000" in str(e.value) and "0.59999" not in str(e.value)

@@ -22,7 +22,7 @@ from trex_web_gui import trexapi
 from trex_web_gui.sessions import ConnectParams, SessionState, TrexSession
 from trex_web_gui.sessions import capture as capture_mod
 from trex_web_gui.sessions import wireshark as wireshark_mod
-from trex_web_gui.store.spool import CaptureKey, Spool
+from trex_web_gui.store.spool import CaptureKey, Spool, Writer
 from trex_web_gui.trexapi import CommandRefused, Fetched, TrexApiError, scapy_exec
 
 SUMMARY = json.loads((FIXTURES / "p3c" / "summary.json").read_text())
@@ -1215,9 +1215,61 @@ def test_a_refused_record_during_save_is_a_shaped_spool_error_and_keeps_the_part
         with refused("spool_error") as e:
             await s.recorder_save(7)
         assert "not a pcap record" in e.value.message
+        assert "1 fetched packet of this batch was not written" in e.value.message
         assert [(f["partial"], f["pkt_count"]) for f in Spool(rig.spool_dir).list()] == [(True, 50)]
     rig.run(body)
     assert rig.server.n("remove") == 0
+
+
+@pytest.mark.parametrize("bad", [
+    {**pkt(11), "binary": "A"},        # one base64 char: incorrect padding
+    {**pkt(11), "wirelen": None},
+    {**pkt(11), "wirelen": "x"},
+    {k: v for k, v in pkt(11).items() if k != "wirelen"},
+    {k: v for k, v in pkt(11).items() if k != "binary"},
+    {k: v for k, v in pkt(11).items() if k != "ts"},
+    {**pkt(11), "ts": float("inf")},        # decodes, then the 32-bit seconds field overflows
+    {**pkt(11), "ts": 1e12},
+    {**pkt(11), "wirelen": 2**40},          # decodes, then the 32-bit length field overflows
+    None,                                   # not a packet at all
+], ids=["bad-base64", "wirelen-none", "wirelen-text", "wirelen-missing", "binary-missing", "ts-missing",
+        "ts-inf", "ts-huge", "wirelen-huge", "not-a-dict"])
+def test_a_malformed_packet_during_save_is_trex_error_and_keeps_the_partial(
+        rig: Rig, bad: dict[str, Any] | None) -> None:
+    rig.server.add(7)
+    # The malformed packets are synthetic by design: no recorded server reply carries one, and an
+    # undecodable packet is the case under test.
+    rig.server.queue(7, Fetched(pkts(50), 50, 100.0), Fetched([*pkts(10), bad, *pkts(39)], 0, 100.0))
+
+    async def body(s: TrexSession) -> None:
+        with pytest.raises(TrexApiError) as e:
+            await s.recorder_save(7)
+        assert "malformed packet" in e.value.message
+        assert "40 fetched packets of this batch were not written" in e.value.message
+        assert [(f["partial"], f["pkt_count"]) for f in Spool(rig.spool_dir).list()] == [(True, 60)]
+    rig.run(body)
+    assert rig.server.n("remove") == 0
+
+
+def test_a_failed_write_midbatch_says_how_many_packets_it_dropped(
+        rig: Rig, monkeypatch: pytest.MonkeyPatch) -> None:
+    rig.server.add(7)
+    rig.server.queue(7, Fetched(pkts(50), 0, 100.0))
+    real = Writer.write
+    calls: list[int] = []
+
+    def flaky(self: Writer, ts_rel: float, raw: bytes, wirelen: int) -> None:
+        calls.append(1)
+        if len(calls) == 11:
+            raise OSError(28, "No space left on device")
+        real(self, ts_rel, raw, wirelen)
+    monkeypatch.setattr(Writer, "write", flaky)
+
+    async def body(s: TrexSession) -> None:
+        with refused("spool_error") as e:
+            await s.recorder_save(7)
+        assert "40 fetched packets of this batch were not written" in e.value.message
+    rig.run(body)
 
 
 def test_a_sidecar_failure_inside_the_save_error_handler_is_still_a_shaped_spool_error(

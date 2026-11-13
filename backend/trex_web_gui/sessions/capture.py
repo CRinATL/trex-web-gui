@@ -36,6 +36,7 @@ import base64
 import dataclasses
 import logging
 import math
+import struct
 import time
 import weakref
 from collections.abc import Callable
@@ -670,8 +671,9 @@ class CaptureCommands:
         changed between peek and first fetch (a file this save created is deleted) or SAVE_EMPTY_CUTOFF
         fetches in a row bring nothing while packets are still pending. A failure once the file is open keeps
         what was written as a partial file (that deleted new file aside); any failure publishes a
-        `capture_save` error (not on a cancel), "not found" also resyncs, and a spool OSError or refused
-        record becomes spool_error. On success: capture_remove (a failure is logged, not raised, though a
+        `capture_save` error (not on a cancel), "not found" also resyncs, a malformed fetched packet is
+        trex_error, and a spool OSError or refused record becomes spool_error, both naming how many fetched
+        packets were not written. On success: capture_remove (a failure is logged, not raised, though a
         lost connection still marks the session lost), forgets `id` as ours, the final `capture_save`, a log
         line, and a status resync while the same clients are connected."""
         c = self.require_control()
@@ -742,7 +744,8 @@ class CaptureCommands:
                         state["sidecar"] = True
                         self._log("warning", f"{label}: the partial's sidecar was not written: {oe}")
                     writer = None
-                reason = e.message if isinstance(e, TrexApiError) else str(e)
+                reason = (e.message if isinstance(e, TrexApiError)
+                          else str(e) + "".join(f"; {n}" for n in getattr(e, "__notes__", ())))
                 if state.get("sidecar"):
                     reason += "; the partial's sidecar was not written"
                 if not isinstance(e, asyncio.CancelledError):
@@ -780,11 +783,33 @@ class CaptureCommands:
                 f"{pending} were still pending.")
 
     @staticmethod
+    def _dropped(f: trexapi.Fetched, i: int) -> str:
+        """How many packets of batch `f` are lost from index `i` on (the fetch is destructive)."""
+        n = len(f.pkts) - i
+        return (f"{n} fetched packets of this batch were not written" if n != 1
+                else "1 fetched packet of this batch was not written")
+
+    @staticmethod
     def _write_pkts(writer: Any, f: trexapi.Fetched, start_ts: float) -> None:
-        """Write each fetched packet to the spool writer, its time relative to `start_ts` (never negative)."""
-        for p in f.pkts:
-            ts_rel = max(0.0, float(p["ts"]) - start_ts)
-            writer.write(ts_rel, base64.b64decode(p["binary"]), int(p["wirelen"]))
+        """Write each fetched packet to the spool writer, its time relative to `start_ts` (never negative).
+        A packet that cannot be decoded is a TrexApiError (TRex sent something malformed); a refused record
+        or a failed write keeps its own type. Either way the error names how many packets of the batch
+        were not written."""
+        for i, p in enumerate(f.pkts):
+            index = p.get("index") if isinstance(p, dict) else None
+            try:
+                ts, raw, wirelen = float(p["ts"]), base64.b64decode(p["binary"]), int(p["wirelen"])
+            except (KeyError, TypeError, ValueError) as e:      # binascii.Error is a ValueError
+                raise TrexApiError(f"TRex returned a malformed packet (index {index}): {e!r}; "
+                                   f"{CaptureCommands._dropped(f, i)}") from e
+            try:
+                writer.write(max(0.0, ts - start_ts), raw, wirelen)
+            except (OSError, RecordRefused) as e:
+                e.add_note(CaptureCommands._dropped(f, i))
+                raise
+            except (OverflowError, struct.error) as e:          # decoded, but too big for a pcap field
+                raise TrexApiError(f"TRex returned a malformed packet (index {index}): {e!r}; "
+                                   f"{CaptureCommands._dropped(f, i)}") from e
 
     def _save_progress(self, id: int, fetched: int, total: int, state: dict[str, Any]) -> None:
         """Record the save's progress in `state` and publish it as a `capture_save` message."""
