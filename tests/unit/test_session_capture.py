@@ -1226,9 +1226,16 @@ def test_a_refused_record_during_save_is_a_shaped_spool_error_and_keeps_the_part
     {**pkt(11), "wirelen": None},
     {**pkt(11), "wirelen": "x"},
     {k: v for k, v in pkt(11).items() if k != "wirelen"},
-], ids=["bad-base64", "wirelen-none", "wirelen-text", "wirelen-missing"])
+    {k: v for k, v in pkt(11).items() if k != "binary"},
+    {k: v for k, v in pkt(11).items() if k != "ts"},
+    {**pkt(11), "ts": float("inf")},        # decodes, then the 32-bit seconds field overflows
+    {**pkt(11), "ts": 1e12},
+    {**pkt(11), "wirelen": 2**40},          # decodes, then the 32-bit length field overflows
+    None,                                   # not a packet at all
+], ids=["bad-base64", "wirelen-none", "wirelen-text", "wirelen-missing", "binary-missing", "ts-missing",
+        "ts-inf", "ts-huge", "wirelen-huge", "not-a-dict"])
 def test_a_malformed_packet_during_save_is_trex_error_and_keeps_the_partial(
-        rig: Rig, bad: dict[str, Any]) -> None:
+        rig: Rig, bad: dict[str, Any] | None) -> None:
     rig.server.add(7)
     # The malformed packets are synthetic by design: no recorded server reply carries one, and an
     # undecodable packet is the case under test.

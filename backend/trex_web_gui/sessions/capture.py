@@ -36,6 +36,7 @@ import base64
 import dataclasses
 import logging
 import math
+import struct
 import time
 import weakref
 from collections.abc import Callable
@@ -795,16 +796,20 @@ class CaptureCommands:
         or a failed write keeps its own type. Either way the error names how many packets of the batch
         were not written."""
         for i, p in enumerate(f.pkts):
+            index = p.get("index") if isinstance(p, dict) else None
             try:
                 ts, raw, wirelen = float(p["ts"]), base64.b64decode(p["binary"]), int(p["wirelen"])
             except (KeyError, TypeError, ValueError) as e:      # binascii.Error is a ValueError
-                raise TrexApiError(f"TRex returned a malformed packet (index {p.get('index')}): {e!r}; "
+                raise TrexApiError(f"TRex returned a malformed packet (index {index}): {e!r}; "
                                    f"{CaptureCommands._dropped(f, i)}") from e
             try:
                 writer.write(max(0.0, ts - start_ts), raw, wirelen)
             except (OSError, RecordRefused) as e:
                 e.add_note(CaptureCommands._dropped(f, i))
                 raise
+            except (OverflowError, struct.error) as e:          # decoded, but too big for a pcap field
+                raise TrexApiError(f"TRex returned a malformed packet (index {index}): {e!r}; "
+                                   f"{CaptureCommands._dropped(f, i)}") from e
 
     def _save_progress(self, id: int, fetched: int, total: int, state: dict[str, Any]) -> None:
         """Record the save's progress in `state` and publish it as a `capture_save` message."""
