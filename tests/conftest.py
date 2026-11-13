@@ -1,4 +1,5 @@
 import contextlib
+import http.client
 import json
 import signal
 import subprocess
@@ -212,11 +213,31 @@ class FakeDaemon:
     proc: subprocess.Popen[str]
     lines: list[str] = field(default_factory=list, repr=False)
     reader: threading.Thread | None = field(default=None, repr=False)
+    _syncs: int = field(default=0, repr=False)
+
+    def _sync(self) -> None:
+        """Wait until the reader has appended everything the fake printed so far. The fake prints a method
+        line before it answers, but the reader thread appends it later; a marker request goes through the
+        same ordered pipe, so once its line is in `lines` every earlier line is too. A fake that cannot
+        answer (it exited, or its server is gone) leaves `lines` as it is: nothing more to wait for."""
+        self._syncs += 1
+        marker = f"__sync-{self._syncs}__"
+        try:
+            conn = http.client.HTTPConnection(self.host, self.port, timeout=2)
+            conn.request("POST", "/", body=json.dumps({"jsonrpc": "2.0", "id": 0, "method": marker}))
+            conn.getresponse().read()
+            conn.close()
+            self.wait_line(f"[fake-daemon] method {marker}", timeout_s=2.0)
+        except (OSError, http.client.HTTPException, AssertionError):
+            pass
 
     def methods(self) -> list[str]:
-        """The JSON-RPC methods the fake has received so far, in order."""
+        """The JSON-RPC methods the fake has received so far, in order (waits for the reader to catch up
+        first, and leaves out its own sync markers)."""
+        self._sync()
         prefix = "[fake-daemon] method "
-        return [ln[len(prefix):] for ln in list(self.lines) if ln.startswith(prefix)]
+        return [ln[len(prefix):] for ln in list(self.lines)
+                if ln.startswith(prefix) and not ln.startswith(prefix + "__sync-")]
 
     def wait_line(self, line: str, timeout_s: float = 10.0) -> None:
         """Block until the fake has printed exactly `line` (`hang is_running`, say); AssertionError after

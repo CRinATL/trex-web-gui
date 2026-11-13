@@ -2,10 +2,12 @@
 test picks a port that another xdist worker can take before the fake binds it."""
 import codecs
 import http.client
+import json
 import locale
 import signal
 import subprocess
 import sys
+import time
 from pathlib import Path
 from typing import Any
 
@@ -110,3 +112,25 @@ def test_a_stopped_fake_daemon_has_closed_its_pipe(fake_daemon, killed_first: bo
         d.proc.wait(timeout=5)
     d.stop()
     assert d.proc.stdout is not None and d.proc.stdout.closed
+
+
+class _SlowList(list):  # type: ignore[type-arg]
+    """A list whose append is slow, standing in for a reader thread that lags the fake's output."""
+
+    def append(self, item: Any) -> None:
+        """Append after a pause, so a reader that was not waited for has not got there yet."""
+        time.sleep(0.3)
+        super().append(item)
+
+
+def test_methods_waits_for_the_reader_to_catch_up(fake_daemon) -> None:
+    """The fake prints a method line before it answers, but the reader thread appends it later; methods() is
+    called right after the answer and must still list it (a lagging reader failed the daemon-session tests
+    one run in forty)."""
+    d = fake_daemon()
+    d.lines = _SlowList(d.lines)
+    c = http.client.HTTPConnection(d.host, d.port, timeout=5)
+    c.request("POST", "/", body=json.dumps({"jsonrpc": "2.0", "id": 1, "method": "get_trex_version"}),
+              headers={"Content-Length": "0"} if False else {})
+    assert c.getresponse().status == 200
+    assert d.methods() == ["get_trex_version"]
