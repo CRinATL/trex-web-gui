@@ -411,7 +411,8 @@ class DaemonSession:
         """Write the config to the daemon's files dir as `filename` (default trex-web-gui-<user>.yaml);
         returns {path}. confirm_required without `confirm`; ValueError for a bad name (it must match
         ^[A-Za-z0-9_.-]{1,64}\\.ya?ml$ and not start with `tg-`); invalid_config when parse or validate
-        fails, with no call made."""
+        fails, with no call made; DaemonFault -33 when the daemon answers push_file with false (nothing is
+        recorded as pushed)."""
         if confirm is not True:
             raise DaemonRefused("confirm_required", "Pushing a config needs confirm.")
         client = self._need_client()
@@ -429,7 +430,9 @@ class DaemonSession:
                                 f"{where}{first.message}")
         await self._begin_op()
         try:
-            await self._call(client.push_file, filename, yaml_text, PUSH_TIMEOUT_S, deadline=PUSH_TIMEOUT_S)
+            if not await self._call(client.push_file, filename, yaml_text, PUSH_TIMEOUT_S,
+                                    deadline=PUSH_TIMEOUT_S):
+                raise DaemonFault(-33, f"push_file returned false for {filename}")
             path = f"{self._files_path}/{filename}"
             if path not in self._pushed:
                 self._pushed.append(path)
