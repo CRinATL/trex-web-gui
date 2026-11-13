@@ -102,7 +102,7 @@ def test_upload_needs_confirm_and_makes_no_push(fake_daemon: Any, tmp_path: Path
         s._op = True
         await refused(s.stf_upload(str(y), True, ANY_PLAN, target_of(s)), "busy")
         s._op = False
-        assert pushes(d) == [] and "push_file" not in d.methods()
+        assert "push_file" not in d.methods() and pushes(d) == []
         # a pcapng and an oversize pcap are refused with confirm given, before any push_file
         ng = make_profile(tmp_path / "ng", {"x.pcap": b"zz"})
         (tmp_path / "ng" / "x.pcap").write_bytes(bytes.fromhex("0a0d0d0a") + b"zz")
@@ -110,7 +110,7 @@ def test_upload_needs_confirm_and_makes_no_push(fake_daemon: Any, tmp_path: Path
         for bad, what in ((ng, "pcapng"), (big, "larger than")):
             e = await refused(s.stf_upload(str(bad), True, ANY_PLAN, target_of(s)), "invalid_profile")
             assert what in e.message
-        assert pushes(d) == [] and "push_file" not in d.methods()
+        assert "push_file" not in d.methods() and pushes(d) == []
     drive(body)
 
 
@@ -253,7 +253,7 @@ def test_upload_refuses_a_different_daemon_than_the_confirm_named(fake_daemon: A
         for wrong in (f"10.9.9.9:{d.port}", f"{d.host}:{d.port + 1}", ""):
             e = await refused(s.stf_upload(str(y), True, prev["yaml_remote"], wrong), "plan_changed")
             assert f"{d.host}:{d.port}" in e.message
-        assert pushes(d) == [] and "push_file" not in d.methods()
+        assert "push_file" not in d.methods() and pushes(d) == []
         assert len((await upload(s, y))["pushed"]) == 2
     drive(body)
 
@@ -271,7 +271,7 @@ def test_upload_refuses_a_plan_that_changed_since_the_preview(fake_daemon: Any, 
         (tmp_path / "b.pcap").write_bytes(MAGIC + b"changed")
         e = await refused(s.stf_upload(str(y), True, old, target_of(s)), "plan_changed")
         assert old in e.message
-        assert pushes(d) == [] and "push_file" not in d.methods()
+        assert "push_file" not in d.methods() and pushes(d) == []
         assert len((await upload(s, y))["pushed"]) == 3
     drive(body)
 
@@ -308,7 +308,7 @@ def test_upload_refuses_a_pcap_that_changes_after_the_plan(fake_daemon: Any, tmp
         swap_after_plan(monkeypatch, change)
         e = await refused(s.stf_upload(str(y), True, prev["yaml_remote"], target_of(s)), "invalid_profile")
         assert ("changed while" if how == "bytes" else "larger than") in e.message
-        assert pushes(d) == [] and "push_file" not in d.methods()
+        assert "push_file" not in d.methods() and pushes(d) == []
         assert s.snapshot()["busy"] is False
     drive(body)
 
