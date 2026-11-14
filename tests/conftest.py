@@ -218,8 +218,12 @@ class FakeDaemon:
     def _sync(self) -> None:
         """Wait until the reader has appended everything the fake printed so far. The fake prints a method
         line before it answers, but the reader thread appends it later; a marker request goes through the
-        same ordered pipe, so once its line is in `lines` every earlier line is too. A fake that cannot
-        answer (it exited, or its server is gone) leaves `lines` as it is: nothing more to wait for."""
+        same ordered pipe, so once its line is in `lines` every earlier line is too. A fake that has exited
+        gets its reader joined instead (the pipe is at EOF, so the join returns once the last line is in);
+        a fake whose server is gone but whose process lives leaves `lines` as it is."""
+        if self.proc.poll() is not None:
+            self._join_reader()
+            return
         self._syncs += 1
         marker = f"__sync-{self._syncs}__"
         try:
@@ -229,7 +233,13 @@ class FakeDaemon:
             conn.close()
             self.wait_line(f"[fake-daemon] method {marker}", timeout_s=2.0)
         except (OSError, http.client.HTTPException, AssertionError):
-            pass
+            if self.proc.poll() is not None:
+                self._join_reader()
+
+    def _join_reader(self) -> None:
+        """Wait up to 5 s for the reader thread (if any) to reach EOF and append the last lines."""
+        if self.reader is not None:
+            self.reader.join(timeout=5)
 
     def methods(self) -> list[str]:
         """The JSON-RPC methods the fake has received so far, in order (waits for the reader to catch up
