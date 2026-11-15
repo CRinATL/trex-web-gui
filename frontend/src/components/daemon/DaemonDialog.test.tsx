@@ -213,6 +213,36 @@ describe('DaemonDialog', () => {
     expect(screen.queryByRole('dialog', { name: /Force stop/ })).toBeNull()
   })
 
+  // A Force whose request is still in flight keeps its dialog, so a rejection is not lost; if the context went meanwhile, the
+  // dialog closes once the request settles and its error stays as the tab's note.
+  async function forceInFlight() {
+    let reject!: (x: unknown) => void
+    vi.spyOn(api, 'daemonStop').mockRejectedValueOnce(new api.ApiError(409, 'busy', 'busy'))
+      .mockImplementationOnce(() => new Promise((_, rej) => { reject = rej }))
+    const r = await open({ daemon: ours })
+    await refuseStop()
+    await userEvent.click(forceBtn()!)
+    await userEvent.click(within(dialog('Force stop TRex')).getByRole('button', { name: 'Force stop' }))
+    return { ...r, reject: (x: unknown) => reject(x) }
+  }
+
+  it('a Force in flight keeps its dialog through a poll error, and its failure shows once the dialog closes', async () => {
+    const { rerender, reject } = await forceInFlight()
+    redraw({ daemon: { ...ours, state: 'error' } }, rerender)
+    expect(forceDialog()).toBeInTheDocument()
+    reject(new api.ApiError(504, 'timeout', 'The daemon did not answer'))
+    await vi.waitFor(() => expect(forceDialog()).toBeNull())
+    expect(screen.getByText('Force stop failed: The daemon did not answer')).toBeInTheDocument()
+  })
+
+  it('a Force refused for unknown owners after its context went asks nothing more', async () => {
+    const { rerender, reject } = await forceInFlight()
+    redraw({ daemon: idle }, rerender)
+    reject(new api.ApiError(409, 'owners_unknown', 'Cannot read who owns the ports'))
+    await vi.waitFor(() => expect(forceDialog()).toBeNull())
+    expect(screen.queryByRole('dialog', { name: /Force stop/ })).toBeNull()
+  })
+
   it("a foreign run's Force confirm closes when the run ends", async () => {
     const { rerender } = await open({ daemon: foreign })
     await userEvent.click(forceBtn()!)

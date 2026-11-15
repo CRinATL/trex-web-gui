@@ -45,6 +45,8 @@ export function DaemonRunTab({ daemon, pushed, onModal }: { daemon: DaemonMsg | 
   const [now, setNow] = useState(() => Date.now())
   const [finalLog, setFinalLog] = useState<{ seq: number; text: string } | null>(null)
   const [stopFailed, setStopFailed] = useState<{ seq: number | null; host: string; port: number } | null>(null)   // the run (and daemon) whose Stop was refused or failed
+  const [forceBusy, setForceBusy] = useState(false)   // a Force request is in flight
+  const [forceError, setForceError] = useState<string | null>(null)   // the last Force request's failure, shown in its dialog
 
   const connected = daemon?.state === 'connected'
   const host = daemon?.target?.host ?? ''
@@ -156,6 +158,15 @@ export function DaemonRunTab({ daemon, pushed, onModal }: { daemon: DaemonMsg | 
       setNote('The stop was sent, but the daemon stopped answering, so the GUI could not confirm TRex stopped.')
     } else setNote(r.running ? 'TRex is still running after the stop.' : null)
   }
+  // Runs one Force request, marking it in flight and keeping its failure for the close above; the dialog still shows the error.
+  async function inForce(action: () => Promise<void>) {
+    setForceBusy(true); setForceError(null)
+    try { await action() }
+    catch (x) { setForceError(errText(x)); throw x }
+    finally { setForceBusy(false) }
+  }
+  // Closing a Force dialog by hand forgets its failure, which the dialog already showed.
+  const closeForce = () => { setConfirm(null); setForceError(null) }
   // Force stop's owners_unknown asks once more; any other refusal stays in the first confirmation.
   async function doForce() {
     try { await doStop(true, false) }
@@ -169,8 +180,13 @@ export function DaemonRunTab({ daemon, pushed, onModal }: { daemon: DaemonMsg | 
   const stopOk = connected && daemon?.running_seq != null && !problems.cmdPort
   const canForce = connected && running && (daemon?.running_seq == null || stopFailed?.seq === daemon.running_seq)
   // A Force confirm belongs to the context that offered Force stop, so it closes when that context goes (the run ends, the
-  // daemon stops answering, the failed Stop is forgotten). State adjusted while rendering; the open-dialog guard stops a render loop.
-  if ((confirm === 'force' || confirm === 'force_ack') && !canForce) setConfirm(null)
+  // daemon stops answering, the failed Stop is forgotten). A request in flight keeps it open until it settles (a Stop that
+  // makes the daemon stop answering is that very case); a failure it showed then moves to the note, so it is not lost.
+  // State adjusted while rendering; the open-dialog guard stops a render loop.
+  if ((confirm === 'force' || confirm === 'force_ack') && !canForce && !forceBusy) {
+    setConfirm(null)
+    if (forceError !== null) { setNote(`Force stop failed: ${forceError}`); setForceError(null) }
+  }
   const startOk = connected && !running && !daemon?.busy && body !== null && preview?.key === key && !!preview.text
   const tail = finalLog && finalLog.seq === stfRun?.seq ? finalLog.text.split('\n').slice(-LOG_TAIL_LINES).join('\n') : null
   const left = endMs === null ? null : Math.max(0, Math.ceil((endMs - now) / 1000))
@@ -285,7 +301,7 @@ export function DaemonRunTab({ daemon, pushed, onModal }: { daemon: DaemonMsg | 
           )} />
       )}
       {confirm === 'force' && (
-        <ConfirmDialog title="Force stop TRex" confirmLabel="Force stop" danger onConfirm={doForce} onClose={() => setConfirm(null)}
+        <ConfirmDialog title="Force stop TRex" confirmLabel="Force stop" danger onConfirm={() => inForce(doForce)} onClose={closeForce}
           body={(
             <>
               {daemon?.running_seq != null
@@ -296,7 +312,7 @@ export function DaemonRunTab({ daemon, pushed, onModal }: { daemon: DaemonMsg | 
           )} />
       )}
       {confirm === 'force_ack' && (
-        <ConfirmDialog title="Force stop anyway?" confirmLabel="Force stop anyway" danger onConfirm={() => doStop(true, true)} onClose={() => setConfirm(null)}
+        <ConfirmDialog title="Force stop anyway?" confirmLabel="Force stop anyway" danger onConfirm={() => inForce(() => doStop(true, true))} onClose={closeForce}
           body={ackStf
             ? <p>A stateful (-f) run has no command port, so the GUI cannot see who is using it. Another user may be running traffic on this TRex. Force stop anyway?</p>
             : <p>TRex&apos;s command port did not answer, so the GUI cannot see who owns its ports. Another user may be running traffic on this TRex. Force stop anyway?</p>} />
