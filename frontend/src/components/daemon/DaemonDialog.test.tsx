@@ -177,6 +177,50 @@ describe('DaemonDialog', () => {
     expect(stop).toHaveBeenLastCalledWith({ rpc_port: 4701, confirm: true, force: true, owners_unknown_ack: false })
   })
 
+  // A Force confirm belongs to the context that offered Force stop: it closes when that context goes (the PR A final review's M2).
+  const refuseStopOurs = () => vi.spyOn(api, 'daemonStop').mockRejectedValue(new api.ApiError(409, 'owners_unknown', 'Cannot read who owns the ports'))
+  const forceDialog = () => screen.queryByRole('dialog', { name: 'Force stop TRex' })
+
+  it('an open Force confirm closes when the run ends', async () => {
+    refuseStopOurs()
+    const { rerender } = await open({ daemon: ours })
+    await refuseStop()
+    await userEvent.click(forceBtn()!)
+    expect(forceDialog()).toBeInTheDocument()
+    redraw({ daemon: idle }, rerender)
+    expect(forceDialog()).toBeNull()
+  })
+
+  it('an open Force confirm closes on a poll error, and stays open across a re-render of the same message', async () => {
+    refuseStopOurs()
+    const { rerender } = await open({ daemon: ours })
+    await refuseStop()
+    await userEvent.click(forceBtn()!)
+    redraw({ daemon: ours }, rerender)
+    expect(forceDialog()).toBeInTheDocument()
+    redraw({ daemon: { ...ours, state: 'error' } }, rerender)
+    expect(forceDialog()).toBeNull()
+  })
+
+  it('the Force stop anyway confirm closes the same way', async () => {
+    refuseStopOurs()
+    const { rerender } = await open({ daemon: ours })
+    await refuseStop()
+    await userEvent.click(forceBtn()!)
+    await userEvent.click(within(dialog('Force stop TRex')).getByRole('button', { name: 'Force stop' }))
+    expect(await screen.findByRole('dialog', { name: 'Force stop anyway?' })).toBeInTheDocument()
+    redraw({ daemon: idle }, rerender)
+    expect(screen.queryByRole('dialog', { name: /Force stop/ })).toBeNull()
+  })
+
+  it("a foreign run's Force confirm closes when the run ends", async () => {
+    const { rerender } = await open({ daemon: foreign })
+    await userEvent.click(forceBtn()!)
+    expect(forceDialog()).toBeInTheDocument()
+    redraw({ daemon: idle }, rerender)
+    expect(forceDialog()).toBeNull()
+  })
+
   it.each([
     { running: true, stop_s: null, other_pids: [], confirmed: true, still_answering: false },
     { running: true, stop_s: null, other_pids: [], confirmed: false, still_answering: false },
@@ -245,6 +289,11 @@ describe('DaemonDialog', () => {
     expect(forceBtn()).toBeInTheDocument()
     await userEvent.click(forceBtn()!)
     expect(dialog('Force stop TRex')).toHaveTextContent('This TRex was not started by this GUI.')
+    await userEvent.click(within(dialog('Force stop TRex')).getByRole('button', { name: 'Cancel' }))
+    // The foreign redraw alone cannot tell whether the seq-68 memory was dropped (Force shows for a foreign run anyway):
+    // back on seq 68, a kept memory would show Force stop again.
+    redraw({ daemon: ours }, rerender)
+    expect(forceBtn()).toBeNull()
   })
 
   it('says the daemon cannot stop a TRex started by hand (daemon-force-1)', async () => {

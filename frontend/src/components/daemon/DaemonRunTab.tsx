@@ -168,6 +168,9 @@ export function DaemonRunTab({ daemon, pushed, onModal }: { daemon: DaemonMsg | 
 
   const stopOk = connected && daemon?.running_seq != null && !problems.cmdPort
   const canForce = connected && running && (daemon?.running_seq == null || stopFailed?.seq === daemon.running_seq)
+  // A Force confirm belongs to the context that offered Force stop, so it closes when that context goes (the run ends, the
+  // daemon stops answering, the failed Stop is forgotten). State adjusted while rendering; the open-dialog guard stops a render loop.
+  if ((confirm === 'force' || confirm === 'force_ack') && !canForce) setConfirm(null)
   const startOk = connected && !running && !daemon?.busy && body !== null && preview?.key === key && !!preview.text
   const tail = finalLog && finalLog.seq === stfRun?.seq ? finalLog.text.split('\n').slice(-LOG_TAIL_LINES).join('\n') : null
   const left = endMs === null ? null : Math.max(0, Math.ceil((endMs - now) / 1000))
