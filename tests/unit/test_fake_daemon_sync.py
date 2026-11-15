@@ -1,22 +1,28 @@
 """FakeDaemon._sync: a fake that has exited must not lose lines its reader has yet to append."""
 from __future__ import annotations
 
-import importlib.util
 import socket
 import subprocess
 import sys
 import threading
 import time
-from pathlib import Path
 
-# `from conftest import FakeDaemon` resolves to tests/contract/conftest.py when the whole suite runs (the
-# module name `conftest` is taken by the first conftest imported), so load tests/conftest.py by its path.
-_ROOT_CONFTEST = Path(__file__).parents[1] / "conftest.py"
-_spec = importlib.util.spec_from_file_location("tests_root_conftest", _ROOT_CONFTEST)
-assert _spec is not None and _spec.loader is not None
-_root_conftest = importlib.util.module_from_spec(_spec)
-_spec.loader.exec_module(_root_conftest)
-FakeDaemon = _root_conftest.FakeDaemon
+from support import FakeDaemon
+
+
+def _start_lagging_reader(d: FakeDaemon) -> None:
+    """Start `d.reader` as a thread that appends each stdout line of `d.proc` after a 0.2 s lag, the way a
+    slow reader thread would, so the fake can exit while lines it printed are still unappended."""
+    def collect() -> None:
+        """Append each line after the lag, then close the pipe."""
+        assert d.proc.stdout is not None
+        with d.proc.stdout:
+            for ln in d.proc.stdout:
+                time.sleep(0.2)
+                d.lines.append(ln.rstrip("\n"))
+
+    d.reader = threading.Thread(target=collect, daemon=True)
+    d.reader.start()
 
 
 def test_methods_after_the_fake_exited_include_every_line_it_printed() -> None:
@@ -27,16 +33,7 @@ def test_methods_after_the_fake_exited_include_every_line_it_printed() -> None:
         s.bind(("127.0.0.1", 0))
         port = s.getsockname()[1]
     d = FakeDaemon("127.0.0.1", port, proc)
-
-    def collect() -> None:
-        """Append each line after a lag, the way a slow reader thread would."""
-        with proc.stdout:
-            for ln in proc.stdout:
-                time.sleep(0.2)
-                d.lines.append(ln.rstrip("\n"))
-
-    d.reader = threading.Thread(target=collect, daemon=True)
-    d.reader.start()
+    _start_lagging_reader(d)
     proc.wait()
     assert d.methods() == ["a", "b"]
     d.stop()
@@ -60,16 +57,7 @@ def test_a_fake_that_exits_during_the_marker_request_is_joined_too() -> None:
         s.bind(("127.0.0.1", 0))
         port = s.getsockname()[1]
     d = FakeDaemon("127.0.0.1", port, proc)
-
-    def collect() -> None:
-        """Append each line after a lag, the way a slow reader thread would."""
-        with proc.stdout:
-            for ln in proc.stdout:
-                time.sleep(0.2)
-                d.lines.append(ln.rstrip("\n"))
-
-    d.reader = threading.Thread(target=collect, daemon=True)
-    d.reader.start()
+    _start_lagging_reader(d)
     proc.wait()
     assert d.methods() == ["a"]
     d.stop()

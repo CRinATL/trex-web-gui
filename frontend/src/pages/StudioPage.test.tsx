@@ -44,7 +44,11 @@ async function dirtyProfile(ui: (active: boolean) => ReactElement, beforeEdit?: 
 }
 const asked = () => screen.queryByRole('dialog', { name: 'Discard the packet edits?' })
 
-describe('StudioPage', () => {
+// The budget is set here, not on one test: the dirtyProfile tests are the heaviest (the first-profile switch is about
+// 19 user actions, 1.6 s alone and 5.4 s in the parallel gate, over the 5 s default), and whichever runs first also
+// pays about 0.5 s of warm-up. No single step is slow (measured: the helper 1.0 s, the rest 0.6 s), so it is a budget,
+// not a retry.
+describe('StudioPage', { timeout: 15_000 }, () => {
   it('re-reads the library when the page becomes active', async () => {
     const list = vi.spyOn(api, 'listLibrary').mockResolvedValue(fixture)
     const { rerender } = render(<StudioPage active={false} />)
@@ -124,8 +128,6 @@ describe('StudioPage', () => {
     expect(screen.getByRole('dialog', { name: 'Import a profile' })).toBeInTheDocument()
   })
 
-  // The heaviest test here: about 19 user actions, 1.6 s alone and 5.4 s in the parallel gate, over the 5 s default.
-  // No single step is slow (measured: the helper 1.0 s, the rest 0.6 s), so the budget is explicit, not a retry.
   it('selecting another profile with unsaved packet edits asks first', async () => {
     const confirm = vi.spyOn(window, 'confirm')
     const { user } = await dirtyProfile((a) => <StudioPage active={a} />)
@@ -144,7 +146,7 @@ describe('StudioPage', () => {
     await user.click(screen.getByRole('option', { name: /udp_for_benchmarks/ }))
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
     expect(confirm).not.toHaveBeenCalled()
-  }, 15_000)
+  })
 
   it('a profile re-selected by a library write (New…) asks while the editor has unsaved edits', async () => {
     const { user } = await dirtyProfile((a) => <StudioPage active={a} />)

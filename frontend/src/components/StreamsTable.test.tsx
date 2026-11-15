@@ -188,6 +188,9 @@ describe('StreamsTab columns', () => {
   const BITS = ['Tx bps L1', 'Tx bps L2', 'Rx bps L1', 'Rx bps L2']
   const COUNTS = ['Tx pkts', 'Rx pkts', 'Tx bytes', 'Rx bytes']
   const openColumns = async () => { await userEvent.click(screen.getByRole('button', { name: 'Columns ▾' })) }
+  // The column headers a combination shows: a combination test asserts them, or a choice that failed to apply would
+  // leave every pass of its loop testing the defaults.
+  const headsFor = (bitRates: boolean, counters: boolean) => [...DEFAULT_HEADS, ...(bitRates ? BITS : []), ...(counters ? COUNTS : [])]
   it('shows only the default columns', () => {
     pgidStore.push(wirePgid('tx'))
     renderTab()
@@ -228,6 +231,7 @@ describe('StreamsTab columns', () => {
       pgidStore.reset(); pgidStore.track('streams', []); pgidStore.push(wirePgid('tx'))
       const { unmount } = renderTab()
       await userEvent.click(screen.getByRole('button', { name: 'PG ID 5 ports' }))
+      expect(headerTexts(), `bitRates=${bitRates} counters=${counters}`).toEqual(headsFor(bitRates, counters))
       const width = (tr: Element) => Array.from(tr.children).reduce((n, c) => n + ((c as HTMLTableCellElement).colSpan || 1), 0)
       const want = width(screen.getByRole('table', { name: 'Streams' }).querySelectorAll('thead tr')[1])
       const portRows = screen.getByRole('table', { name: 'Streams' }).querySelectorAll('tr.port-row')
@@ -248,6 +252,7 @@ describe('StreamsTab columns', () => {
       pgidStore.reset(); pgidStore.track('streams', []); pgidStore.push(wirePgid('tx'))
       const { unmount } = renderTab()
       await userEvent.click(screen.getByRole('button', { name: 'PG ID 5 ports' }))
+      expect(headerTexts(), label).toEqual(headsFor(bitRates, counters))
       const table = screen.getByRole('table', { name: 'Streams' })
       const groups = table.querySelectorAll('thead tr')[0]
       const lossAt = starts(groups)[Array.from(groups.children).findIndex((h) => h.textContent === 'Loss')]
