@@ -53,13 +53,17 @@ describe('ConfirmDialog progress', () => {
     expect(screen.queryByRole('progressbar')).toBeNull()
   })
 
-  it('a progress without pastLimit keeps "of up to" past the limit', () => {
+  it('a progress without pastLimit keeps "of up to" past the limit', async () => {
     vi.useFakeTimers()
-    render(<ConfirmDialog title="Start TRex" body={<p>the command</p>} confirmLabel="Start" onConfirm={() => new Promise<void>(() => undefined)} onClose={vi.fn()}
+    let finish: () => void = () => undefined   // resolved at the end, so no action is left pending after the test
+    const onConfirm = vi.fn(() => new Promise<void>((r) => { finish = r }))
+    render(<ConfirmDialog title="Start TRex" body={<p>the command</p>} confirmLabel="Start" onConfirm={onConfirm} onClose={vi.fn()}
       progress={{ label: 'Starting TRex', busyLabel: 'Starting…', limitS: 40 }} />)
     act(() => { fireEvent.click(screen.getByRole('button', { name: 'Start' })) })
     act(() => { vi.advanceTimersByTime(72_000) })
     expect(screen.getByRole('timer')).toHaveTextContent('1:12 of up to 0:40')
+    await act(async () => { finish() })
+    expect(screen.queryByRole('progressbar')).toBeNull()
   })
 
   it('a failed action leaves the progress view and shows the error over the body again', async () => {

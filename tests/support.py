@@ -2,6 +2,7 @@
 shares the module name `conftest`, so `from conftest import ...` is ambiguous."""
 import contextlib
 import fcntl
+import http.client
 import importlib.util
 import json
 import os
@@ -10,9 +11,11 @@ import socket
 import subprocess
 import sys
 import tempfile
+import threading
 import time
 import warnings
 from collections.abc import Callable, Iterator, Sequence
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
@@ -153,6 +156,74 @@ def spawn_ready(argv: Sequence[str], ready: re.Pattern[str],
             if proc.stdout is not None:
                 proc.stdout.close()
         raise
+
+
+@dataclass
+class FakeDaemon:
+    """A running tests/fake/fake_daemon.py: its port, its process and every stdout line it has printed."""
+    host: str
+    port: int
+    proc: subprocess.Popen[str]
+    lines: list[str] = field(default_factory=list, repr=False)
+    reader: threading.Thread | None = field(default=None, repr=False)
+    _syncs: int = field(default=0, repr=False)
+
+    def _sync(self) -> None:
+        """Wait until the reader has appended everything the fake printed so far. The fake prints a method
+        line before it answers, but the reader thread appends it later; a marker request goes through the
+        same ordered pipe, so once its line is in `lines` every earlier line is too. A fake that has exited
+        gets its reader joined instead (the pipe is at EOF, so the join returns once the last line is in);
+        a fake whose server is gone but whose process lives leaves `lines` as it is."""
+        if self.proc.poll() is not None:
+            self._join_reader()
+            return
+        self._syncs += 1
+        marker = f"__sync-{self._syncs}__"
+        try:
+            conn = http.client.HTTPConnection(self.host, self.port, timeout=2)
+            conn.request("POST", "/", body=json.dumps({"jsonrpc": "2.0", "id": 0, "method": marker}))
+            conn.getresponse().read()
+            conn.close()
+            self.wait_line(f"[fake-daemon] method {marker}", timeout_s=2.0)
+        except (OSError, http.client.HTTPException, AssertionError):
+            if self.proc.poll() is not None:
+                self._join_reader()
+
+    def _join_reader(self) -> None:
+        """Wait up to 5 s for the reader thread (if any) to reach EOF and append the last lines."""
+        if self.reader is not None:
+            self.reader.join(timeout=5)
+
+    def methods(self) -> list[str]:
+        """The JSON-RPC methods the fake has received so far, in order (waits for the reader to catch up
+        first, and leaves out its own sync markers)."""
+        self._sync()
+        prefix = "[fake-daemon] method "
+        return [ln[len(prefix):] for ln in list(self.lines)
+                if ln.startswith(prefix) and not ln.startswith(prefix + "__sync-")]
+
+    def wait_line(self, line: str, timeout_s: float = 10.0) -> None:
+        """Block until the fake has printed exactly `line` (`hang is_running`, say); AssertionError after
+        timeout_s."""
+        deadline = time.monotonic() + timeout_s
+        while time.monotonic() < deadline:
+            if line in list(self.lines):
+                return
+            time.sleep(0.02)
+        raise AssertionError(f"fake daemon never printed {line!r}; it printed {self.lines!r}")
+
+    def stop(self) -> None:
+        """SIGTERM the fake (SIGKILL after 5 s) if it is still running, and wait for the reader to close the
+        pipe, so `lines` is complete and no unclosed file is left behind."""
+        if self.proc.poll() is None:
+            self.proc.terminate()
+            try:
+                self.proc.wait(timeout=5)
+            except subprocess.TimeoutExpired:
+                self.proc.kill()
+                self.proc.wait()
+        if self.reader is not None:
+            self.reader.join(timeout=5)
 
 
 DEMO_PORTS_LOCK = Path(tempfile.gettempdir()) / f"trex-web-gui-demo-ports-{os.getuid()}.lock"

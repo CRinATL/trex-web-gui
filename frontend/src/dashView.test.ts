@@ -19,6 +19,14 @@ describe('dashView', () => {
     expect(Object.isFrozen(DASH_VIEW_DEFAULTS.overviewSeries)).toBe(true)
   })
 
+  it('hands out the frozen defaults themselves, not a copy, when nothing valid is stored', () => {
+    expect(readDashView()).toBe(DASH_VIEW_DEFAULTS)   // nothing stored
+    store('not json')
+    expect(readDashView()).toBe(DASH_VIEW_DEFAULTS)   // unparsable
+    store([1, 2])
+    expect(readDashView()).toBe(DASH_VIEW_DEFAULTS)   // not an object
+  })
+
   it('freezes a stored overview series after sanitizing it', () => {
     store({ overviewSeries: ['tx_bps_l1', 'rx_pps', 'tx_pps', 'rx_pps'] })
     expect(Object.isFrozen(readDashView().overviewSeries)).toBe(true)
