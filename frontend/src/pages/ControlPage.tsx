@@ -183,7 +183,8 @@ export function ControlPage({ active = true, onConnect }: { active?: boolean; on
           {notConnected && <p>{notConnected}</p>}
           {selectedPort !== null && selectedPortView && <h2>{portTitle(selectedPortView, labelOf(selectedPortView))}</h2>}
           {showPanel && selectedPort !== null && !selectedPortView && <h2>Port {selectedPort}</h2>}
-          {connected && selection.kind === 'port' && selectedPortView && <ReadinessStrip port={selectedPortView} readOnly={readOnly} />}
+          {/* the default `_` row acts on the port like the port row does; another profile has every action disabled */}
+          {connected && (selection.kind === 'port' || (selection.kind === 'profile' && selection.profile === '_')) && selectedPortView && <ReadinessStrip port={selectedPortView} readOnly={readOnly} />}
           {showPanel && <PortPanel selection={selection} ports={ports} info={info} readOnly={readOnly} connected={connected} request={panelRequest} active={active} labelOf={labelOf} ifaces={session.ifaces} ifacesNote={session.ifaces_note} onResolved={() => setError(null)} />}
         </div>
       </div>

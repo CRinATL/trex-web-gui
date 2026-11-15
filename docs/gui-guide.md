@@ -303,7 +303,8 @@ A lit button is disabled and keeps its width, so the buttons beside it do not mo
 
 ### 3.2a The readiness strip
 
-With a connected session and a port selected, one muted line sits under the port's title and above its tabs. It reads
+With a connected session and a port (or its default profile `_`) selected, one muted line sits under the port's title
+and above its tabs; another profile's row, whose actions are all disabled, shows none. It reads
 **Acquire → Assign a profile → Start** with the current step in bold, and a sentence naming the next move: acquire the
 port; assign a profile on the Traffic tab; start on the Traffic tab (with a link-down warning when the link is down,
 because TRex, not the GUI, refuses a Start); or that traffic is running (or paused). When the port cannot be acted on (a read-only
