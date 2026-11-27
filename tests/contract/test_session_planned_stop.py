@@ -4,6 +4,7 @@ import asyncio
 import dataclasses
 import signal
 import socket
+import threading
 import time
 
 import pytest
@@ -438,9 +439,26 @@ def test_loss_during_attempt_goes_back_to_probing(fake_trex, new_session, monkey
     new_session.run(run())
 
 
+def sent_method(s, method: str) -> threading.Event:
+    """An event set once either of `s`'s clients sends a request for `method`: wraps `s._on_rpc`, which
+    make_client reads at each connect, so call it before the connect it should watch."""
+    seen, tap = threading.Event(), s._on_rpc
+
+    def on_rpc(r: trexapi.RpcRecord) -> None:
+        """Set `seen` on a request (single or batched) for `method`, then hand the record on."""
+        if r.direction == "request" and any(isinstance(b, dict) and b.get("method") == method
+                                            for b in (r.body if isinstance(r.body, list) else [r.body])):
+            seen.set()
+        tap(r)
+    s._on_rpc = on_rpc
+    return seen
+
+
 def test_restart_during_attempt_goes_back_to_probing(fake_trex, new_session, monkeypatch) -> None:
     # the port sync held 1 s keeps the attempt in flight while the restart lands; its next RPC meets the new
-    # API handler
+    # API handler. The restart waits for that port sync to be sent: the fake applies a restart at its next
+    # message, so one sent at `connecting` could land before the attempt's api_sync_v2, which would then
+    # hand out the new handler and the attempt would connect without failing.
     f, rec = fake_trex(), Recorder()
     g = fake_trex("--delay-method", "get_port_status:1000")
     monkeypatch.setattr(trex_session, "RECONNECT_RETRY_S", 0.05)
@@ -449,9 +467,10 @@ def test_restart_during_attempt_goes_back_to_probing(fake_trex, new_session, mon
         s = new_session(rec)
         await planned_stop(s, f)
         s._params = dataclasses.replace(s._params, sync_port=g.rpc_port, async_port=g.pub_port)
+        port_sync = sent_method(s, "get_port_status")
         n = len(rec.msgs)
         s.reconnect_after_start(30)
-        await wait_for(lambda: s.snapshot()["state"] == "connecting", 10)
+        await wait_for(port_sync.is_set, 10)
         g.restart()
         await asyncio.wait_for(s._reconnect_task, 20)
         assert s.snapshot()["state"] == "connected"
